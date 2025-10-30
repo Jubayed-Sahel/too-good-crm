@@ -1,0 +1,60 @@
+# Python/Django specifics
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.db
+db.sqlite3
+*.sqlite3
+migrations/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment variables and secrets
+.env
+*.env
+*.secret
+
+# Logs and temp files
+*.log
+*.pot
+*.mo
+*.tmp
+tmp/
+temp/
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Coverage and testing
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+coverage.xml
+
+# Django static/media (if collected; commit only if needed for deployment)
+media/
+staticfiles/
+
+# Pipenv or Poetry (if using alternative dependency managers)
+Pipfile.lock
+poetry.lock
+
+# OS-specific
+*.DS_Store
+Thumbs.db
+
+# Miscellaneous
+*.bak
+*.orig
+*~
