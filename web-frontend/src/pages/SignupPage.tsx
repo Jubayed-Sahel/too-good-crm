@@ -1,13 +1,13 @@
-import AuthLayout from '../components/auth/AuthLayout';
-import SignupForm from '../components/auth/SignupForm';
+import { Box } from '@chakra-ui/react';
+import { AuthLayout, SignupForm } from '../components/auth';
 
 const SignupPage = () => {
   return (
-    <div className="h-full min-h-screen">
+    <Box h="100vh" maxH="100vh" overflow="hidden" position="fixed" w="100vw" top={0} left={0}>
       <AuthLayout>
         <SignupForm />
       </AuthLayout>
-    </div>
+    </Box>
   );
 };
 
