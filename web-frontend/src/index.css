@@ -16,6 +16,13 @@ body {
   width: 100%;
 }
 
+/* Auth pages specific - no scroll */
+.auth-page {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
 /* Custom animations for auth pages */
 @keyframes blob {
   0% {
