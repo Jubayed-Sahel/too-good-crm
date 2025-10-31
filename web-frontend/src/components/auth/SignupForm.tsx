@@ -8,8 +8,6 @@ import {
   VStack,
   Text,
   Link,
-  HStack,
-  Separator,
 } from '@chakra-ui/react';
 import { Toaster, toaster } from '../ui/toaster';
 import { Field } from '../ui/field';
@@ -87,16 +85,40 @@ const SignupForm = () => {
   return (
     <>
       <Toaster />
-      <Box bg="white" p={{ base: 6, md: 8 }} borderRadius="xl" boxShadow="xl" w="full">
-        <VStack gap={5} align="stretch">
-          <Box textAlign="center">
-            <Heading size="lg" mb={2}>
-              Create Account
-            </Heading>
-            <Text color="gray.600">
-              Get started with LeadGrid today
-            </Text>
+      <VStack gap={6} w="full">
+        {/* Logo */}
+        <Box textAlign="center">
+          <Box
+            display="inline-flex"
+            alignItems="center"
+            justifyContent="center"
+            w="16"
+            h="16"
+            bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+            borderRadius="2xl"
+            boxShadow="lg"
+            mb={3}
+          >
+            <svg className="w-10 h-10" fill="none" stroke="white" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
           </Box>
+          <Heading size="xl" color="gray.800" mb={1}>
+            LeadGrid
+          </Heading>
+        </Box>
+
+        {/* Form Box */}
+        <Box bg="white" p={{ base: 6, md: 8 }} borderRadius="xl" boxShadow="xl" w="full">
+          <VStack gap={5} align="stretch">
+            <Box textAlign="center">
+              <Heading size="lg" mb={2}>
+                Create Account
+              </Heading>
+              <Text color="gray.600">
+                Get started with LeadGrid today
+              </Text>
+            </Box>
 
           <form onSubmit={handleSubmit}>
             <VStack gap={4}>
@@ -240,6 +262,7 @@ const SignupForm = () => {
           </Text>
         </VStack>
       </Box>
+      </VStack>
     </>
   );
 };
