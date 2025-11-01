@@ -93,7 +93,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                   LeadGrid
                 </Heading>
                 <Text fontSize="xs" color="gray.500">
-                  CRM Dashboard
+                  CRM Platform
                 </Text>
               </Box>
             </Flex>
