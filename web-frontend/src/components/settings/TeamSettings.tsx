@@ -151,19 +151,12 @@ const TeamSettings = () => {
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value)}
-                      style={{
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #E2E8F0',
-                        fontSize: '14px',
-                        width: '100%',
-                        backgroundColor: 'white',
-                      }}
+                      aria-label="Role"
+                      className="chakra-select"
                     >
                       <option value="admin">Admin</option>
                       <option value="sales_manager">Sales Manager</option>
                       <option value="sales_rep">Sales Rep</option>
-                      <option value="viewer">Viewer</option>
                     </select>
                   </Field>
                 </Grid>

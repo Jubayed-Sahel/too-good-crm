@@ -75,13 +75,8 @@ const OrganizationSettings = () => {
                   name="industry"
                   value={formData.industry}
                   onChange={handleChange}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #E2E8F0',
-                    fontSize: '14px',
-                    width: '100%',
-                  }}
+                  aria-label="Industry"
+                  className="chakra-select"
                 >
                   <option value="Software & Technology">Software & Technology</option>
                   <option value="Healthcare">Healthcare</option>
@@ -98,13 +93,8 @@ const OrganizationSettings = () => {
                   name="companySize"
                   value={formData.companySize}
                   onChange={handleChange}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #E2E8F0',
-                    fontSize: '14px',
-                    width: '100%',
-                  }}
+                  aria-label="Company Size"
+                  className="chakra-select"
                 >
                   <option value="1-10">1-10 employees</option>
                   <option value="11-50">11-50 employees</option>
@@ -227,13 +217,8 @@ const OrganizationSettings = () => {
                   name="timezone"
                   value={formData.timezone}
                   onChange={handleChange}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #E2E8F0',
-                    fontSize: '14px',
-                    width: '100%',
-                  }}
+                  aria-label="Timezone"
+                  className="chakra-select"
                 >
                   <option value="America/Los_Angeles">Pacific Time (PT)</option>
                   <option value="America/Denver">Mountain Time (MT)</option>
@@ -250,13 +235,8 @@ const OrganizationSettings = () => {
                   name="currency"
                   value={formData.currency}
                   onChange={handleChange}
-                  style={{
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #E2E8F0',
-                    fontSize: '14px',
-                    width: '100%',
-                  }}
+                  aria-label="Currency"
+                  className="chakra-select"
                 >
                   <option value="USD">USD - US Dollar</option>
                   <option value="EUR">EUR - Euro</option>
