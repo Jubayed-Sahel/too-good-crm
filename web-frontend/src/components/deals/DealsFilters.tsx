@@ -1,5 +1,12 @@
-import { Box, HStack, Input, Button, Stack } from '@chakra-ui/react';
+import { 
+  Box, 
+  HStack, 
+  Input, 
+  Button, 
+  Stack,
+} from '@chakra-ui/react';
 import { FiSearch, FiFilter, FiPlus } from 'react-icons/fi';
+import CustomSelect from '../ui/CustomSelect';
 
 interface DealsFiltersProps {
   searchQuery: string;
@@ -43,41 +50,33 @@ const DealsFilters = ({
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               pl="40px"
-              size="md"
+              h="40px"
               borderRadius="lg"
             />
           </Box>
 
           {/* Stage Filter */}
-          <Box w={{ base: '100%', md: 'auto' }}>
-            <select
-              value={stageFilter}
-              onChange={(e) => onStageFilterChange(e.target.value)}
-              style={{
-                padding: '8px 32px 8px 12px',
-                borderRadius: '8px',
-                border: '1px solid #E2E8F0',
-                fontSize: '14px',
-                backgroundColor: 'white',
-                cursor: 'pointer',
-                width: '100%',
-                minWidth: '160px',
-              }}
-            >
-              <option value="all">All Stages</option>
-              <option value="lead">Lead</option>
-              <option value="qualified">Qualified</option>
-              <option value="proposal">Proposal</option>
-              <option value="negotiation">Negotiation</option>
-              <option value="closed-won">Closed Won</option>
-              <option value="closed-lost">Closed Lost</option>
-            </select>
-          </Box>
+          <CustomSelect
+            value={stageFilter}
+            onChange={onStageFilterChange}
+            options={[
+              { value: 'all', label: 'All Stages' },
+              { value: 'lead', label: 'Lead' },
+              { value: 'qualified', label: 'Qualified' },
+              { value: 'proposal', label: 'Proposal' },
+              { value: 'negotiation', label: 'Negotiation' },
+              { value: 'closed-won', label: 'Closed Won' },
+              { value: 'closed-lost', label: 'Closed Lost' },
+            ]}
+            width={{ base: '100%', md: 'auto' }}
+            minWidth="160px"
+            accentColor="blue"
+          />
 
           {/* More Filters Button */}
           <Button
             variant="outline"
-            size="md"
+            h="40px"
             display={{ base: 'none', lg: 'flex' }}
           >
             <FiFilter />
@@ -89,7 +88,7 @@ const DealsFilters = ({
         <HStack gap={2}>
           <Button
             colorPalette="blue"
-            size="md"
+            h="40px"
             onClick={onAddDeal}
             w={{ base: '100%', md: 'auto' }}
           >

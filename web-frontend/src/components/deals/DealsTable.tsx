@@ -10,7 +10,7 @@ import {
   Heading,
   Stack,
 } from '@chakra-ui/react';
-import { FiEdit, FiTrash2, FiEye, FiUser, FiDollarSign } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiEye, FiUser } from 'react-icons/fi';
 import { Card } from '../common';
 
 // Simple progress bar component
@@ -259,12 +259,9 @@ const DealsTable = ({ deals, onEdit, onDelete, onView }: DealsTableProps) => {
                   <Heading size="sm" mb={1}>
                     {deal.title}
                   </Heading>
-                  <HStack gap={1.5}>
-                    <FiUser size={12} color="#718096" />
-                    <Text fontSize="sm" color="gray.600">
-                      {deal.customer}
-                    </Text>
-                  </HStack>
+                  <Text fontSize="sm" color="gray.600">
+                    {deal.customer}
+                  </Text>
                 </Box>
                 <Badge
                   colorPalette={getStageColor(deal.stage)}
@@ -284,12 +281,9 @@ const DealsTable = ({ deals, onEdit, onDelete, onView }: DealsTableProps) => {
                   <Text fontSize="xs" color="gray.500" mb={0.5}>
                     Deal Value
                   </Text>
-                  <HStack gap={1.5}>
-                    <FiDollarSign size={14} color="#718096" />
-                    <Text fontWeight="semibold" fontSize="md" color="gray.900">
-                      {formatCurrency(deal.value)}
-                    </Text>
-                  </HStack>
+                  <Text fontWeight="semibold" fontSize="md" color="gray.900">
+                    {formatCurrency(deal.value)}
+                  </Text>
                 </Box>
                 <Box>
                   <Text fontSize="xs" color="gray.500" mb={0.5}>

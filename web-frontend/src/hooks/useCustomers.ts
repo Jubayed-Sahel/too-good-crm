@@ -1,8 +1,86 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import api from '../services/api'
-import type { Customer, Statistics } from '../types'
+/**
+ * Customers data hook
+ */
+import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { customerService } from '@/services';
+import api from '../services/api';
+import type { Customer, PaginatedResponse, Statistics } from '@/types';
 
-export const useCustomers = (filters?: Record<string, string>) => {
+// New service-based hook for simple usage
+export const useCustomers = (params?: Record<string, any>) => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [pagination, setPagination] = useState<Omit<PaginatedResponse<Customer>, 'results'> | null>(null);
+
+  const fetchCustomers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await customerService.getCustomers(params);
+      setCustomers(response.results);
+      setPagination({
+        count: response.count,
+        next: response.next,
+        previous: response.previous,
+      });
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [JSON.stringify(params)]);
+
+  const createCustomer = async (data: Partial<Customer>) => {
+    try {
+      const newCustomer = await customerService.createCustomer(data);
+      setCustomers((prev) => [newCustomer, ...prev]);
+      return newCustomer;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const updateCustomer = async (id: number, data: Partial<Customer>) => {
+    try {
+      const updated = await customerService.updateCustomer(id, data);
+      setCustomers((prev) =>
+        prev.map((customer) => (customer.id === id ? updated : customer))
+      );
+      return updated;
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  const deleteCustomer = async (id: number) => {
+    try {
+      await customerService.deleteCustomer(id);
+      setCustomers((prev) => prev.filter((customer) => customer.id !== id));
+    } catch (err) {
+      throw err;
+    }
+  };
+
+  return {
+    customers,
+    isLoading,
+    error,
+    pagination,
+    refetch: fetchCustomers,
+    createCustomer,
+    updateCustomer,
+    deleteCustomer,
+  };
+};
+
+// React Query hooks (kept for backwards compatibility)
+export const useCustomersQuery = (filters?: Record<string, string>) => {
   return useQuery({
     queryKey: ['customers', filters],
     queryFn: async () => {
@@ -74,3 +152,4 @@ export const useCustomerStats = () => {
     },
   })
 }
+
