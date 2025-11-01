@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
   Button,
@@ -12,18 +12,23 @@ import {
 import { Toaster, toaster } from "../ui/toaster";
 import { Field } from "../ui/field";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { useAuth } from "@/hooks";
+import { ROUTES } from "@/config/constants";
+import type { LoginCredentials } from "@/types";
 
 const LoginForm = () => {
-  const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const { login } = useAuth();
+  const [formData, setFormData] = useState<LoginCredentials>({
+    username: "",
+    password: "",
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
+    if (!formData.username || !formData.password) {
       toaster.create({
         title: "Error",
         description: "Please fill in all fields",
@@ -35,17 +40,24 @@ const LoginForm = () => {
 
     setIsLoading(true);
 
-    // Mock authentication - replace with actual API call
-    setTimeout(() => {
+    try {
+      await login(formData);
       toaster.create({
         title: "Success",
         description: "Login successful!",
         type: "success",
         duration: 2000,
       });
-      navigate("/dashboard");
+    } catch (error: any) {
+      toaster.create({
+        title: "Login Failed",
+        description: error.detail || error.message || "Invalid credentials",
+        type: "error",
+        duration: 3000,
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -65,8 +77,18 @@ const LoginForm = () => {
             boxShadow="lg"
             mb={3}
           >
-            <svg className="w-10 h-10" fill="none" stroke="white" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <svg
+              className="w-10 h-10"
+              fill="none"
+              stroke="white"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
             </svg>
           </Box>
           <Heading size="xl" color="gray.800" mb={1}>
@@ -90,94 +112,98 @@ const LoginForm = () => {
               <Text color="gray.600">Sign in to continue to LeadGrid</Text>
             </Box>
 
-          <form onSubmit={handleSubmit}>
-            <VStack gap={4}>
-              <Field label="Email" required>
-                <Input
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  size="md"
-                  h="12"
-                />
-              </Field>
-
-              <Field label="Password" required>
-                <Box position="relative" w="full">
+            <form onSubmit={handleSubmit}>
+              <VStack gap={4}>
+                <Field label="Username" required>
                   <Input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    type="text"
+                    placeholder="Enter your username"
+                    value={formData.username}
+                    onChange={(e) =>
+                      setFormData({ ...formData, username: e.target.value })
+                    }
                     size="md"
                     h="12"
-                    pr="12"
-                    w="full"
                   />
-                  <Box
-                    position="absolute"
-                    right="3"
-                    top="50%"
-                    transform="translateY(-50%)"
-                    zIndex={1}
-                  >
-                    <Button
-                      aria-label={
-                        showPassword ? "Hide password" : "Show password"
+                </Field>
+
+                <Field label="Password" required>
+                  <Box position="relative" w="full">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
                       }
-                      onClick={() => setShowPassword(!showPassword)}
-                      variant="ghost"
-                      size="sm"
-                      p={2}
-                      minW="auto"
-                      h="auto"
+                      size="md"
+                      h="12"
+                      pr="12"
+                      w="full"
+                    />
+                    <Box
+                      position="absolute"
+                      right="3"
+                      top="50%"
+                      transform="translateY(-50%)"
+                      zIndex={1}
                     >
-                      {showPassword ? <FiEyeOff /> : <FiEye />}
-                    </Button>
+                      <Button
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                        onClick={() => setShowPassword(!showPassword)}
+                        variant="ghost"
+                        size="sm"
+                        p={2}
+                        minW="auto"
+                        h="auto"
+                      >
+                        {showPassword ? <FiEyeOff /> : <FiEye />}
+                      </Button>
+                    </Box>
                   </Box>
+                </Field>
+
+                <Box w="full" textAlign="right">
+                  <Link
+                    asChild
+                    color="purple.600"
+                    fontSize="sm"
+                    fontWeight="medium"
+                  >
+                    <RouterLink to="/forgot-password">
+                      Forgot password?
+                    </RouterLink>
+                  </Link>
                 </Box>
-              </Field>
 
-              <Box w="full" textAlign="right">
-                <Link
-                  asChild
-                  color="purple.600"
-                  fontSize="sm"
-                  fontWeight="medium"
+                <Button
+                  type="submit"
+                  colorScheme="purple"
+                  size="lg"
+                  w="full"
+                  h="12"
+                  loading={isLoading}
+                  loadingText="Signing in..."
                 >
-                  <RouterLink to="/forgot-password">
-                    Forgot password?
-                  </RouterLink>
-                </Link>
-              </Box>
+                  Sign In
+                </Button>
+              </VStack>
+            </form>
 
-              <Button
-                type="submit"
-                colorScheme="purple"
-                size="lg"
-                w="full"
-                h="12"
-                loading={isLoading}
-                loadingText="Signing in..."
-              >
-                Sign In
-              </Button>
-            </VStack>
-          </form>
+            <Text fontSize="lg" textAlign="center" color="gray.500">
+              or
+            </Text>
 
-          <Text fontSize="lg" textAlign="center" color="gray.500">
-            or
-          </Text>
-
-          <Text textAlign="center" fontSize="sm">
-            Don't have an account?{" "}
-            <Link asChild color="purple.600" fontWeight="semibold">
-              <RouterLink to="/signup">Sign up</RouterLink>
-            </Link>
-          </Text>
-        </VStack>
-      </Box>
+            <Text textAlign="center" fontSize="sm">
+              Don't have an account?{" "}
+              <Link asChild color="purple.600" fontWeight="semibold">
+                <RouterLink to={ROUTES.SIGNUP}>Sign up</RouterLink>
+              </Link>
+            </Text>
+          </VStack>
+        </Box>
       </VStack>
     </>
   );

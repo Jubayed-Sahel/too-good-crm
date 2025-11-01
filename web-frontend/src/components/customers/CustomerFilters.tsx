@@ -6,6 +6,7 @@ import {
   Stack,
 } from '@chakra-ui/react';
 import { FiSearch, FiFilter, FiPlus } from 'react-icons/fi';
+import CustomSelect from '../ui/CustomSelect';
 
 interface CustomerFiltersProps {
   searchQuery: string;
@@ -32,51 +33,44 @@ const CustomerFilters = ({
       {/* Search and Filter */}
       <Stack direction={{ base: 'column', sm: 'row' }} gap={3} flex="1">
         <Box position="relative" flex="1" maxW={{ base: '100%', md: '400px' }}>
-          <Input
-            placeholder="Search customers..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            ps="40px"
-          />
           <Box
             position="absolute"
             left="12px"
             top="50%"
             transform="translateY(-50%)"
             pointerEvents="none"
+            color="gray.400"
           >
-            <FiSearch color="#A0AEC0" />
+            <FiSearch size={18} />
           </Box>
+          <Input
+            placeholder="Search customers..."
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            pl="40px"
+            h="40px"
+          />
         </Box>
 
-        <Box width={{ base: '100%', sm: '180px' }}>
-          <select
-            value={statusFilter}
-            onChange={(e) => onStatusChange(e.target.value)}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: '6px',
-              border: '1px solid #E2E8F0',
-              fontSize: '14px',
-              backgroundColor: 'white',
-              cursor: 'pointer',
-            }}
-            aria-label="Filter by status"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-            <option value="pending">Pending</option>
-          </select>
-        </Box>
+        <CustomSelect
+          value={statusFilter}
+          onChange={onStatusChange}
+          options={[
+            { value: 'all', label: 'All Status' },
+            { value: 'active', label: 'Active' },
+            { value: 'inactive', label: 'Inactive' },
+            { value: 'pending', label: 'Pending' },
+          ]}
+          width={{ base: '100%', sm: '180px' }}
+          accentColor="purple"
+        />
       </Stack>
 
       {/* Action Buttons */}
       <HStack gap={2}>
         <Button
           variant="outline"
-          size={{ base: 'md', md: 'sm' }}
+          h="40px"
           display={{ base: 'none', sm: 'inline-flex' }}
         >
           <FiFilter />
@@ -85,7 +79,7 @@ const CustomerFilters = ({
 
         <Button
           colorPalette="purple"
-          size={{ base: 'md', md: 'sm' }}
+          h="40px"
           onClick={onAddCustomer}
         >
           <FiPlus />
