@@ -5,17 +5,17 @@ import type { ReactNode } from 'react';
 interface IconBoxProps extends FlexProps {
   icon: ReactNode;
   size?: 'sm' | 'md' | 'lg';
-  colorScheme?: 'purple' | 'blue' | 'green' | 'red' | 'orange';
+  colorPalette?: 'purple' | 'blue' | 'green' | 'red' | 'orange';
 }
 
-const IconBox = ({ icon, size = 'md', colorScheme = 'purple', ...props }: IconBoxProps) => {
+const IconBox = ({ icon, size = 'md', colorPalette = 'purple', ...props }: IconBoxProps) => {
   const sizes = {
     sm: { w: '8', h: '8' },
     md: { w: '10', h: '10' },
     lg: { w: '12', h: '12' },
   };
 
-  const colorSchemes = {
+  const colorPalettes = {
     purple: { bg: 'purple.100', color: 'purple.600' },
     blue: { bg: 'blue.100', color: 'blue.600' },
     green: { bg: 'green.100', color: 'green.600' },
@@ -26,8 +26,8 @@ const IconBox = ({ icon, size = 'md', colorScheme = 'purple', ...props }: IconBo
   return (
     <Flex
       {...sizes[size]}
-      bg={colorSchemes[colorScheme].bg}
-      color={colorSchemes[colorScheme].color}
+      bg={colorPalettes[colorPalette].bg}
+      color={colorPalettes[colorPalette].color}
       borderRadius="lg"
       align="center"
       justify="center"
