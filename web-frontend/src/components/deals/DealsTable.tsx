@@ -14,7 +14,7 @@ import { FiEdit, FiTrash2, FiEye, FiUser } from 'react-icons/fi';
 import { Card } from '../common';
 
 // Simple progress bar component
-const SimpleProgress = ({ value, colorScheme }: { value: number; colorScheme: string }) => {
+const SimpleProgress = ({ value, colorPalette }: { value: number; colorPalette: string }) => {
   const colors: Record<string, string> = {
     green: '#48BB78',
     orange: '#ED8936',
@@ -32,7 +32,7 @@ const SimpleProgress = ({ value, colorScheme }: { value: number; colorScheme: st
       <Box
         h="100%"
         w={`${value}%`}
-        bg={colors[colorScheme] || colors.green}
+        bg={colors[colorPalette] || colors.green}
         borderRadius="full"
         transition="width 0.3s"
       />
@@ -205,7 +205,7 @@ const DealsTable = ({ deals, onEdit, onDelete, onView }: DealsTableProps) => {
                 </Text>
                 <SimpleProgress
                   value={deal.probability}
-                  colorScheme={deal.probability >= 70 ? 'green' : deal.probability >= 40 ? 'orange' : 'red'}
+                  colorPalette={deal.probability >= 70 ? 'green' : deal.probability >= 40 ? 'orange' : 'red'}
                 />
               </VStack>
 
@@ -295,7 +295,7 @@ const DealsTable = ({ deals, onEdit, onDelete, onView }: DealsTableProps) => {
                     </Text>
                     <SimpleProgress
                       value={deal.probability}
-                      colorScheme={deal.probability >= 70 ? 'green' : deal.probability >= 40 ? 'orange' : 'red'}
+                      colorPalette={deal.probability >= 70 ? 'green' : deal.probability >= 40 ? 'orange' : 'red'}
                     />
                   </VStack>
                 </Box>

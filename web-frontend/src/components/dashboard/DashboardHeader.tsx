@@ -46,7 +46,7 @@ const DashboardHeader = () => {
           <Button
             onClick={handleSignOut}
             variant="ghost"
-            colorScheme="gray"
+            colorPalette="gray"
           >
             <Flex align="center" gap={2}>
               <FiLogOut />

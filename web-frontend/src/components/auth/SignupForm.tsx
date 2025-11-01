@@ -116,22 +116,22 @@ const SignupForm = () => {
   return (
     <>
       <Toaster />
-      <VStack gap={6} w="full">
+      <VStack gap={4} w="full">
         {/* Logo */}
         <Box textAlign="center">
           <Box
             display="inline-flex"
             alignItems="center"
             justifyContent="center"
-            w="16"
-            h="16"
+            w={{ base: 12, md: 14 }}
+            h={{ base: 12, md: 14 }}
             bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
             borderRadius="2xl"
             boxShadow="lg"
-            mb={3}
+            mb={2}
           >
             <svg
-              className="w-10 h-10"
+              className="w-8 h-8"
               fill="none"
               stroke="white"
               viewBox="0 0 24 24"
@@ -144,7 +144,7 @@ const SignupForm = () => {
               />
             </svg>
           </Box>
-          <Heading size="xl" color="gray.800" mb={1}>
+          <Heading size={{ base: "lg", md: "xl" }} color="gray.800" mb={0.5}>
             LeadGrid
           </Heading>
         </Box>
@@ -152,21 +152,21 @@ const SignupForm = () => {
         {/* Form Box */}
         <Box
           bg="white"
-          p={{ base: 6, md: 8 }}
+          p={{ base: 5, md: 6 }}
           borderRadius="xl"
           boxShadow="xl"
           w="full"
         >
-          <VStack gap={6} align="stretch">
+          <VStack gap={4} align="stretch">
             <Box textAlign="center">
-              <Heading size="lg" mb={2}>
+              <Heading size={{ base: "md", md: "lg" }} mb={1}>
                 Create Account
               </Heading>
-              <Text color="gray.600">Sign up to get started with LeadGrid</Text>
+              <Text color="gray.600" fontSize="sm">Sign up to get started with LeadGrid</Text>
             </Box>
 
             <form onSubmit={handleSubmit}>
-              <VStack gap={4}>
+              <VStack gap={3}>
                 <Field 
                   label="Username" 
                   required
@@ -181,7 +181,7 @@ const SignupForm = () => {
                       setFormData({ ...formData, username: e.target.value })
                     }
                     size="md"
-                    h="12"
+                    h="10"
                   />
                 </Field>
 
@@ -199,7 +199,7 @@ const SignupForm = () => {
                       setFormData({ ...formData, email: e.target.value })
                     }
                     size="md"
-                    h="12"
+                    h="10"
                   />
                 </Field>
 
@@ -219,7 +219,7 @@ const SignupForm = () => {
                         setFormData({ ...formData, first_name: e.target.value })
                       }
                       size="md"
-                      h="12"
+                      h="10"
                     />
                   </Field>
 
@@ -238,7 +238,7 @@ const SignupForm = () => {
                         setFormData({ ...formData, last_name: e.target.value })
                       }
                       size="md"
-                      h="12"
+                      h="10"
                     />
                   </Field>
                 </Box>
@@ -258,7 +258,7 @@ const SignupForm = () => {
                         setFormData({ ...formData, password: e.target.value })
                       }
                       size="md"
-                      h="12"
+                      h="10"
                       pr="12"
                       w="full"
                     />
@@ -301,7 +301,7 @@ const SignupForm = () => {
                         setFormData({ ...formData, password2: e.target.value })
                       }
                       size="md"
-                      h="12"
+                      h="10"
                       pr="12"
                       w="full"
                     />
@@ -331,10 +331,10 @@ const SignupForm = () => {
 
                 <Button
                   type="submit"
-                  colorScheme="purple"
+                  colorPalette="purple"
                   size="lg"
                   w="full"
-                  h="12"
+                  h="10"
                   loading={isLoading}
                   loadingText="Creating account..."
                 >
@@ -343,7 +343,7 @@ const SignupForm = () => {
               </VStack>
             </form>
 
-            <Text fontSize="lg" textAlign="center" color="gray.500">
+            <Text fontSize="sm" textAlign="center" color="gray.500">
               or
             </Text>
 

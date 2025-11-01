@@ -180,7 +180,7 @@ const LoginForm = () => {
 
                 <Button
                   type="submit"
-                  colorScheme="purple"
+                  colorPalette="purple"
                   size="lg"
                   w="full"
                   h="12"

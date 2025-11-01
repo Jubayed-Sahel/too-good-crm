@@ -36,7 +36,7 @@ const StatCard = ({ title, value, icon, change, iconBg, iconColor }: StatCardPro
           <Icon as={() => icon} w={{ base: 5, md: 6 }} h={{ base: 5, md: 6 }} color={iconColor} />
         </Flex>
         <Badge
-          colorScheme={isPositive ? 'green' : 'red'}
+          colorPalette={isPositive ? 'green' : 'red'}
           fontSize="sm"
           px={3}
           py={1}

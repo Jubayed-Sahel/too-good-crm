@@ -1,0 +1,24 @@
+{
+	"servers": {
+		"chakra-ui": {
+			"command": "npx",
+			"args": [
+				"-y",
+				"@chakra-ui/react-mcp@2.1.0"
+			],
+			"env": {
+				"CHAKRA_PRO_API_KEY": "your-api-key-here"
+			},
+			"type": "stdio"
+		},
+		"my-mcp-server-542c2af5": {
+			"type": "stdio",
+			"command": "npx",
+			"args": [
+				"-y",
+				"@chakra-ui/react-mcp@2.1.0"
+			]
+		}
+	},
+	"inputs": []
+}

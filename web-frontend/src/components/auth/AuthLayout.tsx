@@ -51,11 +51,18 @@ const AuthLayout = ({ children }: AuthLayoutProps) => {
           flex="1"
           align="center"
           justify="center"
-          p={{ base: 6, md: 8 }}
+          p={{ base: 4, md: 6 }}
           overflowY="auto"
           maxH="100vh"
+          css={{
+            '&::-webkit-scrollbar': {
+              display: 'none'
+            },
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none'
+          }}
         >
-          <Container maxW="md" w="full">
+          <Container maxW="md" w="full" py={{ base: 4, md: 6 }}>
             {children}
           </Container>
         </Flex>
