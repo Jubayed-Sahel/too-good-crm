@@ -1,0 +1,446 @@
++-------------------+
+|      users        |
+|-------------------|
+| id (PK)           |
+| email             |
+| password_hash     |
+| first_name        |
+| last_name         |
+| is_verified       |
+| is_active         |
+| last_login        |
+| created_at        |
+| updated_at        |
++-------------------+
+
+       |
+       | 1-to-many
+       v
+
++--------------------------+
+|     refresh_tokens       |
+|--------------------------|
+| id (PK)                  |
+| user_id (FK→users.id)    |
+| token                    |
+| expires_at               |
+| created_at               |
++--------------------------+
+
+       |
+       | 1-to-many
+       v
+
++----------------------------------+
+|    password_reset_tokens         |
+|----------------------------------|
+| id (PK)                          |
+| user_id (FK→users.id)            |
+| token                            |
+| expires_at                       |
+| created_at                       |
++----------------------------------+
+
+       |
+       | 1-to-many
+       v
+
++----------------------------------+
+|   email_verification_tokens      |
+|----------------------------------|
+| id (PK)                          |
+| user_id (FK→users.id)            |
+| token                            |
+| expires_at                       |
+| created_at                       |
++----------------------------------+
+
+------------------------------------------------------
+   ORGANIZATIONS & MEMBERSHIP
+------------------------------------------------------
+
++-------------------+
+|  organizations    |
+|-------------------|
+| id (PK)           |
+| name              |
+| owner_id (FK→users.id) |
+| created_at        |
+| updated_at        |
++-------------------+
+
+       |
+       | many-to-many
+       v
+
++--------------------------+
+|   user_organizations     |
+|--------------------------|
+| id (PK)                  |
+| user_id (FK→users.id)    |
+| organization_id (FK→organizations.id) |
+| joined_at                |
++--------------------------+
+
+------------------------------------------------------
+   BILLING & SUBSCRIPTIONS
+------------------------------------------------------
+
++----------------------------+
+|    subscription_plans      |
+|----------------------------|
+| id (PK)                    |
+| name                       |
+| description                |
+| price                      |
+| billing_cycle              |
+| features                   |
+| created_at                 |
++----------------------------+
+
+       |
+       | 1-to-many
+       v
+
++----------------------------+
+|       subscriptions        |
+|----------------------------|
+| id (PK)                    |
+| organization_id (FK→organizations.id) |
+| plan_id (FK→subscription_plans.id)   |
+| start_date                 |
+| end_date                   |
+| status                     |
+| created_at                 |
++----------------------------+
+
+       |
+       | 1-to-many
+       v
+
++----------------------------+
+|          payments          |
+|----------------------------|
+| id (PK)                    |
+| subscription_id (FK→subscriptions.id) |
+| organization_id (FK→organizations.id) |
+| amount                     |
+| status                     |
+| payment_date               |
+| method                     |
+| created_at                 |
++----------------------------+
+
+       |
+       | 1-to-many
+       v
+
++----------------------------+
+|     payment_line_items     |
+|----------------------------|
+| id (PK)                    |
+| payment_id (FK→payments.id)|
+| description                |
+| quantity                   |
+| unit_price                 |
+| total                      |
+| created_at                 |
++----------------------------+
+
+------------------------------------------------------
+   ROLES & PERMISSIONS (RBAC)
+------------------------------------------------------
+
++-------------------+
+|       roles       |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| name              |
+| description       |
+| created_at        |
++-------------------+
+
+       |
+       | many-to-many
+       v
+
++-------------------+
+|    permissions    |
+|-------------------|
+| id (PK)           |
+| name              |
+| description       |
+| created_at        |
++-------------------+
+
+       |
+       | via role_permissions
+       v
+
++--------------------------+
+|    role_permissions      |
+|--------------------------|
+| id (PK)                  |
+| role_id (FK→roles.id)    |
+| permission_id (FK→permissions.id) |
++--------------------------+
+
+       |
+       | via user_roles
+       v
+
++--------------------------+
+|       user_roles         |
+|--------------------------|
+| id (PK)                  |
+| user_id (FK→users.id)    |
+| role_id (FK→roles.id)    |
+| organization_id (FK→organizations.id) |
+| assigned_at              |
++--------------------------+
+
+------------------------------------------------------
+   EMPLOYEES
+------------------------------------------------------
+
++-------------------+
+|    employees      |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| user_id (FK→users.id) |
+| role_id (FK→roles.id) |
+| manager_id (FK→employees.id) |
+| first_name        |
+| last_name         |
+| email             |
+| phone             |
+| position          |
+| department        |
+| salary            |
+| hire_date         |
+| created_at        |
+| updated_at        |
++-------------------+
+
+------------------------------------------------------
+   VENDORS, CUSTOMERS & LEADS
+------------------------------------------------------
+
++-------------------+
+|     vendors       |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| name              |
+| contact_name      |
+| email             |
+| phone             |
+| address           |
+| city              |
+| country           |
+| created_at        |
+| updated_at        |
++-------------------+
+
+       |
+       | 1-to-many
+       v
+
++-------------------+
+|     customers     |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| vendor_id (FK→vendors.id) |
+| first_name        |
+| last_name         |
+| email             |
+| phone             |
+| address           |
+| city              |
+| country           |
+| created_at        |
+| updated_at        |
++-------------------+
+
+       |
+       | 1-to-many
+       v
+
++-------------------+
+|       leads       |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| employee_id (FK→employees.id) |
+| customer_id (FK→customers.id) |
+| first_name        |
+| last_name         |
+| email             |
+| phone             |
+| source            |
+| status            |
+| created_at        |
+| updated_at        |
++-------------------+
+
+------------------------------------------------------
+   ACCOUNTS & DEALS
+------------------------------------------------------
+
++-------------------+
+|     accounts      |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| vendor_id (FK→vendors.id) |
+| company_name      |
+| industry          |
+| website           |
+| phone             |
+| address           |
+| employee_count    |
+| created_at        |
+| updated_at        |
++-------------------+
+
+       |
+       | 1-to-many
+       v
+
++-------------------+
+|       deals       |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| pipeline_id (FK→pipelines.id) |
+| pipeline_stage_id (FK→pipeline_stages.id) |
+| lead_id (FK→leads.id) |
+| customer_id (FK→customers.id) |
+| account_id (FK→accounts.id) |
+| employee_id (FK→employees.id) |
+| name              |
+| amount            |
+| stage             |
+| probability       |
+| close_date        |
+| created_at        |
+| updated_at        |
++-------------------+
+
+------------------------------------------------------
+   PIPELINES
+------------------------------------------------------
+
++-------------------+
+|     pipelines     |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| name              |
+| description       |
+| created_at        |
+| updated_at        |
++-------------------+
+
+       |
+       | 1-to-many
+       v
+
++-------------------+
+|  pipeline_stages  |
+|-------------------|
+| id (PK)           |
+| pipeline_id (FK→pipelines.id) |
+| name              |
+| order_index       |
+| probability       |
+| created_at        |
+| updated_at        |
++-------------------+
+
+------------------------------------------------------
+   ORDERS & PRODUCTS
+------------------------------------------------------
+
++-------------------+
+|      orders       |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| customer_id (FK→customers.id) |
+| account_id (FK→accounts.id) |
+| deal_id (FK→deals.id) |
+| order_date        |
+| total_amount      |
+| status            |
+| created_at        |
+| updated_at        |
++-------------------+
+
+       |
+       | 1-to-many
+       v
+
++-------------------+
+|  order_details    |
+|-------------------|
+| id (PK)           |
+| order_id (FK→orders.id) |
+| product_id (FK→products.id) |
+| quantity          |
+| unit_price        |
+| subtotal          |
+| created_at        |
++-------------------+
+
+       |
+       | many-to-many (via order_details)
+       v
+
++-------------------+
+|     products      |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| vendor_id (FK→vendors.id) |
+| name              |
+| description       |
+| category          |
+| price             |
+| stock_quantity    |
+| created_at        |
+| updated_at        |
++-------------------+
+
+------------------------------------------------------
+   ACTIVITIES & AUDIT LOGS
+------------------------------------------------------
+
++-------------------+
+|    activities     |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| employee_id (FK→employees.id) |
+| related_to_id     |
+| related_to_type   |
+| type              |
+| description       |
+| date              |
+| duration          |
+| created_at        |
++-------------------+
+
++-------------------+
+|    audit_logs     |
+|-------------------|
+| id (PK)           |
+| organization_id(FK→organizations.id)|
+| user_id (FK→users.id) |
+| action            |
+| details           |
+| created_at        |
++-------------------+
