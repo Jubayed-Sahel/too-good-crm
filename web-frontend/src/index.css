@@ -50,3 +50,24 @@ body {
 .animation-delay-4000 {
   animation-delay: 4s;
 }
+
+/* Custom select styling for settings pages */
+.chakra-select {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #E2E8F0;
+  font-size: 14px;
+  width: 100%;
+  background-color: white;
+  transition: all 0.2s;
+}
+
+.chakra-select:focus {
+  outline: none;
+  border-color: #3182CE;
+  box-shadow: 0 0 0 1px #3182CE;
+}
+
+.chakra-select:hover {
+  border-color: #CBD5E0;
+}
