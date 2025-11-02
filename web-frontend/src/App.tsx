@@ -12,6 +12,8 @@ import { LeadsPage } from './pages/LeadsPage'
 import EditLeadPage from './pages/EditLeadPage'
 import LeadDetailPage from './pages/LeadDetailPage'
 import EditCustomerPage from './pages/EditCustomerPage'
+import ActivitiesPage from './pages/ActivitiesPage'
+import ActivityDetailPage from './pages/ActivityDetailPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
 import './App.css'
@@ -34,6 +36,8 @@ function App() {
         <Route path="/leads" element={<LeadsPage />} />
         <Route path="/leads/:id" element={<LeadDetailPage />} />
         <Route path="/leads/:id/edit" element={<EditLeadPage />} />
+        <Route path="/activities" element={<ActivitiesPage />} />
+        <Route path="/activities/:id" element={<ActivityDetailPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
