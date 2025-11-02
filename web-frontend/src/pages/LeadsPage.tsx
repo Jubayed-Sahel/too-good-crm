@@ -82,6 +82,10 @@ export const LeadsPage = () => {
     navigate(`/leads/${lead.id}/edit`);
   };
 
+  const handleViewLead = (lead: Lead) => {
+    navigate(`/leads/${lead.id}`);
+  };
+
   const handleClearFilters = () => {
     setFilters({});
   };
@@ -143,6 +147,7 @@ export const LeadsPage = () => {
               <LeadsTable
                 leads={leads}
                 isLoading={leadsLoading}
+                onView={handleViewLead}
                 onEdit={handleEditLead}
                 onDelete={handleDeleteLead}
                 onConvert={handleConvertLead}

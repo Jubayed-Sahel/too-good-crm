@@ -78,8 +78,7 @@ const CustomersPage = () => {
 
   const handleEdit = (customer: any) => {
     console.log('Edit customer:', customer);
-    // TODO: Implement edit functionality
-    alert(`Edit customer: ${customer.name}`);
+    navigate(`/customers/${customer.id}/edit`);
   };
 
   const handleDelete = (customer: any) => {
