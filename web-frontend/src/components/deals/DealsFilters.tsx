@@ -87,7 +87,7 @@ const DealsFilters = ({
         {/* Right side - Action Buttons */}
         <HStack gap={2}>
           <Button
-            colorPalette="blue"
+            colorPalette="purple"
             h="40px"
             onClick={onAddDeal}
             w={{ base: '100%', md: 'auto' }}

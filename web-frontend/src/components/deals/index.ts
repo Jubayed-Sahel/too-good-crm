@@ -1,4 +1,5 @@
 export { default as DealsTable } from './DealsTable';
 export { default as DealsFilters } from './DealsFilters';
 export { default as DealsStats } from './DealsStats';
+export { default as CreateDealDialog } from './CreateDealDialog';
 export type { Deal } from './DealsTable';

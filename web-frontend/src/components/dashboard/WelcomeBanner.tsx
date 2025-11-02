@@ -62,6 +62,7 @@ const WelcomeBanner = () => {
             colorPalette="whiteAlpha"
             variant="outline"
             size="md"
+            color="white"
             _hover={{
               bg: 'whiteAlpha.200',
             }}
