@@ -37,7 +37,7 @@ const StatsGrid = ({ stats }: StatsGridProps) => {
   ];
 
   return (
-    <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
+    <SimpleGrid columns={{ base: 1, md: 3 }} gap={5}>
       {statsData.map((stat, index) => (
         <StatCard key={index} {...stat} />
       ))}
