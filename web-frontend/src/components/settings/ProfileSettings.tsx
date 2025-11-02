@@ -175,8 +175,15 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
               <Field label="First Name" required>
-                <HStack>
-                  <Box color="gray.400" pl={3}>
+                <Box position="relative">
+                  <Box
+                    position="absolute"
+                    left="12px"
+                    top="50%"
+                    transform="translateY(-50%)"
+                    pointerEvents="none"
+                    color="gray.400"
+                  >
                     <FiUser size={16} />
                   </Box>
                   <Input
@@ -184,9 +191,10 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
                     value={formData.firstName}
                     onChange={handleChange}
                     size="md"
-                    pl={2}
+                    pl="40px"
+                    borderRadius="lg"
                   />
-                </HStack>
+                </Box>
               </Field>
 
               <Field label="Last Name" required>
@@ -195,30 +203,46 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
                   value={formData.lastName}
                   onChange={handleChange}
                   size="md"
+                  borderRadius="lg"
                 />
               </Field>
             </Grid>
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
               <Field label="Email" helperText="Email cannot be changed">
-                <HStack>
-                  <Box color="gray.400" pl={3}>
+                <Box position="relative">
+                  <Box
+                    position="absolute"
+                    left="12px"
+                    top="50%"
+                    transform="translateY(-50%)"
+                    pointerEvents="none"
+                    color="gray.400"
+                  >
                     <FiMail size={16} />
                   </Box>
                   <Input
                     type="email"
                     value={profile.email}
                     size="md"
-                    pl={2}
+                    pl="40px"
                     disabled
                     bg="gray.50"
+                    borderRadius="lg"
                   />
-                </HStack>
+                </Box>
               </Field>
 
               <Field label="Phone">
-                <HStack>
-                  <Box color="gray.400" pl={3}>
+                <Box position="relative">
+                  <Box
+                    position="absolute"
+                    left="12px"
+                    top="50%"
+                    transform="translateY(-50%)"
+                    pointerEvents="none"
+                    color="gray.400"
+                  >
                     <FiPhone size={16} />
                   </Box>
                   <Input
@@ -226,16 +250,24 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
                     value={formData.phone}
                     onChange={handleChange}
                     size="md"
-                    pl={2}
+                    pl="40px"
+                    borderRadius="lg"
                   />
-                </HStack>
+                </Box>
               </Field>
             </Grid>
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
               <Field label="Job Title">
-                <HStack>
-                  <Box color="gray.400" pl={3}>
+                <Box position="relative">
+                  <Box
+                    position="absolute"
+                    left="12px"
+                    top="50%"
+                    transform="translateY(-50%)"
+                    pointerEvents="none"
+                    color="gray.400"
+                  >
                     <FiBriefcase size={16} />
                   </Box>
                   <Input
@@ -243,9 +275,10 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
                     value={formData.title}
                     onChange={handleChange}
                     size="md"
-                    pl={2}
+                    pl="40px"
+                    borderRadius="lg"
                   />
-                </HStack>
+                </Box>
               </Field>
 
               <Field label="Department">
@@ -254,6 +287,7 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
                   value={formData.department}
                   onChange={handleChange}
                   size="md"
+                  borderRadius="lg"
                 />
               </Field>
             </Grid>
@@ -266,6 +300,7 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
                 size="md"
                 rows={3}
                 placeholder="Tell us about yourself..."
+                borderRadius="lg"
               />
             </Field>
 
@@ -275,8 +310,15 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
               <Field label="Location">
-                <HStack>
-                  <Box color="gray.400" pl={3}>
+                <Box position="relative">
+                  <Box
+                    position="absolute"
+                    left="12px"
+                    top="50%"
+                    transform="translateY(-50%)"
+                    pointerEvents="none"
+                    color="gray.400"
+                  >
                     <FiMapPin size={16} />
                   </Box>
                   <Input
@@ -284,10 +326,11 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
                     value={formData.location}
                     onChange={handleChange}
                     size="md"
-                    pl={2}
+                    pl="40px"
                     placeholder="City, State"
+                    borderRadius="lg"
                   />
-                </HStack>
+                </Box>
               </Field>
 
               <Field label="Timezone">

@@ -56,18 +56,13 @@ const OrganizationSettings = () => {
             </HStack>
 
             <Field label="Organization Name" required>
-              <HStack>
-                <Box color="gray.400" pl={3}>
-                  <FiMail size={16} />
-                </Box>
-                <Input
-                  name="organizationName"
-                  value={formData.organizationName}
-                  onChange={handleChange}
-                  size="md"
-                  pl={2}
-                />
-              </HStack>
+              <Input
+                name="organizationName"
+                value={formData.organizationName}
+                onChange={handleChange}
+                size="md"
+                borderRadius="lg"
+              />
             </Field>
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
@@ -109,8 +104,15 @@ const OrganizationSettings = () => {
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
               <Field label="Website">
-                <HStack>
-                  <Box color="gray.400" pl={3}>
+                <Box position="relative">
+                  <Box
+                    position="absolute"
+                    left="12px"
+                    top="50%"
+                    transform="translateY(-50%)"
+                    pointerEvents="none"
+                    color="gray.400"
+                  >
                     <FiGlobe size={16} />
                   </Box>
                   <Input
@@ -118,14 +120,22 @@ const OrganizationSettings = () => {
                     value={formData.website}
                     onChange={handleChange}
                     size="md"
-                    pl={2}
+                    pl="40px"
+                    borderRadius="lg"
                   />
-                </HStack>
+                </Box>
               </Field>
 
               <Field label="Email">
-                <HStack>
-                  <Box color="gray.400" pl={3}>
+                <Box position="relative">
+                  <Box
+                    position="absolute"
+                    left="12px"
+                    top="50%"
+                    transform="translateY(-50%)"
+                    pointerEvents="none"
+                    color="gray.400"
+                  >
                     <FiMail size={16} />
                   </Box>
                   <Input
@@ -134,15 +144,23 @@ const OrganizationSettings = () => {
                     value={formData.email}
                     onChange={handleChange}
                     size="md"
-                    pl={2}
+                    pl="40px"
+                    borderRadius="lg"
                   />
-                </HStack>
+                </Box>
               </Field>
             </Grid>
 
             <Field label="Phone">
-              <HStack>
-                <Box color="gray.400" pl={3}>
+              <Box position="relative">
+                <Box
+                  position="absolute"
+                  left="12px"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  pointerEvents="none"
+                  color="gray.400"
+                >
                   <FiPhone size={16} />
                 </Box>
                 <Input
@@ -150,9 +168,10 @@ const OrganizationSettings = () => {
                   value={formData.phone}
                   onChange={handleChange}
                   size="md"
-                  pl={2}
+                  pl="40px"
+                  borderRadius="lg"
                 />
-              </HStack>
+              </Box>
             </Field>
 
             <Text fontSize="sm" fontWeight="semibold" color="gray.700" pt={2}>
@@ -165,6 +184,7 @@ const OrganizationSettings = () => {
                 value={formData.address}
                 onChange={handleChange}
                 size="md"
+                borderRadius="lg"
               />
             </Field>
 
@@ -175,6 +195,7 @@ const OrganizationSettings = () => {
                   value={formData.city}
                   onChange={handleChange}
                   size="md"
+                  borderRadius="lg"
                 />
               </Field>
 
@@ -184,6 +205,7 @@ const OrganizationSettings = () => {
                   value={formData.state}
                   onChange={handleChange}
                   size="md"
+                  borderRadius="lg"
                 />
               </Field>
             </Grid>
@@ -195,6 +217,7 @@ const OrganizationSettings = () => {
                   value={formData.zipCode}
                   onChange={handleChange}
                   size="md"
+                  borderRadius="lg"
                 />
               </Field>
 
@@ -204,6 +227,7 @@ const OrganizationSettings = () => {
                   value={formData.country}
                   onChange={handleChange}
                   size="md"
+                  borderRadius="lg"
                 />
               </Field>
             </Grid>

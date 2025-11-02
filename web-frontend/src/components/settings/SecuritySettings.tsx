@@ -61,6 +61,7 @@ const SecuritySettings = () => {
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 size="md"
+                borderRadius="lg"
               />
             </Field>
 
@@ -71,6 +72,7 @@ const SecuritySettings = () => {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 size="md"
+                borderRadius="lg"
               />
             </Field>
 
@@ -81,6 +83,7 @@ const SecuritySettings = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 size="md"
+                borderRadius="lg"
               />
             </Field>
 
