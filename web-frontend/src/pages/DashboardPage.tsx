@@ -1,4 +1,4 @@
-import { VStack, Spinner, Box, Text } from '@chakra-ui/react';
+import { VStack, Spinner, Box, Text, Heading, Container } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
   WelcomeBanner,
@@ -13,14 +13,52 @@ const DashboardPage = () => {
   if (error) {
     return (
       <DashboardLayout title="Dashboard">
-        <Box textAlign="center" py={12}>
-          <Text color="red.600" fontSize="lg" mb={2}>
-            Failed to load dashboard data
-          </Text>
-          <Text color="gray.500" fontSize="sm">
-            {error.message || 'Please try again later'}
-          </Text>
-        </Box>
+        <Container maxW="md">
+          <Box 
+            textAlign="center" 
+            py={20}
+            px={6}
+            bg="white"
+            borderRadius="xl"
+            boxShadow="sm"
+            borderWidth="1px"
+            borderColor="red.200"
+          >
+            <Box
+              w={16}
+              h={16}
+              bg="red.50"
+              borderRadius="full"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              mx="auto"
+              mb={4}
+            >
+              <Text fontSize="3xl">⚠️</Text>
+            </Box>
+            <Heading size="md" color="red.600" mb={3}>
+              Failed to load dashboard data
+            </Heading>
+            <Text color="gray.600" fontSize="sm" mb={6}>
+              {error.message || 'Please try again later or contact support if the problem persists'}
+            </Text>
+            <Box
+              as="button"
+              px={6}
+              py={2}
+              bg="red.500"
+              color="white"
+              borderRadius="lg"
+              fontWeight="medium"
+              fontSize="sm"
+              _hover={{ bg: 'red.600' }}
+              onClick={() => window.location.reload()}
+            >
+              Reload Page
+            </Box>
+          </Box>
+        </Container>
       </DashboardLayout>
     );
   }
@@ -30,8 +68,21 @@ const DashboardPage = () => {
       <VStack gap={6} align="stretch">
         <WelcomeBanner />
         {isLoading ? (
-          <Box display="flex" justifyContent="center" py={12}>
-            <Spinner size="xl" color="purple.500" />
+          <Box 
+            display="flex" 
+            flexDirection="column"
+            alignItems="center"
+            justifyContent="center"
+            py={20}
+            gap={4}
+          >
+            <Spinner 
+              size="xl" 
+              color="purple.500"
+            />
+            <Text color="gray.600" fontSize="sm">
+              Loading your dashboard...
+            </Text>
           </Box>
         ) : (
           <>

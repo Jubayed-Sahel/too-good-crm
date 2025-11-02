@@ -22,20 +22,22 @@ const SimpleProgress = ({ value, colorPalette }: { value: number; colorPalette: 
   };
   
   return (
-    <Box
-      h="6px"
-      bg="gray.100"
-      borderRadius="full"
-      overflow="hidden"
-      position="relative"
-    >
+    <Box w="full">
       <Box
-        h="100%"
-        w={`${value}%`}
-        bg={colors[colorPalette] || colors.green}
+        h="6px"
+        bg="gray.100"
         borderRadius="full"
-        transition="width 0.3s"
-      />
+        overflow="hidden"
+        position="relative"
+      >
+        <Box
+          h="100%"
+          w={`${value}%`}
+          bg={colors[colorPalette] || colors.green}
+          borderRadius="full"
+          transition="width 0.3s"
+        />
+      </Box>
     </Box>
   );
 };
@@ -151,11 +153,16 @@ const DealsTable = ({ deals, onEdit, onDelete, onView }: DealsTableProps) => {
         <Card
           key={deal.id}
           variant="elevated"
+          borderWidth="1px"
+          borderColor="gray.200"
+          boxShadow="sm"
           _hover={{
-            shadow: 'md',
+            shadow: 'lg',
             transform: 'translateY(-2px)',
-            transition: 'all 0.2s',
+            borderColor: 'purple.200',
           }}
+          transition="all 0.2s ease-in-out"
+          cursor="pointer"
         >
           {/* Desktop Layout */}
           <Box display={{ base: 'none', lg: 'block' }}>

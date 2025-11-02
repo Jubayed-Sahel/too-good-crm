@@ -54,13 +54,6 @@ const AuthLayout = ({ children }: AuthLayoutProps) => {
           p={{ base: 4, md: 6 }}
           overflowY="auto"
           maxH="100vh"
-          css={{
-            '&::-webkit-scrollbar': {
-              display: 'none'
-            },
-            msOverflowStyle: 'none',
-            scrollbarWidth: 'none'
-          }}
         >
           <Container maxW="md" w="full" py={{ base: 4, md: 6 }}>
             {children}
