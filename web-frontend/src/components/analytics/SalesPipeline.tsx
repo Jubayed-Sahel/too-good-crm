@@ -1,4 +1,4 @@
-import { Box, Text, VStack, HStack, Flex } from '@chakra-ui/react';
+import { Box, Text, VStack, HStack, Flex, Heading } from '@chakra-ui/react';
 import { Card } from '../common';
 import { formatCurrency } from '@/utils';
 
@@ -26,13 +26,25 @@ const SalesPipeline = ({
     <Card variant="elevated">
       <VStack align="stretch" gap={4}>
         <Box>
-          <Text fontSize="sm" color="gray.600" fontWeight="medium" mb={1}>
+          <Text 
+            fontSize="sm" 
+            fontWeight="semibold"
+            color="gray.600"
+            textTransform="uppercase"
+            letterSpacing="wider"
+            mb={2}
+          >
             Sales Pipeline
           </Text>
-          <Text fontSize="2xl" fontWeight="bold" color="gray.900">
+          <Heading
+            size={{ base: '2xl', md: '3xl' }}
+            fontWeight="bold"
+            color="gray.900"
+            lineHeight="1.1"
+          >
             {formatCurrency(totalValue)}
-          </Text>
-          <Text fontSize="xs" color="gray.500" mt={1}>
+          </Heading>
+          <Text fontSize="sm" color="gray.500" mt={2}>
             Total Pipeline Value
           </Text>
         </Box>
@@ -50,14 +62,14 @@ const SalesPipeline = ({
                       borderRadius="full"
                       bg={stage.color}
                     />
-                    <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                    <Text fontSize="sm" fontWeight="semibold" color="gray.900">
                       {stage.name}
                     </Text>
-                    <Text fontSize="xs" color="gray.500">
+                    <Text fontSize="xs" color="gray.500" fontWeight="medium">
                       ({stage.count})
                     </Text>
                   </HStack>
-                  <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+                  <Text fontSize="sm" fontWeight="bold" color="gray.900">
                     {formatCurrency(stage.value)}
                   </Text>
                 </HStack>
@@ -76,7 +88,7 @@ const SalesPipeline = ({
                       transition="width 0.3s"
                     />
                   </Box>
-                  <Text fontSize="xs" color="gray.600" minW="40px" textAlign="right">
+                  <Text fontSize="xs" color="gray.600" minW="40px" textAlign="right" fontWeight="semibold">
                     {percentage.toFixed(1)}%
                   </Text>
                 </Flex>

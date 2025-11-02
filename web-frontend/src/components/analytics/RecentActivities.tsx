@@ -48,7 +48,13 @@ const RecentActivities = ({
   return (
     <Card variant="elevated">
       <VStack align="stretch" gap={4}>
-        <Text fontSize="sm" color="gray.600" fontWeight="medium">
+        <Text 
+          fontSize="sm" 
+          fontWeight="semibold"
+          color="gray.600"
+          textTransform="uppercase"
+          letterSpacing="wider"
+        >
           Recent Activities
         </Text>
 
@@ -78,11 +84,11 @@ const RecentActivities = ({
                 </Box>
 
                 <VStack align="stretch" gap={0.5} flex="1">
-                  <Text fontSize="sm" color="gray.900" fontWeight="medium">
+                  <Text fontSize="sm" color="gray.900" fontWeight="semibold">
                     {activity.title}
                   </Text>
                   <HStack gap={2}>
-                    <Text fontSize="xs" color="gray.500">
+                    <Text fontSize="xs" color="gray.500" fontWeight="medium">
                       by {activity.user}
                     </Text>
                     <Text fontSize="xs" color="gray.400">
@@ -97,7 +103,8 @@ const RecentActivities = ({
                 {activity.status && (
                   <Badge
                     colorPalette={activity.status === 'won' ? 'green' : 'gray'}
-                    borderRadius="full"
+                    size="sm"
+                    variant="subtle"
                     px={2}
                     py={0.5}
                     fontSize="xs"
@@ -114,7 +121,14 @@ const RecentActivities = ({
         </VStack>
 
         <Box pt={2} borderTopWidth="1px" borderColor="gray.100">
-          <Text fontSize="xs" color="blue.600" fontWeight="medium" textAlign="center" cursor="pointer" _hover={{ color: 'blue.700' }}>
+          <Text 
+            fontSize="sm" 
+            color="purple.600" 
+            fontWeight="semibold" 
+            textAlign="center" 
+            cursor="pointer" 
+            _hover={{ color: 'purple.700' }}
+          >
             View All Activities
           </Text>
         </Box>

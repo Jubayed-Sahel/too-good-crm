@@ -22,10 +22,17 @@ const ConversionFunnel = ({
     <Card variant="elevated">
       <VStack align="stretch" gap={4}>
         <Box>
-          <Text fontSize="sm" color="gray.600" fontWeight="medium" mb={1}>
+          <Text 
+            fontSize="sm" 
+            fontWeight="semibold"
+            color="gray.600"
+            textTransform="uppercase"
+            letterSpacing="wider"
+            mb={2}
+          >
             Conversion Funnel
           </Text>
-          <Text fontSize="xs" color="gray.500">
+          <Text fontSize="sm" color="gray.500">
             Lead to customer conversion rate: 16%
           </Text>
         </Box>
@@ -39,14 +46,14 @@ const ConversionFunnel = ({
             return (
               <Box key={item.stage}>
                 <HStack justify="space-between" mb={1.5}>
-                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                  <Text fontSize="sm" fontWeight="semibold" color="gray.900">
                     {item.stage}
                   </Text>
                   <HStack gap={2}>
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+                    <Text fontSize="sm" fontWeight="bold" color="gray.900">
                       {item.count}
                     </Text>
-                    <Text fontSize="xs" color="gray.500">
+                    <Text fontSize="xs" color="gray.500" fontWeight="medium">
                       ({item.percentage}%)
                     </Text>
                   </HStack>
