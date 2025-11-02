@@ -1,5 +1,6 @@
-import { Box, Flex, Heading, Text, Icon, Badge } from '@chakra-ui/react';
+import { Box, Heading, Text, Icon, HStack, VStack, Badge } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
+import { FiTrendingUp, FiTrendingDown } from 'react-icons/fi';
 
 interface StatCardProps {
   title: string;
@@ -17,40 +18,88 @@ const StatCard = ({ title, value, icon, change, iconBg, iconColor }: StatCardPro
     <Box
       bg="white"
       borderRadius="xl"
-      boxShadow="md"
-      p={{ base: 4, md: 6 }}
-      border="1px"
-      borderColor="gray.100"
-      _hover={{ boxShadow: 'lg' }}
-      transition="all 0.2s"
+      boxShadow="sm"
+      p={{ base: 5, md: 6 }}
+      borderWidth="1px"
+      borderColor="gray.200"
+      _hover={{ 
+        boxShadow: 'md',
+        transform: 'translateY(-2px)',
+        borderColor: 'gray.300'
+      }}
+      transition="all 0.2s ease-in-out"
+      position="relative"
+      overflow="hidden"
     >
-      <Flex justify="space-between" align="center" mb={4}>
-        <Flex
-          w={{ base: 10, md: 12 }}
-          h={{ base: 10, md: 12 }}
+      {/* Subtle gradient overlay */}
+      <Box
+        position="absolute"
+        top={0}
+        right={0}
+        w="100px"
+        h="100px"
+        bgGradient="linear(to-br, transparent, gray.50)"
+        opacity={0.5}
+        pointerEvents="none"
+      />
+      
+      <HStack justify="space-between" align="start" mb={4} position="relative">
+        <VStack align="start" gap={1} flex={1}>
+          <Text
+            fontSize="xs"
+            fontWeight="semibold"
+            color="gray.600"
+            textTransform="uppercase"
+            letterSpacing="wider"
+          >
+            {title}
+          </Text>
+          <Heading 
+            size={{ base: '2xl', md: '3xl' }} 
+            color="gray.900"
+            lineHeight="1.1"
+            fontWeight="bold"
+          >
+            {value}
+          </Heading>
+        </VStack>
+        
+        <Box
+          p={{ base: 2.5, md: 3 }}
           bg={iconBg}
           borderRadius="lg"
-          align="center"
-          justify="center"
+          boxShadow="sm"
         >
-          <Icon as={() => icon} w={{ base: 5, md: 6 }} h={{ base: 5, md: 6 }} color={iconColor} />
-        </Flex>
+          <Icon 
+            as={() => icon} 
+            w={{ base: 5, md: 6 }} 
+            h={{ base: 5, md: 6 }} 
+            color={iconColor} 
+          />
+        </Box>
+      </HStack>
+
+      <HStack gap={2} align="center">
+        <Icon
+          as={isPositive ? FiTrendingUp : FiTrendingDown}
+          w={3.5}
+          h={3.5}
+          color={isPositive ? 'green.600' : 'red.600'}
+        />
         <Badge
           colorPalette={isPositive ? 'green' : 'red'}
-          fontSize="sm"
-          px={3}
-          py={1}
-          borderRadius="full"
+          size="sm"
+          variant="subtle"
+          fontSize="xs"
+          px={2}
+          py={0.5}
         >
           {change}
         </Badge>
-      </Flex>
-      <Text color="gray.600" fontSize="sm" fontWeight="medium" mb={1}>
-        {title}
-      </Text>
-      <Heading size={{ base: 'lg', md: 'xl' }} color="gray.800">
-        {value}
-      </Heading>
+        <Text fontSize="xs" color="gray.500">
+          vs last month
+        </Text>
+      </HStack>
     </Box>
   );
 };

@@ -1,6 +1,6 @@
-import { Box, Container, Flex, Heading, Button, HStack, Text } from '@chakra-ui/react';
+import { Box, Container, Flex, Heading, Button, HStack, Text, VStack } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { FiLogOut } from 'react-icons/fi';
+import { FiLogOut, FiCalendar } from 'react-icons/fi';
 
 const DashboardHeader = () => {
   const navigate = useNavigate();
@@ -10,10 +10,25 @@ const DashboardHeader = () => {
     navigate('/login');
   };
 
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
   return (
-    <Box bg="white" boxShadow="sm" borderBottom="1px" borderColor="gray.200">
+    <Box 
+      bg="white" 
+      boxShadow="sm" 
+      borderBottomWidth="1px" 
+      borderColor="gray.200"
+      position="sticky"
+      top={0}
+      zIndex={10}
+    >
       <Container maxW="7xl" py={4}>
-        <Flex justify="space-between" align="center">
+        <Flex justify="space-between" align="center" flexWrap="wrap" gap={4}>
           <HStack gap={3}>
             <Box
               w="10"
@@ -23,34 +38,42 @@ const DashboardHeader = () => {
               display="flex"
               alignItems="center"
               justifyContent="center"
-              boxShadow="lg"
+              boxShadow="md"
             >
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </Box>
-            <Box>
+            <VStack align="start" gap={0}>
               <Heading
                 size="md"
                 bgGradient="linear(to-r, purple.600, blue.600)"
                 bgClip="text"
+                fontWeight="bold"
               >
                 LeadGrid
               </Heading>
-              <Text fontSize="xs" color="gray.500">
-                Dashboard
-              </Text>
-            </Box>
+              <HStack gap={1.5} color="gray.500">
+                <FiCalendar size={12} />
+                <Text fontSize="xs">
+                  {currentDate}
+                </Text>
+              </HStack>
+            </VStack>
           </HStack>
 
           <Button
             onClick={handleSignOut}
             variant="ghost"
             colorPalette="gray"
+            size="sm"
+            _hover={{
+              bg: 'gray.100',
+            }}
           >
             <Flex align="center" gap={2}>
               <FiLogOut />
-              <Text>Sign Out</Text>
+              <Text display={{ base: 'none', md: 'block' }}>Sign Out</Text>
             </Flex>
           </Button>
         </Flex>
