@@ -416,3 +416,270 @@ export const getCustomerActivities = (customerId: number) => {
 export const getCustomerNotes = (customerId: number) => {
   return mockNotes[customerId as keyof typeof mockNotes] || [];
 };
+
+// Mock Sales Pipeline Data
+export const mockPipelineDeals: any[] = [
+  // Lead Stage
+  {
+    id: 1,
+    title: 'Enterprise Software License',
+    customer: 'Acme Corporation',
+    customerId: 1,
+    value: 125000,
+    stage: 'lead',
+    probability: 20,
+    expectedCloseDate: '2025-01-15',
+    owner: 'Sales Team',
+    description: 'Potential enterprise software deal for 50+ users',
+    created_at: '2024-10-15T10:00:00Z',
+    lastActivity: '2024-11-01T14:30:00Z',
+  },
+  {
+    id: 2,
+    title: 'Cloud Migration Services',
+    customer: 'Global Solutions Ltd',
+    customerId: 3,
+    value: 85000,
+    stage: 'lead',
+    probability: 15,
+    expectedCloseDate: '2025-02-01',
+    owner: 'Sales Team',
+    description: 'Cloud infrastructure migration project',
+    created_at: '2024-10-20T09:00:00Z',
+    lastActivity: '2024-10-28T16:00:00Z',
+  },
+  {
+    id: 3,
+    title: 'Marketing Automation Platform',
+    customer: 'Digital Dynamics',
+    customerId: 5,
+    value: 45000,
+    stage: 'lead',
+    probability: 25,
+    expectedCloseDate: '2024-12-20',
+    owner: 'Account Manager',
+    description: 'Full marketing automation suite implementation',
+    created_at: '2024-10-25T11:00:00Z',
+    lastActivity: '2024-11-01T10:00:00Z',
+  },
+  
+  // Qualified Stage
+  {
+    id: 4,
+    title: 'AI Integration Package',
+    customer: 'Innovation Labs',
+    customerId: 4,
+    value: 95000,
+    stage: 'qualified',
+    probability: 40,
+    expectedCloseDate: '2024-12-15',
+    owner: 'Solutions Engineer',
+    description: 'Custom AI/ML integration for product suite',
+    created_at: '2024-09-10T14:00:00Z',
+    lastActivity: '2024-10-30T13:45:00Z',
+  },
+  {
+    id: 5,
+    title: 'SaaS Subscription - Annual',
+    customer: 'TechStart Inc',
+    customerId: 2,
+    value: 78000,
+    stage: 'qualified',
+    probability: 50,
+    expectedCloseDate: '2024-12-10',
+    owner: 'Account Manager',
+    description: 'Annual SaaS subscription with premium features',
+    created_at: '2024-09-15T10:30:00Z',
+    lastActivity: '2024-10-29T09:15:00Z',
+  },
+  {
+    id: 6,
+    title: 'E-commerce Platform Setup',
+    customer: 'RetailPro Systems',
+    customerId: 7,
+    value: 120000,
+    stage: 'qualified',
+    probability: 45,
+    expectedCloseDate: '2025-01-05',
+    owner: 'Sales Manager',
+    description: 'Full e-commerce platform with payment integration',
+    created_at: '2024-09-20T15:00:00Z',
+    lastActivity: '2024-10-31T11:20:00Z',
+  },
+  
+  // Proposal Stage
+  {
+    id: 7,
+    title: 'White Label Partnership',
+    customer: 'Cloud Ventures',
+    customerId: 6,
+    value: 250000,
+    stage: 'proposal',
+    probability: 60,
+    expectedCloseDate: '2024-12-05',
+    owner: 'VP Sales',
+    description: 'Strategic white-label partnership agreement',
+    created_at: '2024-08-15T09:00:00Z',
+    lastActivity: '2024-10-29T15:30:00Z',
+  },
+  {
+    id: 8,
+    title: 'Custom Development Project',
+    customer: 'HealthTech Solutions',
+    customerId: 8,
+    value: 175000,
+    stage: 'proposal',
+    probability: 55,
+    expectedCloseDate: '2024-12-20',
+    owner: 'Solutions Engineer',
+    description: 'HIPAA-compliant custom software development',
+    created_at: '2024-08-20T10:00:00Z',
+    lastActivity: '2024-10-27T14:00:00Z',
+  },
+  {
+    id: 9,
+    title: 'Training & Onboarding Package',
+    customer: 'Digital Dynamics',
+    customerId: 5,
+    value: 35000,
+    stage: 'proposal',
+    probability: 65,
+    expectedCloseDate: '2024-11-30',
+    owner: 'Customer Success',
+    description: 'Comprehensive training program for new features',
+    created_at: '2024-09-01T13:00:00Z',
+    lastActivity: '2024-10-30T10:45:00Z',
+  },
+  
+  // Negotiation Stage
+  {
+    id: 10,
+    title: 'Multi-Location Expansion',
+    customer: 'RetailPro Systems',
+    customerId: 7,
+    value: 310000,
+    stage: 'negotiation',
+    probability: 75,
+    expectedCloseDate: '2024-11-25',
+    owner: 'Sales Manager',
+    description: '10-location rollout with enterprise support',
+    created_at: '2024-07-10T11:00:00Z',
+    lastActivity: '2024-11-01T16:00:00Z',
+  },
+  {
+    id: 11,
+    title: 'API Integration Services',
+    customer: 'TechStart Inc',
+    customerId: 2,
+    value: 62000,
+    stage: 'negotiation',
+    probability: 80,
+    expectedCloseDate: '2024-11-20',
+    owner: 'Technical Lead',
+    description: 'Custom API development and integration',
+    created_at: '2024-07-25T14:30:00Z',
+    lastActivity: '2024-11-01T11:15:00Z',
+  },
+  
+  // Closed Won
+  {
+    id: 12,
+    title: 'Enterprise Package Upgrade',
+    customer: 'Acme Corporation',
+    customerId: 1,
+    value: 125000,
+    stage: 'closed-won',
+    probability: 100,
+    expectedCloseDate: '2024-10-15',
+    actualCloseDate: '2024-10-15',
+    owner: 'Account Manager',
+    description: 'Upgraded to enterprise package with additional features',
+    created_at: '2024-06-01T10:00:00Z',
+    lastActivity: '2024-10-15T16:45:00Z',
+  },
+  {
+    id: 13,
+    title: 'Consulting Services Q3',
+    customer: 'Cloud Ventures',
+    customerId: 6,
+    value: 95000,
+    stage: 'closed-won',
+    probability: 100,
+    expectedCloseDate: '2024-09-30',
+    actualCloseDate: '2024-09-28',
+    owner: 'Consultant',
+    description: 'Q3 consulting and advisory services',
+    created_at: '2024-07-01T09:00:00Z',
+    lastActivity: '2024-09-28T17:00:00Z',
+  },
+  {
+    id: 14,
+    title: 'Monthly Subscription',
+    customer: 'Digital Dynamics',
+    customerId: 5,
+    value: 9500,
+    stage: 'closed-won',
+    probability: 100,
+    expectedCloseDate: '2024-10-01',
+    actualCloseDate: '2024-10-01',
+    owner: 'Account Manager',
+    description: 'Recurring monthly subscription renewed',
+    created_at: '2024-09-01T10:00:00Z',
+    lastActivity: '2024-10-01T09:00:00Z',
+  },
+  
+  // Closed Lost
+  {
+    id: 15,
+    title: 'Basic Plan Subscription',
+    customer: 'Global Solutions Ltd',
+    customerId: 3,
+    value: 25000,
+    stage: 'closed-lost',
+    probability: 0,
+    expectedCloseDate: '2024-09-15',
+    actualCloseDate: '2024-09-20',
+    owner: 'Sales Rep',
+    description: 'Lost to competitor - pricing concerns',
+    created_at: '2024-08-01T11:00:00Z',
+    lastActivity: '2024-09-20T14:00:00Z',
+    lostReason: 'Competitor pricing',
+  },
+];
+
+// Pipeline statistics helper
+export const getPipelineStats = () => {
+  const totalValue = mockPipelineDeals.reduce((sum, deal) => sum + deal.value, 0);
+  const wonValue = mockPipelineDeals
+    .filter(d => d.stage === 'closed-won')
+    .reduce((sum, deal) => sum + deal.value, 0);
+  const pipelineValue = mockPipelineDeals
+    .filter(d => !['closed-won', 'closed-lost'].includes(d.stage))
+    .reduce((sum, deal) => sum + (deal.value * deal.probability / 100), 0);
+  
+  const byStage = {
+    lead: mockPipelineDeals.filter(d => d.stage === 'lead'),
+    qualified: mockPipelineDeals.filter(d => d.stage === 'qualified'),
+    proposal: mockPipelineDeals.filter(d => d.stage === 'proposal'),
+    negotiation: mockPipelineDeals.filter(d => d.stage === 'negotiation'),
+    'closed-won': mockPipelineDeals.filter(d => d.stage === 'closed-won'),
+    'closed-lost': mockPipelineDeals.filter(d => d.stage === 'closed-lost'),
+  };
+
+  return {
+    totalDeals: mockPipelineDeals.length,
+    totalValue,
+    wonValue,
+    pipelineValue,
+    openDeals: mockPipelineDeals.filter(d => !['closed-won', 'closed-lost'].includes(d.stage)).length,
+    wonDeals: byStage['closed-won'].length,
+    lostDeals: byStage['closed-lost'].length,
+    byStage,
+  };
+};
+
+// Get deals by stage for pipeline view
+export const getDealsByStage = (stage: string) => {
+  return mockPipelineDeals.filter(d => d.stage === stage);
+};
+
