@@ -6,13 +6,17 @@ import {
   CustomerFilters,
   CustomerStats,
   CreateCustomerDialog,
+  CustomerDetailModal,
 } from '../components/customers';
 import { useCustomers } from '@/hooks';
+import type { Customer } from '../components/customers';
 
 const CustomersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   // Fetch customers data
   const { customers, isLoading, error } = useCustomers();
@@ -76,12 +80,14 @@ const CustomersPage = () => {
 
   const handleEdit = (customer: any) => {
     console.log('Edit customer:', customer);
+    setIsDetailModalOpen(false);
     // TODO: Implement edit modal
     alert(`Edit customer: ${customer.name}`);
   };
 
   const handleDelete = (customer: any) => {
     console.log('Delete customer:', customer);
+    setIsDetailModalOpen(false);
     // TODO: Implement delete confirmation
     if (confirm(`Are you sure you want to delete ${customer.name}?`)) {
       alert(`Customer ${customer.name} deleted`);
@@ -90,8 +96,8 @@ const CustomersPage = () => {
 
   const handleView = (customer: any) => {
     console.log('View customer:', customer);
-    // TODO: Implement view modal/page
-    alert(`View customer: ${customer.name}`);
+    setSelectedCustomer(customer);
+    setIsDetailModalOpen(true);
   };
 
   const handleAddCustomer = () => {
@@ -121,13 +127,13 @@ const CustomersPage = () => {
 
   return (
     <DashboardLayout title="Customers">
-      <VStack gap={6} align="stretch">
+      <VStack gap={5} align="stretch">
         {/* Page Header */}
         <Box>
-          <Heading size="xl" mb={2}>
+          <Heading size="2xl" mb={2}>
             Customers
           </Heading>
-          <Text color="gray.600">
+          <Text color="gray.600" fontSize="md">
             Manage your customer relationships and track interactions
           </Text>
         </Box>
@@ -168,10 +174,10 @@ const CustomersPage = () => {
                 bg="gray.50"
                 borderRadius="lg"
               >
-                <Heading size="md" color="gray.600" mb={2}>
+                <Heading size="lg" color="gray.600" mb={2}>
                   No customers found
                 </Heading>
-                <Text color="gray.500">
+                <Text color="gray.500" fontSize="md">
                   {searchQuery || statusFilter !== 'all'
                     ? 'Try adjusting your filters'
                     : 'Get started by adding your first customer'}
@@ -187,6 +193,18 @@ const CustomersPage = () => {
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
         onSubmit={handleCreateCustomer}
+      />
+
+      {/* Customer Detail Modal */}
+      <CustomerDetailModal
+        customer={selectedCustomer}
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false);
+          setSelectedCustomer(null);
+        }}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
       />
     </DashboardLayout>
   );

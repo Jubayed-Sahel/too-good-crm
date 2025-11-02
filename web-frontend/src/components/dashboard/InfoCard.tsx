@@ -15,14 +15,14 @@ const InfoCard = ({ title, icon, iconBg, iconColor, children }: InfoCardProps) =
       bg="white"
       borderRadius="xl"
       boxShadow="md"
-      p={{ base: 4, md: 6 }}
+      p={{ base: 4, md: 5 }}
       border="1px"
       borderColor="gray.100"
     >
       <Flex align="center" gap={3} mb={4}>
         <Flex
-          w={{ base: 8, md: 10 }}
-          h={{ base: 8, md: 10 }}
+          w={{ base: 9, md: 10 }}
+          h={{ base: 9, md: 10 }}
           bg={iconBg}
           borderRadius="lg"
           align="center"
@@ -30,11 +30,11 @@ const InfoCard = ({ title, icon, iconBg, iconColor, children }: InfoCardProps) =
         >
           <Icon as={() => icon} w={{ base: 5, md: 6 }} h={{ base: 5, md: 6 }} color={iconColor} />
         </Flex>
-        <Heading size={{ base: 'sm', md: 'md' }} color="gray.800">
+        <Heading size={{ base: 'md', md: 'lg' }} color="gray.800">
           {title}
         </Heading>
       </Flex>
-      <Box color="gray.600" fontSize={{ base: 'sm', md: 'md' }}>
+      <Box color="gray.600" fontSize={{ base: 'md', md: 'md' }}>
         {children}
       </Box>
     </Box>

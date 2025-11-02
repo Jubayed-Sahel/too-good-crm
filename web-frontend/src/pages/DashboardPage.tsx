@@ -65,7 +65,7 @@ const DashboardPage = () => {
 
   return (
     <DashboardLayout title="Dashboard">
-      <VStack gap={6} align="stretch">
+      <VStack gap={5} align="stretch">
         <WelcomeBanner />
         {isLoading ? (
           <Box 
@@ -73,20 +73,20 @@ const DashboardPage = () => {
             flexDirection="column"
             alignItems="center"
             justifyContent="center"
-            py={20}
+            py={16}
             gap={4}
           >
             <Spinner 
               size="xl" 
               color="purple.500"
             />
-            <Text color="gray.600" fontSize="sm">
+            <Text color="gray.600" fontSize="md">
               Loading your dashboard...
             </Text>
           </Box>
         ) : (
           <>
-            <StatsGrid stats={stats} />
+            {stats && <StatsGrid stats={stats} />}
             <InfoCardsGrid />
           </>
         )}

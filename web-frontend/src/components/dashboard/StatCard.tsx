@@ -46,7 +46,7 @@ const StatCard = ({ title, value, icon, change, iconBg, iconColor }: StatCardPro
       <HStack justify="space-between" align="start" mb={4} position="relative">
         <VStack align="start" gap={1} flex={1}>
           <Text
-            fontSize="xs"
+            fontSize="sm"
             fontWeight="semibold"
             color="gray.600"
             textTransform="uppercase"
@@ -55,7 +55,7 @@ const StatCard = ({ title, value, icon, change, iconBg, iconColor }: StatCardPro
             {title}
           </Text>
           <Heading 
-            size={{ base: '2xl', md: '3xl' }} 
+            size={{ base: '3xl', md: '4xl' }} 
             color="gray.900"
             lineHeight="1.1"
             fontWeight="bold"
@@ -65,15 +65,15 @@ const StatCard = ({ title, value, icon, change, iconBg, iconColor }: StatCardPro
         </VStack>
         
         <Box
-          p={{ base: 2.5, md: 3 }}
+          p={{ base: 3, md: 3.5 }}
           bg={iconBg}
           borderRadius="lg"
           boxShadow="sm"
         >
           <Icon 
             as={() => icon} 
-            w={{ base: 5, md: 6 }} 
-            h={{ base: 5, md: 6 }} 
+            w={{ base: 6, md: 6 }} 
+            h={{ base: 6, md: 6 }} 
             color={iconColor} 
           />
         </Box>
@@ -82,21 +82,21 @@ const StatCard = ({ title, value, icon, change, iconBg, iconColor }: StatCardPro
       <HStack gap={2} align="center">
         <Icon
           as={isPositive ? FiTrendingUp : FiTrendingDown}
-          w={3.5}
-          h={3.5}
+          w={4}
+          h={4}
           color={isPositive ? 'green.600' : 'red.600'}
         />
         <Badge
           colorPalette={isPositive ? 'green' : 'red'}
           size="sm"
           variant="subtle"
-          fontSize="xs"
+          fontSize="sm"
           px={2}
           py={0.5}
         >
           {change}
         </Badge>
-        <Text fontSize="xs" color="gray.500">
+        <Text fontSize="sm" color="gray.500">
           vs last month
         </Text>
       </HStack>

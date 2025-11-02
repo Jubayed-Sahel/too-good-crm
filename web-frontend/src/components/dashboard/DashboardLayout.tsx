@@ -1,4 +1,4 @@
-import { Box, Container } from '@chakra-ui/react';
+import { Box } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import Sidebar from './Sidebar';
@@ -23,14 +23,16 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
         <TopBar onMenuClick={() => setIsSidebarOpen(true)} title={title} />
 
         {/* Page Content */}
-        <Container maxW="7xl" py={{ base: 6, md: 8 }}>
+        <Box px={{ base: 4, md: 5, lg: 6 }} py={{ base: 4, md: 5 }} maxW="100%">
           <Box 
             bg="transparent"
-            minH="calc(100vh - 200px)"
+            minH="calc(100vh - 150px)"
+            maxW="1600px"
+            mx="auto"
           >
             {children}
           </Box>
-        </Container>
+        </Box>
       </Box>
     </Box>
   );
