@@ -1,17 +1,18 @@
 import {
-  Box,
+  Table,
   Badge,
   HStack,
+  VStack,
   Text,
   IconButton,
-  Flex,
-  Grid,
-  VStack,
-  Heading,
-  Stack,
+  Box,
+  Button,
 } from '@chakra-ui/react';
+import { Checkbox } from '../ui/checkbox';
 import { FiEdit, FiTrash2, FiEye, FiUser } from 'react-icons/fi';
 import { Card } from '../common';
+import { useState } from 'react';
+import { formatCurrency, formatDate } from '@/utils';
 
 // Simple progress bar component
 const SimpleProgress = ({ value, colorPalette }: { value: number; colorPalette: string }) => {
@@ -59,9 +60,43 @@ interface DealsTableProps {
   onEdit: (deal: Deal) => void;
   onDelete: (deal: Deal) => void;
   onView: (deal: Deal) => void;
+  onBulkDelete?: (dealIds: string[]) => void;
+  onBulkExport?: (dealIds: string[]) => void;
 }
 
-const DealsTable = ({ deals, onEdit, onDelete, onView }: DealsTableProps) => {
+const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExport }: DealsTableProps) => {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(deals.map(d => d.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds([...selectedIds, id]);
+    } else {
+      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} deal(s)?`)) {
+      onBulkDelete?.(selectedIds);
+      setSelectedIds([]);
+    }
+  };
+
+  const handleBulkExport = () => {
+    if (selectedIds.length === 0) return;
+    onBulkExport?.(selectedIds);
+  };
+
+  const isAllSelected = selectedIds.length === deals.length && deals.length > 0;
   const getStageColor = (stage: string) => {
     switch (stage) {
       case 'lead':
@@ -88,188 +123,95 @@ const DealsTable = ({ deals, onEdit, onDelete, onView }: DealsTableProps) => {
       .join(' ');
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(date);
-  };
+  if (deals.length === 0) {
+    return (
+      <Card p={6}>
+        <VStack gap={2}>
+          <Text fontSize="lg" fontWeight="semibold" color="gray.700">No deals found</Text>
+          <Text color="gray.600">Try adjusting your filters or add a new deal.</Text>
+        </VStack>
+      </Card>
+    );
+  }
 
   return (
-    <Stack gap={3}>
-      {/* Table Header - Desktop Only */}
-      <Box
-        display={{ base: 'none', lg: 'block' }}
-        bg="gray.50"
-        borderRadius="lg"
-        px={6}
-        py={3}
-      >
-        <Grid
-          templateColumns="2fr 1.5fr 1fr 1.5fr 1fr 1.5fr 1fr 80px"
-          gap={4}
-          alignItems="center"
-        >
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Deal Title
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Customer
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase" textAlign="right">
-            Value
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Stage
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase" textAlign="center">
-            Probability
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Expected Close
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Owner
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Actions
-          </Text>
-        </Grid>
-      </Box>
-
-      {/* Deal Cards/Rows */}
-      {deals.map((deal) => (
-        <Card
-          key={deal.id}
-          variant="elevated"
-          borderWidth="1px"
-          borderColor="gray.200"
-          boxShadow="sm"
-          _hover={{
-            shadow: 'lg',
-            transform: 'translateY(-2px)',
-            borderColor: 'purple.200',
-          }}
-          transition="all 0.2s ease-in-out"
-          cursor="pointer"
-        >
-          {/* Desktop Layout */}
-          <Box display={{ base: 'none', lg: 'block' }}>
-            <Grid
-              templateColumns="2fr 1.5fr 1fr 1.5fr 1fr 1.5fr 1fr 80px"
-              gap={4}
-              alignItems="center"
-            >
-              {/* Deal Title */}
-              <Box>
+    <Card p={0} overflow="hidden">
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <Box bg="purple.50" borderBottomWidth="1px" borderColor="purple.200" px={4} py={3}>
+          <HStack justify="space-between">
+            <Text fontSize="sm" fontWeight="medium" color="purple.900">
+              {selectedIds.length} deal(s) selected
+            </Text>
+            <HStack gap={2}>
+              <Button
+                size="sm"
+                variant="outline"
+                colorPalette="purple"
+                onClick={handleBulkExport}
+              >
+                Export Selected
+              </Button>
+              <Button
+                size="sm"
+                variant="solid"
+                colorPalette="red"
+                onClick={handleBulkDelete}
+              >
+                Delete Selected
+              </Button>
+            </HStack>
+          </HStack>
+        </Box>
+      )}
+      
+      <Table.Root size="sm" variant="line">
+        <Table.Header>
+          <Table.Row bg="gray.50">
+            <Table.ColumnHeader px={4} py={3} width="50px">
+              <Checkbox
+                checked={isAllSelected}
+                onCheckedChange={(details) => handleSelectAll(details.checked as boolean)}
+              />
+            </Table.ColumnHeader>
+            <Table.ColumnHeader>Deal Title</Table.ColumnHeader>
+            <Table.ColumnHeader>Customer</Table.ColumnHeader>
+            <Table.ColumnHeader textAlign="right">Value</Table.ColumnHeader>
+            <Table.ColumnHeader>Stage</Table.ColumnHeader>
+            <Table.ColumnHeader>Probability</Table.ColumnHeader>
+            <Table.ColumnHeader>Expected Close</Table.ColumnHeader>
+            <Table.ColumnHeader>Owner</Table.ColumnHeader>
+            <Table.ColumnHeader textAlign="center">Actions</Table.ColumnHeader>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {deals.map((deal) => (
+            <Table.Row key={deal.id} _hover={{ bg: 'gray.50' }}>
+              <Table.Cell px={4} py={3}>
+                <Checkbox
+                  checked={selectedIds.includes(deal.id)}
+                  onCheckedChange={(details) => handleSelectOne(deal.id, details.checked as boolean)}
+                />
+              </Table.Cell>
+              <Table.Cell>
                 <Text fontWeight="semibold" fontSize="sm" color="gray.900">
                   {deal.title}
                 </Text>
-              </Box>
-
-              {/* Customer */}
-              <HStack gap={1.5}>
-                <FiUser size={12} color="#718096" />
-                <Text fontSize="sm" color="gray.600">
-                  {deal.customer}
-                </Text>
-              </HStack>
-
-              {/* Value */}
-              <Text fontWeight="semibold" fontSize="sm" color="gray.900" textAlign="right">
-                {formatCurrency(deal.value)}
-              </Text>
-
-              {/* Stage */}
-              <Box>
-                <Badge
-                  colorPalette={getStageColor(deal.stage)}
-                  borderRadius="full"
-                  px={3}
-                  py={1}
-                  textTransform="capitalize"
-                  fontSize="xs"
-                >
-                  {getStageName(deal.stage)}
-                </Badge>
-              </Box>
-
-              {/* Probability */}
-              <VStack gap={1} align="stretch">
-                <Text fontSize="xs" color="gray.600" textAlign="center">
-                  {deal.probability}%
-                </Text>
-                <SimpleProgress
-                  value={deal.probability}
-                  colorPalette={deal.probability >= 70 ? 'green' : deal.probability >= 40 ? 'orange' : 'red'}
-                />
-              </VStack>
-
-              {/* Expected Close */}
-              <Text fontSize="sm" color="gray.600">
-                {formatDate(deal.expectedCloseDate)}
-              </Text>
-
-              {/* Owner */}
-              <Text fontSize="sm" color="gray.600">
-                {deal.owner}
-              </Text>
-
-              {/* Actions */}
-              <HStack gap={1} justifyContent="flex-end">
-                <IconButton
-                  aria-label="View deal"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onView(deal)}
-                >
-                  <FiEye />
-                </IconButton>
-                <IconButton
-                  aria-label="Edit deal"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onEdit(deal)}
-                >
-                  <FiEdit />
-                </IconButton>
-                <IconButton
-                  aria-label="Delete deal"
-                  size="sm"
-                  variant="ghost"
-                  colorPalette="red"
-                  onClick={() => onDelete(deal)}
-                >
-                  <FiTrash2 />
-                </IconButton>
-              </HStack>
-            </Grid>
-          </Box>
-
-          {/* Mobile/Tablet Layout */}
-          <Box display={{ base: 'block', lg: 'none' }}>
-            <VStack align="stretch" gap={3}>
-              {/* Header Row */}
-              <Flex justifyContent="space-between" alignItems="start">
-                <Box flex="1">
-                  <Heading size="sm" mb={1}>
-                    {deal.title}
-                  </Heading>
+              </Table.Cell>
+              <Table.Cell>
+                <HStack gap={1.5}>
+                  <FiUser size={12} color="#718096" />
                   <Text fontSize="sm" color="gray.600">
                     {deal.customer}
                   </Text>
-                </Box>
+                </HStack>
+              </Table.Cell>
+              <Table.Cell>
+                <Text fontWeight="semibold" fontSize="sm" color="gray.900" textAlign="right">
+                  {formatCurrency(deal.value)}
+                </Text>
+              </Table.Cell>
+              <Table.Cell>
                 <Badge
                   colorPalette={getStageColor(deal.stage)}
                   borderRadius="full"
@@ -280,91 +222,64 @@ const DealsTable = ({ deals, onEdit, onDelete, onView }: DealsTableProps) => {
                 >
                   {getStageName(deal.stage)}
                 </Badge>
-              </Flex>
-
-              {/* Value & Probability */}
-              <Grid templateColumns="1fr 1fr" gap={4}>
-                <Box>
-                  <Text fontSize="xs" color="gray.500" mb={0.5}>
-                    Deal Value
+              </Table.Cell>
+              <Table.Cell>
+                <VStack gap={1} align="stretch">
+                  <Text fontSize="xs" color="gray.600" textAlign="center">
+                    {deal.probability}%
                   </Text>
-                  <Text fontWeight="semibold" fontSize="md" color="gray.900">
-                    {formatCurrency(deal.value)}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" color="gray.500" mb={0.5}>
-                    Probability
-                  </Text>
-                  <VStack align="stretch" gap={1}>
-                    <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                      {deal.probability}%
-                    </Text>
-                    <SimpleProgress
-                      value={deal.probability}
-                      colorPalette={deal.probability >= 70 ? 'green' : deal.probability >= 40 ? 'orange' : 'red'}
-                    />
-                  </VStack>
-                </Box>
-              </Grid>
-
-              {/* Details Row */}
-              <Grid templateColumns="1fr 1fr" gap={4}>
-                <Box>
-                  <Text fontSize="xs" color="gray.500" mb={0.5}>
-                    Expected Close
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    {formatDate(deal.expectedCloseDate)}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" color="gray.500" mb={0.5}>
-                    Owner
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    {deal.owner}
-                  </Text>
-                </Box>
-              </Grid>
-
-              {/* Actions Row */}
-              <Flex gap={2} pt={2} borderTopWidth="1px" borderColor="gray.100">
-                <IconButton
-                  aria-label="View deal"
-                  size="sm"
-                  variant="outline"
-                  flex="1"
-                  onClick={() => onView(deal)}
-                >
-                  <FiEye />
-                  <Text ml={2} fontSize="sm">View</Text>
-                </IconButton>
-                <IconButton
-                  aria-label="Edit deal"
-                  size="sm"
-                  variant="outline"
-                  flex="1"
-                  onClick={() => onEdit(deal)}
-                >
-                  <FiEdit />
-                  <Text ml={2} fontSize="sm">Edit</Text>
-                </IconButton>
-                <IconButton
-                  aria-label="Delete deal"
-                  size="sm"
-                  variant="outline"
-                  colorPalette="red"
-                  onClick={() => onDelete(deal)}
-                >
-                  <FiTrash2 />
-                </IconButton>
-              </Flex>
-            </VStack>
-          </Box>
-        </Card>
-      ))}
-    </Stack>
+                  <SimpleProgress
+                    value={deal.probability}
+                    colorPalette={deal.probability >= 70 ? 'green' : deal.probability >= 40 ? 'orange' : 'red'}
+                  />
+                </VStack>
+              </Table.Cell>
+              <Table.Cell>
+                <Text fontSize="sm" color="gray.600">
+                  {formatDate(deal.expectedCloseDate)}
+                </Text>
+              </Table.Cell>
+              <Table.Cell>
+                <Text fontSize="sm" color="gray.600">
+                  {deal.owner}
+                </Text>
+              </Table.Cell>
+              <Table.Cell>
+                <HStack gap={1} justify="center">
+                  <IconButton
+                    aria-label="View deal"
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="purple"
+                    onClick={() => onView(deal)}
+                  >
+                    <FiEye size={16} />
+                  </IconButton>
+                  <IconButton
+                    aria-label="Edit deal"
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="blue"
+                    onClick={() => onEdit(deal)}
+                  >
+                    <FiEdit size={16} />
+                  </IconButton>
+                  <IconButton
+                    aria-label="Delete deal"
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="red"
+                    onClick={() => onDelete(deal)}
+                  >
+                    <FiTrash2 size={16} />
+                  </IconButton>
+                </HStack>
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table.Root>
+    </Card>
   );
 };
 

@@ -1,5 +1,6 @@
 import { Box, Text, VStack, HStack, Flex } from '@chakra-ui/react';
 import { Card } from '../common';
+import { formatCurrency } from '@/utils';
 
 interface SalesPipelineProps {
   stages?: Array<{
@@ -19,15 +20,6 @@ const SalesPipeline = ({
     { name: 'Closed Won', count: 8, value: 320000, color: '#38A169' },
   ]
 }: SalesPipelineProps) => {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
   const totalValue = stages.reduce((sum, stage) => sum + stage.value, 0);
 
   return (

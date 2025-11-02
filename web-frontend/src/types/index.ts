@@ -2,18 +2,18 @@
  * Centralized type definitions for the application
  */
 
-// User types
+// User types (Legacy - to be replaced)
 export interface User {
   id: number;
   username: string;
   email: string;
   first_name: string;
   last_name: string;
-  profile?: UserProfile;
+  profile?: LegacyUserProfile;
   date_joined?: string;
 }
 
-export interface UserProfile {
+export interface LegacyUserProfile {
   phone: string;
   avatar: string | null;
   job_title: string;
@@ -176,3 +176,10 @@ export interface ApiError {
   [key: string]: any;
 }
 
+// Export Phase 1 types
+export * from './organization.types';
+export * from './rbac.types';
+export * from './user.types';
+
+// Export Phase 2 types
+export * from './lead.types';

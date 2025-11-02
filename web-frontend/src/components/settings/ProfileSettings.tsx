@@ -1,31 +1,82 @@
-import { useState } from 'react';
-import { Box, Button, Input, VStack, HStack, Text, Grid } from '@chakra-ui/react';
+import { useState, useEffect } from 'react';
+import { Box, Button, Input, VStack, HStack, Text, Grid, Spinner, Textarea } from '@chakra-ui/react';
 import { Card } from '../common';
 import { Field } from '../ui/field';
-import { FiUser, FiMail, FiPhone, FiMapPin, FiCamera } from 'react-icons/fi';
+import { toaster } from '../ui/toaster';
+import CustomSelect from '../ui/CustomSelect';
+import { FiUser, FiMail, FiPhone, FiMapPin, FiCamera, FiBriefcase } from 'react-icons/fi';
+import { useCurrentUserProfile, useUpdateProfile } from '@/hooks';
+
+// Timezone options
+const timezoneOptions = [
+  { value: 'America/New_York', label: 'Eastern Time (ET)' },
+  { value: 'America/Chicago', label: 'Central Time (CT)' },
+  { value: 'America/Denver', label: 'Mountain Time (MT)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+  { value: 'America/Phoenix', label: 'Arizona (MST)' },
+  { value: 'America/Anchorage', label: 'Alaska Time (AKT)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)' },
+  { value: 'Europe/London', label: 'London (GMT/BST)' },
+  { value: 'Europe/Paris', label: 'Paris (CET/CEST)' },
+  { value: 'Europe/Berlin', label: 'Berlin (CET/CEST)' },
+  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+  { value: 'Asia/Kolkata', label: 'India (IST)' },
+  { value: 'Asia/Shanghai', label: 'Shanghai (CST)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)' },
+];
+
+// Language options
+const languageOptions = [
+  { value: 'en', label: 'English' },
+  { value: 'es', label: 'Spanish' },
+  { value: 'fr', label: 'French' },
+  { value: 'de', label: 'German' },
+  { value: 'it', label: 'Italian' },
+  { value: 'pt', label: 'Portuguese' },
+  { value: 'zh', label: 'Chinese' },
+  { value: 'ja', label: 'Japanese' },
+  { value: 'ko', label: 'Korean' },
+  { value: 'ar', label: 'Arabic' },
+];
 
 interface ProfileSettingsProps {
   onSave?: (data: any) => void;
 }
 
 const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
+  const { data: profile, isLoading: profileLoading } = useCurrentUserProfile();
+  const updateProfile = useUpdateProfile();
+  
   const [formData, setFormData] = useState({
-    firstName: 'John',
-    lastName: 'Smith',
-    email: 'john.smith@example.com',
-    phone: '+1 (555) 123-4567',
-    jobTitle: 'Sales Manager',
-    department: 'Sales',
-    address: '123 Business St',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10001',
-    country: 'United States',
+    firstName: '',
+    lastName: '',
+    phone: '',
+    title: '',
+    department: '',
+    bio: '',
+    location: '',
+    timezone: '',
+    language: '',
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        phone: profile.phone || '',
+        title: profile.title || '',
+        department: profile.department || '',
+        bio: profile.bio || '',
+        location: profile.location || '',
+        timezone: profile.timezone || '',
+        language: profile.language || '',
+      });
+    }
+  }, [profile]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -34,13 +85,49 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setTimeout(() => {
-      alert('Profile updated successfully!');
-      onSave?.(formData);
-      setIsLoading(false);
-    }, 1000);
+    
+    if (!profile) return;
+
+    updateProfile.mutate(
+      { userId: profile.id, data: formData },
+      {
+        onSuccess: () => {
+          toaster.create({
+            title: 'Profile updated',
+            description: 'Your profile has been updated successfully.',
+            type: 'success',
+            duration: 3000,
+          });
+          onSave?.(formData);
+        },
+        onError: (error) => {
+          toaster.create({
+            title: 'Update failed',
+            description: error.message || 'Failed to update profile.',
+            type: 'error',
+            duration: 5000,
+          });
+        },
+      }
+    );
   };
+
+  if (profileLoading) {
+    return (
+      <Box textAlign="center" py={12}>
+        <Spinner size="lg" color="purple.500" />
+        <Text mt={4} color="gray.500">Loading profile...</Text>
+      </Box>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <Box textAlign="center" py={12}>
+        <Text color="gray.500">Profile not found</Text>
+      </Box>
+    );
+  }
 
   return (
     <VStack align="stretch" gap={6}>
@@ -55,7 +142,7 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
               w="20"
               h="20"
               borderRadius="full"
-              bg="blue.500"
+              bgGradient="linear(to-br, purple.500, blue.500)"
               color="white"
               display="flex"
               alignItems="center"
@@ -63,7 +150,7 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
               fontSize="2xl"
               fontWeight="bold"
             >
-              {formData.firstName[0]}{formData.lastName[0]}
+              {profile.firstName[0]}{profile.lastName[0]}
             </Box>
             <VStack align="start" gap={2}>
               <Button size="sm" colorPalette="blue">
@@ -113,18 +200,18 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
             </Grid>
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
-              <Field label="Email" required>
+              <Field label="Email" helperText="Email cannot be changed">
                 <HStack>
                   <Box color="gray.400" pl={3}>
                     <FiMail size={16} />
                   </Box>
                   <Input
-                    name="email"
                     type="email"
-                    value={formData.email}
-                    onChange={handleChange}
+                    value={profile.email}
                     size="md"
                     pl={2}
+                    disabled
+                    bg="gray.50"
                   />
                 </HStack>
               </Field>
@@ -147,12 +234,18 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
               <Field label="Job Title">
-                <Input
-                  name="jobTitle"
-                  value={formData.jobTitle}
-                  onChange={handleChange}
-                  size="md"
-                />
+                <HStack>
+                  <Box color="gray.400" pl={3}>
+                    <FiBriefcase size={16} />
+                  </Box>
+                  <Input
+                    name="title"
+                    value={formData.title}
+                    onChange={handleChange}
+                    size="md"
+                    pl={2}
+                  />
+                </HStack>
               </Field>
 
               <Field label="Department">
@@ -165,64 +258,58 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
               </Field>
             </Grid>
 
-            <Text fontSize="sm" fontWeight="semibold" color="gray.700" pt={2}>
-              Address
-            </Text>
-
-            <Field label="Street Address">
-              <HStack>
-                <Box color="gray.400" pl={3}>
-                  <FiMapPin size={16} />
-                </Box>
-                <Input
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  size="md"
-                  pl={2}
-                />
-              </HStack>
+            <Field label="Bio">
+              <Textarea
+                name="bio"
+                value={formData.bio}
+                onChange={handleChange}
+                size="md"
+                rows={3}
+                placeholder="Tell us about yourself..."
+              />
             </Field>
 
+            <Text fontSize="sm" fontWeight="semibold" color="gray.700" pt={2}>
+              Location & Preferences
+            </Text>
+
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
-              <Field label="City">
-                <Input
-                  name="city"
-                  value={formData.city}
-                  onChange={handleChange}
-                  size="md"
-                />
+              <Field label="Location">
+                <HStack>
+                  <Box color="gray.400" pl={3}>
+                    <FiMapPin size={16} />
+                  </Box>
+                  <Input
+                    name="location"
+                    value={formData.location}
+                    onChange={handleChange}
+                    size="md"
+                    pl={2}
+                    placeholder="City, State"
+                  />
+                </HStack>
               </Field>
 
-              <Field label="State/Province">
-                <Input
-                  name="state"
-                  value={formData.state}
-                  onChange={handleChange}
-                  size="md"
+              <Field label="Timezone">
+                <CustomSelect
+                  value={formData.timezone}
+                  onChange={(val) => setFormData({ ...formData, timezone: val })}
+                  options={timezoneOptions}
+                  placeholder="Select timezone"
+                  accentColor="purple"
                 />
               </Field>
             </Grid>
 
-            <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
-              <Field label="ZIP/Postal Code">
-                <Input
-                  name="zipCode"
-                  value={formData.zipCode}
-                  onChange={handleChange}
-                  size="md"
-                />
-              </Field>
-
-              <Field label="Country">
-                <Input
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  size="md"
-                />
-              </Field>
-            </Grid>
+            <Field label="Language">
+              <CustomSelect
+                value={formData.language}
+                onChange={(val) => setFormData({ ...formData, language: val })}
+                options={languageOptions}
+                placeholder="Select language"
+                accentColor="purple"
+              />
+            </Field>
 
             <HStack justify="flex-end" pt={2}>
               <Button variant="outline" size="md">
@@ -232,7 +319,7 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
                 type="submit"
                 colorPalette="blue"
                 size="md"
-                loading={isLoading}
+                loading={updateProfile.isPending}
               >
                 Save Changes
               </Button>

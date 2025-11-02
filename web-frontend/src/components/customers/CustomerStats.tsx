@@ -1,6 +1,7 @@
 import { SimpleGrid } from '@chakra-ui/react';
 import { StatCard } from '../dashboard';
 import { FiUsers, FiUserCheck, FiUserX, FiDollarSign } from 'react-icons/fi';
+import { formatCurrency } from '@/utils';
 
 interface CustomerStatsProps {
   totalCustomers: number;
@@ -15,15 +16,6 @@ const CustomerStats = ({
   inactiveCustomers,
   totalRevenue,
 }: CustomerStatsProps) => {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
   return (
     <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={6}>
       <StatCard

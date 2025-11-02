@@ -1,6 +1,7 @@
 import { Box, Heading, Text, VStack, HStack, Badge } from '@chakra-ui/react';
 import { Card } from '../common';
 import { FiTrendingUp, FiTrendingDown } from 'react-icons/fi';
+import { formatCurrency } from '@/utils';
 
 interface RevenueChartProps {
   data?: {
@@ -11,15 +12,6 @@ interface RevenueChartProps {
 }
 
 const RevenueChart = ({ data = { currentMonth: 125000, previousMonth: 98000, growth: 27.6 } }: RevenueChartProps) => {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
   const isPositive = data.growth > 0;
 
   // Mock data for simple bar visualization

@@ -1,17 +1,18 @@
 import {
-  Box,
+  Table,
   Badge,
   HStack,
+  VStack,
   Text,
   IconButton,
-  Flex,
-  Grid,
-  VStack,
-  Heading,
-  Stack,
+  Button,
+  Box,
 } from '@chakra-ui/react';
+import { Checkbox } from '../ui/checkbox';
 import { FiEdit, FiTrash2, FiEye, FiMail, FiPhone } from 'react-icons/fi';
 import { Card } from '../common';
+import { useState } from 'react';
+import { formatCurrency, formatDate } from '@/utils';
 
 export interface Customer {
   id: string;
@@ -30,9 +31,44 @@ interface CustomerTableProps {
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
   onView: (customer: Customer) => void;
+  onBulkDelete?: (customerIds: string[]) => void;
+  onBulkExport?: (customerIds: string[]) => void;
 }
 
-const CustomerTable = ({ customers, onEdit, onDelete, onView }: CustomerTableProps) => {
+const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBulkExport }: CustomerTableProps) => {
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(customers.map(c => c.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    if (checked) {
+      setSelectedIds([...selectedIds, id]);
+    } else {
+      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} customer(s)?`)) {
+      onBulkDelete?.(selectedIds);
+      setSelectedIds([]);
+    }
+  };
+
+  const handleBulkExport = () => {
+    if (selectedIds.length === 0) return;
+    onBulkExport?.(selectedIds);
+  };
+
+  const isAllSelected = selectedIds.length === customers.length && customers.length > 0;
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active':
@@ -46,109 +82,104 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView }: CustomerTablePro
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }).format(date);
-  };
+  if (customers.length === 0) {
+    return (
+      <Card p={6}>
+        <VStack gap={2}>
+          <Text fontSize="lg" fontWeight="semibold" color="gray.700">No customers found</Text>
+          <Text color="gray.600">Try adjusting your filters or add a new customer.</Text>
+        </VStack>
+      </Card>
+    );
+  }
 
   return (
-    <Stack gap={3}>
-      {/* Table Header - Desktop Only */}
-      <Box
-        display={{ base: 'none', lg: 'block' }}
-        bg="gray.50"
-        borderRadius="lg"
-        px={6}
-        py={3}
-      >
-        <Grid
-          templateColumns="2fr 1.5fr 2fr 1fr 1fr 1.5fr 80px"
-          gap={4}
-          alignItems="center"
-        >
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Customer
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Company
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Contact
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Status
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase" textAlign="right">
-            Total Value
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Last Contact
-          </Text>
-          <Text fontSize="xs" fontWeight="bold" color="gray.600" textTransform="uppercase">
-            Actions
-          </Text>
-        </Grid>
-      </Box>
-
-      {/* Customer Cards/Rows */}
-      {customers.map((customer) => (
-        <Card
-          key={customer.id}
-          variant="elevated"
-          _hover={{
-            shadow: 'md',
-            transform: 'translateY(-2px)',
-            transition: 'all 0.2s',
-          }}
-        >
-          {/* Desktop Layout */}
-          <Box display={{ base: 'none', lg: 'block' }}>
-            <Grid
-              templateColumns="2fr 1.5fr 2fr 1fr 1fr 1.5fr 80px"
-              gap={4}
-              alignItems="center"
-            >
-              {/* Customer Name */}
-              <Box>
+    <Card p={0} overflow="hidden">
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <Box bg="purple.50" borderBottomWidth="1px" borderColor="purple.200" px={4} py={3}>
+          <HStack justify="space-between">
+            <Text fontSize="sm" fontWeight="medium" color="purple.900">
+              {selectedIds.length} customer(s) selected
+            </Text>
+            <HStack gap={2}>
+              <Button
+                size="sm"
+                variant="outline"
+                colorPalette="purple"
+                onClick={handleBulkExport}
+              >
+                Export Selected
+              </Button>
+              <Button
+                size="sm"
+                variant="solid"
+                colorPalette="red"
+                onClick={handleBulkDelete}
+              >
+                Delete Selected
+              </Button>
+            </HStack>
+          </HStack>
+        </Box>
+      )}
+      
+      <Table.Root size="sm" variant="line">
+        <Table.Header>
+          <Table.Row bg="gray.50">
+            <Table.ColumnHeader px={4} py={3} width="50px">
+              <Checkbox
+                checked={isAllSelected}
+                onCheckedChange={(details) => handleSelectAll(details.checked as boolean)}
+              />
+            </Table.ColumnHeader>
+            <Table.ColumnHeader>Customer</Table.ColumnHeader>
+            <Table.ColumnHeader>Company</Table.ColumnHeader>
+            <Table.ColumnHeader>Contact</Table.ColumnHeader>
+            <Table.ColumnHeader>Status</Table.ColumnHeader>
+            <Table.ColumnHeader textAlign="right">Total Value</Table.ColumnHeader>
+            <Table.ColumnHeader>Last Contact</Table.ColumnHeader>
+            <Table.ColumnHeader textAlign="center">Actions</Table.ColumnHeader>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
+          {customers.map((customer) => (
+            <Table.Row key={customer.id} _hover={{ bg: 'gray.50' }}>
+              <Table.Cell px={4} py={3}>
+                <Checkbox
+                  checked={selectedIds.includes(customer.id)}
+                  onCheckedChange={(details) => handleSelectOne(customer.id, details.checked as boolean)}
+                />
+              </Table.Cell>
+              <Table.Cell>
                 <Text fontWeight="semibold" fontSize="sm" color="gray.900">
                   {customer.name}
                 </Text>
-              </Box>
-
-              {/* Company */}
-              <Text fontSize="sm" color="gray.600">
-                {customer.company}
-              </Text>
-
-              {/* Contact Info */}
-              <VStack align="start" gap={0.5}>
-                <HStack gap={1.5}>
-                  <FiMail size={12} color="#718096" />
-                  <Text fontSize="sm" color="gray.600">
-                    {customer.email}
-                  </Text>
-                </HStack>
-                <HStack gap={1.5}>
-                  <FiPhone size={12} color="#718096" />
-                  <Text fontSize="xs" color="gray.500">
-                    {customer.phone}
-                  </Text>
-                </HStack>
-              </VStack>
-
-              {/* Status */}
-              <Box>
+              </Table.Cell>
+              <Table.Cell>
+                <Text fontSize="sm" color="gray.600">
+                  {customer.company}
+                </Text>
+              </Table.Cell>
+              <Table.Cell>
+                <VStack align="flex-start" gap={0}>
+                  <HStack gap={1}>
+                    <FiMail size={12} color="#718096" />
+                    <Text fontSize="sm" color="gray.600">
+                      {customer.email}
+                    </Text>
+                  </HStack>
+                  {customer.phone && (
+                    <HStack gap={1}>
+                      <FiPhone size={12} color="#718096" />
+                      <Text fontSize="xs" color="gray.500">
+                        {customer.phone}
+                      </Text>
+                    </HStack>
+                  )}
+                </VStack>
+              </Table.Cell>
+              <Table.Cell>
                 <Badge
                   colorPalette={getStatusColor(customer.status)}
                   borderRadius="full"
@@ -159,147 +190,53 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView }: CustomerTablePro
                 >
                   {customer.status}
                 </Badge>
-              </Box>
-
-              {/* Total Value */}
-              <Text fontWeight="semibold" fontSize="sm" color="gray.900" textAlign="right">
-                {formatCurrency(customer.totalValue)}
-              </Text>
-
-              {/* Last Contact */}
-              <Text fontSize="sm" color="gray.600">
-                {formatDate(customer.lastContact)}
-              </Text>
-
-              {/* Actions */}
-              <HStack gap={1} justifyContent="flex-end">
-                <IconButton
-                  aria-label="View customer"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onView(customer)}
-                >
-                  <FiEye />
-                </IconButton>
-                <IconButton
-                  aria-label="Edit customer"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onEdit(customer)}
-                >
-                  <FiEdit />
-                </IconButton>
-                <IconButton
-                  aria-label="Delete customer"
-                  size="sm"
-                  variant="ghost"
-                  colorPalette="red"
-                  onClick={() => onDelete(customer)}
-                >
-                  <FiTrash2 />
-                </IconButton>
-              </HStack>
-            </Grid>
-          </Box>
-
-          {/* Mobile/Tablet Layout */}
-          <Box display={{ base: 'block', lg: 'none' }}>
-            <VStack align="stretch" gap={3}>
-              {/* Header Row */}
-              <Flex justifyContent="space-between" alignItems="start">
-                <Box flex="1">
-                  <Heading size="sm" mb={1}>
-                    {customer.name}
-                  </Heading>
-                  <Text fontSize="sm" color="gray.600">
-                    {customer.company}
-                  </Text>
-                </Box>
-                <Badge
-                  colorPalette={getStatusColor(customer.status)}
-                  borderRadius="full"
-                  px={3}
-                  py={1}
-                  textTransform="capitalize"
-                  fontSize="xs"
-                >
-                  {customer.status}
-                </Badge>
-              </Flex>
-
-              {/* Contact Info */}
-              <VStack align="stretch" gap={1}>
-                <HStack gap={2}>
-                  <FiMail size={14} color="#718096" />
-                  <Text fontSize="sm" color="gray.600">
-                    {customer.email}
-                  </Text>
+              </Table.Cell>
+              <Table.Cell>
+                <Text fontWeight="semibold" fontSize="sm" color="gray.900" textAlign="right">
+                  {formatCurrency(customer.totalValue)}
+                </Text>
+              </Table.Cell>
+              <Table.Cell>
+                <Text fontSize="sm" color="gray.600">
+                  {formatDate(customer.lastContact)}
+                </Text>
+              </Table.Cell>
+              <Table.Cell>
+                <HStack gap={1} justify="center">
+                  <IconButton
+                    aria-label="View customer"
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="purple"
+                    onClick={() => onView(customer)}
+                  >
+                    <FiEye size={16} />
+                  </IconButton>
+                  <IconButton
+                    aria-label="Edit customer"
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="blue"
+                    onClick={() => onEdit(customer)}
+                  >
+                    <FiEdit size={16} />
+                  </IconButton>
+                  <IconButton
+                    aria-label="Delete customer"
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="red"
+                    onClick={() => onDelete(customer)}
+                  >
+                    <FiTrash2 size={16} />
+                  </IconButton>
                 </HStack>
-                <HStack gap={2}>
-                  <FiPhone size={14} color="#718096" />
-                  <Text fontSize="sm" color="gray.600">
-                    {customer.phone}
-                  </Text>
-                </HStack>
-              </VStack>
-
-              {/* Stats Row */}
-              <Grid templateColumns="1fr 1fr" gap={4}>
-                <Box>
-                  <Text fontSize="xs" color="gray.500" mb={0.5}>
-                    Total Value
-                  </Text>
-                  <Text fontWeight="semibold" fontSize="md" color="gray.900">
-                    {formatCurrency(customer.totalValue)}
-                  </Text>
-                </Box>
-                <Box>
-                  <Text fontSize="xs" color="gray.500" mb={0.5}>
-                    Last Contact
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    {formatDate(customer.lastContact)}
-                  </Text>
-                </Box>
-              </Grid>
-
-              {/* Actions Row */}
-              <Flex gap={2} pt={2} borderTopWidth="1px" borderColor="gray.100">
-                <IconButton
-                  aria-label="View customer"
-                  size="sm"
-                  variant="outline"
-                  flex="1"
-                  onClick={() => onView(customer)}
-                >
-                  <FiEye />
-                  <Text ml={2} fontSize="sm">View</Text>
-                </IconButton>
-                <IconButton
-                  aria-label="Edit customer"
-                  size="sm"
-                  variant="outline"
-                  flex="1"
-                  onClick={() => onEdit(customer)}
-                >
-                  <FiEdit />
-                  <Text ml={2} fontSize="sm">Edit</Text>
-                </IconButton>
-                <IconButton
-                  aria-label="Delete customer"
-                  size="sm"
-                  variant="outline"
-                  colorPalette="red"
-                  onClick={() => onDelete(customer)}
-                >
-                  <FiTrash2 />
-                </IconButton>
-              </Flex>
-            </VStack>
-          </Box>
-        </Card>
-      ))}
-    </Stack>
+              </Table.Cell>
+            </Table.Row>
+          ))}
+        </Table.Body>
+      </Table.Root>
+    </Card>
   );
 };
 

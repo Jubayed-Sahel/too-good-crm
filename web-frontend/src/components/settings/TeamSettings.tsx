@@ -12,6 +12,7 @@ import {
 } from '@chakra-ui/react';
 import { Card } from '../common';
 import { Field } from '../ui/field';
+import CustomSelect from '../ui/CustomSelect';
 import { FiUserPlus, FiMail, FiTrash2, FiMoreVertical } from 'react-icons/fi';
 
 interface TeamMember {
@@ -148,16 +149,17 @@ const TeamSettings = () => {
                   </Field>
 
                   <Field label="Role" required>
-                    <select
+                    <CustomSelect
                       value={inviteRole}
-                      onChange={(e) => setInviteRole(e.target.value)}
-                      aria-label="Role"
-                      className="chakra-select"
-                    >
-                      <option value="admin">Admin</option>
-                      <option value="sales_manager">Sales Manager</option>
-                      <option value="sales_rep">Sales Rep</option>
-                    </select>
+                      onChange={(val) => setInviteRole(val)}
+                      options={[
+                        { value: 'admin', label: 'Admin' },
+                        { value: 'sales_manager', label: 'Sales Manager' },
+                        { value: 'sales_rep', label: 'Sales Rep' },
+                      ]}
+                      placeholder="Select role"
+                      accentColor="purple"
+                    />
                   </Field>
                 </Grid>
 
