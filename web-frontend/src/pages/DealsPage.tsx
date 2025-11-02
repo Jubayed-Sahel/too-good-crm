@@ -109,14 +109,14 @@ const DealsPage = () => {
 
   return (
     <DashboardLayout title="Deals">
-      <VStack gap={6} align="stretch">
+      <VStack gap={5} align="stretch">
         {/* Page Header */}
         <Box>
-          <Heading size="xl" mb={2}>
+          <Heading size="2xl" mb={2}>
             Deals
           </Heading>
-          <Text color="gray.600">
-            Manage your sales pipeline and track deal progress
+          <Text color="gray.600" fontSize="md">
+            Track your sales pipeline and manage deal progress
           </Text>
         </Box>
 

@@ -101,13 +101,13 @@ export const LeadsPage = () => {
 
   return (
     <DashboardLayout title="Leads">
-      <VStack gap={6} align="stretch">
+      <VStack gap={5} align="stretch">
         {/* Page Header */}
         <Box>
-          <Heading size="xl" mb={2}>
+          <Heading size="2xl" mb={2}>
             Leads
           </Heading>
-          <Text color="gray.600">
+          <Text color="gray.600" fontSize="md">
             Manage your lead pipeline and track conversions
           </Text>
         </Box>
