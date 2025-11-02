@@ -7,7 +7,8 @@ import {
   FiBarChart2, 
   FiSettings, 
   FiLogOut,
-  FiUserPlus
+  FiUserPlus,
+  FiTrendingUp
 } from 'react-icons/fi';
 
 interface SidebarProps {
@@ -26,6 +27,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const menuItems = [
     { icon: FiHome, label: 'Dashboard', path: '/dashboard' },
     { icon: FiUsers, label: 'Customers', path: '/customers' },
+    { icon: FiTrendingUp, label: 'Sales', path: '/sales' },
     { icon: FiFileText, label: 'Deals', path: '/deals' },
     { icon: FiUserPlus, label: 'Leads', path: '/leads' },
     { icon: FiBarChart2, label: 'Analytics', path: '/analytics' },
