@@ -1,13 +1,23 @@
 import { useState, useMemo } from 'react';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { DealsTable, DealsFilters, DealsStats, CreateDealDialog } from '../components/deals';
+import { 
+  DealsTable, 
+  DealsFilters, 
+  DealsStats, 
+  CreateDealDialog,
+  EditDealDialog,
+  type EditDealData 
+} from '../components/deals';
 import { useDeals } from '@/hooks';
+import { updateDeal, createDeal, deleteDeal } from '@/services/deals.service';
 
 const DealsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState<EditDealData | null>(null);
   
   // Fetch deals data
   const { deals, isLoading, error } = useDeals();
@@ -66,14 +76,53 @@ const DealsPage = () => {
 
   // Action handlers
   const handleEditDeal = (deal: any) => {
-    alert(`Edit deal: ${deal.title}`);
-    // TODO: Implement edit modal
+    // Convert deal to EditDealData format
+    const editData: EditDealData = {
+      id: deal.id,
+      title: deal.title,
+      customer: deal.customer,
+      value: deal.value,
+      stage: deal.stage,
+      probability: deal.probability,
+      expectedCloseDate: deal.expectedCloseDate,
+      owner: deal.owner,
+      description: '', // Add description if available
+    };
+    setSelectedDeal(editData);
+    setIsEditDialogOpen(true);
   };
 
-  const handleDeleteDeal = (deal: any) => {
+  const handleUpdateDeal = async (data: EditDealData) => {
+    try {
+      const result = await updateDeal(data);
+      if (result) {
+        alert(`Deal "${data.title}" updated successfully!\n\nUpdated fields:\n- Customer: ${data.customer}\n- Value: $${data.value.toLocaleString()}\n- Stage: ${data.stage}\n- Probability: ${data.probability}%`);
+        // Refresh deals data (in a real app, you'd call a refetch method)
+        window.location.reload();
+      } else {
+        alert('Failed to update deal. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error updating deal:', error);
+      alert('An error occurred while updating the deal.');
+    }
+  };
+
+  const handleDeleteDeal = async (deal: any) => {
     if (window.confirm(`Are you sure you want to delete "${deal.title}"?`)) {
-      alert(`Deleted deal: ${deal.title}`);
-      // TODO: Implement actual delete logic
+      try {
+        const success = await deleteDeal(deal.id);
+        if (success) {
+          alert(`Deleted deal: ${deal.title}`);
+          // Refresh deals data (in a real app, you'd call a refetch method)
+          window.location.reload();
+        } else {
+          alert('Failed to delete deal. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting deal:', error);
+        alert('An error occurred while deleting the deal.');
+      }
     }
   };
 
@@ -86,10 +135,20 @@ const DealsPage = () => {
     setIsCreateDialogOpen(true);
   };
 
-  const handleCreateDeal = (data: any) => {
-    console.log('Create deal:', data);
-    // TODO: Implement API call to create deal
-    alert(`Deal "${data.title}" created successfully!`);
+  const handleCreateDeal = async (data: any) => {
+    try {
+      const result = await createDeal(data);
+      if (result) {
+        alert(`Deal "${data.title}" created successfully!`);
+        // Refresh deals data (in a real app, you'd call a refetch method)
+        window.location.reload();
+      } else {
+        alert('Failed to create deal. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error creating deal:', error);
+      alert('An error occurred while creating the deal.');
+    }
   };
 
   if (error) {
@@ -179,6 +238,14 @@ const DealsPage = () => {
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
         onSubmit={handleCreateDeal}
+      />
+
+      {/* Edit Deal Dialog */}
+      <EditDealDialog
+        isOpen={isEditDialogOpen}
+        onClose={() => setIsEditDialogOpen(false)}
+        onSubmit={handleUpdateDeal}
+        deal={selectedDeal}
       />
     </DashboardLayout>
   );

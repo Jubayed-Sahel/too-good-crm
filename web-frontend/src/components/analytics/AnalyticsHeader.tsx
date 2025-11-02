@@ -11,25 +11,25 @@ const AnalyticsHeader = ({ onExport, onDateRangeChange }: AnalyticsHeaderProps) 
     <Box>
       <HStack justify="space-between" align="start" flexWrap="wrap" gap={4}>
         <Box>
-          <Heading size="xl" mb={2}>
+          <Heading size="2xl" mb={2}>
             Analytics
           </Heading>
-          <Text color="gray.600">
+          <Text color="gray.600" fontSize="md">
             Track your sales performance and business insights
           </Text>
         </Box>
         <HStack gap={2} flexWrap="wrap">
           <Button
             variant="outline"
-            size="md"
+            h="40px"
             onClick={onDateRangeChange}
           >
             <FiCalendar />
             <Box ml={2}>Last 30 Days</Box>
           </Button>
           <Button
-            colorPalette="blue"
-            size="md"
+            colorPalette="purple"
+            h="40px"
             onClick={onExport}
           >
             <FiDownload />

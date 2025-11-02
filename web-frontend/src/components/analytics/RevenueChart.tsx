@@ -24,19 +24,32 @@ const RevenueChart = ({ data = { currentMonth: 125000, previousMonth: 98000, gro
       <VStack align="stretch" gap={4}>
         <HStack justify="space-between" align="start">
           <Box>
-            <Text fontSize="sm" color="gray.600" fontWeight="medium" mb={1}>
+            <Text 
+              fontSize="sm" 
+              fontWeight="semibold"
+              color="gray.600"
+              textTransform="uppercase"
+              letterSpacing="wider"
+              mb={2}
+            >
               Revenue Overview
             </Text>
-            <Heading size="xl" color="gray.900">
+            <Heading 
+              size={{ base: '3xl', md: '4xl' }}
+              color="gray.900"
+              lineHeight="1.1"
+              fontWeight="bold"
+            >
               {formatCurrency(data.currentMonth)}
             </Heading>
-            <HStack gap={2} mt={2}>
+            <HStack gap={2} mt={3}>
               <Badge
                 colorPalette={isPositive ? 'green' : 'red'}
-                borderRadius="full"
+                size="sm"
+                variant="subtle"
                 px={2}
                 py={0.5}
-                fontSize="xs"
+                fontSize="sm"
                 display="flex"
                 alignItems="center"
                 gap={1}
@@ -44,7 +57,7 @@ const RevenueChart = ({ data = { currentMonth: 125000, previousMonth: 98000, gro
                 {isPositive ? <FiTrendingUp size={12} /> : <FiTrendingDown size={12} />}
                 {isPositive ? '+' : ''}{data.growth.toFixed(1)}%
               </Badge>
-              <Text fontSize="xs" color="gray.500">
+              <Text fontSize="sm" color="gray.500">
                 vs last month
               </Text>
             </HStack>
@@ -68,7 +81,7 @@ const RevenueChart = ({ data = { currentMonth: 125000, previousMonth: 98000, gro
                   }}
                   transition="all 0.2s"
                 />
-                <Text fontSize="xs" color="gray.600" textAlign="center" fontWeight="medium">
+                <Text fontSize="xs" color="gray.600" textAlign="center" fontWeight="semibold">
                   {month}
                 </Text>
               </VStack>

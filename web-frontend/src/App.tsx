@@ -7,6 +7,7 @@ import CustomerDetailPage from './pages/CustomerDetailPage'
 import SalesPage from './pages/SalesPage'
 import DealsPage from './pages/DealsPage'
 import { LeadsPage } from './pages/LeadsPage'
+import EditLeadPage from './pages/EditLeadPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
 import './App.css'
@@ -24,6 +25,7 @@ function App() {
         <Route path="/sales" element={<SalesPage />} />
         <Route path="/deals" element={<DealsPage />} />
         <Route path="/leads" element={<LeadsPage />} />
+        <Route path="/leads/:id/edit" element={<EditLeadPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Routes>
