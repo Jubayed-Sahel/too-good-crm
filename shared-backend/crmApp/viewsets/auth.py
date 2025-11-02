@@ -1,0 +1,181 @@
+"""
+Authentication and User ViewSets
+"""
+
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import login, logout
+from django.utils import timezone
+
+from crmApp.models import User, RefreshToken as RefreshTokenModel
+from crmApp.serializers import (
+    UserSerializer,
+    UserCreateSerializer,
+    UserUpdateSerializer,
+    LoginSerializer,
+    ChangePasswordSerializer,
+    RefreshTokenSerializer,
+)
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for User management.
+    Provides CRUD operations for users.
+    """
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return UserCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return UserUpdateSerializer
+        return UserSerializer
+    
+    def get_permissions(self):
+        if self.action == 'create':
+            return [AllowAny()]
+        return [IsAuthenticated()]
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def me(self, request):
+        """Get current user profile"""
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['put', 'patch'], permission_classes=[IsAuthenticated])
+    def update_profile(self, request):
+        """Update current user profile"""
+        serializer = UserUpdateSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(UserSerializer(request.user).data)
+
+
+class LoginViewSet(viewsets.ViewSet):
+    """
+    ViewSet for user authentication.
+    """
+    permission_classes = [AllowAny]
+    serializer_class = LoginSerializer
+    
+    def create(self, request):
+        """
+        Login endpoint - returns JWT tokens
+        """
+        serializer = LoginSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        
+        user = serializer.validated_data['user']
+        
+        # Update last login
+        user.last_login_at = timezone.now()
+        user.save(update_fields=['last_login_at'])
+        
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        
+        # Store refresh token in database
+        RefreshTokenModel.objects.create(
+            user=user,
+            token=str(refresh),
+            expires_at=timezone.now() + timezone.timedelta(days=7),
+            ip_address=request.META.get('REMOTE_ADDR'),
+            device_info=request.META.get('HTTP_USER_AGENT', '')[:255]
+        )
+        
+        return Response({
+            'user': UserSerializer(user).data,
+            'tokens': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            }
+        })
+
+
+class LogoutViewSet(viewsets.ViewSet):
+    """
+    ViewSet for user logout.
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def create(self, request):
+        """
+        Logout endpoint - revokes refresh token
+        """
+        try:
+            refresh_token = request.data.get('refresh_token')
+            if refresh_token:
+                token = RefreshTokenModel.objects.filter(
+                    user=request.user,
+                    token=refresh_token,
+                    is_revoked=False
+                ).first()
+                
+                if token:
+                    token.is_revoked = True
+                    token.revoked_at = timezone.now()
+                    token.save()
+            
+            logout(request)
+            return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ChangePasswordViewSet(viewsets.ViewSet):
+    """
+    ViewSet for changing user password.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+    
+    def create(self, request):
+        """
+        Change password endpoint
+        """
+        serializer = ChangePasswordSerializer(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        
+        # Set new password
+        user = request.user
+        user.set_password(serializer.validated_data['new_password'])
+        user.password_changed_at = timezone.now()
+        user.save()
+        
+        return Response({
+            'message': 'Password changed successfully.'
+        }, status=status.HTTP_200_OK)
+
+
+class RefreshTokenViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing refresh tokens.
+    """
+    queryset = RefreshTokenModel.objects.all()
+    serializer_class = RefreshTokenSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return RefreshTokenModel.objects.filter(user=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def revoke(self, request, pk=None):
+        """Revoke a specific refresh token"""
+        token = self.get_object()
+        token.is_revoked = True
+        token.revoked_at = timezone.now()
+        token.save()
+        return Response({'message': 'Token revoked successfully.'})

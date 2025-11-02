@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
@@ -10,6 +11,7 @@ import {
 import { useCustomers } from '@/hooks';
 
 const CustomersPage = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -76,7 +78,7 @@ const CustomersPage = () => {
 
   const handleEdit = (customer: any) => {
     console.log('Edit customer:', customer);
-    // TODO: Implement edit modal
+    // TODO: Implement edit functionality
     alert(`Edit customer: ${customer.name}`);
   };
 
@@ -90,8 +92,7 @@ const CustomersPage = () => {
 
   const handleView = (customer: any) => {
     console.log('View customer:', customer);
-    // TODO: Implement view modal/page
-    alert(`View customer: ${customer.name}`);
+    navigate(`/customers/${customer.id}`);
   };
 
   const handleAddCustomer = () => {
@@ -121,13 +122,13 @@ const CustomersPage = () => {
 
   return (
     <DashboardLayout title="Customers">
-      <VStack gap={6} align="stretch">
+      <VStack gap={5} align="stretch">
         {/* Page Header */}
         <Box>
-          <Heading size="xl" mb={2}>
+          <Heading size="2xl" mb={2}>
             Customers
           </Heading>
-          <Text color="gray.600">
+          <Text color="gray.600" fontSize="md">
             Manage your customer relationships and track interactions
           </Text>
         </Box>
@@ -168,10 +169,10 @@ const CustomersPage = () => {
                 bg="gray.50"
                 borderRadius="lg"
               >
-                <Heading size="md" color="gray.600" mb={2}>
+                <Heading size="lg" color="gray.600" mb={2}>
                   No customers found
                 </Heading>
-                <Text color="gray.500">
+                <Text color="gray.500" fontSize="md">
                   {searchQuery || statusFilter !== 'all'
                     ? 'Try adjusting your filters'
                     : 'Get started by adding your first customer'}

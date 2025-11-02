@@ -10,7 +10,7 @@ const WelcomeBanner = () => {
       bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
       borderRadius="2xl"
       boxShadow="lg"
-      p={{ base: 6, md: 8 }}
+      p={{ base: 5, md: 6 }}
       color="white"
       position="relative"
       overflow="hidden"
@@ -46,13 +46,13 @@ const WelcomeBanner = () => {
         zIndex={1}
       >
         <VStack align="start" gap={2}>
-          <Text fontSize="sm" opacity={0.9} fontWeight="medium">
+          <Text fontSize="md" opacity={0.9} fontWeight="medium">
             {greeting}! 👋
           </Text>
-          <Heading size={{ base: 'lg', md: '2xl' }} fontWeight="bold">
+          <Heading size={{ base: 'xl', md: '2xl' }} fontWeight="bold">
             Welcome to Your Dashboard
           </Heading>
-          <Text fontSize={{ base: 'sm', md: 'md' }} opacity={0.95} maxW="600px">
+          <Text fontSize={{ base: 'md', md: 'lg' }} opacity={0.95} maxW="600px">
             Track your sales pipeline, manage customer relationships, and grow your business
           </Text>
         </VStack>
