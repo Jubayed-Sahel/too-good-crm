@@ -71,9 +71,17 @@ const TopPerformers = ({
   return (
     <Card variant="elevated">
       <VStack align="stretch" gap={4}>
-        <HStack gap={2}>
-          <FiAward size={20} color="#3182CE" />
-          <Text fontSize="sm" color="gray.600" fontWeight="medium">
+        <HStack gap={2} align="center">
+          <Box color="purple.600">
+            <FiAward size={18} />
+          </Box>
+          <Text 
+            fontSize="sm" 
+            fontWeight="semibold"
+            color="gray.600"
+            textTransform="uppercase"
+            letterSpacing="wider"
+          >
             Top Performers
           </Text>
         </HStack>
