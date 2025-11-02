@@ -36,7 +36,7 @@ const SettingsPage = () => {
 
   return (
     <DashboardLayout title="Settings">
-      <VStack align="stretch" gap={6}>
+      <VStack align="stretch" gap={5}>
         <SettingsHeader />
         <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
         {renderTabContent()}
