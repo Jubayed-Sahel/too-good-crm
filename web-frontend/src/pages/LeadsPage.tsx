@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { 
@@ -17,6 +18,7 @@ import type { LeadFilters as LeadFiltersType, CreateLeadData, Lead } from '../ty
 import { toaster } from '../components/ui/toaster';
 
 export const LeadsPage = () => {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState<LeadFiltersType>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
@@ -74,6 +76,10 @@ export const LeadsPage = () => {
       description: 'Convert lead feature coming soon',
       type: 'info',
     });
+  };
+
+  const handleEditLead = (lead: Lead) => {
+    navigate(`/leads/${lead.id}/edit`);
   };
 
   const handleClearFilters = () => {
@@ -137,6 +143,7 @@ export const LeadsPage = () => {
               <LeadsTable
                 leads={leads}
                 isLoading={leadsLoading}
+                onEdit={handleEditLead}
                 onDelete={handleDeleteLead}
                 onConvert={handleConvertLead}
               />
