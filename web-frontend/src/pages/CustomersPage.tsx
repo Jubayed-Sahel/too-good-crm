@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
@@ -6,17 +7,14 @@ import {
   CustomerFilters,
   CustomerStats,
   CreateCustomerDialog,
-  CustomerDetailModal,
 } from '../components/customers';
 import { useCustomers } from '@/hooks';
-import type { Customer } from '../components/customers';
 
 const CustomersPage = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   // Fetch customers data
   const { customers, isLoading, error } = useCustomers();
@@ -80,14 +78,12 @@ const CustomersPage = () => {
 
   const handleEdit = (customer: any) => {
     console.log('Edit customer:', customer);
-    setIsDetailModalOpen(false);
-    // TODO: Implement edit modal
+    // TODO: Implement edit functionality
     alert(`Edit customer: ${customer.name}`);
   };
 
   const handleDelete = (customer: any) => {
     console.log('Delete customer:', customer);
-    setIsDetailModalOpen(false);
     // TODO: Implement delete confirmation
     if (confirm(`Are you sure you want to delete ${customer.name}?`)) {
       alert(`Customer ${customer.name} deleted`);
@@ -96,8 +92,7 @@ const CustomersPage = () => {
 
   const handleView = (customer: any) => {
     console.log('View customer:', customer);
-    setSelectedCustomer(customer);
-    setIsDetailModalOpen(true);
+    navigate(`/customers/${customer.id}`);
   };
 
   const handleAddCustomer = () => {
@@ -193,18 +188,6 @@ const CustomersPage = () => {
         isOpen={isCreateDialogOpen}
         onClose={() => setIsCreateDialogOpen(false)}
         onSubmit={handleCreateCustomer}
-      />
-
-      {/* Customer Detail Modal */}
-      <CustomerDetailModal
-        customer={selectedCustomer}
-        isOpen={isDetailModalOpen}
-        onClose={() => {
-          setIsDetailModalOpen(false);
-          setSelectedCustomer(null);
-        }}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
       />
     </DashboardLayout>
   );

@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardPage from './pages/DashboardPage'
 import CustomersPage from './pages/CustomersPage'
+import CustomerDetailPage from './pages/CustomerDetailPage'
 import DealsPage from './pages/DealsPage'
 import { LeadsPage } from './pages/LeadsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
@@ -18,6 +19,7 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/customers" element={<CustomersPage />} />
+        <Route path="/customers/:id" element={<CustomerDetailPage />} />
         <Route path="/deals" element={<DealsPage />} />
         <Route path="/leads" element={<LeadsPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
