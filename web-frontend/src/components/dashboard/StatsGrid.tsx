@@ -2,21 +2,13 @@ import { SimpleGrid } from '@chakra-ui/react';
 import StatCard from './StatCard';
 import { FiUsers, FiFileText, FiDollarSign } from 'react-icons/fi';
 import type { DashboardStats } from '@/types';
+import { formatCurrency } from '@/utils';
 
 interface StatsGridProps {
-  stats: DashboardStats | null;
+  stats?: DashboardStats;
 }
 
 const StatsGrid = ({ stats }: StatsGridProps) => {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
   const statsData = [
     {
       title: 'Total Customers',

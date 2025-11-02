@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Box, Button, Input, VStack, HStack, Text, Grid, Badge } from '@chakra-ui/react';
 import { Card } from '../common';
 import { Field } from '../ui/field';
+import CustomSelect from '../ui/CustomSelect';
 import { FiGlobe, FiMail, FiPhone } from 'react-icons/fi';
 
 const OrganizationSettings = () => {
@@ -71,38 +72,38 @@ const OrganizationSettings = () => {
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
               <Field label="Industry">
-                <select
-                  name="industry"
+                <CustomSelect
                   value={formData.industry}
-                  onChange={handleChange}
-                  aria-label="Industry"
-                  className="chakra-select"
-                >
-                  <option value="Software & Technology">Software & Technology</option>
-                  <option value="Healthcare">Healthcare</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Retail">Retail</option>
-                  <option value="Manufacturing">Manufacturing</option>
-                  <option value="Education">Education</option>
-                  <option value="Other">Other</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, industry: val })}
+                  options={[
+                    { value: 'Software & Technology', label: 'Software & Technology' },
+                    { value: 'Healthcare', label: 'Healthcare' },
+                    { value: 'Finance', label: 'Finance' },
+                    { value: 'Retail', label: 'Retail' },
+                    { value: 'Manufacturing', label: 'Manufacturing' },
+                    { value: 'Education', label: 'Education' },
+                    { value: 'Other', label: 'Other' },
+                  ]}
+                  placeholder="Select industry"
+                  accentColor="purple"
+                />
               </Field>
 
               <Field label="Company Size">
-                <select
-                  name="companySize"
+                <CustomSelect
                   value={formData.companySize}
-                  onChange={handleChange}
-                  aria-label="Company Size"
-                  className="chakra-select"
-                >
-                  <option value="1-10">1-10 employees</option>
-                  <option value="11-50">11-50 employees</option>
-                  <option value="51-200">51-200 employees</option>
-                  <option value="201-500">201-500 employees</option>
-                  <option value="501-1000">501-1000 employees</option>
-                  <option value="1000+">1000+ employees</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, companySize: val })}
+                  options={[
+                    { value: '1-10', label: '1-10 employees' },
+                    { value: '11-50', label: '11-50 employees' },
+                    { value: '51-200', label: '51-200 employees' },
+                    { value: '201-500', label: '201-500 employees' },
+                    { value: '501-1000', label: '501-1000 employees' },
+                    { value: '1000+', label: '1000+ employees' },
+                  ]}
+                  placeholder="Select company size"
+                  accentColor="purple"
+                />
               </Field>
             </Grid>
 
@@ -213,38 +214,38 @@ const OrganizationSettings = () => {
 
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
               <Field label="Timezone">
-                <select
-                  name="timezone"
+                <CustomSelect
                   value={formData.timezone}
-                  onChange={handleChange}
-                  aria-label="Timezone"
-                  className="chakra-select"
-                >
-                  <option value="America/Los_Angeles">Pacific Time (PT)</option>
-                  <option value="America/Denver">Mountain Time (MT)</option>
-                  <option value="America/Chicago">Central Time (CT)</option>
-                  <option value="America/New_York">Eastern Time (ET)</option>
-                  <option value="Europe/London">London (GMT)</option>
-                  <option value="Europe/Paris">Paris (CET)</option>
-                  <option value="Asia/Tokyo">Tokyo (JST)</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, timezone: val })}
+                  options={[
+                    { value: 'America/Los_Angeles', label: 'Pacific Time (PT)' },
+                    { value: 'America/Denver', label: 'Mountain Time (MT)' },
+                    { value: 'America/Chicago', label: 'Central Time (CT)' },
+                    { value: 'America/New_York', label: 'Eastern Time (ET)' },
+                    { value: 'Europe/London', label: 'London (GMT)' },
+                    { value: 'Europe/Paris', label: 'Paris (CET)' },
+                    { value: 'Asia/Tokyo', label: 'Tokyo (JST)' },
+                  ]}
+                  placeholder="Select timezone"
+                  accentColor="purple"
+                />
               </Field>
 
               <Field label="Currency">
-                <select
-                  name="currency"
+                <CustomSelect
                   value={formData.currency}
-                  onChange={handleChange}
-                  aria-label="Currency"
-                  className="chakra-select"
-                >
-                  <option value="USD">USD - US Dollar</option>
-                  <option value="EUR">EUR - Euro</option>
-                  <option value="GBP">GBP - British Pound</option>
-                  <option value="JPY">JPY - Japanese Yen</option>
-                  <option value="CAD">CAD - Canadian Dollar</option>
-                  <option value="AUD">AUD - Australian Dollar</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, currency: val })}
+                  options={[
+                    { value: 'USD', label: 'USD - US Dollar' },
+                    { value: 'EUR', label: 'EUR - Euro' },
+                    { value: 'GBP', label: 'GBP - British Pound' },
+                    { value: 'JPY', label: 'JPY - Japanese Yen' },
+                    { value: 'CAD', label: 'CAD - Canadian Dollar' },
+                    { value: 'AUD', label: 'AUD - Australian Dollar' },
+                  ]}
+                  placeholder="Select currency"
+                  accentColor="purple"
+                />
               </Field>
             </Grid>
 

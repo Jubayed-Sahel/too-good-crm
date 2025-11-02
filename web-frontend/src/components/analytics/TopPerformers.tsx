@@ -1,6 +1,7 @@
 import { Box, Text, VStack, HStack, Badge } from '@chakra-ui/react';
 import { Card } from '../common';
 import { FiAward } from 'react-icons/fi';
+import { formatCurrency } from '@/utils';
 
 // Simple Avatar component
 const Avatar = ({ name, size = 'md', bg }: { name: string; size?: string; bg?: string }) => {
@@ -58,15 +59,6 @@ const TopPerformers = ({
     { name: 'David Wilson', role: 'Sales Rep', deals: 12, revenue: 295000 },
   ]
 }: TopPerformersProps) => {
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
-
   const getRankColor = (index: number) => {
     switch (index) {
       case 0: return 'yellow';
