@@ -20,6 +20,7 @@ import { useState } from 'react';
 interface LeadsTableProps {
   leads: Lead[];
   isLoading?: boolean;
+  onView?: (lead: Lead) => void;
   onEdit?: (lead: Lead) => void;
   onDelete?: (leadId: string) => void;
   onConvert?: (lead: Lead) => void;
@@ -37,6 +38,7 @@ const priorityColors = {
 export const LeadsTable = ({ 
   leads, 
   isLoading = false,
+  onView,
   onEdit,
   onDelete,
   onConvert,
@@ -208,13 +210,13 @@ export const LeadsTable = ({
               </Table.Cell>
               <Table.Cell>
                 <HStack gap={1} justify="center">
-                  {lead.status !== 'converted' && lead.status !== 'lost' && onConvert && (
+                  {onView && (
                     <IconButton
-                      aria-label="View/Convert lead"
+                      aria-label="View lead details"
                       size="sm"
                       variant="ghost"
                       colorPalette="purple"
-                      onClick={() => onConvert(lead)}
+                      onClick={() => onView(lead)}
                     >
                       <FiEye size={16} />
                     </IconButton>
