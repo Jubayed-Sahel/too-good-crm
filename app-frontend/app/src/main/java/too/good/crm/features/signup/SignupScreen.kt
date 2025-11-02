@@ -21,65 +21,182 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import too.good.crm.ui.theme.Purple500
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
 fun SignupScreen() {
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(text = "Sign Up", style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(32.dp))
+
+        Text(
+            text = "Create Account",
+            style = MaterialTheme.typography.headlineMedium,
+            modifier = Modifier.padding(vertical = 16.dp)
+        )
+        Text(
+            text = "Sign up to get started with LeadGrid",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
         OutlinedTextField(
-            value = "",
-            onValueChange = { /*TODO*/ },
+            value = username,
+            onValueChange = { username = it },
+            label = { Text("Username") },
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Purple500,
+                unfocusedBorderColor = Color.LightGray
+            )
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
             label = { Text("Email") },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
+            singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Purple500,
                 unfocusedBorderColor = Color.LightGray
             )
         )
         Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedTextField(
+                value = firstName,
+                onValueChange = { firstName = it },
+                label = { Text("First Name") },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(8.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Purple500,
+                    unfocusedBorderColor = Color.LightGray
+                )
+            )
+            OutlinedTextField(
+                value = lastName,
+                onValueChange = { lastName = it },
+                label = { Text("Last Name") },
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(8.dp),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Purple500,
+                    unfocusedBorderColor = Color.LightGray
+                )
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
         OutlinedTextField(
-            value = "",
-            onValueChange = { /*TODO*/ },
+            value = password,
+            onValueChange = { password = it },
             label = { Text("Password") },
-            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
+            visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                    Icon(
+                        // FIX: Changed Icons.Default to Icons.Filled
+                        if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription = "Toggle password visibility"
+                    )
+                }
+            },
+            singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Purple500,
                 unfocusedBorderColor = Color.LightGray
             )
         )
         Spacer(modifier = Modifier.height(12.dp))
+
         OutlinedTextField(
-            value = "",
-            onValueChange = { /*TODO*/ },
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
             label = { Text("Confirm Password") },
-            visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
+            visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+            trailingIcon = {
+                IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
+                    Icon(
+                        // FIX: Changed Icons.Default to Icons.Filled
+                        if (confirmPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
+                        contentDescription = "Toggle password visibility"
+                    )
+                }
+            },
+            singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = Purple500,
                 unfocusedBorderColor = Color.LightGray
             )
         )
         Spacer(modifier = Modifier.height(24.dp))
+
         Button(
-            onClick = { /*TODO*/ },
+            onClick = { /* TODO: Implement signup */ },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(40.dp),
+                .height(48.dp),
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Purple500)
         ) {
-            Text("Sign Up", color = Color.White)
+            Text("Sign Up")
+        }
+
+        Row(
+            modifier = Modifier.padding(vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Already have an account?")
+            Button(
+                onClick = { /* TODO: Implement signup */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Purple500)
+            ) {
+                Text("Sign In")
+            }
+
         }
     }
 }
