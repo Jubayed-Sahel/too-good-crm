@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { DealsTable, DealsFilters, DealsStats } from '../components/deals';
+import { DealsTable, DealsFilters, DealsStats, CreateDealDialog } from '../components/deals';
 import { useDeals } from '@/hooks';
 
 const DealsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   // Fetch deals data
   const { deals, isLoading, error } = useDeals();
@@ -82,8 +83,13 @@ const DealsPage = () => {
   };
 
   const handleAddDeal = () => {
-    alert('Add new deal');
-    // TODO: Implement add deal modal
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleCreateDeal = (data: any) => {
+    console.log('Create deal:', data);
+    // TODO: Implement API call to create deal
+    alert(`Deal "${data.title}" created successfully!`);
   };
 
   if (error) {
@@ -167,6 +173,13 @@ const DealsPage = () => {
           </>
         )}
       </VStack>
+
+      {/* Create Deal Dialog */}
+      <CreateDealDialog
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        onSubmit={handleCreateDeal}
+      />
     </DashboardLayout>
   );
 };

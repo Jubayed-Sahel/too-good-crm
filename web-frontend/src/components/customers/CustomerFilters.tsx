@@ -49,6 +49,7 @@ const CustomerFilters = ({
             onChange={(e) => onSearchChange(e.target.value)}
             pl="40px"
             h="40px"
+            borderRadius="lg"
           />
         </Box>
 

@@ -5,12 +5,14 @@ import {
   CustomerTable,
   CustomerFilters,
   CustomerStats,
+  CreateCustomerDialog,
 } from '../components/customers';
 import { useCustomers } from '@/hooks';
 
 const CustomersPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
   // Fetch customers data
   const { customers, isLoading, error } = useCustomers();
@@ -93,9 +95,13 @@ const CustomersPage = () => {
   };
 
   const handleAddCustomer = () => {
-    console.log('Add new customer');
-    // TODO: Implement add customer modal
-    alert('Add new customer form coming soon!');
+    setIsCreateDialogOpen(true);
+  };
+
+  const handleCreateCustomer = (data: any) => {
+    console.log('Create customer:', data);
+    // TODO: Implement API call to create customer
+    alert(`Customer "${data.fullName}" created successfully!`);
   };
 
   if (error) {
@@ -175,6 +181,13 @@ const CustomersPage = () => {
           </>
         )}
       </VStack>
+
+      {/* Create Customer Dialog */}
+      <CreateCustomerDialog
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        onSubmit={handleCreateCustomer}
+      />
     </DashboardLayout>
   );
 };
