@@ -182,6 +182,7 @@ const SignupForm = () => {
                     }
                     size="md"
                     h="10"
+                    borderRadius="lg"
                   />
                 </Field>
 
@@ -200,6 +201,7 @@ const SignupForm = () => {
                     }
                     size="md"
                     h="10"
+                    borderRadius="lg"
                   />
                 </Field>
 
@@ -220,6 +222,7 @@ const SignupForm = () => {
                       }
                       size="md"
                       h="10"
+                      borderRadius="lg"
                     />
                   </Field>
 
@@ -239,6 +242,7 @@ const SignupForm = () => {
                       }
                       size="md"
                       h="10"
+                      borderRadius="lg"
                     />
                   </Field>
                 </Box>
@@ -261,6 +265,7 @@ const SignupForm = () => {
                       h="10"
                       pr="12"
                       w="full"
+                      borderRadius="lg"
                     />
                     <Box
                       position="absolute"
@@ -304,6 +309,7 @@ const SignupForm = () => {
                       h="10"
                       pr="12"
                       w="full"
+                      borderRadius="lg"
                     />
                     <Box
                       position="absolute"

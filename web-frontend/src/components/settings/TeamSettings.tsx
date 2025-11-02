@@ -132,8 +132,15 @@ const TeamSettings = () => {
               <VStack align="stretch" gap={4} p={4} bg="gray.50" borderRadius="md">
                 <Grid templateColumns={{ base: '1fr', md: '2fr 1fr' }} gap={3}>
                   <Field label="Email Address" required>
-                    <HStack>
-                      <Box color="gray.400" pl={3}>
+                    <Box position="relative">
+                      <Box
+                        position="absolute"
+                        left="12px"
+                        top="50%"
+                        transform="translateY(-50%)"
+                        pointerEvents="none"
+                        color="gray.400"
+                      >
                         <FiMail size={16} />
                       </Box>
                       <Input
@@ -143,9 +150,10 @@ const TeamSettings = () => {
                         onChange={(e) => setInviteEmail(e.target.value)}
                         size="md"
                         bg="white"
-                        pl={2}
+                        pl="40px"
+                        borderRadius="lg"
                       />
-                    </HStack>
+                    </Box>
                   </Field>
 
                   <Field label="Role" required>

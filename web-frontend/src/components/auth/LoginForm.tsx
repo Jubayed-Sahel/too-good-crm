@@ -124,6 +124,7 @@ const LoginForm = () => {
                     }
                     size="md"
                     h="12"
+                    borderRadius="lg"
                   />
                 </Field>
 
@@ -140,6 +141,7 @@ const LoginForm = () => {
                       h="12"
                       pr="12"
                       w="full"
+                      borderRadius="lg"
                     />
                     <Box
                       position="absolute"
