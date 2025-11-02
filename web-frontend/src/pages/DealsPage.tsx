@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { 
@@ -13,6 +14,7 @@ import { useDeals } from '@/hooks';
 import { updateDeal, createDeal, deleteDeal } from '@/services/deals.service';
 
 const DealsPage = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -76,20 +78,7 @@ const DealsPage = () => {
 
   // Action handlers
   const handleEditDeal = (deal: any) => {
-    // Convert deal to EditDealData format
-    const editData: EditDealData = {
-      id: deal.id,
-      title: deal.title,
-      customer: deal.customer,
-      value: deal.value,
-      stage: deal.stage,
-      probability: deal.probability,
-      expectedCloseDate: deal.expectedCloseDate,
-      owner: deal.owner,
-      description: '', // Add description if available
-    };
-    setSelectedDeal(editData);
-    setIsEditDialogOpen(true);
+    navigate(`/deals/${deal.id}/edit`);
   };
 
   const handleUpdateDeal = async (data: EditDealData) => {
@@ -127,8 +116,7 @@ const DealsPage = () => {
   };
 
   const handleViewDeal = (deal: any) => {
-    alert(`View deal: ${deal.title}`);
-    // TODO: Implement view/details modal or navigation
+    navigate(`/deals/${deal.id}`);
   };
 
   const handleAddDeal = () => {
