@@ -33,22 +33,35 @@ const CustomerDetailPage = () => {
   const navigate = useNavigate();
   const { customers, isLoading, error } = useCustomers();
 
-  // Find the customer by ID
+  // Find the customer by ID - now uses full mock data with activities, notes, etc.
   const customer = useMemo(() => {
     if (!customers || !id) return null;
     
-    const found = customers.find((c) => c.id.toString() === id);
+    const found = customers.find((c) => c.id.toString() === id) as any;
     if (!found) return null;
 
+    // Return the full customer object with all mock data fields
     return {
       id: found.id.toString(),
       name: found.full_name,
       email: found.email,
       phone: found.phone || '',
       company: found.company || '',
+      website: found.website || '',
+      address: found.address || '',
+      city: found.city || '',
+      state: found.state || '',
+      country: found.country || '',
       status: (found.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'pending',
-      totalValue: 0, // Backend doesn't provide this yet
-      lastContact: found.updated_at || found.created_at,
+      job_title: found.job_title || '',
+      industry: found.industry || '',
+      source: found.source || '',
+      notes: found.notes || '',
+      tags: found.tags || [],
+      totalValue: found.total_value || 0,
+      lifetimeValue: found.lifetime_value || 0,
+      lastContact: found.last_contact || found.updated_at || found.created_at,
+      created_at: found.created_at,
     };
   }, [customers, id]);
 
