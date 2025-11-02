@@ -166,19 +166,19 @@ export const designTokens = {
       mono: "'Fira Code', 'Courier New', monospace",
     },
 
-    // Font Sizes
+    // Font Sizes (UPDATED for better readability)
     fontSizes: {
-      xs: '0.75rem',      // 12px
-      sm: '0.875rem',     // 14px
-      md: '1rem',         // 16px (base)
-      lg: '1.125rem',     // 18px
-      xl: '1.25rem',      // 20px
-      '2xl': '1.5rem',    // 24px
-      '3xl': '1.875rem',  // 30px
-      '4xl': '2.25rem',   // 36px
-      '5xl': '3rem',      // 48px
-      '6xl': '3.75rem',   // 60px
-      '7xl': '4.5rem',    // 72px
+      xs: '0.8125rem',    // 13px (was 12px)
+      sm: '0.9375rem',    // 15px (was 14px)
+      md: '1.0625rem',    // 17px (was 16px)
+      lg: '1.1875rem',    // 19px (was 18px)
+      xl: '1.375rem',     // 22px (was 20px)
+      '2xl': '1.625rem',  // 26px (was 24px)
+      '3xl': '2rem',      // 32px (was 30px)
+      '4xl': '2.5rem',    // 40px (was 36px)
+      '5xl': '3.25rem',   // 52px (was 48px)
+      '6xl': '4rem',      // 64px (was 60px)
+      '7xl': '4.75rem',   // 76px (was 72px)
     },
 
     // Font Weights
@@ -498,30 +498,30 @@ export const designTokens = {
   },
 
   // ============================================
-  // LAYOUT
+  // LAYOUT (UPDATED for better spacing)
   // ============================================
   layout: {
-    // Page padding
+    // Page padding (REDUCED)
     pagePadding: {
       mobile: '16px',
-      tablet: '24px',
-      desktop: '32px',
+      tablet: '20px',
+      desktop: '24px',
     },
 
-    // Section spacing
+    // Section spacing (REDUCED)
     sectionGap: {
-      sm: '24px',
-      md: '32px',
-      lg: '48px',
-      xl: '64px',
+      sm: '16px',
+      md: '20px',
+      lg: '24px',
+      xl: '32px',
     },
 
     // Grid gaps
     gridGap: {
       sm: '12px',
       md: '16px',
-      lg: '24px',
-      xl: '32px',
+      lg: '20px',
+      xl: '24px',
     },
 
     // Sidebar

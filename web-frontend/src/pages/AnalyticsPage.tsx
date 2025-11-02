@@ -22,7 +22,7 @@ const AnalyticsPage = () => {
 
   return (
     <DashboardLayout title="Analytics">
-      <VStack align="stretch" gap={6}>
+      <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <AnalyticsHeader
           onExport={handleExport}
@@ -35,7 +35,7 @@ const AnalyticsPage = () => {
         {/* Two Column Layout */}
         <Grid
           templateColumns={{ base: '1fr', lg: '2fr 1fr' }}
-          gap={6}
+          gap={5}
         >
           <SalesPipeline />
           <TopPerformers />
@@ -44,7 +44,7 @@ const AnalyticsPage = () => {
         {/* Two Column Layout */}
         <Grid
           templateColumns={{ base: '1fr', lg: '1fr 1fr' }}
-          gap={6}
+          gap={5}
         >
           <ConversionFunnel />
           <RecentActivities />

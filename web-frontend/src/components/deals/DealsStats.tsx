@@ -12,7 +12,7 @@ interface DealsStatsProps {
 
 const DealsStats = ({ totalDeals, activeDeals, wonDeals, totalValue }: DealsStatsProps) => {
   return (
-    <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} gap={6} w="100%">
+    <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} gap={5} w="100%">
       <StatCard
         title="Total Deals"
         value={totalDeals.toString()}
