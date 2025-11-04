@@ -22,6 +22,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import too.good.crm.features.dashboard.DashboardScreen
 import too.good.crm.features.login.LoginScreen
 import too.good.crm.features.signup.SignupScreen
 import too.good.crm.ui.theme.TooGoodCrmTheme
@@ -43,11 +44,43 @@ class MainActivity : ComponentActivity() {
                             MainScreen(navController = navController)
                         }
                         composable("login") {
-                            LoginScreen()
+                            LoginScreen(
+                                onLoginClicked = {
+                                    navController.navigate("dashboard"){
+                                        popUpTo("main") { inclusive = true }
+                                    }
+                                },
+                                onSignUpClicked = {
+                                    navController.navigate("signup")
+                                }
+                            )
                         }
                         composable("signup") {
-                            SignupScreen()
+                            SignupScreen(
+                                onSignUpClicked = {
+                                    navController.navigate("dashboard"){
+                                        popUpTo("main") { inclusive = true }
+                                    }
+                                },
+                                onLoginClicked = {
+                                    navController.popBackStack()
+                                }
+
+                            )
                         }
+                        composable("dashboard") {
+                            DashboardScreen(
+                                onLogoutClicked = {
+                                    navController.navigate("main") {
+                                        popUpTo("dashboard") { inclusive = true }
+                                    }
+                                },
+                                onDashboardItemClicked = { route ->
+                                    navController.navigate(route)
+                                }
+                            )
+                        }
+
                     }
                 }
             }
