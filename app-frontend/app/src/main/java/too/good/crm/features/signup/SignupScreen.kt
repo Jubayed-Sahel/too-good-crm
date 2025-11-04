@@ -34,7 +34,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.text.input.VisualTransformation
 
 @Composable
-fun SignupScreen() {
+fun SignupScreen(
+    onSignUpClicked: () -> Unit,
+    onLoginClicked: () -> Unit,
+) {
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
