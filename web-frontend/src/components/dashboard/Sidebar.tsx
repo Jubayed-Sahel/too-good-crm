@@ -8,7 +8,8 @@ import {
   FiSettings, 
   FiLogOut,
   FiUserPlus,
-  FiTrendingUp
+  FiTrendingUp,
+  FiActivity
 } from 'react-icons/fi';
 
 interface SidebarProps {
@@ -30,6 +31,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiTrendingUp, label: 'Sales', path: '/sales' },
     { icon: FiFileText, label: 'Deals', path: '/deals' },
     { icon: FiUserPlus, label: 'Leads', path: '/leads' },
+    { icon: FiActivity, label: 'Activities', path: '/activities' },
     { icon: FiBarChart2, label: 'Analytics', path: '/analytics' },
     { icon: FiSettings, label: 'Settings', path: '/settings' },
   ];
