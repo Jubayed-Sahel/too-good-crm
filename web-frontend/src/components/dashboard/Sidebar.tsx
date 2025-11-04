@@ -9,8 +9,13 @@ import {
   FiLogOut,
   FiUserPlus,
   FiTrendingUp,
-  FiActivity
+  FiActivity,
+  FiShoppingBag,
+  FiPackage,
+  FiCreditCard,
+  FiAlertCircle,
 } from 'react-icons/fi';
+import { useAccountMode } from '@/contexts/AccountModeContext';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -19,13 +24,15 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const navigate = useNavigate();
+  const { isClientMode } = useAccountMode();
 
   const handleSignOut = () => {
     console.log('Signing out...');
     navigate('/login');
   };
 
-  const menuItems = [
+  // Vendor menu items
+  const vendorMenuItems = [
     { icon: FiHome, label: 'Dashboard', path: '/dashboard' },
     { icon: FiUsers, label: 'Customers', path: '/customers' },
     { icon: FiTrendingUp, label: 'Sales', path: '/sales' },
@@ -35,6 +42,19 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiBarChart2, label: 'Analytics', path: '/analytics' },
     { icon: FiSettings, label: 'Settings', path: '/settings' },
   ];
+
+  // Client menu items
+  const clientMenuItems = [
+    { icon: FiHome, label: 'Dashboard', path: '/client/dashboard' },
+    { icon: FiShoppingBag, label: 'My Vendors', path: '/client/vendors' },
+    { icon: FiPackage, label: 'My Orders', path: '/client/orders' },
+    { icon: FiCreditCard, label: 'Payments', path: '/client/payments' },
+    { icon: FiActivity, label: 'Activities', path: '/client/activities' },
+    { icon: FiAlertCircle, label: 'Issues', path: '/client/issues' },
+    { icon: FiSettings, label: 'Settings', path: '/client/settings' },
+  ];
+
+  const menuItems = isClientMode ? clientMenuItems : vendorMenuItems;
 
   return (
     <>
@@ -78,7 +98,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
               <Box
                 w="10"
                 h="10"
-                bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                bg={isClientMode ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"}
                 borderRadius="xl"
                 display="flex"
                 alignItems="center"
@@ -92,14 +112,14 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
               <Box>
                 <Heading
                   size="md"
-                  bgGradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                  bgGradient={isClientMode ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"}
                   bgClip="text"
                   fontWeight="bold"
                 >
                   LeadGrid
                 </Heading>
-                <Text fontSize="xs" color="gray.500">
-                  CRM Platform
+                <Text fontSize="xs" color={isClientMode ? "blue.600" : "purple.600"} fontWeight="semibold">
+                  {isClientMode ? 'Client Portal' : 'CRM Platform'}
                 </Text>
               </Box>
             </Flex>
@@ -120,12 +140,12 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                     px={4}
                     py={3}
                     borderRadius="lg"
-                    bg={isActive ? 'purple.50' : 'transparent'}
-                    color={isActive ? 'purple.600' : 'gray.700'}
+                    bg={isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'transparent'}
+                    color={isActive ? (isClientMode ? 'blue.600' : 'purple.600') : 'gray.700'}
                     fontWeight={isActive ? 'semibold' : 'medium'}
                     _hover={{
-                      bg: isActive ? 'purple.50' : 'gray.50',
-                      color: isActive ? 'purple.600' : 'gray.900',
+                      bg: isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'gray.50',
+                      color: isActive ? (isClientMode ? 'blue.600' : 'purple.600') : 'gray.900',
                     }}
                     cursor="pointer"
                     transition="all 0.2s"
