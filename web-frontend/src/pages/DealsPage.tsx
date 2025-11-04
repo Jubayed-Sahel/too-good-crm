@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { 
@@ -15,6 +15,7 @@ import { updateDeal, createDeal, deleteDeal } from '@/services/deals.service';
 
 const DealsPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [stageFilter, setStageFilter] = useState('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -23,6 +24,15 @@ const DealsPage = () => {
   
   // Fetch deals data
   const { deals, isLoading, error } = useDeals();
+
+  // Check if we should open the new deal dialog (from dashboard redirect)
+  useEffect(() => {
+    if (location.state?.openNewDeal) {
+      setIsCreateDialogOpen(true);
+      // Clear the state so dialog doesn't reopen on refresh
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, location.pathname, navigate]);
 
   // Filter deals based on search and stage
   const filteredDeals = useMemo(() => {

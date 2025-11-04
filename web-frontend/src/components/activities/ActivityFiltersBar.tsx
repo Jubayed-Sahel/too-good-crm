@@ -2,6 +2,7 @@ import { HStack, Input, Button, Stack, Text } from '@chakra-ui/react';
 import { FiSearch, FiPlus, FiX } from 'react-icons/fi';
 import CustomSelect from '../ui/CustomSelect';
 import { Card } from '../common';
+import { useAccountMode } from '@/contexts/AccountModeContext';
 import type { ActivityType, ActivityStatus } from '@/types/activity.types';
 
 interface ActivityFiltersBarProps {
@@ -44,6 +45,7 @@ export const ActivityFiltersBar = ({
   onAddActivity,
   onClearFilters,
 }: ActivityFiltersBarProps) => {
+  const { isClientMode } = useAccountMode();
   const hasActiveFilters =
     searchQuery !== '' || typeFilter !== 'all' || statusFilter !== 'all';
 
@@ -109,7 +111,7 @@ export const ActivityFiltersBar = ({
           )}
 
           <Button
-            colorPalette="purple"
+            colorPalette={isClientMode ? "blue" : "purple"}
             onClick={onAddActivity}
             size="sm"
             height="40px"
