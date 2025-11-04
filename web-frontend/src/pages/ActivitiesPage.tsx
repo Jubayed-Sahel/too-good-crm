@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { toaster } from '../components/ui/toaster';
+import { useAccountMode } from '@/contexts/AccountModeContext';
 import { ActivityStatsCards } from '../components/activities/ActivityStatsCards';
 import { ActivityFiltersBar } from '../components/activities/ActivityFiltersBar';
 import { ActivitiesTable } from '../components/activities/ActivitiesTable';
+import { ActivityTypeMenu } from '../components/activities/ActivityTypeMenu';
 import { CreateCallDialog, type CallData } from '../components/activities/CreateCallDialog';
 import { SendEmailDialog, type EmailData } from '../components/activities/SendEmailDialog';
 import { SendTelegramDialog, type TelegramData } from '../components/activities/SendTelegramDialog';
@@ -20,6 +22,7 @@ import type { Activity, ActivityType, ActivityStatus, ActivityFilters, ActivityS
 
 export const ActivitiesPage = () => {
   const navigate = useNavigate();
+  const { isClientMode } = useAccountMode();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [stats, setStats] = useState<ActivityStats>({
     totalActivities: 0,
@@ -36,6 +39,7 @@ export const ActivitiesPage = () => {
   });
 
   // Dialog states
+  const [isActivityMenuOpen, setIsActivityMenuOpen] = useState(false);
   const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
@@ -94,8 +98,7 @@ export const ActivitiesPage = () => {
 
   // Action handlers
   const handleNewActivity = () => {
-    // For now, just open the call dialog
-    setIsCallDialogOpen(true);
+    setIsActivityMenuOpen(true);
   };
 
   const handleCreateCall = async (data: CallData) => {
@@ -307,6 +310,16 @@ export const ActivitiesPage = () => {
           </>
         )}
       </VStack>
+
+      {/* Activity Type Menu */}
+      <ActivityTypeMenu
+        isOpen={isActivityMenuOpen}
+        onClose={() => setIsActivityMenuOpen(false)}
+        onSelectCall={() => setIsCallDialogOpen(true)}
+        onSelectEmail={() => setIsEmailDialogOpen(true)}
+        onSelectTelegram={() => setIsTelegramDialogOpen(true)}
+        isClientMode={isClientMode}
+      />
 
       {/* Dialogs */}
       <CreateCallDialog

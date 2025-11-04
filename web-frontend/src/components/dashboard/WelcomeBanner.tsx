@@ -1,9 +1,19 @@
 import { Box, Heading, Text, Flex, VStack, HStack, Button } from '@chakra-ui/react';
+import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiTrendingUp } from 'react-icons/fi';
 
 const WelcomeBanner = () => {
+  const navigate = useNavigate();
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 18 ? 'Good Afternoon' : 'Good Evening';
+
+  const handleViewAnalytics = () => {
+    navigate('/analytics');
+  };
+
+  const handleNewDeal = () => {
+    navigate('/deals', { state: { openNewDeal: true } });
+  };
 
   return (
     <Box
@@ -67,6 +77,7 @@ const WelcomeBanner = () => {
               bg: 'whiteAlpha.200',
             }}
             borderWidth="2px"
+            onClick={handleViewAnalytics}
           >
             <FiTrendingUp />
             <Text ml={2}>View Analytics</Text>
@@ -82,6 +93,7 @@ const WelcomeBanner = () => {
             }}
             transition="all 0.2s"
             fontWeight="semibold"
+            onClick={handleNewDeal}
           >
             <FiPlus />
             <Text ml={2}>New Deal</Text>
