@@ -4,6 +4,7 @@ ViewSets package for CRM Application
 
 from .auth import (
     UserViewSet,
+    UserProfileViewSet,
     LoginViewSet,
     LogoutViewSet,
     ChangePasswordViewSet,
@@ -34,6 +35,7 @@ from .deal import (
 __all__ = [
     # Auth
     'UserViewSet',
+    'UserProfileViewSet',
     'LoginViewSet',
     'LogoutViewSet',
     'ChangePasswordViewSet',

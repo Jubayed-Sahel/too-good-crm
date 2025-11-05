@@ -3,8 +3,9 @@ Customer related serializers
 """
 
 from rest_framework import serializers
-from crmApp.models import Customer
+from crmApp.models import Customer, UserProfile
 from .employee import EmployeeListSerializer
+from .auth import UserSerializer, UserProfileSerializer
 
 
 class CustomerListSerializer(serializers.ModelSerializer):
@@ -26,42 +27,72 @@ class CustomerListSerializer(serializers.ModelSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     """Full customer serializer"""
+    user = UserSerializer(read_only=True)
+    user_profile = UserProfileSerializer(read_only=True)
     assigned_to = EmployeeListSerializer(read_only=True)
     converted_from_lead = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
+    customer_type_display = serializers.CharField(source='get_customer_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
     
     class Meta:
         model = Customer
         fields = [
-            'id', 'organization', 'code', 'name',
+            'id', 'organization', 'user', 'user_profile', 'code',
+            'name', 'first_name', 'last_name', 'full_name',
             'company_name', 'contact_person', 'email', 'phone',
-            'website', 'customer_type', 'status', 'industry',
+            'website', 'customer_type', 'customer_type_display',
+            'status', 'status_display', 'industry', 'rating',
             'assigned_to', 'payment_terms', 'credit_limit',
             'tax_id', 'address', 'city', 'state', 'zip_code',
             'country', 'source', 'tags', 'notes',
             'converted_from_lead', 'converted_at',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'code', 'created_at', 'updated_at', 'converted_at']
+        read_only_fields = ['id', 'code', 'user_profile', 'created_at', 'updated_at', 'converted_at']
+    
+    def get_full_name(self, obj):
+        return obj.full_name
     
     def get_converted_from_lead(self, obj):
         if obj.converted_from_lead:
             return {
                 'id': obj.converted_from_lead.id,
-                'name': obj.converted_from_lead.name
+                'name': f"{obj.converted_from_lead.first_name} {obj.converted_from_lead.last_name}".strip()
             }
         return None
 
 
 class CustomerCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating customers"""
+    user_id = serializers.IntegerField(required=False, allow_null=True)
     assigned_to_id = serializers.IntegerField(required=False, allow_null=True)
     
     class Meta:
         model = Customer
         fields = [
-            'organization', 'name', 'company_name', 'contact_person',
-            'email', 'phone', 'website', 'customer_type', 'status',
-            'industry', 'assigned_to_id', 'payment_terms',
-            'credit_limit', 'tax_id', 'address', 'city', 'state',
-            'zip_code', 'country', 'source', 'tags', 'notes'
+            'organization', 'user_id', 'name', 'first_name', 'last_name',
+            'company_name', 'contact_person', 'email', 'phone', 'website',
+            'customer_type', 'status', 'industry', 'rating',
+            'assigned_to_id', 'payment_terms', 'credit_limit', 'tax_id',
+            'address', 'city', 'state', 'zip_code', 'country',
+            'source', 'tags', 'notes'
         ]
+    
+    def create(self, validated_data):
+        """Create customer and auto-create user profile if user is linked"""
+        user_id = validated_data.pop('user_id', None)
+        assigned_to_id = validated_data.pop('assigned_to_id', None)
+        
+        customer = Customer(**validated_data)
+        
+        if user_id:
+            from crmApp.models import User
+            customer.user = User.objects.get(id=user_id)
+        
+        if assigned_to_id:
+            from crmApp.models import Employee
+            customer.assigned_to = Employee.objects.get(id=assigned_to_id)
+        
+        customer.save()  # This will auto-create UserProfile
+        return customer
