@@ -35,10 +35,14 @@ class UserManager(BaseUserManager):
 class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
     """
     Custom user model with email-based authentication.
-    Supports multi-factor authentication and account security features.
+    Supports multi-tenancy through UserProfile (vendor, employee, customer).
     """
     username = models.CharField(max_length=100, unique=True)
     email = models.EmailField(max_length=255, unique=True)
+    first_name = models.CharField(max_length=100, null=True, blank=True)
+    last_name = models.CharField(max_length=100, null=True, blank=True)
+    profile_image = models.CharField(max_length=255, null=True, blank=True)
+    
     is_active = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
@@ -72,7 +76,35 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
     @property
     def full_name(self):
         """Return the user's full name if available."""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
         return self.username
+    
+    def get_profiles(self, organization_id=None):
+        """Get all user profiles, optionally filtered by organization."""
+        profiles = self.user_profiles.all()
+        if organization_id:
+            profiles = profiles.filter(organization_id=organization_id)
+        return profiles
+    
+    def has_profile_type(self, profile_type, organization_id=None):
+        """Check if user has a specific profile type."""
+        query = {'profile_type': profile_type, 'status': 'active'}
+        if organization_id:
+            query['organization_id'] = organization_id
+        return self.user_profiles.filter(**query).exists()
+    
+    def is_vendor(self, organization_id=None):
+        """Check if user has vendor profile."""
+        return self.has_profile_type('vendor', organization_id)
+    
+    def is_employee(self, organization_id=None):
+        """Check if user has employee profile."""
+        return self.has_profile_type('employee', organization_id)
+    
+    def is_customer(self, organization_id=None):
+        """Check if user has customer profile."""
+        return self.has_profile_type('customer', organization_id)
 
 
 class RefreshToken(TimestampedModel):
@@ -139,3 +171,63 @@ class EmailVerificationToken(TimestampedModel):
     
     def __str__(self):
         return f"Verification token for {self.user.email}"
+
+
+class UserProfile(TimestampedModel):
+    """
+    User Profile model for multi-tenancy.
+    Links a user to an organization with a specific profile type (vendor, employee, customer).
+    A user can have multiple profiles across different organizations.
+    """
+    PROFILE_TYPE_CHOICES = [
+        ('vendor', 'Vendor'),
+        ('employee', 'Employee'),
+        ('customer', 'Customer'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('suspended', 'Suspended'),
+    ]
+    
+    user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='user_profiles')
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='user_profiles')
+    profile_type = models.CharField(max_length=20, choices=PROFILE_TYPE_CHOICES)
+    is_primary = models.BooleanField(default=False)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    activated_at = models.DateTimeField(null=True, blank=True)
+    deactivated_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'user_profiles'
+        verbose_name = 'User Profile'
+        verbose_name_plural = 'User Profiles'
+        unique_together = [('user', 'organization', 'profile_type')]
+        indexes = [
+            models.Index(fields=['user', 'organization']),
+            models.Index(fields=['profile_type', 'status']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.get_profile_type_display()} @ {self.organization.name}"
+    
+    def activate(self):
+        """Activate the user profile."""
+        from django.utils import timezone
+        self.status = 'active'
+        self.activated_at = timezone.now()
+        self.deactivated_at = None
+        self.save(update_fields=['status', 'activated_at', 'deactivated_at'])
+    
+    def deactivate(self):
+        """Deactivate the user profile."""
+        from django.utils import timezone
+        self.status = 'inactive'
+        self.deactivated_at = timezone.now()
+        self.save(update_fields=['status', 'deactivated_at'])
+    
+    def suspend(self):
+        """Suspend the user profile."""
+        self.status = 'suspended'
+        self.save(update_fields=['status'])

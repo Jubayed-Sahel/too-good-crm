@@ -9,6 +9,7 @@ organized into logical modules for better maintainability.
 from .auth import (
     User,
     UserManager,
+    UserProfile,
     RefreshToken,
     PasswordResetToken,
     EmailVerificationToken,
@@ -52,6 +53,7 @@ __all__ = [
     # Authentication
     'User',
     'UserManager',
+    'UserProfile',
     'RefreshToken',
     'PasswordResetToken',
     'EmailVerificationToken',
