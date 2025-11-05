@@ -200,16 +200,18 @@ export const ActivitiesTable = ({
                     <Box ml={2}>View</Box>
                   </Button>
                 )}
-                {onMarkComplete && activity.status !== 'completed' && (
+                {onMarkComplete && (
                   <Button
                     size="sm"
                     variant="outline"
                     colorPalette="green"
                     flex={1}
                     onClick={() => onMarkComplete(activity.id)}
+                    disabled={activity.status === 'completed'}
+                    opacity={activity.status === 'completed' ? 0.5 : 1}
                   >
                     <FiCheckCircle size={16} />
-                    <Box ml={2}>Complete</Box>
+                    <Box ml={2}>{activity.status === 'completed' ? 'Completed' : 'Complete'}</Box>
                   </Button>
                 )}
                 {onDelete && (
@@ -318,13 +320,16 @@ export const ActivitiesTable = ({
                           <FiEye size={16} />
                         </IconButton>
                       )}
-                      {onMarkComplete && activity.status !== 'completed' && (
+                      {onMarkComplete && (
                         <IconButton
                           aria-label="Mark as complete"
                           size="sm"
                           variant="ghost"
                           colorPalette="green"
                           onClick={() => onMarkComplete(activity.id)}
+                          disabled={activity.status === 'completed'}
+                          opacity={activity.status === 'completed' ? 0.5 : 1}
+                          cursor={activity.status === 'completed' ? 'not-allowed' : 'pointer'}
                         >
                           <FiCheckCircle size={16} />
                         </IconButton>

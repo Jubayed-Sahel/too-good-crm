@@ -24,6 +24,7 @@ import ClientOrderDetailPage from './pages/ClientOrderDetailPage'
 import ClientPaymentsPage from './pages/ClientPaymentsPage'
 import ClientSettingsPage from './pages/ClientSettingsPage'
 import ClientIssuesPage from './pages/ClientIssuesPage'
+import ClientIssueDetailPage from './pages/ClientIssueDetailPage'
 import './App.css'
 
 function App() {
@@ -58,6 +59,7 @@ function App() {
           <Route path="/client/payments" element={<ClientPaymentsPage />} />
           <Route path="/client/activities" element={<ActivitiesPage />} />
           <Route path="/client/issues" element={<ClientIssuesPage />} />
+          <Route path="/client/issues/:id" element={<ClientIssueDetailPage />} />
           <Route path="/client/settings" element={<ClientSettingsPage />} />
         </Routes>
       </Router>
