@@ -22,31 +22,33 @@ export const ModeSwitcher = () => {
 
   return (
     <HStack
-      gap={3}
+      gap={{ base: 1.5, md: 3 }}
       bg="white"
-      px={4}
-      py={2}
+      px={{ base: 2, md: 4 }}
+      py={{ base: 1.5, md: 2 }}
       borderRadius="full"
       boxShadow="sm"
       border="1px"
       borderColor="gray.200"
+      flexShrink={0}
     >
       {/* Client Icon */}
-      <HStack gap={2}>
+      <HStack gap={{ base: 1, md: 2 }}>
         <Box
-          p={1.5}
+          p={{ base: 1, md: 1.5 }}
           borderRadius="md"
           bg={isClientMode ? 'blue.100' : 'gray.100'}
           color={isClientMode ? 'blue.600' : 'gray.500'}
           transition="all 0.2s"
         >
-          <FiUser size={16} />
+          <FiUser size={14} />
         </Box>
         <Text
-          fontSize="sm"
+          fontSize={{ base: 'xs', md: 'sm' }}
           fontWeight={isClientMode ? 'bold' : 'medium'}
           color={isClientMode ? 'blue.600' : 'gray.600'}
           transition="all 0.2s"
+          display={{ base: 'none', sm: 'block' }}
         >
           Client
         </Text>
@@ -57,7 +59,7 @@ export const ModeSwitcher = () => {
         checked={isVendorMode}
         onCheckedChange={handleToggle}
         colorPalette="purple"
-        size="md"
+        size={{ base: 'sm', md: 'md' }}
       >
         <ChakraSwitch.HiddenInput />
         <ChakraSwitch.Control>
@@ -66,21 +68,22 @@ export const ModeSwitcher = () => {
       </ChakraSwitch.Root>
 
       {/* Vendor Icon */}
-      <HStack gap={2}>
+      <HStack gap={{ base: 1, md: 2 }}>
         <Box
-          p={1.5}
+          p={{ base: 1, md: 1.5 }}
           borderRadius="md"
           bg={isVendorMode ? 'purple.100' : 'gray.100'}
           color={isVendorMode ? 'purple.600' : 'gray.500'}
           transition="all 0.2s"
         >
-          <FiShoppingBag size={16} />
+          <FiShoppingBag size={14} />
         </Box>
         <Text
-          fontSize="sm"
+          fontSize={{ base: 'xs', md: 'sm' }}
           fontWeight={isVendorMode ? 'bold' : 'medium'}
           color={isVendorMode ? 'purple.600' : 'gray.600'}
           transition="all 0.2s"
+          display={{ base: 'none', sm: 'block' }}
         >
           Vendor
         </Text>
