@@ -6,11 +6,11 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.authtoken.models import Token
 from django.contrib.auth import login, logout
 from django.utils import timezone
 
-from crmApp.models import User, UserProfile, RefreshToken as RefreshTokenModel
+from crmApp.models import User, UserProfile
 from crmApp.serializers import (
     UserSerializer,
     UserCreateSerializer,
@@ -19,7 +19,6 @@ from crmApp.serializers import (
     UserProfileCreateSerializer,
     LoginSerializer,
     ChangePasswordSerializer,
-    RefreshTokenSerializer,
 )
 
 
@@ -43,6 +42,21 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return [AllowAny()]
         return [IsAuthenticated()]
+    
+    def create(self, request, *args, **kwargs):
+        """Register a new user and return token"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        
+        # Create token for new user
+        token, created = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            'user': UserSerializer(user).data,
+            'token': token.key,
+            'message': 'Registration successful'
+        }, status=status.HTTP_201_CREATED)
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
@@ -168,7 +182,7 @@ class LoginViewSet(viewsets.ViewSet):
     
     def create(self, request):
         """
-        Login endpoint - returns JWT tokens
+        Login endpoint - returns Token for authentication
         """
         serializer = LoginSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
@@ -179,24 +193,13 @@ class LoginViewSet(viewsets.ViewSet):
         user.last_login_at = timezone.now()
         user.save(update_fields=['last_login_at'])
         
-        # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
-        
-        # Store refresh token in database
-        RefreshTokenModel.objects.create(
-            user=user,
-            token=str(refresh),
-            expires_at=timezone.now() + timezone.timedelta(days=7),
-            ip_address=request.META.get('REMOTE_ADDR'),
-            device_info=request.META.get('HTTP_USER_AGENT', '')[:255]
-        )
+        # Get or create token
+        token, created = Token.objects.get_or_create(user=user)
         
         return Response({
             'user': UserSerializer(user).data,
-            'tokens': {
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-            }
+            'token': token.key,
+            'message': 'Login successful'
         })
 
 
@@ -208,22 +211,11 @@ class LogoutViewSet(viewsets.ViewSet):
     
     def create(self, request):
         """
-        Logout endpoint - revokes refresh token
+        Logout endpoint - deletes auth token
         """
         try:
-            refresh_token = request.data.get('refresh_token')
-            if refresh_token:
-                token = RefreshTokenModel.objects.filter(
-                    user=request.user,
-                    token=refresh_token,
-                    is_revoked=False
-                ).first()
-                
-                if token:
-                    token.is_revoked = True
-                    token.revoked_at = timezone.now()
-                    token.save()
-            
+            # Delete the user's token
+            request.user.auth_token.delete()
             logout(request)
             return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
         except Exception as e:
@@ -258,22 +250,4 @@ class ChangePasswordViewSet(viewsets.ViewSet):
         }, status=status.HTTP_200_OK)
 
 
-class RefreshTokenViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing refresh tokens.
-    """
-    queryset = RefreshTokenModel.objects.all()
-    serializer_class = RefreshTokenSerializer
-    permission_classes = [IsAuthenticated]
-    
-    def get_queryset(self):
-        return RefreshTokenModel.objects.filter(user=self.request.user)
-    
-    @action(detail=True, methods=['post'])
-    def revoke(self, request, pk=None):
-        """Revoke a specific refresh token"""
-        token = self.get_object()
-        token.is_revoked = True
-        token.revoked_at = timezone.now()
-        token.save()
-        return Response({'message': 'Token revoked successfully.'})
+# RefreshTokenViewSet removed - using simple Token authentication instead

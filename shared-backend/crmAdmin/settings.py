@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     
     # Third party apps
     'rest_framework',
+    'rest_framework.authtoken',  # Token authentication
     'corsheaders',
     
     # Your apps
@@ -135,8 +136,8 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',  # Primary authentication
+        'rest_framework.authentication.SessionAuthentication',  # For browsable API
     ],
     'DEFAULT_PAGINATION_CLASS': 'crmApp.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 25,
@@ -186,11 +187,20 @@ CORS_ALLOW_HEADERS = [
     'accept-encoding',
     'authorization',
     'content-type',
+    'content_type',
     'dnt',
     'origin',
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+]
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 ]
 
 # Custom User Model

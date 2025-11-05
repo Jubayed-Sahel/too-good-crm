@@ -8,7 +8,7 @@ from .auth import (
     LoginViewSet,
     LogoutViewSet,
     ChangePasswordViewSet,
-    RefreshTokenViewSet,
+    # RefreshTokenViewSet removed - using simple Token auth
 )
 
 from .organization import (
@@ -31,6 +31,7 @@ from .deal import (
     PipelineStageViewSet,
     DealViewSet,
 )
+from .analytics import AnalyticsViewSet
 
 __all__ = [
     # Auth
@@ -39,7 +40,7 @@ __all__ = [
     'LoginViewSet',
     'LogoutViewSet',
     'ChangePasswordViewSet',
-    'RefreshTokenViewSet',
+    # 'RefreshTokenViewSet' removed - using simple Token auth
     
     # Organization
     'OrganizationViewSet',
@@ -58,4 +59,7 @@ __all__ = [
     'PipelineViewSet',
     'PipelineStageViewSet',
     'DealViewSet',
+    
+    # Analytics
+    'AnalyticsViewSet',
 ]
