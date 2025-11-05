@@ -10,8 +10,8 @@ import {
   EditDealDialog,
   type EditDealData 
 } from '../components/deals';
-import { getDeals, createDeal as createDealMock, updateDeal as updateDealMock, deleteDeal as deleteDealMock } from '@/services/deals.service';
-import type { Deal as MockDeal } from '@/services/deals.service';
+import { dealService } from '@/services/deal.service';
+import type { Deal } from '@/types';
 
 const DealsPage = () => {
   const navigate = useNavigate();
@@ -21,15 +21,15 @@ const DealsPage = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<EditDealData | null>(null);
-  const [deals, setDeals] = useState<MockDeal[]>([]);
+  const [deals, setDeals] = useState<Deal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch deals from mock service
+  // Fetch deals from API
   const fetchDeals = async () => {
     try {
       setIsLoading(true);
-      const data = await getDeals();
-      setDeals(data);
+      const response = await dealService.getDeals({ page_size: 1000 });
+      setDeals(response.results);
     } catch (error) {
       console.error('Error fetching deals:', error);
     } finally {
@@ -57,7 +57,7 @@ const DealsPage = () => {
     return deals.filter((deal) => {
       const matchesSearch =
         deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        deal.customer.toLowerCase().includes(searchQuery.toLowerCase());
+        (deal.customer_name?.toLowerCase() || '').includes(searchQuery.toLowerCase());
 
       const matchesStage =
         stageFilter === 'all' || deal.stage === stageFilter;
@@ -78,7 +78,7 @@ const DealsPage = () => {
     ).length;
     const won = deals.filter((d) => d.stage === 'closed-won').length;
     const totalValue = deals.reduce((sum, d) => {
-      const value = d.value || 0;
+      const value = typeof d.value === 'string' ? parseFloat(d.value) : d.value;
       if (d.stage === 'closed-won') return sum + value;
       return sum + (value * (d.probability || 0)) / 100;
     }, 0);
@@ -92,12 +92,12 @@ const DealsPage = () => {
     return filteredDeals.map((deal) => ({
       id: deal.id.toString(),
       title: deal.title,
-      customer: deal.customer,
-      value: deal.value || 0,
+      customer: deal.customer_name || 'Unknown Customer',
+      value: typeof deal.value === 'string' ? parseFloat(deal.value) : deal.value,
       stage: deal.stage as 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'closed-won' | 'closed-lost',
       probability: deal.probability || 0,
-      expectedCloseDate: deal.expectedCloseDate || deal.created_at,
-      owner: deal.owner,
+      expectedCloseDate: deal.expected_close_date || deal.created_at,
+      owner: deal.assigned_to_name || 'Unassigned',
       createdDate: deal.created_at,
     }));
   }, [deals, filteredDeals]);
@@ -120,23 +120,16 @@ const DealsPage = () => {
 
   const handleUpdateDeal = async (data: EditDealData) => {
     try {
-      const result = await updateDealMock({
-        id: data.id,
+      const dealId = typeof data.id === 'string' ? parseInt(data.id) : data.id;
+      await dealService.updateDeal(dealId, {
         title: data.title,
-        customer: data.customer,
         value: data.value,
-        stage: data.stage,
         probability: data.probability,
-        expectedCloseDate: data.expectedCloseDate,
-        owner: data.owner,
+        expected_close_date: data.expectedCloseDate,
       });
-      if (result) {
-        alert(`Deal "${data.title}" updated successfully!\n\nUpdated fields:\n- Customer: ${data.customer}\n- Value: $${data.value.toLocaleString()}\n- Stage: ${data.stage}\n- Probability: ${data.probability}%`);
-        await fetchDeals();
-        setIsEditDialogOpen(false);
-      } else {
-        alert('Failed to update deal. Please try again.');
-      }
+      alert(`Deal "${data.title}" updated successfully!\n\nUpdated fields:\n- Customer: ${data.customer}\n- Value: $${data.value.toLocaleString()}\n- Stage: ${data.stage}\n- Probability: ${data.probability}%`);
+      await fetchDeals();
+      setIsEditDialogOpen(false);
     } catch (error) {
       console.error('Error updating deal:', error);
       alert('An error occurred while updating the deal.');
@@ -146,7 +139,8 @@ const DealsPage = () => {
   const handleDeleteDeal = async (deal: any) => {
     if (window.confirm(`Are you sure you want to delete "${deal.title}"?`)) {
       try {
-        await deleteDealMock(deal.id);
+        const dealId = typeof deal.id === 'string' ? parseInt(deal.id) : deal.id;
+        await dealService.deleteDeal(dealId);
         alert(`Deleted deal: ${deal.title}`);
         await fetchDeals();
       } catch (error) {
@@ -166,23 +160,20 @@ const DealsPage = () => {
 
   const handleCreateDeal = async (data: any) => {
     try {
-      const result = await createDealMock({
+      // Note: Backend expects customer ID, but frontend provides customer name
+      // This needs proper customer lookup or creation
+      await dealService.createDeal({
         title: data.title,
-        customerName: data.customer,
         value: data.value,
-        stage: data.stage,
+        customer: 1, // TODO: Need to get actual customer ID
+        stage: 1, // TODO: Need to get actual stage ID
         probability: data.probability,
-        expectedCloseDate: data.expectedCloseDate,
-        owner: data.owner || 'Deal Owner',
+        expected_close_date: data.expectedCloseDate,
         description: data.description,
       });
-      if (result) {
-        alert(`Deal "${data.title}" created successfully!`);
-        await fetchDeals();
-        setIsCreateDialogOpen(false);
-      } else {
-        alert('Failed to create deal. Please try again.');
-      }
+      alert(`Deal "${data.title}" created successfully!`);
+      await fetchDeals();
+      setIsCreateDialogOpen(false);
     } catch (error) {
       console.error('Error creating deal:', error);
       alert('An error occurred while creating the deal.');

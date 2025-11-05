@@ -1,140 +1,142 @@
 /**
  * Customer service
  */
+import api from '@/lib/apiClient';
+import { API_CONFIG, buildUrl } from '@/config/api.config';
 import type { Customer, CustomerNote, PaginatedResponse } from '@/types';
-import { mockCustomers, getCustomerById, getCustomerActivities, getCustomerNotes } from './mockData';
+
+export interface CustomerFilters {
+  status?: string;
+  customer_type?: string;
+  assigned_to?: number;
+  organization?: number;
+  search?: string;
+  page?: number;
+  page_size?: number;
+  ordering?: string;
+  [key: string]: string | number | boolean | undefined;
+}
 
 class CustomerService {
   /**
    * Get paginated list of customers
    */
-  async getCustomers(_params?: Record<string, any>): Promise<PaginatedResponse<Customer>> {
-    // Using mock data for development - feels dynamic without backend
-    return Promise.resolve({
-      count: mockCustomers.length,
-      next: null,
-      previous: null,
-      results: mockCustomers as Customer[],
-    });
+  async getCustomers(params?: CustomerFilters): Promise<PaginatedResponse<Customer>> {
+    const url = buildUrl(API_CONFIG.ENDPOINTS.CUSTOMERS.LIST, params);
+    return api.get<PaginatedResponse<Customer>>(url);
+  }
+
+  /**
+   * Get all customers (for backward compatibility)
+   */
+  async getAll(params?: CustomerFilters): Promise<PaginatedResponse<Customer>> {
+    return this.getCustomers(params);
   }
 
   /**
    * Get customer by ID
    */
   async getCustomer(id: number): Promise<Customer> {
-    const customer = getCustomerById(id);
-    if (!customer) {
-      throw new Error(`Customer with ID ${id} not found`);
-    }
-    return Promise.resolve(customer as Customer);
+    const url = API_CONFIG.ENDPOINTS.CUSTOMERS.DETAIL(id);
+    return api.get<Customer>(url);
+  }
+
+  /**
+   * Get customer by ID (alias)
+   */
+  async get(id: number): Promise<Customer> {
+    return this.getCustomer(id);
   }
 
   /**
    * Create new customer
    */
   async createCustomer(data: Partial<Customer>): Promise<Customer> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const newCustomer = {
-      id: mockCustomers.length + 1,
-      ...data,
-      full_name: `${data.first_name} ${data.last_name}`,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    } as Customer;
-    
-    mockCustomers.push(newCustomer as any);
-    return Promise.resolve(newCustomer);
+    return api.post<Customer>(API_CONFIG.ENDPOINTS.CUSTOMERS.LIST, data);
+  }
+
+  /**
+   * Create new customer (alias)
+   */
+  async create(data: Partial<Customer>): Promise<Customer> {
+    return this.createCustomer(data);
   }
 
   /**
    * Update customer
    */
   async updateCustomer(id: number, data: Partial<Customer>): Promise<Customer> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const index = mockCustomers.findIndex(c => c.id === id);
-    if (index === -1) {
-      throw new Error(`Customer with ID ${id} not found`);
-    }
-    
-    mockCustomers[index] = {
-      ...mockCustomers[index],
-      ...data,
-      updated_at: new Date().toISOString(),
-    };
-    
-    return Promise.resolve(mockCustomers[index] as Customer);
+    const url = API_CONFIG.ENDPOINTS.CUSTOMERS.DETAIL(id);
+    return api.patch<Customer>(url, data);
+  }
+
+  /**
+   * Update customer (alias)
+   */
+  async update(id: number, data: Partial<Customer>): Promise<Customer> {
+    return this.updateCustomer(id, data);
   }
 
   /**
    * Delete customer
    */
   async deleteCustomer(id: number): Promise<void> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const index = mockCustomers.findIndex(c => c.id === id);
-    if (index === -1) {
-      throw new Error(`Customer with ID ${id} not found`);
-    }
-    
-    mockCustomers.splice(index, 1);
-    return Promise.resolve();
+    const url = API_CONFIG.ENDPOINTS.CUSTOMERS.DETAIL(id);
+    return api.delete(url);
+  }
+
+  /**
+   * Delete customer (alias)
+   */
+  async delete(id: number): Promise<void> {
+    return this.deleteCustomer(id);
   }
 
   /**
    * Add note to customer
    */
   async addNote(customerId: number, note: string): Promise<CustomerNote> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    const newNote: CustomerNote = {
-      id: Date.now(),
-      customer: customerId,
-      user: 1,
-      user_name: 'Current User',
-      note: note,
-      created_at: new Date().toISOString(),
-    };
-    
-    return Promise.resolve(newNote);
+    const url = API_CONFIG.ENDPOINTS.CUSTOMERS.ADD_NOTE(customerId);
+    return api.post<CustomerNote>(url, { note });
   }
 
   /**
    * Get customer statistics
    */
   async getStats(): Promise<any> {
-    const total = mockCustomers.length;
-    const active = mockCustomers.filter(c => c.status === 'active').length;
-    const inactive = mockCustomers.filter(c => c.status === 'inactive').length;
-    const pending = mockCustomers.filter(c => c.status === 'pending').length;
-    
-    return Promise.resolve({
-      total,
-      active,
-      inactive,
-      pending,
-      total_value: mockCustomers.reduce((sum, c: any) => sum + (c.total_value || 0), 0),
-      lifetime_value: mockCustomers.reduce((sum, c: any) => sum + (c.lifetime_value || 0), 0),
-    });
+    return api.get(API_CONFIG.ENDPOINTS.CUSTOMERS.STATS);
   }
 
   /**
    * Get customer activities (for detail page)
    */
   async getCustomerActivities(customerId: number): Promise<any[]> {
-    return Promise.resolve(getCustomerActivities(customerId));
+    const url = API_CONFIG.ENDPOINTS.CUSTOMERS.ACTIVITIES(customerId);
+    return api.get<any[]>(url);
   }
 
   /**
    * Get customer notes (for detail page)
    */
-  async getCustomerNotes(customerId: number): Promise<any[]> {
-    return Promise.resolve(getCustomerNotes(customerId));
+  async getCustomerNotes(customerId: number): Promise<CustomerNote[]> {
+    const url = API_CONFIG.ENDPOINTS.CUSTOMERS.NOTES(customerId);
+    return api.get<CustomerNote[]>(url);
+  }
+
+  /**
+   * Activate customer
+   */
+  async activate(customerId: number): Promise<Customer> {
+    const url = API_CONFIG.ENDPOINTS.CUSTOMERS.ACTIVATE(customerId);
+    return api.post<Customer>(url);
+  }
+
+  /**
+   * Deactivate customer
+   */
+  async deactivate(customerId: number): Promise<Customer> {
+    const url = API_CONFIG.ENDPOINTS.CUSTOMERS.DEACTIVATE(customerId);
+    return api.post<Customer>(url);
   }
 }
 

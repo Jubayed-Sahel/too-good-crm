@@ -40,7 +40,7 @@ class LeadSerializer(serializers.ModelSerializer):
             'estimated_value', 'is_converted', 'converted_at',
             'converted_by', 'converted_by_name', 'tags', 'notes',
             'campaign', 'referrer', 'address', 'city', 'state',
-            'zip_code', 'country', 'created_at', 'updated_at'
+            'postal_code', 'country', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'code', 'created_at', 'updated_at', 'converted_at']
     
@@ -61,7 +61,7 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             'email', 'phone', 'source', 'qualification_status',
             'assigned_to_id', 'lead_score', 'estimated_value',
             'tags', 'notes', 'campaign', 'referrer',
-            'address', 'city', 'state', 'zip_code', 'country'
+            'address', 'city', 'state', 'postal_code', 'country'
         ]
 
 
@@ -76,7 +76,7 @@ class LeadUpdateSerializer(serializers.ModelSerializer):
             'status', 'source', 'qualification_status',
             'assigned_to_id', 'lead_score', 'estimated_value',
             'tags', 'notes', 'campaign', 'referrer',
-            'address', 'city', 'state', 'zip_code', 'country'
+            'address', 'city', 'state', 'postal_code', 'country'
         ]
 
 
@@ -112,7 +112,7 @@ class ConvertLeadSerializer(serializers.Serializer):
             address=lead.address,
             city=lead.city,
             state=lead.state,
-            zip_code=lead.zip_code,
+            postal_code=lead.postal_code,
             country=lead.country,
             notes=lead.notes,
             converted_from_lead=lead,

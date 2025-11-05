@@ -23,7 +23,8 @@ export const LeadsPage = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // Queries
-  const { data: leads = [], isLoading: leadsLoading, error } = useLeads(filters);
+  const { data, isLoading: leadsLoading, error } = useLeads(filters);
+  const leads = data?.results ?? [];
   const { data: stats } = useLeadStats();
 
   // Mutations
@@ -49,7 +50,7 @@ export const LeadsPage = () => {
     });
   };
 
-  const handleDeleteLead = (leadId: string) => {
+  const handleDeleteLead = (leadId: number) => {
     if (!confirm('Are you sure you want to delete this lead?')) return;
 
     deleteLead.mutate(leadId, {

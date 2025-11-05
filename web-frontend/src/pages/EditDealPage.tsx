@@ -17,7 +17,8 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import CustomSelect from '../components/ui/CustomSelect';
 import { Card } from '../components/common';
 import { toaster } from '../components/ui/toaster';
-import { getDeal, updateDeal as updateDealService } from '@/services/deals.service';
+import { dealService } from '@/services/deal.service';
+import type { Deal } from '@/types';
 
 const stageOptions = [
   { value: 'lead', label: 'Lead' },
@@ -27,22 +28,6 @@ const stageOptions = [
   { value: 'closed-won', label: 'Closed Won' },
   { value: 'closed-lost', label: 'Closed Lost' },
 ];
-
-interface Deal {
-  id: number;
-  title: string;
-  customer: string;
-  customerId: number;
-  value: number;
-  stage: string;
-  probability: number;
-  expectedCloseDate: string;
-  actualCloseDate?: string;
-  owner: string;
-  description: string;
-  created_at: string;
-  lastActivity: string;
-}
 
 export const EditDealPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -70,17 +55,17 @@ export const EditDealPage = () => {
       if (!id) return;
       try {
         setIsLoading(true);
-        const dealData = await getDeal(id);
+        const dealData = await dealService.getDeal(parseInt(id));
         if (dealData) {
           setDeal(dealData);
           setFormData({
             title: dealData.title,
-            customer: dealData.customer,
-            value: dealData.value,
+            customer: dealData.customer_name || '',
+            value: typeof dealData.value === 'string' ? parseFloat(dealData.value) : dealData.value,
             stage: dealData.stage,
             probability: dealData.probability,
-            expectedCloseDate: dealData.expectedCloseDate.split('T')[0], // Format for date input
-            owner: dealData.owner,
+            expectedCloseDate: dealData.expected_close_date?.split('T')[0] || '', // Format for date input
+            owner: dealData.assigned_to_name || 'Unassigned',
             description: dealData.description || '',
           });
         } else {
@@ -101,15 +86,11 @@ export const EditDealPage = () => {
 
     try {
       setIsSaving(true);
-      await updateDealService({
-        id,
+      await dealService.updateDeal(parseInt(id), {
         title: formData.title,
-        customer: formData.customer,
         value: formData.value,
-        stage: formData.stage,
         probability: formData.probability,
-        expectedCloseDate: formData.expectedCloseDate,
-        owner: formData.owner,
+        expected_close_date: formData.expectedCloseDate,
         description: formData.description,
       });
       

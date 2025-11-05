@@ -2,137 +2,111 @@
  * Leads Types
  */
 
-export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'proposal' | 'negotiation' | 'converted' | 'lost';
-export type LeadSource = 'website' | 'referral' | 'cold_call' | 'email' | 'social_media' | 'trade_show' | 'partner' | 'other';
-export type LeadPriority = 'low' | 'medium' | 'high' | 'urgent';
+// Backend uses qualification_status with these values
+export type LeadQualificationStatus = 'new' | 'contacted' | 'qualified' | 'unqualified' | 'converted' | 'lost';
+export type LeadStatus = 'active' | 'inactive';
+export type LeadSource = 'website' | 'referral' | 'social_media' | 'email_campaign' | 'cold_call' | 'event' | 'partner' | 'other';
 
 export interface Lead {
-  id: string;
-  organizationId: string;
-  firstName: string;
-  lastName: string;
-  fullName: string;
+  id: number;
+  organization: number;
+  code: string;
+  name: string; // Backend uses single name field
   email: string;
   phone?: string;
   company?: string;
-  title?: string;
-  jobTitle?: string;
-  website?: string;
+  job_title?: string;
   source: LeadSource;
-  status: LeadStatus;
-  priority: LeadPriority;
-  score: number; // 0-100
-  estimatedValue?: number;
+  status: LeadStatus; // active/inactive
+  qualification_status: LeadQualificationStatus; // new/contacted/qualified/etc
+  lead_score: number; // 0-100
+  estimated_value?: number;
+  assigned_to?: {
+    id: number;
+    full_name: string;
+    email: string;
+  };
+  assigned_to_name?: string; // For list view
+  is_converted: boolean;
+  converted_at?: string;
+  converted_by?: number;
+  converted_by_name?: string;
+  tags?: string[];
+  notes?: string;
+  campaign?: string;
+  referrer?: string;
   address?: string;
   city?: string;
   state?: string;
+  postal_code?: string;
   country?: string;
-  postalCode?: string;
-  description?: string;
-  assignedToId?: string;
-  assignedToName?: string;
-  tags?: string[];
-  customFields?: Record<string, any>;
-  lastContactedAt?: string;
-  nextFollowUpAt?: string;
-  convertedAt?: string;
-  convertedToCustomerId?: string;
-  lostReason?: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface LeadActivity {
   id: string;
-  leadId: string;
   type: 'call' | 'email' | 'meeting' | 'note' | 'status_change' | 'score_change';
-  subject: string;
-  description?: string;
-  outcome?: string;
-  duration?: number; // in minutes
-  scheduledAt?: string;
-  completedAt?: string;
-  userId: string;
-  userName: string;
-  metadata?: Record<string, any>;
-  createdAt: string;
-}
-
-export interface LeadScoreHistory {
-  id: string;
-  leadId: string;
-  oldScore: number;
-  newScore: number;
-  reason: string;
-  userId: string;
-  userName: string;
-  createdAt: string;
+  description: string;
+  created_at: string;
 }
 
 export interface CreateLeadData {
-  firstName: string;
-  lastName: string;
+  organization: number;
+  name: string;
   email: string;
   phone?: string;
   company?: string;
-  title?: string;
-  jobTitle?: string;
-  website?: string;
+  job_title?: string;
   source: LeadSource;
-  status?: LeadStatus;
-  priority?: LeadPriority;
-  estimatedValue?: number;
+  qualification_status?: LeadQualificationStatus;
+  estimated_value?: number;
+  assigned_to_id?: number;
+  tags?: string[];
+  notes?: string;
+  campaign?: string;
+  referrer?: string;
   address?: string;
   city?: string;
   state?: string;
+  postal_code?: string;
   country?: string;
-  postalCode?: string;
-  description?: string;
-  notes?: string;
-  assignedToId?: string;
-  tags?: string[];
 }
 
 export interface UpdateLeadData {
-  firstName?: string;
-  lastName?: string;
+  name?: string;
   email?: string;
   phone?: string;
   company?: string;
-  title?: string;
-  website?: string;
+  job_title?: string;
   source?: LeadSource;
   status?: LeadStatus;
-  priority?: LeadPriority;
-  score?: number;
-  estimatedValue?: number;
+  qualification_status?: LeadQualificationStatus;
+  lead_score?: number;
+  estimated_value?: number;
+  assigned_to_id?: number;
+  tags?: string[];
+  notes?: string;
+  campaign?: string;
+  referrer?: string;
   address?: string;
   city?: string;
   state?: string;
+  postal_code?: string;
   country?: string;
-  postalCode?: string;
-  description?: string;
-  assignedToId?: string;
-  tags?: string[];
-  nextFollowUpAt?: string;
 }
 
 export interface ConvertLeadData {
-  createCustomer: boolean;
-  createDeal: boolean;
-  dealValue?: number;
-  dealName?: string;
-  notes?: string;
+  customer_type?: 'individual' | 'business';
+  assigned_to_id?: number;
 }
 
 export interface LeadFilters {
   status?: LeadStatus;
+  qualification_status?: LeadQualificationStatus;
   source?: LeadSource;
-  priority?: LeadPriority;
-  assignedToId?: string;
-  minScore?: number;
-  maxScore?: number;
-  tags?: string[];
+  assigned_to?: number;
+  is_converted?: boolean;
   search?: string;
 }
 
@@ -142,12 +116,12 @@ export interface LeadStats {
     new: number;
     contacted: number;
     qualified: number;
-    proposal: number;
-    negotiation: number;
+    unqualified: number;
     converted: number;
     lost: number;
   };
   averageScore: number;
   totalEstimatedValue: number;
   conversionRate: number;
+  by_source?: Record<string, number>;
 }
