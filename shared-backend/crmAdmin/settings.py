@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     
     # Your apps
     'crmApp',
+    'django_mcp',
 ]
 
 MIDDLEWARE = [

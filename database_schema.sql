@@ -6,14 +6,18 @@
 -- AUTHENTICATION & AUTHORIZATION TABLES
 -- ============================================
 
--- Users Table (for authentication)
+-- Users Table (for authentication - supports multi-tenancy with profiles)
 CREATE TABLE users (
     id INT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(100) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    profile_image VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
     is_verified BOOLEAN DEFAULT FALSE,
+    is_staff BOOLEAN DEFAULT FALSE,
     email_verified_at TIMESTAMP NULL,
     phone VARCHAR(20),
     last_login_at TIMESTAMP NULL,
@@ -114,6 +118,23 @@ CREATE TABLE user_organizations (
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     FOREIGN KEY (invited_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
     UNIQUE KEY unique_user_org (user_id, organization_id)
+);
+
+-- User Profiles Table (Multi-tenancy: One user can have multiple profiles - Vendor, Employee, Customer)
+CREATE TABLE user_profiles (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    organization_id INT NOT NULL,
+    profile_type ENUM('vendor', 'employee', 'customer') NOT NULL,
+    is_primary BOOLEAN DEFAULT FALSE,
+    status ENUM('active', 'inactive', 'suspended') DEFAULT 'active',
+    activated_at TIMESTAMP NULL,
+    deactivated_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_org_profile (user_id, organization_id, profile_type)
 );
 
 -- ============================================
@@ -277,6 +298,7 @@ CREATE TABLE employees (
     id INT PRIMARY KEY AUTO_INCREMENT,
     organization_id INT NOT NULL,
     user_id INT,
+    user_profile_id INT,
     employee_code VARCHAR(50),
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
@@ -286,10 +308,13 @@ CREATE TABLE employees (
     role_id INT,
     department VARCHAR(100),
     designation VARCHAR(100),
+    employment_type ENUM('full_time', 'part_time', 'contract', 'intern') DEFAULT 'full_time',
     manager_id INT,
     date_of_joining DATE,
-    status ENUM('active', 'inactive', 'on_leave') DEFAULT 'active',
+    date_of_leaving DATE,
+    status ENUM('active', 'inactive', 'on_leave', 'terminated') DEFAULT 'active',
     profile_image VARCHAR(255),
+    emergency_contact VARCHAR(255),
     address TEXT,
     city VARCHAR(100),
     state VARCHAR(100),
@@ -299,16 +324,20 @@ CREATE TABLE employees (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (user_profile_id) REFERENCES user_profiles(id) ON DELETE SET NULL,
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE SET NULL,
     FOREIGN KEY (manager_id) REFERENCES employees(id) ON DELETE SET NULL,
     UNIQUE KEY unique_org_employee_code (organization_id, employee_code),
-    UNIQUE KEY unique_org_employee_email (organization_id, email)
+    UNIQUE KEY unique_org_employee_email (organization_id, email),
+    UNIQUE KEY unique_org_user (organization_id, user_id)
 );
 
 -- Vendors Table
 CREATE TABLE vendors (
     id INT PRIMARY KEY AUTO_INCREMENT,
     organization_id INT NOT NULL,
+    user_id INT,
+    user_profile_id INT,
     vendor_code VARCHAR(50),
     company_name VARCHAR(255) NOT NULL,
     contact_person VARCHAR(255),
@@ -318,7 +347,7 @@ CREATE TABLE vendors (
     website VARCHAR(255),
     industry VARCHAR(100),
     rating DECIMAL(3,2),
-    status ENUM('active', 'inactive', 'pending') DEFAULT 'active',
+    status ENUM('active', 'inactive', 'pending', 'blacklisted') DEFAULT 'active',
     address TEXT,
     city VARCHAR(100),
     state VARCHAR(100),
@@ -326,19 +355,25 @@ CREATE TABLE vendors (
     postal_code VARCHAR(20),
     tax_id VARCHAR(100),
     payment_terms VARCHAR(100),
+    credit_limit DECIMAL(15,2),
     notes TEXT,
     assigned_employee_id INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (user_profile_id) REFERENCES user_profiles(id) ON DELETE SET NULL,
     FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
-    UNIQUE KEY unique_org_vendor_code (organization_id, vendor_code)
+    UNIQUE KEY unique_org_vendor_code (organization_id, vendor_code),
+    UNIQUE KEY unique_org_user (organization_id, user_id)
 );
 
 -- Customers Table
 CREATE TABLE customers (
     id INT PRIMARY KEY AUTO_INCREMENT,
     organization_id INT NOT NULL,
+    user_id INT,
+    user_profile_id INT,
     customer_code VARCHAR(50),
     company_name VARCHAR(255),
     first_name VARCHAR(100),
@@ -349,8 +384,10 @@ CREATE TABLE customers (
     website VARCHAR(255),
     industry VARCHAR(100),
     customer_type ENUM('individual', 'business') DEFAULT 'individual',
-    status ENUM('active', 'inactive', 'prospect') DEFAULT 'active',
+    status ENUM('active', 'inactive', 'prospect', 'vip') DEFAULT 'active',
     rating DECIMAL(3,2),
+    credit_limit DECIMAL(15,2),
+    payment_terms VARCHAR(100),
     address TEXT,
     city VARCHAR(100),
     state VARCHAR(100),
@@ -362,8 +399,11 @@ CREATE TABLE customers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (user_profile_id) REFERENCES user_profiles(id) ON DELETE SET NULL,
     FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
-    UNIQUE KEY unique_org_customer_code (organization_id, customer_code)
+    UNIQUE KEY unique_org_customer_code (organization_id, customer_code),
+    UNIQUE KEY unique_org_user (organization_id, user_id)
 );
 
 -- Leads Table
@@ -679,6 +719,11 @@ CREATE INDEX idx_organizations_subdomain ON organizations(subdomain);
 CREATE INDEX idx_organizations_status ON organizations(status);
 CREATE INDEX idx_user_organizations_user ON user_organizations(user_id);
 CREATE INDEX idx_user_organizations_org ON user_organizations(organization_id);
+
+CREATE INDEX idx_user_profiles_user ON user_profiles(user_id);
+CREATE INDEX idx_user_profiles_org ON user_profiles(organization_id);
+CREATE INDEX idx_user_profiles_type ON user_profiles(profile_type);
+CREATE INDEX idx_user_profiles_status ON user_profiles(status);
 
 CREATE INDEX idx_subscriptions_org ON subscriptions(organization_id);
 CREATE INDEX idx_subscriptions_status ON subscriptions(status);
