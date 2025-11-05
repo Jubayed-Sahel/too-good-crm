@@ -153,10 +153,10 @@ const SalesPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <Box>
-          <Heading size="2xl" mb={2}>
+          <Heading size="xl" mb={2}>
             Sales Pipeline
           </Heading>
-          <Text color="gray.600" fontSize="md">
+          <Text color="gray.600" fontSize="sm">
             Manage deals through every stage of your sales process
           </Text>
         </Box>

@@ -246,13 +246,13 @@ export const ActivitiesPage = () => {
 
   return (
     <DashboardLayout title="Activities">
-      <VStack align="stretch" gap={6}>
+      <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <Box>
-          <Heading size="2xl" color="gray.900" mb={2}>
+          <Heading size="xl" color="gray.900" mb={2}>
             Activities
           </Heading>
-          <Text fontSize="md" color="gray.600">
+          <Text fontSize="sm" color="gray.600">
             Manage calls, emails, Telegram messages, and other activities
           </Text>
         </Box>

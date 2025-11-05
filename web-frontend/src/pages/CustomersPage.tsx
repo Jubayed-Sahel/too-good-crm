@@ -124,10 +124,10 @@ const CustomersPage = () => {
       <VStack gap={5} align="stretch">
         {/* Page Header */}
         <Box>
-          <Heading size="2xl" mb={2}>
+          <Heading size="xl" mb={2}>
             Customers
           </Heading>
-          <Text color="gray.600" fontSize="md">
+          <Text color="gray.600" fontSize="sm">
             Manage your customer relationships and track interactions
           </Text>
         </Box>

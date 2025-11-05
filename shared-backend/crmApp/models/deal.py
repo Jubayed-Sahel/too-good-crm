@@ -130,5 +130,8 @@ class Deal(TimestampedModel, CodeMixin, StatusMixin):
     def save(self, *args, **kwargs):
         """Calculate expected revenue based on value and probability."""
         if self.value and self.probability:
-            self.expected_revenue = self.value * (self.probability / 100)
+            from decimal import Decimal
+            # Convert value to Decimal if it's not already
+            value_decimal = Decimal(str(self.value)) if not isinstance(self.value, Decimal) else self.value
+            self.expected_revenue = value_decimal * (self.probability / Decimal('100'))
         super().save(*args, **kwargs)
