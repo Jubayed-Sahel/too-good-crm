@@ -100,6 +100,15 @@ export const API_CONFIG = {
       ASSIGN_PERMISSION: (roleId: number | string) => `/roles/${roleId}/assign_permission/`,
       REMOVE_PERMISSION: (roleId: number | string) => `/roles/${roleId}/remove_permission/`,
     },
+
+    // Analytics
+    ANALYTICS: {
+      DASHBOARD: '/analytics/dashboard/',
+      SALES_FUNNEL: '/analytics/sales_funnel/',
+      REVENUE_BY_PERIOD: '/analytics/revenue_by_period/',
+      EMPLOYEE_PERFORMANCE: '/analytics/employee_performance/',
+      TOP_PERFORMERS: '/analytics/top_performers/',
+    },
   },
 
   // Query Parameters
