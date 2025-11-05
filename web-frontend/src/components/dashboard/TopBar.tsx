@@ -16,20 +16,37 @@ const TopBar = ({ onMenuClick, title = 'Dashboard' }: TopBarProps) => {
       borderBottom="1px"
       borderColor="gray.200"
       zIndex={10}
+      width="100%"
+      overflowX="hidden"
     >
-      <Flex align="center" justify="space-between" px={4} py={3} gap={3}>
+      <Flex 
+        align="center" 
+        justify="space-between" 
+        px={{ base: 3, md: 4 }} 
+        py={3} 
+        gap={{ base: 2, md: 3 }}
+        maxW="100%"
+      >
         {/* Left: Menu & Title */}
-        <HStack gap={3}>
+        <HStack gap={{ base: 2, md: 3 }} minW={0} flex={1}>
           <IconButton
             aria-label="Open menu"
             onClick={onMenuClick}
             variant="ghost"
             size="md"
             display={{ base: 'flex', md: 'none' }}
+            flexShrink={0}
           >
             <FiMenu />
           </IconButton>
-          <Text fontWeight="semibold" fontSize="lg" display={{ base: 'block', md: 'none' }}>
+          <Text 
+            fontWeight="semibold" 
+            fontSize={{ base: 'md', md: 'lg' }}
+            display={{ base: 'block', md: 'none' }}
+            overflow="hidden"
+            textOverflow="ellipsis"
+            whiteSpace="nowrap"
+          >
             {title}
           </Text>
         </HStack>
