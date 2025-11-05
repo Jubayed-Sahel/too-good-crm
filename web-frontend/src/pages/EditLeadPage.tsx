@@ -179,10 +179,10 @@ export const EditLeadPage = () => {
             <FiArrowLeft />
             <Text ml={2} fontWeight="bold">Back</Text>
           </Button>
-          <Heading size="2xl" mb={2}>
+          <Heading size="xl" mb={2}>
             Edit Lead
           </Heading>
-          <Text color="gray.600" fontSize="md">
+          <Text color="gray.600" fontSize="sm">
             Update lead information and track their progress
           </Text>
         </Box>

@@ -23,8 +23,13 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
         <TopBar onMenuClick={() => setIsSidebarOpen(true)} title={title} />
 
         {/* Page Content */}
-        <Box px={{ base: 4, md: 5, lg: 6 }} py={{ base: 4, md: 5 }} maxW="100%" width="100%">
-          <Box 
+        <Box 
+          px={{ base: 4, md: 5, lg: 6 }} 
+          py={{ base: 4, md: 5 }}
+          pt={{ base: '68px', md: 5 }}
+          maxW="100%" 
+          width="100%"
+        >          <Box 
             bg="transparent"
             minH="calc(100vh - 150px)"
             maxW="1600px"
