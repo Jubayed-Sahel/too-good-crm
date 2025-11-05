@@ -163,10 +163,10 @@ export const EditCustomerPage = () => {
             <FiArrowLeft />
             <Text ml={2} fontWeight="bold">Back</Text>
           </Button>
-          <Heading size="2xl" mb={2}>
+          <Heading size="xl" mb={2}>
             Edit Customer
           </Heading>
-          <Text color="gray.600" fontSize="md">
+          <Text color="gray.600" fontSize="sm">
             Update customer information and track their status
           </Text>
         </Box>

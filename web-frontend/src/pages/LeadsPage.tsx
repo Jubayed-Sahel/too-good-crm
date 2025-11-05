@@ -114,10 +114,10 @@ export const LeadsPage = () => {
       <VStack gap={5} align="stretch">
         {/* Page Header */}
         <Box>
-          <Heading size="2xl" mb={2}>
+          <Heading size="xl" mb={2}>
             Leads
           </Heading>
-          <Text color="gray.600" fontSize="md">
+          <Text color="gray.600" fontSize="sm">
             Manage your lead pipeline and track conversions
           </Text>
         </Box>

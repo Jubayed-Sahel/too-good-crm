@@ -10,12 +10,14 @@ interface TopBarProps {
 const TopBar = ({ onMenuClick, title = 'Dashboard' }: TopBarProps) => {
   return (
     <Box
-      position="sticky"
+      position={{ base: 'fixed', md: 'sticky' }}
       top={0}
+      left={{ base: 0, md: 'auto' }}
+      right={{ base: 0, md: 'auto' }}
       bg="white"
       borderBottom="1px"
       borderColor="gray.200"
-      zIndex={10}
+      zIndex={1000}
       width="100%"
       overflowX="hidden"
     >
