@@ -10,8 +10,8 @@ import {
   EditDealDialog,
   type EditDealData 
 } from '../components/deals';
-import { useDeals } from '@/hooks';
-import { updateDeal, createDeal, deleteDeal } from '@/services/deals.service';
+import { getDeals, createDeal as createDealMock, updateDeal as updateDealMock, deleteDeal as deleteDealMock } from '@/services/deals.service';
+import type { Deal as MockDeal } from '@/services/deals.service';
 
 const DealsPage = () => {
   const navigate = useNavigate();
@@ -21,9 +21,25 @@ const DealsPage = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<EditDealData | null>(null);
+  const [deals, setDeals] = useState<MockDeal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch deals data
-  const { deals, isLoading, error } = useDeals();
+  // Fetch deals from mock service
+  const fetchDeals = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getDeals();
+      setDeals(data);
+    } catch (error) {
+      console.error('Error fetching deals:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeals();
+  }, []);
 
   // Check if we should open the new deal dialog (from dashboard redirect)
   useEffect(() => {
@@ -41,7 +57,7 @@ const DealsPage = () => {
     return deals.filter((deal) => {
       const matchesSearch =
         deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (deal.customer_name && deal.customer_name.toLowerCase().includes(searchQuery.toLowerCase()));
+        deal.customer.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesStage =
         stageFilter === 'all' || deal.stage === stageFilter;
@@ -62,7 +78,7 @@ const DealsPage = () => {
     ).length;
     const won = deals.filter((d) => d.stage === 'closed-won').length;
     const totalValue = deals.reduce((sum, d) => {
-      const value = typeof d.value === 'string' ? parseFloat(d.value) : (d.value || 0);
+      const value = d.value || 0;
       if (d.stage === 'closed-won') return sum + value;
       return sum + (value * (d.probability || 0)) / 100;
     }, 0);
@@ -76,28 +92,48 @@ const DealsPage = () => {
     return filteredDeals.map((deal) => ({
       id: deal.id.toString(),
       title: deal.title,
-      customer: deal.customer_name || `Customer #${deal.customer}`,
-      value: typeof deal.value === 'string' ? parseFloat(deal.value) : (deal.value || 0),
-      stage: (deal.stage || 'lead') as 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'closed-won' | 'closed-lost',
+      customer: deal.customer,
+      value: deal.value || 0,
+      stage: deal.stage as 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'closed-won' | 'closed-lost',
       probability: deal.probability || 0,
-      expectedCloseDate: deal.expected_close_date || deal.created_at,
-      owner: `Deal Owner`,
+      expectedCloseDate: deal.expectedCloseDate || deal.created_at,
+      owner: deal.owner,
       createdDate: deal.created_at,
     }));
   }, [deals, filteredDeals]);
 
   // Action handlers
   const handleEditDeal = (deal: any) => {
-    navigate(`/deals/${deal.id}/edit`);
+    // Map the deal data to EditDealData format
+    setSelectedDeal({
+      id: deal.id,
+      title: deal.title,
+      customer: deal.customer,
+      value: deal.value,
+      stage: deal.stage,
+      probability: deal.probability,
+      expectedCloseDate: deal.expectedCloseDate,
+      owner: deal.owner || 'Deal Owner',
+    });
+    setIsEditDialogOpen(true);
   };
 
   const handleUpdateDeal = async (data: EditDealData) => {
     try {
-      const result = await updateDeal(data);
+      const result = await updateDealMock({
+        id: data.id,
+        title: data.title,
+        customer: data.customer,
+        value: data.value,
+        stage: data.stage,
+        probability: data.probability,
+        expectedCloseDate: data.expectedCloseDate,
+        owner: data.owner,
+      });
       if (result) {
         alert(`Deal "${data.title}" updated successfully!\n\nUpdated fields:\n- Customer: ${data.customer}\n- Value: $${data.value.toLocaleString()}\n- Stage: ${data.stage}\n- Probability: ${data.probability}%`);
-        // Refresh deals data (in a real app, you'd call a refetch method)
-        window.location.reload();
+        await fetchDeals();
+        setIsEditDialogOpen(false);
       } else {
         alert('Failed to update deal. Please try again.');
       }
@@ -110,14 +146,9 @@ const DealsPage = () => {
   const handleDeleteDeal = async (deal: any) => {
     if (window.confirm(`Are you sure you want to delete "${deal.title}"?`)) {
       try {
-        const success = await deleteDeal(deal.id);
-        if (success) {
-          alert(`Deleted deal: ${deal.title}`);
-          // Refresh deals data (in a real app, you'd call a refetch method)
-          window.location.reload();
-        } else {
-          alert('Failed to delete deal. Please try again.');
-        }
+        await deleteDealMock(deal.id);
+        alert(`Deleted deal: ${deal.title}`);
+        await fetchDeals();
       } catch (error) {
         console.error('Error deleting deal:', error);
         alert('An error occurred while deleting the deal.');
@@ -135,11 +166,20 @@ const DealsPage = () => {
 
   const handleCreateDeal = async (data: any) => {
     try {
-      const result = await createDeal(data);
+      const result = await createDealMock({
+        title: data.title,
+        customerName: data.customer,
+        value: data.value,
+        stage: data.stage,
+        probability: data.probability,
+        expectedCloseDate: data.expectedCloseDate,
+        owner: data.owner || 'Deal Owner',
+        description: data.description,
+      });
       if (result) {
         alert(`Deal "${data.title}" created successfully!`);
-        // Refresh deals data (in a real app, you'd call a refetch method)
-        window.location.reload();
+        await fetchDeals();
+        setIsCreateDialogOpen(false);
       } else {
         alert('Failed to create deal. Please try again.');
       }
@@ -149,16 +189,14 @@ const DealsPage = () => {
     }
   };
 
-  if (error) {
+  if (isLoading) {
     return (
       <DashboardLayout title="Deals">
-        <Box textAlign="center" py={12}>
-          <Heading size="md" color="red.600" mb={2}>
-            Failed to load deals
-          </Heading>
-          <Text color="gray.500">
-            {error.message || 'Please try again later'}
-          </Text>
+        <Box display="flex" justifyContent="center" py={12}>
+          <VStack gap={4}>
+            <Spinner size="xl" color="purple.500" />
+            <Text color="gray.500">Loading deals...</Text>
+          </VStack>
         </Box>
       </DashboardLayout>
     );
@@ -169,10 +207,10 @@ const DealsPage = () => {
       <VStack gap={5} align="stretch">
         {/* Page Header */}
         <Box>
-          <Heading size="2xl" mb={2}>
+          <Heading size="xl" mb={2}>
             Deals
           </Heading>
-          <Text color="gray.600" fontSize="md">
+          <Text color="gray.600" fontSize="sm">
             Track your sales pipeline and manage deal progress
           </Text>
         </Box>
@@ -194,40 +232,31 @@ const DealsPage = () => {
           onAddDeal={handleAddDeal}
         />
 
-        {/* Loading State */}
-        {isLoading ? (
-          <Box display="flex" justifyContent="center" py={12}>
-            <Spinner size="xl" color="blue.500" />
-          </Box>
+        {/* Deals Table */}
+        {mappedDeals.length > 0 ? (
+          <DealsTable
+            deals={mappedDeals}
+            onEdit={handleEditDeal}
+            onDelete={handleDeleteDeal}
+            onView={handleViewDeal}
+          />
         ) : (
-          <>
-            {/* Deals Table */}
-            {mappedDeals.length > 0 ? (
-              <DealsTable
-                deals={mappedDeals}
-                onEdit={handleEditDeal}
-                onDelete={handleDeleteDeal}
-                onView={handleViewDeal}
-              />
-            ) : (
-              <Box
-                py={12}
-                px={6}
-                textAlign="center"
-                bg="gray.50"
-                borderRadius="lg"
-              >
-                <Heading size="md" color="gray.600" mb={2}>
-                  No deals found
-                </Heading>
-                <Text color="gray.500">
-                  {searchQuery || stageFilter !== 'all'
-                    ? 'Try adjusting your search or filters'
-                    : 'Get started by adding your first deal'}
-                </Text>
-              </Box>
-            )}
-          </>
+          <Box
+            py={12}
+            px={6}
+            textAlign="center"
+            bg="gray.50"
+            borderRadius="lg"
+          >
+            <Heading size="md" color="gray.600" mb={2}>
+              No deals found
+            </Heading>
+            <Text color="gray.500">
+              {searchQuery || stageFilter !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'Get started by adding your first deal'}
+            </Text>
+          </Box>
         )}
       </VStack>
 

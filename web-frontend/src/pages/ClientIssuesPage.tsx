@@ -1,26 +1,19 @@
-import { useState } from 'react';
-import { Box, Heading, Text, VStack, HStack, Button, Badge, SimpleGrid, Input, Textarea, NativeSelectRoot, NativeSelectField, Grid } from '@chakra-ui/react';
+import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Box, Heading, Text, VStack, Button, Input, Textarea, NativeSelectRoot, NativeSelectField, Grid, HStack } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { Card } from '../components/common';
 import { toaster } from '../components/ui/toaster';
-import { FiAlertCircle, FiPlus, FiClock, FiCheckCircle, FiXCircle, FiMessageSquare } from 'react-icons/fi';
-
-interface Issue {
-  id: string;
-  issueNumber: string;
-  title: string;
-  description: string;
-  vendor: string;
-  orderNumber?: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
-  category: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import { IssueStats, IssueFilters, IssuesTable } from '../components/client-issues';
+import type { Issue } from '../components/client-issues';
+import { FiXCircle } from 'react-icons/fi';
 
 const ClientIssuesPage = () => {
+  const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -97,45 +90,62 @@ const ClientIssuesPage = () => {
     { value: 'other', label: 'Other' },
   ];
 
-  const getPriorityColor = (priority: Issue['priority']) => {
-    switch (priority) {
-      case 'urgent':
-        return 'red';
-      case 'high':
-        return 'orange';
-      case 'medium':
-        return 'blue';
-      case 'low':
-        return 'gray';
-      default:
-        return 'gray';
-    }
-  };
+  // Filter issues based on search and filters
+  const filteredIssues = useMemo(() => {
+    return issues.filter(issue => {
+      // Search filter
+      const searchLower = searchQuery.toLowerCase();
+      const matchesSearch = !searchQuery || 
+        issue.title.toLowerCase().includes(searchLower) ||
+        issue.description.toLowerCase().includes(searchLower) ||
+        issue.vendor.toLowerCase().includes(searchLower) ||
+        issue.issueNumber.toLowerCase().includes(searchLower);
 
-  const getStatusColor = (status: Issue['status']) => {
-    switch (status) {
-      case 'open':
-        return 'blue';
-      case 'in_progress':
-        return 'orange';
-      case 'resolved':
-        return 'green';
-      case 'closed':
-        return 'gray';
-      default:
-        return 'gray';
-    }
-  };
+      // Status filter
+      const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
 
-  const getStatusLabel = (status: Issue['status']) => {
-    return status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-  };
+      // Priority filter
+      const matchesPriority = priorityFilter === 'all' || issue.priority === priorityFilter;
 
-  const stats = {
+      return matchesSearch && matchesStatus && matchesPriority;
+    });
+  }, [issues, searchQuery, statusFilter, priorityFilter]);
+
+  // Calculate stats
+  const stats = useMemo(() => ({
     total: issues.length,
     open: issues.filter(i => i.status === 'open').length,
     inProgress: issues.filter(i => i.status === 'in_progress').length,
     resolved: issues.filter(i => i.status === 'resolved').length,
+  }), [issues]);
+
+  // Handlers
+  const handleView = (issue: Issue) => {
+    navigate(`/client/issues/${issue.id}`);
+  };
+
+  const handleResolve = (issueId: string) => {
+    const issue = issues.find(i => i.id === issueId);
+    console.log('Complete issue:', issue);
+    toaster.create({
+      title: 'Issue Completed',
+      description: `Issue has been marked as complete.`,
+      type: 'success',
+      duration: 3000,
+    });
+    // In real app, make API call to update status
+  };
+
+  const handleDelete = (issueId: string) => {
+    const issue = issues.find(i => i.id === issueId);
+    console.log('Delete issue:', issue);
+    toaster.create({
+      title: 'Issue Deleted',
+      description: `Issue has been deleted.`,
+      type: 'info',
+      duration: 3000,
+    });
+    // In real app, make API call to delete
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -172,95 +182,33 @@ const ClientIssuesPage = () => {
 
   return (
     <DashboardLayout title="Issues">
-      <VStack align="stretch" gap={6}>
-        {/* Page Header */}
-        <HStack justify="space-between" flexWrap="wrap" gap={4}>
-          <Box>
-            <Heading size="2xl" color="gray.900" mb={2}>
-              Issues & Support
-            </Heading>
-            <Text fontSize="md" color="gray.600">
-              Report and track issues with your vendors and orders
-            </Text>
-          </Box>
-          <Button
-            colorPalette="blue"
-            size="lg"
-            onClick={() => setIsCreateDialogOpen(!isCreateDialogOpen)}
-          >
-            <HStack gap={2}>
-              <FiPlus size={20} />
-              <Text>Lodge Issue</Text>
-            </HStack>
-          </Button>
-        </HStack>
+      <VStack align="stretch" gap={5}>
+        {/* Stats */}
+        <IssueStats 
+          total={stats.total}
+          open={stats.open}
+          inProgress={stats.inProgress}
+          resolved={stats.resolved}
+        />
 
-        {/* Stats Cards */}
-        <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} gap={6}>
-          <Card>
-            <VStack align="start" gap={3}>
-              <HStack justify="space-between" width="100%">
-                <Text fontSize="sm" color="gray.600" fontWeight="medium">
-                  Total Issues
-                </Text>
-                <Box p={2} bg="purple.100" borderRadius="md" color="purple.600">
-                  <FiAlertCircle size={18} />
-                </Box>
-              </HStack>
-              <Heading size="xl" color="gray.900">
-                {stats.total}
-              </Heading>
-            </VStack>
-          </Card>
+        {/* Filters */}
+        <IssueFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          priorityFilter={priorityFilter}
+          onPriorityChange={setPriorityFilter}
+          onCreateIssue={() => setIsCreateDialogOpen(true)}
+        />
 
-          <Card>
-            <VStack align="start" gap={3}>
-              <HStack justify="space-between" width="100%">
-                <Text fontSize="sm" color="gray.600" fontWeight="medium">
-                  Open
-                </Text>
-                <Box p={2} bg="blue.100" borderRadius="md" color="blue.600">
-                  <FiMessageSquare size={18} />
-                </Box>
-              </HStack>
-              <Heading size="xl" color="gray.900">
-                {stats.open}
-              </Heading>
-            </VStack>
-          </Card>
-
-          <Card>
-            <VStack align="start" gap={3}>
-              <HStack justify="space-between" width="100%">
-                <Text fontSize="sm" color="gray.600" fontWeight="medium">
-                  In Progress
-                </Text>
-                <Box p={2} bg="orange.100" borderRadius="md" color="orange.600">
-                  <FiClock size={18} />
-                </Box>
-              </HStack>
-              <Heading size="xl" color="gray.900">
-                {stats.inProgress}
-              </Heading>
-            </VStack>
-          </Card>
-
-          <Card>
-            <VStack align="start" gap={3}>
-              <HStack justify="space-between" width="100%">
-                <Text fontSize="sm" color="gray.600" fontWeight="medium">
-                  Resolved
-                </Text>
-                <Box p={2} bg="green.100" borderRadius="md" color="green.600">
-                  <FiCheckCircle size={18} />
-                </Box>
-              </HStack>
-              <Heading size="xl" color="gray.900">
-                {stats.resolved}
-              </Heading>
-            </VStack>
-          </Card>
-        </SimpleGrid>
+        {/* Issues Table */}
+        <IssuesTable
+          issues={filteredIssues}
+          onView={handleView}
+          onComplete={handleResolve}
+          onDelete={handleDelete}
+        />
 
         {/* Create Issue Form */}
         {isCreateDialogOpen && (
@@ -390,104 +338,6 @@ const ClientIssuesPage = () => {
             </form>
           </Card>
         )}
-
-        {/* Issues List */}
-        <VStack align="stretch" gap={4}>
-          <Heading size="md" color="gray.900">
-            Your Issues
-          </Heading>
-
-          {issues.map(issue => (
-            <Card key={issue.id}>
-              <VStack align="stretch" gap={4}>
-                {/* Issue Header */}
-                <HStack justify="space-between" flexWrap="wrap" gap={3}>
-                  <HStack gap={3}>
-                    <Box
-                      p={3}
-                      bg={`${getPriorityColor(issue.priority)}.100`}
-                      borderRadius="lg"
-                      color={`${getPriorityColor(issue.priority)}.600`}
-                    >
-                      <FiAlertCircle size={24} />
-                    </Box>
-                    <Box>
-                      <Heading size="md" color="gray.900">
-                        {issue.issueNumber}
-                      </Heading>
-                      <Text fontSize="sm" color="gray.600">
-                        {issue.vendor}
-                      </Text>
-                    </Box>
-                  </HStack>
-                  <HStack gap={2}>
-                    <Badge colorPalette={getPriorityColor(issue.priority)} size="lg">
-                      {issue.priority.toUpperCase()}
-                    </Badge>
-                    <Badge colorPalette={getStatusColor(issue.status)} size="lg">
-                      {getStatusLabel(issue.status)}
-                    </Badge>
-                  </HStack>
-                </HStack>
-
-                {/* Issue Details */}
-                <Box>
-                  <Text fontSize="lg" fontWeight="semibold" color="gray.900" mb={1}>
-                    {issue.title}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    {issue.description}
-                  </Text>
-                </Box>
-
-                {/* Issue Info */}
-                <SimpleGrid columns={{ base: 2, md: 4 }} gap={4}>
-                  <Box>
-                    <Text fontSize="xs" color="gray.600">Category</Text>
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.900" textTransform="capitalize">
-                      {issue.category}
-                    </Text>
-                  </Box>
-
-                  {issue.orderNumber && (
-                    <Box>
-                      <Text fontSize="xs" color="gray.600">Order Number</Text>
-                      <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-                        {issue.orderNumber}
-                      </Text>
-                    </Box>
-                  )}
-
-                  <Box>
-                    <Text fontSize="xs" color="gray.600">Created</Text>
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-                      {new Date(issue.createdAt).toLocaleDateString()}
-                    </Text>
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="xs" color="gray.600">Last Updated</Text>
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-                      {new Date(issue.updatedAt).toLocaleDateString()}
-                    </Text>
-                  </Box>
-                </SimpleGrid>
-
-                {/* Action Button */}
-                <HStack gap={3} pt={2}>
-                  <Button size="sm" variant="outline" colorPalette="blue">
-                    View Details
-                  </Button>
-                  {issue.status !== 'resolved' && issue.status !== 'closed' && (
-                    <Button size="sm" variant="outline" colorPalette="purple">
-                      Add Comment
-                    </Button>
-                  )}
-                </HStack>
-              </VStack>
-            </Card>
-          ))}
-        </VStack>
       </VStack>
     </DashboardLayout>
   );
