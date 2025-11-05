@@ -20,8 +20,8 @@ export const leadKeys = {
   lists: () => [...leadKeys.all, 'list'] as const,
   list: (filters?: LeadFilters) => [...leadKeys.lists(), { filters }] as const,
   details: () => [...leadKeys.all, 'detail'] as const,
-  detail: (id: string) => [...leadKeys.details(), id] as const,
-  activities: (id: string) => [...leadKeys.all, 'activities', id] as const,
+  detail: (id: string | number) => [...leadKeys.details(), id] as const,
+  activities: (id: string | number) => [...leadKeys.all, 'activities', id] as const,
   stats: () => [...leadKeys.all, 'stats'] as const,
 };
 
@@ -38,7 +38,7 @@ export function useLeads(filters?: LeadFilters) {
 /**
  * Get lead by ID
  */
-export function useLead(id: string) {
+export function useLead(id: string | number) {
   return useQuery({
     queryKey: leadKeys.detail(id),
     queryFn: () => leadService.getLead(id),
@@ -49,7 +49,7 @@ export function useLead(id: string) {
 /**
  * Get lead activities
  */
-export function useLeadActivities(leadId: string) {
+export function useLeadActivities(leadId: string | number) {
   return useQuery({
     queryKey: leadKeys.activities(leadId),
     queryFn: () => leadService.getLeadActivities(leadId),
@@ -89,7 +89,7 @@ export function useUpdateLead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateLeadData }) =>
+    mutationFn: ({ id, data }: { id: string | number; data: UpdateLeadData }) =>
       leadService.updateLead(id, data),
     onSuccess: (updatedLead) => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
@@ -106,7 +106,7 @@ export function useDeleteLead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => leadService.deleteLead(id),
+    mutationFn: (id: string | number) => leadService.deleteLead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
       queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
@@ -121,7 +121,7 @@ export function useConvertLead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: ConvertLeadData }) =>
+    mutationFn: ({ id, data }: { id: string | number; data: ConvertLeadData }) =>
       leadService.convertLead(id, data),
     onSuccess: (convertedLead) => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
@@ -138,7 +138,7 @@ export function useAddLeadActivity() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ leadId, activity }: { leadId: string; activity: Partial<LeadActivity> }) =>
+    mutationFn: ({ leadId, activity }: { leadId: string | number; activity: Partial<LeadActivity> }) =>
       leadService.addLeadActivity(leadId, activity),
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: leadKeys.activities(variables.leadId) });
@@ -154,7 +154,7 @@ export function useUpdateLeadScore() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, score, reason }: { id: string; score: number; reason: string }) =>
+    mutationFn: ({ id, score, reason }: { id: string | number; score: number; reason: string }) =>
       leadService.updateLeadScore(id, score, reason),
     onSuccess: (updatedLead) => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
@@ -171,8 +171,8 @@ export function useAssignLead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, userId, userName }: { id: string; userId: string; userName: string }) =>
-      leadService.assignLead(id, userId, userName),
+    mutationFn: ({ id, userId }: { id: string | number; userId: string | number }) =>
+      leadService.assignLead(id, userId),
     onSuccess: (updatedLead) => {
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
       queryClient.invalidateQueries({ queryKey: leadKeys.detail(updatedLead.id) });

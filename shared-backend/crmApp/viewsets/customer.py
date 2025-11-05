@@ -115,3 +115,87 @@ class CustomerViewSet(viewsets.ModelViewSet):
             'message': 'Customer activated successfully.',
             'customer': CustomerSerializer(customer).data
         })
+    
+    @action(detail=True, methods=['get'])
+    def notes(self, request, pk=None):
+        """Get customer notes"""
+        from crmApp.models import Activity
+        customer = self.get_object()
+        
+        # Get all note-type activities for this customer
+        notes = Activity.objects.filter(
+            customer=customer,
+            activity_type='note'
+        ).select_related('created_by').order_by('-created_at')
+        
+        notes_data = [{
+            'id': note.id,
+            'customer': note.customer_id,
+            'user': note.created_by_id if note.created_by else None,
+            'user_name': note.created_by.full_name if note.created_by else 'Unknown',
+            'note': note.description,
+            'created_at': note.created_at
+        } for note in notes]
+        
+        return Response(notes_data)
+    
+    @action(detail=True, methods=['post'])
+    def add_note(self, request, pk=None):
+        """Add a note to customer"""
+        from crmApp.models import Activity
+        customer = self.get_object()
+        note_text = request.data.get('note')
+        
+        if not note_text:
+            return Response(
+                {'error': 'Note text is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        note = Activity.objects.create(
+            customer=customer,
+            activity_type='note',
+            subject=f'Note for {customer.name}',
+            description=note_text,
+            created_by=request.user,
+            is_completed=True
+        )
+        
+        return Response({
+            'id': note.id,
+            'customer': note.customer_id,
+            'user': note.created_by_id,
+            'user_name': note.created_by.full_name,
+            'note': note.description,
+            'created_at': note.created_at
+        }, status=status.HTTP_201_CREATED)
+    
+    @action(detail=True, methods=['get'])
+    def activities(self, request, pk=None):
+        """Get customer activities"""
+        from crmApp.models import Activity
+        customer = self.get_object()
+        
+        activities = Activity.objects.filter(
+            customer=customer
+        ).select_related('created_by').order_by('-created_at')[:50]
+        
+        activities_data = [{
+            'id': activity.id,
+            'customer': activity.customer_id,
+            'deal': activity.deal_id if hasattr(activity, 'deal') else None,
+            'activity_type': activity.activity_type,
+            'subject': activity.subject,
+            'description': activity.description,
+            'scheduled_at': activity.scheduled_at,
+            'completed_at': activity.completed_at,
+            'is_completed': activity.is_completed,
+            'created_by': {
+                'id': activity.created_by.id,
+                'name': activity.created_by.full_name
+            } if activity.created_by else None,
+            'created_at': activity.created_at,
+            'updated_at': activity.updated_at
+        } for activity in activities]
+        
+        return Response(activities_data)

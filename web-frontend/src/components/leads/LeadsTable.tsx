@@ -4,7 +4,6 @@ import {
   VStack,
   Text, 
   IconButton,
-  Badge,
   Button,
   Box,
   Flex,
@@ -23,18 +22,11 @@ interface LeadsTableProps {
   isLoading?: boolean;
   onView?: (lead: Lead) => void;
   onEdit?: (lead: Lead) => void;
-  onDelete?: (leadId: string) => void;
+  onDelete?: (leadId: number) => void;
   onConvert?: (lead: Lead) => void;
-  onBulkDelete?: (leadIds: string[]) => void;
-  onBulkExport?: (leadIds: string[]) => void;
+  onBulkDelete?: (leadIds: number[]) => void;
+  onBulkExport?: (leadIds: number[]) => void;
 }
-
-const priorityColors = {
-  low: 'gray',
-  medium: 'blue',
-  high: 'orange',
-  urgent: 'red',
-};
 
 export const LeadsTable = ({ 
   leads, 
@@ -46,7 +38,7 @@ export const LeadsTable = ({
   onBulkDelete,
   onBulkExport,
 }: LeadsTableProps) => {
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -56,7 +48,7 @@ export const LeadsTable = ({
     }
   };
 
-  const handleSelectOne = (id: string, checked: boolean) => {
+  const handleSelectOne = (id: number, checked: boolean) => {
     if (checked) {
       setSelectedIds([...selectedIds, id]);
     } else {
@@ -107,22 +99,22 @@ export const LeadsTable = ({
             <Flex justify="space-between" align="start">
               <VStack align="start" gap={1} flex={1}>
                 <Text fontWeight="bold" fontSize="md" color="gray.900">
-                  {lead.firstName} {lead.lastName}
+                  {lead.name}
                 </Text>
                 <HStack gap={1.5}>
                   <FiBriefcase size={12} color="#718096" />
                   <Text fontSize="sm" color="gray.600">
-                    {lead.company}
+                    {lead.company || 'No company'}
                   </Text>
                 </HStack>
-                {lead.title && (
+                {lead.job_title && (
                   <Text fontSize="xs" color="gray.500">
-                    {lead.title}
+                    {lead.job_title}
                   </Text>
                 )}
               </VStack>
               
-              <LeadStatusBadge status={lead.status} size="sm" />
+              <LeadStatusBadge status={lead.qualification_status} size="sm" />
             </Flex>
 
             {/* Email */}
@@ -139,28 +131,13 @@ export const LeadsTable = ({
             <Flex justify="space-between" align="center" pt={2} borderTopWidth="1px" borderColor="gray.100">
               <VStack align="start" gap={1}>
                 <Text fontSize="xs" color="gray.500">Score</Text>
-                <LeadScoreIndicator score={lead.score} showLabel={true} size="sm" />
-              </VStack>
-              
-              <VStack align="center" gap={1}>
-                <Text fontSize="xs" color="gray.500">Priority</Text>
-                <Badge 
-                  colorPalette={priorityColors[lead.priority]}
-                  size="sm"
-                  borderRadius="full"
-                  px={3}
-                  py={1}
-                  textTransform="capitalize"
-                  fontSize="xs"
-                >
-                  {lead.priority}
-                </Badge>
+                <LeadScoreIndicator score={lead.lead_score} showLabel={true} size="sm" />
               </VStack>
 
               <VStack align="end" gap={1}>
                 <Text fontSize="xs" color="gray.500">Est. Value</Text>
                 <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-                  {lead.estimatedValue ? formatCurrency(lead.estimatedValue) : '-'}
+                  {lead.estimated_value ? formatCurrency(lead.estimated_value) : '-'}
                 </Text>
               </VStack>
             </Flex>
@@ -170,13 +147,13 @@ export const LeadsTable = ({
               <VStack align="start" gap={0}>
                 <Text fontSize="xs" color="gray.500">Source</Text>
                 <Text fontSize="sm" color="gray.600" textTransform="capitalize">
-                  {lead.source.replace('_', ' ')}
+                  {lead.source.replace(/_/g, ' ')}
                 </Text>
               </VStack>
               <VStack align="end" gap={0}>
                 <Text fontSize="xs" color="gray.500">Created</Text>
                 <Text fontSize="sm" color="gray.600">
-                  {formatDate(lead.createdAt)}
+                  {formatDate(lead.created_at)}
                 </Text>
               </VStack>
             </Flex>
@@ -283,7 +260,6 @@ export const LeadsTable = ({
               <Table.ColumnHeader>Lead</Table.ColumnHeader>
               <Table.ColumnHeader>Company</Table.ColumnHeader>
               <Table.ColumnHeader>Status</Table.ColumnHeader>
-              <Table.ColumnHeader>Priority</Table.ColumnHeader>
               <Table.ColumnHeader>Score</Table.ColumnHeader>
               <Table.ColumnHeader>Source</Table.ColumnHeader>
               <Table.ColumnHeader>Est. Value</Table.ColumnHeader>
@@ -303,7 +279,7 @@ export const LeadsTable = ({
                 <Table.Cell>
                   <VStack align="flex-start" gap={0}>
                     <Text fontWeight="semibold" fontSize="sm" color="gray.900">
-                      {lead.firstName} {lead.lastName}
+                      {lead.name}
                     </Text>
                     {lead.email && (
                       <Text fontSize="xs" color="gray.600">{lead.email}</Text>
@@ -312,44 +288,31 @@ export const LeadsTable = ({
                 </Table.Cell>
                 <Table.Cell>
                   <VStack align="flex-start" gap={0}>
-                    <Text fontWeight="medium" fontSize="sm" color="gray.700">{lead.company}</Text>
-                    {lead.title && (
-                      <Text fontSize="xs" color="gray.600">{lead.title}</Text>
+                    <Text fontWeight="medium" fontSize="sm" color="gray.700">{lead.company || '-'}</Text>
+                    {lead.job_title && (
+                      <Text fontSize="xs" color="gray.600">{lead.job_title}</Text>
                     )}
                   </VStack>
                 </Table.Cell>
                 <Table.Cell>
-                  <LeadStatusBadge status={lead.status} size="sm" />
+                  <LeadStatusBadge status={lead.qualification_status} size="sm" />
                 </Table.Cell>
                 <Table.Cell>
-                  <Badge 
-                    colorPalette={priorityColors[lead.priority]}
-                    size="sm"
-                    borderRadius="full"
-                    px={3}
-                    py={1}
-                    textTransform="capitalize"
-                    fontSize="xs"
-                  >
-                    {lead.priority}
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell>
-                  <LeadScoreIndicator score={lead.score} showLabel={false} size="sm" />
+                  <LeadScoreIndicator score={lead.lead_score} showLabel={false} size="sm" />
                 </Table.Cell>
                 <Table.Cell>
                   <Text fontSize="sm" textTransform="capitalize" color="gray.600">
-                    {lead.source.replace('_', ' ')}
+                    {lead.source.replace(/_/g, ' ')}
                   </Text>
                 </Table.Cell>
                 <Table.Cell>
                   <Text fontWeight="semibold" fontSize="sm" color="gray.900">
-                    {lead.estimatedValue ? formatCurrency(lead.estimatedValue) : '-'}
+                    {lead.estimated_value ? formatCurrency(lead.estimated_value) : '-'}
                   </Text>
                 </Table.Cell>
                 <Table.Cell>
                   <Text fontSize="sm" color="gray.600">
-                    {formatDate(lead.createdAt)}
+                    {formatDate(lead.created_at)}
                   </Text>
                 </Table.Cell>
                 <Table.Cell>

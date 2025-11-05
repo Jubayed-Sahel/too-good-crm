@@ -43,6 +43,9 @@ export const API_CONFIG = {
       STATS: '/customers/stats/',
       ACTIVATE: (id: number | string) => `/customers/${id}/activate/`,
       DEACTIVATE: (id: number | string) => `/customers/${id}/deactivate/`,
+      ADD_NOTE: (id: number | string) => `/customers/${id}/add_note/`,
+      NOTES: (id: number | string) => `/customers/${id}/notes/`,
+      ACTIVITIES: (id: number | string) => `/customers/${id}/activities/`,
     },
 
     // Leads
@@ -53,6 +56,10 @@ export const API_CONFIG = {
       CONVERT: (id: number | string) => `/leads/${id}/convert/`,
       QUALIFY: (id: number | string) => `/leads/${id}/qualify/`,
       DISQUALIFY: (id: number | string) => `/leads/${id}/disqualify/`,
+      ACTIVITIES: (id: number | string) => `/leads/${id}/activities/`,
+      ADD_ACTIVITY: (id: number | string) => `/leads/${id}/add_activity/`,
+      UPDATE_SCORE: (id: number | string) => `/leads/${id}/update_score/`,
+      ASSIGN: (id: number | string) => `/leads/${id}/assign/`,
     },
 
     // Deals

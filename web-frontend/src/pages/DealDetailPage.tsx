@@ -28,23 +28,8 @@ import {
   FiTrendingUp,
   FiTarget,
 } from 'react-icons/fi';
-import { getDeal } from '@/services/deals.service';
-
-interface Deal {
-  id: number;
-  title: string;
-  customer: string;
-  customerId: number;
-  value: number;
-  stage: string;
-  probability: number;
-  expectedCloseDate: string;
-  actualCloseDate?: string;
-  owner: string;
-  description: string;
-  created_at: string;
-  lastActivity: string;
-}
+import { dealService } from '@/services/deal.service';
+import type { Deal } from '@/types';
 
 const DealDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -58,7 +43,7 @@ const DealDetailPage = () => {
       if (!id) return;
       try {
         setIsLoading(true);
-        const dealData = await getDeal(id);
+        const dealData = await dealService.getDeal(parseInt(id));
         if (dealData) {
           setDeal(dealData);
         } else {
@@ -98,7 +83,11 @@ const DealDetailPage = () => {
     return labels[stage] || stage;
   };
 
-  const formatDate = (dateString?: string) => {
+  const getDealValue = (deal: Deal): number => {
+    return typeof deal.value === 'string' ? parseFloat(deal.value) : deal.value;
+  };
+
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'Not set';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -272,13 +261,13 @@ const DealDetailPage = () => {
                   <Heading size={{ base: 'xl', md: '2xl' }}>
                     {deal.title}
                   </Heading>
-                  <HStack gap={2} opacity={0.9}>
+                  <HStack gap={2}>
                     <FiUser size={16} />
-                    <Text fontSize="lg">{deal.customer}</Text>
+                    <Text fontSize="lg">{deal.customer_name || 'Unknown Customer'}</Text>
                   </HStack>
                   <HStack gap={2} opacity={0.85}>
                     <FiBriefcase size={14} />
-                    <Text fontSize="md">Owner: {deal.owner}</Text>
+                    <Text fontSize="md">Owner: {deal.assigned_to_name || 'Unassigned'}</Text>
                   </HStack>
                 </VStack>
               </HStack>
@@ -313,7 +302,7 @@ const DealDetailPage = () => {
                     Deal Value
                   </Text>
                   <Text fontSize="2xl" fontWeight="bold">
-                    {formatCurrency(deal.value)}
+                    {formatCurrency(getDealValue(deal))}
                   </Text>
                 </VStack>
               </HStack>
@@ -370,7 +359,7 @@ const DealDetailPage = () => {
                     </Text>
                   </HStack>
                   <Text fontSize="md" fontWeight="bold" color="blue.900">
-                    {formatDate(deal.expectedCloseDate)}
+                    {formatDate(deal.expected_close_date)}
                   </Text>
                 </Box>
 
@@ -411,7 +400,7 @@ const DealDetailPage = () => {
                     </Text>
                   </HStack>
                   <Text fontSize="2xl" fontWeight="bold" color="green.900">
-                    {formatCurrency((deal.value * deal.probability) / 100)}
+                    {formatCurrency((getDealValue(deal) * deal.probability) / 100)}
                   </Text>
                   <Text fontSize="sm" color="green.700" mt={1}>
                     Based on {deal.probability}% probability
@@ -499,7 +488,7 @@ const DealDetailPage = () => {
                     Last Activity
                   </Text>
                   <Text fontSize="sm" color="gray.600" mt={1}>
-                    {formatDate(deal.lastActivity)}
+                    {formatDate(deal.updated_at)}
                   </Text>
                 </Box>
 
@@ -514,7 +503,7 @@ const DealDetailPage = () => {
                     Expected Close
                   </Text>
                   <Text fontSize="sm" color="gray.600" mt={1}>
-                    {formatDate(deal.expectedCloseDate)}
+                    {formatDate(deal.expected_close_date)}
                   </Text>
                 </Box>
               </VStack>

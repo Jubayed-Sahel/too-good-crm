@@ -1,8 +1,8 @@
 import { Badge } from '@chakra-ui/react';
-import type { LeadStatus } from '../../types';
+import type { LeadQualificationStatus } from '../../types';
 
 interface LeadStatusBadgeProps {
-  status: LeadStatus;
+  status: LeadQualificationStatus;
   size?: 'sm' | 'md' | 'lg';
 }
 
@@ -19,13 +19,9 @@ const statusConfig = {
     label: 'Qualified',
     colorPalette: 'green',
   },
-  proposal: {
-    label: 'Proposal',
-    colorPalette: 'orange',
-  },
-  negotiation: {
-    label: 'Negotiation',
-    colorPalette: 'yellow',
+  unqualified: {
+    label: 'Unqualified',
+    colorPalette: 'gray',
   },
   converted: {
     label: 'Converted',

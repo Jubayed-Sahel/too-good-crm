@@ -89,7 +89,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
             )
     
     @action(detail=False, methods=['get'])
-    def revenue(self, request):
+    def revenue_by_period(self, request):
         """
         Get revenue analytics by period
         
