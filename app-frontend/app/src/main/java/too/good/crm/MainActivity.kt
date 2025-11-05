@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
                                         popUpTo("dashboard") { inclusive = true }
                                     }
                                 },
-                                onDashboardItemClicked = { route ->
+                                onNavigate = { route ->
                                     navController.navigate(route)
                                 }
                             )
