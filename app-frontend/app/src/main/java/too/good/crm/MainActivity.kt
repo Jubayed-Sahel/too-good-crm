@@ -15,13 +15,15 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import too.good.crm.features.dashboard.DashboardScreen
-import too.good.crm.features.login.LoginScreen
 import too.good.crm.features.signup.SignupScreen
 import too.good.crm.ui.components.PrimaryButton
 import too.good.crm.ui.components.SecondaryButton
 import too.good.crm.ui.theme.TooGoodCrmTheme
 import too.good.crm.ui.theme.DesignTokens
+
+import too.good.crm.features.dashboard.DashboardScreen
+import too.good.crm.features.login.LoginScreen
+import too.good.crm.features.leads.LeadsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,6 +81,17 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        composable("leads") {
+                            LeadsScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
                     }
                 }
             }
