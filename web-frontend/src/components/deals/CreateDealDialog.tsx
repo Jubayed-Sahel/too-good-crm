@@ -96,7 +96,7 @@ export const CreateDealDialog = ({
   const isFormValid = formData.title && formData.customerName && formData.value > 0;
 
   return (
-    <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size="lg">
+    <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size={{ base: 'full', md: 'lg' }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -124,7 +124,7 @@ export const CreateDealDialog = ({
             </VStack>
 
             {/* Customer and Value */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Customer Name *
@@ -154,7 +154,7 @@ export const CreateDealDialog = ({
             </SimpleGrid>
 
             {/* Stage and Probability */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Stage
@@ -186,7 +186,7 @@ export const CreateDealDialog = ({
             </SimpleGrid>
 
             {/* Expected Close Date and Owner */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Expected Close Date

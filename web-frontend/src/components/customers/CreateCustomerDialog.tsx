@@ -93,7 +93,7 @@ export const CreateCustomerDialog = ({
   const isFormValid = formData.fullName && formData.email && formData.company;
 
   return (
-    <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size="lg">
+    <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size={{ base: 'full', md: 'lg' }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -108,7 +108,7 @@ export const CreateCustomerDialog = ({
         <DialogBody>
           <VStack gap={4} align="stretch">
             {/* Name and Email */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Full Name *
@@ -135,7 +135,7 @@ export const CreateCustomerDialog = ({
             </SimpleGrid>
 
             {/* Phone and Company */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Phone
@@ -188,7 +188,7 @@ export const CreateCustomerDialog = ({
             </VStack>
 
             {/* City and State */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   City
@@ -214,7 +214,7 @@ export const CreateCustomerDialog = ({
             </SimpleGrid>
 
             {/* ZIP and Country */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   ZIP/Postal Code

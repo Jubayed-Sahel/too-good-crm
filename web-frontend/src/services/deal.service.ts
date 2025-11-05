@@ -1,147 +1,313 @@
 /**
- * Deal service
+ * Deals Service
+ * Handles deal and pipeline-related API calls
  */
-import { apiService } from './api.service';
-import { API_ENDPOINTS } from '@/config/constants';
+import api from '@/lib/apiClient';
+import { API_CONFIG, buildUrl } from '@/config/api.config';
 import type { Deal, PaginatedResponse } from '@/types';
+
+export interface DealStats {
+  total: number;
+  open: number;
+  won: number;
+  lost: number;
+  total_value: number;
+  won_value: number;
+  average_deal_size: number;
+  win_rate: number;
+  average_days_to_close: number;
+}
+
+export interface Pipeline {
+  id: number;
+  name: string;
+  description?: string;
+  is_default: boolean;
+  organization: number;
+  created_at: string;
+  updated_at: string;
+  stages?: PipelineStage[];
+}
+
+export interface PipelineStage {
+  id: number;
+  name: string;
+  pipeline: number;
+  probability: number;
+  order: number;
+  created_at: string;
+  updated_at: string;
+  deals_count?: number;
+}
+
+export interface DealFilters {
+  status?: string;
+  stage?: number;
+  pipeline?: number;
+  assigned_to?: number;
+  customer?: number;
+  min_value?: number;
+  max_value?: number;
+  tags?: string;
+  search?: string;
+  page?: number;
+  page_size?: number;
+  ordering?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+export interface DealCreateData {
+  title: string;
+  value: number;
+  currency?: string;
+  customer: number;
+  stage: number;
+  pipeline?: number;
+  probability?: number;
+  expected_close_date?: string;
+  assigned_to?: number;
+  tags?: string[];
+  notes?: string;
+  description?: string;
+}
+
+export interface MoveStageData {
+  stage: number;
+  notes?: string;
+}
+
+export interface MarkWonData {
+  actual_close_date?: string;
+  notes?: string;
+}
+
+export interface MarkLostData {
+  lost_reason: string;
+  notes?: string;
+}
 
 class DealService {
   /**
    * Get paginated list of deals
    */
-  async getDeals(_params?: Record<string, any>): Promise<PaginatedResponse<Deal>> {
-    // Mock data for development
-    const mockDeals: Deal[] = [
-      {
-        id: 1,
-        title: 'Enterprise Software License',
-        customer: 1,
-        customer_name: 'John Doe',
-        value: 150000,
-        stage: 'negotiation',
-        probability: 75,
-        expected_close_date: '2024-02-15',
-        assigned_to: 1,
-        description: 'Annual enterprise software license renewal',
-        created_at: '2024-01-10T10:00:00Z',
-        updated_at: '2024-01-20T14:30:00Z',
-      },
-      {
-        id: 2,
-        title: 'Cloud Migration Project',
-        customer: 2,
-        customer_name: 'Jane Smith',
-        value: 250000,
-        stage: 'proposal',
-        probability: 60,
-        expected_close_date: '2024-03-01',
-        assigned_to: 2,
-        description: 'Full cloud infrastructure migration',
-        created_at: '2024-01-12T09:15:00Z',
-        updated_at: '2024-01-18T16:45:00Z',
-      },
-      {
-        id: 3,
-        title: 'Consulting Services',
-        customer: 3,
-        customer_name: 'Mike Johnson',
-        value: 75000,
-        stage: 'qualified',
-        probability: 40,
-        expected_close_date: '2024-02-28',
-        assigned_to: 1,
-        description: 'Business process optimization consulting',
-        created_at: '2024-01-15T11:30:00Z',
-        updated_at: '2024-01-15T11:30:00Z',
-      },
-      {
-        id: 4,
-        title: 'Product Development',
-        customer: 4,
-        customer_name: 'Sarah Williams',
-        value: 180000,
-        stage: 'lead',
-        probability: 25,
-        expected_close_date: '2024-04-15',
-        assigned_to: 3,
-        description: 'Custom product development engagement',
-        created_at: '2024-01-18T13:00:00Z',
-        updated_at: '2024-01-18T13:00:00Z',
-      },
-      {
-        id: 5,
-        title: 'Training Package',
-        customer: 5,
-        customer_name: 'David Brown',
-        value: 45000,
-        stage: 'closed-won',
-        probability: 100,
-        expected_close_date: '2024-01-25',
-        actual_close_date: '2024-01-24',
-        assigned_to: 2,
-        description: 'Corporate training program',
-        is_won: true,
-        is_closed: true,
-        created_at: '2024-01-05T08:00:00Z',
-        updated_at: '2024-01-24T17:00:00Z',
-      },
-      {
-        id: 6,
-        title: 'System Integration',
-        customer: 1,
-        customer_name: 'John Doe',
-        value: 95000,
-        stage: 'negotiation',
-        probability: 80,
-        expected_close_date: '2024-02-20',
-        assigned_to: 1,
-        description: 'ERP system integration',
-        created_at: '2024-01-08T10:30:00Z',
-        updated_at: '2024-01-22T15:20:00Z',
-      },
-    ];
-
-    return Promise.resolve({
-      count: mockDeals.length,
-      next: null,
-      previous: null,
-      results: mockDeals,
-    });
+  async getDeals(filters?: DealFilters): Promise<PaginatedResponse<Deal>> {
+    const url = buildUrl(API_CONFIG.ENDPOINTS.DEALS.LIST, filters);
+    return api.get<PaginatedResponse<Deal>>(url);
   }
 
   /**
    * Get deal by ID
    */
   async getDeal(id: number): Promise<Deal> {
-    return apiService.get<Deal>(API_ENDPOINTS.DEALS.DETAIL(id));
+    const url = API_CONFIG.ENDPOINTS.DEALS.DETAIL(id);
+    return api.get<Deal>(url);
   }
 
   /**
    * Create new deal
    */
-  async createDeal(data: Partial<Deal>): Promise<Deal> {
-    return apiService.post<Deal>(API_ENDPOINTS.DEALS.LIST, data);
+  async createDeal(data: DealCreateData): Promise<Deal> {
+    return api.post<Deal>(API_CONFIG.ENDPOINTS.DEALS.LIST, data);
   }
 
   /**
    * Update deal
    */
-  async updateDeal(id: number, data: Partial<Deal>): Promise<Deal> {
-    return apiService.patch<Deal>(API_ENDPOINTS.DEALS.DETAIL(id), data);
+  async updateDeal(id: number, data: Partial<DealCreateData>): Promise<Deal> {
+    const url = API_CONFIG.ENDPOINTS.DEALS.DETAIL(id);
+    return api.patch<Deal>(url, data);
   }
 
   /**
    * Delete deal
    */
   async deleteDeal(id: number): Promise<void> {
-    return apiService.delete(API_ENDPOINTS.DEALS.DETAIL(id));
+    const url = API_CONFIG.ENDPOINTS.DEALS.DETAIL(id);
+    return api.delete(url);
   }
 
   /**
-   * Get pipeline statistics
+   * Get deal statistics
    */
-  async getPipelineStats(): Promise<any> {
-    return apiService.get(API_ENDPOINTS.DEALS.PIPELINE_STATS);
+  async getStats(filters?: Pick<DealFilters, 'pipeline' | 'assigned_to'>): Promise<DealStats> {
+    const url = buildUrl(API_CONFIG.ENDPOINTS.DEALS.STATS, filters);
+    return api.get<DealStats>(url);
+  }
+
+  /**
+   * Move deal to different stage
+   */
+  async moveStage(id: number, data: MoveStageData): Promise<Deal> {
+    const url = API_CONFIG.ENDPOINTS.DEALS.MOVE_STAGE(id);
+    return api.post<Deal>(url, data);
+  }
+
+  /**
+   * Mark deal as won
+   */
+  async markWon(id: number, data?: MarkWonData): Promise<Deal> {
+    const url = API_CONFIG.ENDPOINTS.DEALS.MARK_WON(id);
+    return api.post<Deal>(url, data || {});
+  }
+
+  /**
+   * Mark deal as lost
+   */
+  async markLost(id: number, data: MarkLostData): Promise<Deal> {
+    const url = API_CONFIG.ENDPOINTS.DEALS.MARK_LOST(id);
+    return api.post<Deal>(url, data);
+  }
+
+  /**
+   * Reopen a closed deal
+   */
+  async reopen(id: number): Promise<Deal> {
+    const url = API_CONFIG.ENDPOINTS.DEALS.REOPEN(id);
+    return api.post<Deal>(url);
+  }
+
+  /**
+   * Get pipeline statistics (legacy method)
+   */
+  async getPipelineStats(): Promise<DealStats> {
+    return this.getStats();
+  }
+
+  // ==================== Pipelines ====================
+
+  /**
+   * Get all pipelines
+   */
+  async getPipelines(): Promise<Pipeline[]> {
+    return api.get<Pipeline[]>(API_CONFIG.ENDPOINTS.PIPELINES.LIST);
+  }
+
+  /**
+   * Get a single pipeline by ID
+   */
+  async getPipeline(id: number): Promise<Pipeline> {
+    const url = API_CONFIG.ENDPOINTS.PIPELINES.DETAIL(id);
+    return api.get<Pipeline>(url);
+  }
+
+  /**
+   * Create a new pipeline
+   */
+  async createPipeline(data: Omit<Pipeline, 'id' | 'created_at' | 'updated_at' | 'organization'>): Promise<Pipeline> {
+    return api.post<Pipeline>(API_CONFIG.ENDPOINTS.PIPELINES.LIST, data);
+  }
+
+  /**
+   * Update a pipeline
+   */
+  async updatePipeline(id: number, data: Partial<Omit<Pipeline, 'id' | 'created_at' | 'updated_at' | 'organization'>>): Promise<Pipeline> {
+    const url = API_CONFIG.ENDPOINTS.PIPELINES.DETAIL(id);
+    return api.patch<Pipeline>(url, data);
+  }
+
+  /**
+   * Delete a pipeline
+   */
+  async deletePipeline(id: number): Promise<void> {
+    const url = API_CONFIG.ENDPOINTS.PIPELINES.DETAIL(id);
+    return api.delete(url);
+  }
+
+  /**
+   * Set a pipeline as default
+   */
+  async setDefaultPipeline(id: number): Promise<Pipeline> {
+    const url = API_CONFIG.ENDPOINTS.PIPELINES.SET_DEFAULT(id);
+    return api.post<Pipeline>(url);
+  }
+
+  /**
+   * Get pipeline stages
+   */
+  async getPipelineStages(pipelineId?: number): Promise<PipelineStage[]> {
+    const url = pipelineId 
+      ? buildUrl(API_CONFIG.ENDPOINTS.PIPELINES.STAGES, { pipeline: pipelineId })
+      : API_CONFIG.ENDPOINTS.PIPELINES.STAGES;
+    return api.get<PipelineStage[]>(url);
+  }
+
+  /**
+   * Create a pipeline stage
+   */
+  async createPipelineStage(
+    pipelineId: number,
+    data: Omit<PipelineStage, 'id' | 'created_at' | 'updated_at' | 'pipeline'>
+  ): Promise<PipelineStage> {
+    return api.post<PipelineStage>(API_CONFIG.ENDPOINTS.PIPELINES.STAGES, { 
+      ...data, 
+      pipeline: pipelineId 
+    });
+  }
+
+  /**
+   * Update a pipeline stage
+   */
+  async updatePipelineStage(
+    stageId: number,
+    data: Partial<Omit<PipelineStage, 'id' | 'created_at' | 'updated_at' | 'pipeline'>>
+  ): Promise<PipelineStage> {
+    const url = API_CONFIG.ENDPOINTS.PIPELINES.STAGE_DETAIL(stageId);
+    return api.patch<PipelineStage>(url, data);
+  }
+
+  /**
+   * Delete a pipeline stage
+   */
+  async deletePipelineStage(stageId: number): Promise<void> {
+    const url = API_CONFIG.ENDPOINTS.PIPELINES.STAGE_DETAIL(stageId);
+    return api.delete(url);
+  }
+
+  /**
+   * Reorder pipeline stages
+   */
+  async reorderStages(pipelineId: number, stageOrders: { id: number; order: number }[]): Promise<PipelineStage[]> {
+    return api.post<PipelineStage[]>(`/pipelines/${pipelineId}/stages/reorder/`, {
+      stages: stageOrders,
+    });
+  }
+
+  /**
+   * Get deals by pipeline stage (for Kanban view)
+   */
+  async getDealsByStage(pipelineId: number): Promise<Record<number, Deal[]>> {
+    const deals = await this.getDeals({ pipeline: pipelineId, page_size: 1000 });
+    const dealsByStage: Record<number, Deal[]> = {};
+
+    deals.results.forEach(deal => {
+      const stageId = typeof deal.stage === 'number' ? deal.stage : parseInt(deal.stage, 10);
+      if (!dealsByStage[stageId]) {
+        dealsByStage[stageId] = [];
+      }
+      dealsByStage[stageId].push(deal);
+    });
+
+    return dealsByStage;
+  }
+
+  /**
+   * Bulk update deals
+   */
+  async bulkUpdate(dealIds: number[], data: Partial<DealCreateData>): Promise<Deal[]> {
+    return api.post<Deal[]>('/deals/bulk_update/', {
+      ids: dealIds,
+      data,
+    });
+  }
+
+  /**
+   * Export deals to CSV
+   */
+  async exportDeals(filters?: DealFilters): Promise<Blob> {
+    const url = buildUrl('/deals/export/', filters);
+    return api.get<Blob>(url, {
+      responseType: 'blob',
+    });
   }
 }
 
