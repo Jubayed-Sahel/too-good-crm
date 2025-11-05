@@ -7,13 +7,14 @@ import {
   Badge,
   Button,
   Box,
+  Flex,
 } from '@chakra-ui/react';
 import { Checkbox } from '../ui/checkbox';
-import { Card } from '../common';
+import { Card, ResponsiveTable } from '../common';
 import type { Lead } from '../../types';
 import { LeadStatusBadge } from './LeadStatusBadge';
 import { LeadScoreIndicator } from './LeadScoreIndicator';
-import { FiEdit, FiTrash2, FiEye } from 'react-icons/fi';
+import { FiEdit, FiTrash2, FiEye, FiMail, FiBriefcase } from 'react-icons/fi';
 import { formatCurrency, formatDate } from '../../utils';
 import { useState } from 'react';
 
@@ -96,12 +97,154 @@ export const LeadsTable = ({
     );
   }
 
-  return (
+  // Mobile Card View
+  const MobileView = () => (
+    <VStack gap={3} align="stretch">
+      {leads.map((lead) => (
+        <Card key={lead.id} p={4}>
+          <VStack align="stretch" gap={3}>
+            {/* Header */}
+            <Flex justify="space-between" align="start">
+              <VStack align="start" gap={1} flex={1}>
+                <Text fontWeight="bold" fontSize="md" color="gray.900">
+                  {lead.firstName} {lead.lastName}
+                </Text>
+                <HStack gap={1.5}>
+                  <FiBriefcase size={12} color="#718096" />
+                  <Text fontSize="sm" color="gray.600">
+                    {lead.company}
+                  </Text>
+                </HStack>
+                {lead.title && (
+                  <Text fontSize="xs" color="gray.500">
+                    {lead.title}
+                  </Text>
+                )}
+              </VStack>
+              
+              <LeadStatusBadge status={lead.status} size="sm" />
+            </Flex>
+
+            {/* Email */}
+            {lead.email && (
+              <HStack gap={1.5}>
+                <FiMail size={14} color="#718096" />
+                <Text fontSize="sm" color="gray.600">
+                  {lead.email}
+                </Text>
+              </HStack>
+            )}
+
+            {/* Metrics */}
+            <Flex justify="space-between" align="center" pt={2} borderTopWidth="1px" borderColor="gray.100">
+              <VStack align="start" gap={1}>
+                <Text fontSize="xs" color="gray.500">Score</Text>
+                <LeadScoreIndicator score={lead.score} showLabel={true} size="sm" />
+              </VStack>
+              
+              <VStack align="center" gap={1}>
+                <Text fontSize="xs" color="gray.500">Priority</Text>
+                <Badge 
+                  colorPalette={priorityColors[lead.priority]}
+                  size="sm"
+                  borderRadius="full"
+                  px={3}
+                  py={1}
+                  textTransform="capitalize"
+                  fontSize="xs"
+                >
+                  {lead.priority}
+                </Badge>
+              </VStack>
+
+              <VStack align="end" gap={1}>
+                <Text fontSize="xs" color="gray.500">Est. Value</Text>
+                <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+                  {lead.estimatedValue ? formatCurrency(lead.estimatedValue) : '-'}
+                </Text>
+              </VStack>
+            </Flex>
+
+            {/* Details */}
+            <Flex justify="space-between" pt={2} borderTopWidth="1px" borderColor="gray.100">
+              <VStack align="start" gap={0}>
+                <Text fontSize="xs" color="gray.500">Source</Text>
+                <Text fontSize="sm" color="gray.600" textTransform="capitalize">
+                  {lead.source.replace('_', ' ')}
+                </Text>
+              </VStack>
+              <VStack align="end" gap={0}>
+                <Text fontSize="xs" color="gray.500">Created</Text>
+                <Text fontSize="sm" color="gray.600">
+                  {formatDate(lead.createdAt)}
+                </Text>
+              </VStack>
+            </Flex>
+
+            {/* Actions */}
+            <HStack gap={2} pt={2} borderTopWidth="1px" borderColor="gray.100">
+              {onView && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="purple"
+                  flex={1}
+                  onClick={() => onView(lead)}
+                >
+                  <FiEye size={16} />
+                  <Box ml={2}>View</Box>
+                </Button>
+              )}
+              {onEdit && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="blue"
+                  flex={1}
+                  onClick={() => onEdit(lead)}
+                >
+                  <FiEdit size={16} />
+                  <Box ml={2}>Edit</Box>
+                </Button>
+              )}
+              {onDelete && (
+                <IconButton
+                  aria-label="Delete"
+                  size="sm"
+                  variant="outline"
+                  colorPalette="red"
+                  onClick={() => onDelete(lead.id)}
+                >
+                  <FiTrash2 size={16} />
+                </IconButton>
+              )}
+            </HStack>
+
+            {/* Convert Button */}
+            {onConvert && (
+              <Button
+                size="sm"
+                variant="solid"
+                colorPalette="green"
+                width="full"
+                onClick={() => onConvert(lead)}
+              >
+                Convert to Customer
+              </Button>
+            )}
+          </VStack>
+        </Card>
+      ))}
+    </VStack>
+  );
+
+  // Desktop Table View
+  const DesktopView = () => (
     <Card p={0} overflow="hidden">
       {/* Bulk Actions Bar */}
       {selectedIds.length > 0 && (
         <Box bg="purple.50" borderBottomWidth="1px" borderColor="purple.200" px={4} py={3}>
-          <HStack justify="space-between">
+          <HStack justify="space-between" flexWrap="wrap" gap={2}>
             <Text fontSize="sm" fontWeight="medium" color="purple.900">
               {selectedIds.length} lead(s) selected
             </Text>
@@ -127,128 +270,136 @@ export const LeadsTable = ({
         </Box>
       )}
       
-      <Table.Root size="sm" variant="line">
-        <Table.Header>
-          <Table.Row bg="gray.50">
-            <Table.ColumnHeader px={4} py={3} width="50px">
-              <Checkbox
-                checked={isAllSelected}
-                onCheckedChange={(details) => handleSelectAll(details.checked as boolean)}
-              />
-            </Table.ColumnHeader>
-            <Table.ColumnHeader>Lead</Table.ColumnHeader>
-            <Table.ColumnHeader>Company</Table.ColumnHeader>
-            <Table.ColumnHeader>Status</Table.ColumnHeader>
-            <Table.ColumnHeader>Priority</Table.ColumnHeader>
-            <Table.ColumnHeader>Score</Table.ColumnHeader>
-            <Table.ColumnHeader>Source</Table.ColumnHeader>
-            <Table.ColumnHeader>Est. Value</Table.ColumnHeader>
-            <Table.ColumnHeader>Created</Table.ColumnHeader>
-            <Table.ColumnHeader textAlign="center">Actions</Table.ColumnHeader>
-          </Table.Row>
-        </Table.Header>
-        <Table.Body>
-          {leads.map((lead) => (
-            <Table.Row key={lead.id} _hover={{ bg: 'gray.50' }}>
-              <Table.Cell px={4} py={3}>
+      <Box overflowX="auto">
+        <Table.Root size="sm" variant="line">
+          <Table.Header>
+            <Table.Row bg="gray.50">
+              <Table.ColumnHeader px={4} py={3} width="50px">
                 <Checkbox
-                  checked={selectedIds.includes(lead.id)}
-                  onCheckedChange={(details) => handleSelectOne(lead.id, details.checked as boolean)}
+                  checked={isAllSelected}
+                  onCheckedChange={(details) => handleSelectAll(details.checked as boolean)}
                 />
-              </Table.Cell>
-              <Table.Cell>
-                <VStack align="flex-start" gap={0}>
-                  <Text fontWeight="semibold" fontSize="sm" color="gray.900">
-                    {lead.firstName} {lead.lastName}
-                  </Text>
-                  {lead.email && (
-                    <Text fontSize="xs" color="gray.600">{lead.email}</Text>
-                  )}
-                </VStack>
-              </Table.Cell>
-              <Table.Cell>
-                <VStack align="flex-start" gap={0}>
-                  <Text fontWeight="medium" fontSize="sm" color="gray.700">{lead.company}</Text>
-                  {lead.title && (
-                    <Text fontSize="xs" color="gray.600">{lead.title}</Text>
-                  )}
-                </VStack>
-              </Table.Cell>
-              <Table.Cell>
-                <LeadStatusBadge status={lead.status} size="sm" />
-              </Table.Cell>
-              <Table.Cell>
-                <Badge 
-                  colorPalette={priorityColors[lead.priority]}
-                  size="sm"
-                  borderRadius="full"
-                  px={3}
-                  py={1}
-                  textTransform="capitalize"
-                  fontSize="xs"
-                >
-                  {lead.priority}
-                </Badge>
-              </Table.Cell>
-              <Table.Cell>
-                <LeadScoreIndicator score={lead.score} showLabel={false} size="sm" />
-              </Table.Cell>
-              <Table.Cell>
-                <Text fontSize="sm" textTransform="capitalize" color="gray.600">
-                  {lead.source.replace('_', ' ')}
-                </Text>
-              </Table.Cell>
-              <Table.Cell>
-                <Text fontWeight="semibold" fontSize="sm" color="gray.900">
-                  {lead.estimatedValue ? formatCurrency(lead.estimatedValue) : '-'}
-                </Text>
-              </Table.Cell>
-              <Table.Cell>
-                <Text fontSize="sm" color="gray.600">
-                  {formatDate(lead.createdAt)}
-                </Text>
-              </Table.Cell>
-              <Table.Cell>
-                <HStack gap={1} justify="center">
-                  {onView && (
-                    <IconButton
-                      aria-label="View lead details"
-                      size="sm"
-                      variant="ghost"
-                      colorPalette="purple"
-                      onClick={() => onView(lead)}
-                    >
-                      <FiEye size={16} />
-                    </IconButton>
-                  )}
-                  {onEdit && (
-                    <IconButton
-                      aria-label="Edit lead"
-                      size="sm"
-                      variant="ghost"
-                      colorPalette="blue"
-                      onClick={() => onEdit(lead)}
-                    >
-                      <FiEdit size={16} />
-                    </IconButton>
-                  )}
-                  {onDelete && (
-                    <IconButton
-                      aria-label="Delete lead"
-                      size="sm"
-                      variant="ghost"
-                      colorPalette="red"
-                      onClick={() => onDelete(lead.id)}
-                    >
-                      <FiTrash2 size={16} />
-                    </IconButton>
-                  )}
-                </HStack>
-              </Table.Cell>
+              </Table.ColumnHeader>
+              <Table.ColumnHeader>Lead</Table.ColumnHeader>
+              <Table.ColumnHeader>Company</Table.ColumnHeader>
+              <Table.ColumnHeader>Status</Table.ColumnHeader>
+              <Table.ColumnHeader>Priority</Table.ColumnHeader>
+              <Table.ColumnHeader>Score</Table.ColumnHeader>
+              <Table.ColumnHeader>Source</Table.ColumnHeader>
+              <Table.ColumnHeader>Est. Value</Table.ColumnHeader>
+              <Table.ColumnHeader>Created</Table.ColumnHeader>
+              <Table.ColumnHeader textAlign="center">Actions</Table.ColumnHeader>
             </Table.Row>
-          ))}
-        </Table.Body>
-      </Table.Root>
+          </Table.Header>
+          <Table.Body>
+            {leads.map((lead) => (
+              <Table.Row key={lead.id} _hover={{ bg: 'gray.50' }}>
+                <Table.Cell px={4} py={3}>
+                  <Checkbox
+                    checked={selectedIds.includes(lead.id)}
+                    onCheckedChange={(details) => handleSelectOne(lead.id, details.checked as boolean)}
+                  />
+                </Table.Cell>
+                <Table.Cell>
+                  <VStack align="flex-start" gap={0}>
+                    <Text fontWeight="semibold" fontSize="sm" color="gray.900">
+                      {lead.firstName} {lead.lastName}
+                    </Text>
+                    {lead.email && (
+                      <Text fontSize="xs" color="gray.600">{lead.email}</Text>
+                    )}
+                  </VStack>
+                </Table.Cell>
+                <Table.Cell>
+                  <VStack align="flex-start" gap={0}>
+                    <Text fontWeight="medium" fontSize="sm" color="gray.700">{lead.company}</Text>
+                    {lead.title && (
+                      <Text fontSize="xs" color="gray.600">{lead.title}</Text>
+                    )}
+                  </VStack>
+                </Table.Cell>
+                <Table.Cell>
+                  <LeadStatusBadge status={lead.status} size="sm" />
+                </Table.Cell>
+                <Table.Cell>
+                  <Badge 
+                    colorPalette={priorityColors[lead.priority]}
+                    size="sm"
+                    borderRadius="full"
+                    px={3}
+                    py={1}
+                    textTransform="capitalize"
+                    fontSize="xs"
+                  >
+                    {lead.priority}
+                  </Badge>
+                </Table.Cell>
+                <Table.Cell>
+                  <LeadScoreIndicator score={lead.score} showLabel={false} size="sm" />
+                </Table.Cell>
+                <Table.Cell>
+                  <Text fontSize="sm" textTransform="capitalize" color="gray.600">
+                    {lead.source.replace('_', ' ')}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  <Text fontWeight="semibold" fontSize="sm" color="gray.900">
+                    {lead.estimatedValue ? formatCurrency(lead.estimatedValue) : '-'}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  <Text fontSize="sm" color="gray.600">
+                    {formatDate(lead.createdAt)}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  <HStack gap={1} justify="center">
+                    {onView && (
+                      <IconButton
+                        aria-label="View lead details"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="purple"
+                        onClick={() => onView(lead)}
+                      >
+                        <FiEye size={16} />
+                      </IconButton>
+                    )}
+                    {onEdit && (
+                      <IconButton
+                        aria-label="Edit lead"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="blue"
+                        onClick={() => onEdit(lead)}
+                      >
+                        <FiEdit size={16} />
+                      </IconButton>
+                    )}
+                    {onDelete && (
+                      <IconButton
+                        aria-label="Delete lead"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="red"
+                        onClick={() => onDelete(lead.id)}
+                      >
+                        <FiTrash2 size={16} />
+                      </IconButton>
+                    )}
+                  </HStack>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      </Box>
     </Card>
+  );
+
+  return (
+    <ResponsiveTable mobileView={<MobileView />}>
+      <DesktopView />
+    </ResponsiveTable>
   );
 };

@@ -55,7 +55,7 @@ const WelcomeBanner = () => {
         position="relative"
         zIndex={1}
       >
-        <VStack align="start" gap={2}>
+        <VStack align="start" gap={2} flex={1} width={{ base: 'full', md: 'auto' }}>
           <Text fontSize="md" opacity={0.9} fontWeight="medium">
             {greeting}! 👋
           </Text>
@@ -67,25 +67,26 @@ const WelcomeBanner = () => {
           </Text>
         </VStack>
 
-        <HStack gap={3} display={{ base: 'none', md: 'flex' }}>
+        <HStack gap={3} width={{ base: 'full', md: 'auto' }}>
           <Button
             colorPalette="whiteAlpha"
             variant="outline"
-            size="md"
+            size={{ base: 'sm', md: 'md' }}
             color="white"
             _hover={{
               bg: 'whiteAlpha.200',
             }}
             borderWidth="2px"
             onClick={handleViewAnalytics}
+            flex={{ base: 1, md: 'initial' }}
           >
             <FiTrendingUp />
-            <Text ml={2}>View Analytics</Text>
+            <Text ml={2}>Analytics</Text>
           </Button>
           <Button
             bg="white"
             color="purple.600"
-            size="md"
+            size={{ base: 'sm', md: 'md' }}
             _hover={{
               bg: 'whiteAlpha.900',
               transform: 'translateY(-2px)',
@@ -94,6 +95,7 @@ const WelcomeBanner = () => {
             transition="all 0.2s"
             fontWeight="semibold"
             onClick={handleNewDeal}
+            flex={{ base: 1, md: 'initial' }}
           >
             <FiPlus />
             <Text ml={2}>New Deal</Text>

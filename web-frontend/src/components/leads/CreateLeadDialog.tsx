@@ -92,7 +92,7 @@ export const CreateLeadDialog = ({
   const isFormValid = formData.firstName && formData.lastName && formData.company;
 
   return (
-    <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size="lg">
+    <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size={{ base: 'full', md: 'lg' }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
@@ -107,7 +107,7 @@ export const CreateLeadDialog = ({
         <DialogBody>
           <VStack gap={4} align="stretch">
             {/* Name Fields */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   First Name *
@@ -133,7 +133,7 @@ export const CreateLeadDialog = ({
             </SimpleGrid>
 
             {/* Contact Fields */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Email
@@ -161,7 +161,7 @@ export const CreateLeadDialog = ({
             </SimpleGrid>
 
             {/* Company Fields */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Company *
@@ -187,7 +187,7 @@ export const CreateLeadDialog = ({
             </SimpleGrid>
 
             {/* Source and Priority */}
-            <SimpleGrid columns={2} gap={4}>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Source

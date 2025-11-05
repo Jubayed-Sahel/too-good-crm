@@ -1,7 +1,6 @@
-import { HStack, Input, Button, Stack, Text } from '@chakra-ui/react';
-import { FiSearch, FiPlus, FiX } from 'react-icons/fi';
+import { Box, HStack, Input, Button, Stack } from '@chakra-ui/react';
+import { FiSearch, FiPlus, FiFilter } from 'react-icons/fi';
 import CustomSelect from '../ui/CustomSelect';
-import { Card } from '../common';
 import { useAccountMode } from '@/contexts/AccountModeContext';
 import type { ActivityType, ActivityStatus } from '@/types/activity.types';
 
@@ -50,80 +49,95 @@ export const ActivityFiltersBar = ({
     searchQuery !== '' || typeFilter !== 'all' || statusFilter !== 'all';
 
   return (
-    <Card>
+    <Box>
       <Stack
         direction={{ base: 'column', md: 'row' }}
-        gap={4}
+        gap={3}
+        justify="space-between"
         align={{ base: 'stretch', md: 'center' }}
       >
-        {/* Search Input */}
-        <HStack
-          flex={{ base: '1', md: '2' }}
-          bg="gray.50"
-          borderRadius="md"
-          px={3}
-          py={2}
-        >
-          <FiSearch size={18} color="#9CA3AF" />
-          <Input
-            placeholder="Search activities..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            variant="flushed"
-            size="sm"
-            border="none"
-            _focus={{ border: 'none', boxShadow: 'none' }}
-          />
-        </HStack>
-
-        {/* Type Filter */}
-        <CustomSelect
-          value={typeFilter}
-          onChange={onTypeChange}
-          options={typeOptions}
-          placeholder="Filter by type"
-          width={{ base: '100%', md: '180px' }}
-        />
-
-        {/* Status Filter */}
-        <CustomSelect
-          value={statusFilter}
-          onChange={onStatusChange}
-          options={statusOptions}
-          placeholder="Filter by status"
-          width={{ base: '100%', md: '180px' }}
-        />
-
-        {/* Action Buttons */}
-        <HStack gap={2} justify={{ base: 'stretch', md: 'flex-end' }}>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              colorPalette="gray"
-              onClick={onClearFilters}
-              size="sm"
+        {/* Left side - Search and Filters */}
+        <HStack gap={3} flex="1" flexWrap={{ base: 'wrap', md: 'nowrap' }}>
+          {/* Search Input */}
+          <Box position="relative" flex="1" minW={{ base: '100%', md: '300px' }}>
+            <Box
+              position="absolute"
+              left="12px"
+              top="50%"
+              transform="translateY(-50%)"
+              pointerEvents="none"
+              color="gray.400"
             >
-              <HStack gap={2}>
-                <FiX size={16} />
-                <Text>Clear Filters</Text>
-              </HStack>
+              <FiSearch size={18} />
+            </Box>
+            <Input
+              placeholder="Search activities..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              pl="40px"
+              h="40px"
+              borderRadius="lg"
+            />
+          </Box>
+
+          {/* Type Filter */}
+          <CustomSelect
+            value={typeFilter}
+            onChange={onTypeChange}
+            options={typeOptions}
+            placeholder="Filter by type"
+            width={{ base: '100%', md: 'auto' }}
+            minWidth="160px"
+            accentColor={isClientMode ? "blue" : "purple"}
+          />
+
+          {/* Status Filter */}
+          <CustomSelect
+            value={statusFilter}
+            onChange={onStatusChange}
+            options={statusOptions}
+            placeholder="Filter by status"
+            width={{ base: '100%', md: 'auto' }}
+            minWidth="160px"
+            accentColor={isClientMode ? "blue" : "purple"}
+          />
+
+          {/* More Filters / Clear Filters Button */}
+          {hasActiveFilters ? (
+            <Button
+              variant="outline"
+              h="40px"
+              onClick={onClearFilters}
+              display={{ base: 'none', lg: 'flex' }}
+            >
+              <Box ml={2}>Clear Filters</Box>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              h="40px"
+              display={{ base: 'none', lg: 'flex' }}
+            >
+              <FiFilter />
+              <Box ml={2}>More Filters</Box>
             </Button>
           )}
+        </HStack>
 
+        {/* Right side - Action Buttons */}
+        <HStack gap={2}>
           <Button
             colorPalette={isClientMode ? "blue" : "purple"}
+            h="40px"
             onClick={onAddActivity}
-            size="sm"
-            height="40px"
+            w={{ base: '100%', md: 'auto' }}
           >
-            <HStack gap={2}>
-              <FiPlus size={18} />
-              <Text>New Activity</Text>
-            </HStack>
+            <FiPlus />
+            <Box ml={2}>New Activity</Box>
           </Button>
         </HStack>
       </Stack>
-    </Card>
+    </Box>
   );
 };
 

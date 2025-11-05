@@ -1,41 +1,72 @@
 /**
- * Authentication service
+ * Authentication Service
+ * Handles user authentication and session management
  */
-import { apiService } from './api.service';
-import { API_ENDPOINTS, STORAGE_KEYS } from '@/config/constants';
+import api from '@/lib/apiClient';
+import { API_CONFIG } from '@/config/api.config';
 import type { AuthResponse, LoginCredentials, RegisterData, User } from '@/types';
+
+// Storage keys
+const STORAGE_KEYS = {
+  ACCESS_TOKEN: 'access_token',
+  REFRESH_TOKEN: 'refresh_token',
+  USER: 'user',
+} as const;
+
+interface LoginResponse {
+  access: string;
+  refresh: string;
+  user: User;
+}
+
+interface RegisterResponse {
+  access: string;
+  refresh: string;
+  user: User;
+  message?: string;
+}
+
+interface RefreshResponse {
+  access: string;
+}
 
 class AuthService {
   /**
    * Register a new user
    */
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await apiService.post<AuthResponse>(
-      API_ENDPOINTS.AUTH.REGISTER,
-      data,
-      false
+    const response = await api.post<RegisterResponse>(
+      API_CONFIG.ENDPOINTS.AUTH.REGISTER,
+      data
     );
 
-    // Store token and user
-    this.setAuthData(response.token, response.user);
+    // Store tokens and user
+    this.setAuthData(response.access, response.refresh, response.user);
 
-    return response;
+    return {
+      token: response.access,
+      user: response.user,
+      message: response.message || 'Registration successful',
+    };
   }
 
   /**
    * Login user
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiService.post<AuthResponse>(
-      API_ENDPOINTS.AUTH.LOGIN,
-      credentials,
-      false
+    const response = await api.post<LoginResponse>(
+      API_CONFIG.ENDPOINTS.AUTH.LOGIN,
+      credentials
     );
 
-    // Store token and user
-    this.setAuthData(response.token, response.user);
+    // Store tokens and user
+    this.setAuthData(response.access, response.refresh, response.user);
 
-    return response;
+    return {
+      token: response.access,
+      user: response.user,
+      message: 'Login successful',
+    };
   }
 
   /**
@@ -43,7 +74,13 @@ class AuthService {
    */
   async logout(): Promise<void> {
     try {
-      await apiService.post(API_ENDPOINTS.AUTH.LOGOUT, {});
+      const refreshToken = this.getRefreshToken();
+      
+      if (refreshToken) {
+        await api.post(API_CONFIG.ENDPOINTS.AUTH.LOGOUT, {
+          refresh: refreshToken,
+        });
+      }
     } finally {
       // Always clear local storage
       this.clearAuthData();
@@ -51,24 +88,74 @@ class AuthService {
   }
 
   /**
+   * Refresh access token
+   */
+  async refreshAccessToken(): Promise<string> {
+    const refreshToken = this.getRefreshToken();
+    
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    const response = await api.post<RefreshResponse>(
+      API_CONFIG.ENDPOINTS.AUTH.REFRESH,
+      { refresh: refreshToken }
+    );
+
+    // Update access token
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.access);
+
+    return response.access;
+  }
+
+  /**
    * Get current user profile
    */
   async getProfile(): Promise<User> {
-    return apiService.get<User>(API_ENDPOINTS.AUTH.PROFILE);
+    return api.get<User>(API_CONFIG.ENDPOINTS.AUTH.ME);
   }
 
   /**
    * Update user profile
    */
-  async updateProfile(data: Partial<User>): Promise<{ user: User; message: string }> {
-    return apiService.put(API_ENDPOINTS.AUTH.PROFILE, data);
+  async updateProfile(data: Partial<User>): Promise<User> {
+    const user = await api.patch<User>(API_CONFIG.ENDPOINTS.AUTH.ME, data);
+    
+    // Update user in localStorage
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    
+    return user;
+  }
+
+  /**
+   * Change password
+   */
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    await api.post(API_CONFIG.ENDPOINTS.AUTH.CHANGE_PASSWORD, {
+      old_password: oldPassword,
+      new_password: newPassword,
+    });
   }
 
   /**
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    return !!localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    return !!this.getAccessToken();
+  }
+
+  /**
+   * Get access token
+   */
+  getAccessToken(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  }
+
+  /**
+   * Get refresh token
+   */
+  getRefreshToken(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
   }
 
   /**
@@ -88,8 +175,9 @@ class AuthService {
   /**
    * Store authentication data
    */
-  private setAuthData(token: string, user: User): void {
-    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
+  private setAuthData(accessToken: string, refreshToken: string, user: User): void {
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
   }
 
@@ -97,7 +185,8 @@ class AuthService {
    * Clear authentication data
    */
   private clearAuthData(): void {
-    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
   }
 }
