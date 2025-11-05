@@ -1,90 +1,365 @@
 package too.good.crm.features.leads
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import too.good.crm.ui.theme.TooGoodCrmTheme
-
-// Data class to represent a Lead. In a real app, this would be in a 'domain' or 'data' layer.
-data class Lead(
-    val id: Int,
-    val companyName: String,
-    val contactPerson: String,
-    val status: String,
-    val value: Double
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeadsScreen(
-    leads: List<Lead>,
-    onAddLeadClicked: () -> Unit,
-    onLeadClicked: (leadId: Int) -> Unit,
-    onLogoutClicked: () -> Unit,
-    // viewModel: LeadsViewModel = hiltViewModel() // In a real app
+    onNavigate: (String) -> Unit,
+    onBack: () -> Unit
 ) {
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedStatus by remember { mutableStateOf("All Statuses") }
+    var selectedSource by remember { mutableStateOf("All Sources") }
+    var selectedPriority by remember { mutableStateOf("All Priorities") }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Leads") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { /* TODO: Profile */ }) {
+                        Icon(Icons.Default.Person, contentDescription = "Profile")
+                    }
+                    Switch(
+                        checked = false,
+                        onCheckedChange = { /* TODO: Dark mode */ },
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    IconButton(onClick = { /* TODO: Notifications */ }) {
+                        Icon(Icons.Default.Notifications, contentDescription = "Notifications")
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                actions = {
-                    IconButton(onClick = onLogoutClicked) {
-                        Icon(
-                            imageVector = Icons.Default.Logout,
-                            contentDescription = "Log Out"
+                )
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp)
+        ) {
+            // Header
+            Text(
+                text = "Leads",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Manage your lead pipeline and track conversions",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Metrics
+            LeadMetricCard(
+                title = "TOTAL LEADS",
+                value = "10",
+                change = "+12%",
+                changeLabel = "vs last month",
+                icon = Icons.Default.People,
+                iconBackgroundColor = Color(0xFFF3E5F5)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LeadMetricCard(
+                title = "NEW LEADS",
+                value = "2",
+                change = "+8%",
+                changeLabel = "vs last month",
+                icon = Icons.Default.TrendingUp,
+                iconBackgroundColor = Color(0xFFFFEBEE)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LeadMetricCard(
+                title = "QUALIFIED",
+                value = "2",
+                change = "+15%",
+                changeLabel = "vs last month",
+                icon = Icons.Default.EmojiEvents,
+                iconBackgroundColor = Color(0xFFE3F2FD)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LeadMetricCard(
+                title = "CONVERTED",
+                value = "0",
+                change = "+23%",
+                changeLabel = "vs last month",
+                icon = Icons.Default.CheckCircle,
+                iconBackgroundColor = Color(0xFFE8F5E9)
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Search
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search leads...") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = "Search")
+                },
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Filters
+            var statusExpanded by remember { mutableStateOf(false) }
+            var sourceExpanded by remember { mutableStateOf(false) }
+            var priorityExpanded by remember { mutableStateOf(false) }
+
+            // Status Filter
+            ExposedDropdownMenuBox(
+                expanded = statusExpanded,
+                onExpandedChange = { statusExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedStatus,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = {
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = statusExpanded,
+                    onDismissRequest = { statusExpanded = false }
+                ) {
+                    listOf("All Statuses", "New", "Contacted", "Qualified", "Proposal", "Negotiation", "Converted", "Lost").forEach { status ->
+                        DropdownMenuItem(
+                            text = { Text(status) },
+                            onClick = {
+                                selectedStatus = status
+                                statusExpanded = false
+                            }
                         )
                     }
                 }
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddLeadClicked,
-                containerColor = MaterialTheme.colorScheme.secondary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Lead")
             }
-        }
-    ) { innerPadding ->
-        if (leads.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
-                contentAlignment = Alignment.Center
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Source Filter
+            ExposedDropdownMenuBox(
+                expanded = sourceExpanded,
+                onExpandedChange = { sourceExpanded = it }
             ) {
+                OutlinedTextField(
+                    value = selectedSource,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = {
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = sourceExpanded,
+                    onDismissRequest = { sourceExpanded = false }
+                ) {
+                    listOf("All Sources", "Website", "Referral", "Cold Call", "Email", "Social Media", "Trade Show", "Partner").forEach { source ->
+                        DropdownMenuItem(
+                            text = { Text(source) },
+                            onClick = {
+                                selectedSource = source
+                                sourceExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Priority Filter
+            ExposedDropdownMenuBox(
+                expanded = priorityExpanded,
+                onExpandedChange = { priorityExpanded = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedPriority,
+                    onValueChange = {},
+                    readOnly = true,
+                    trailingIcon = {
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
+                )
+                ExposedDropdownMenu(
+                    expanded = priorityExpanded,
+                    onDismissRequest = { priorityExpanded = false }
+                ) {
+                    listOf("All Priorities", "Low", "Medium", "High","Urgent").forEach { priority ->
+                        DropdownMenuItem(
+                            text = { Text(priority) },
+                            onClick = {
+                                selectedPriority = priority
+                                priorityExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // New Lead Button
+            Button(
+                onClick = { /* TODO: Add new lead */ },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("New Lead")
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Lead Cards
+            LeadCard(
+                name = "Sarah Johnson",
+                company = "TechCorp Solutions",
+                position = "VP of Sales",
+                email = "sarah.johnson@techcorp.com",
+                score = "85/100",
+                priority = "High",
+                estimatedValue = "$50,000",
+                source = "Website",
+                created = "Mar 15, 2024",
+                status = "Qualified",
+                statusColor = Color(0xFF4CAF50)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LeadCard(
+                name = "Michael Chen",
+                company = "StartupXYZ",
+                position = "Founder & CEO",
+                email = "mchen@startupxyz.io",
+                score = "78/100",
+                priority = "High",
+                estimatedValue = "$25,000",
+                source = "Referral",
+                created = "Mar 10, 2024",
+                status = "Proposal",
+                statusColor = Color(0xFFFF9800)
+            )
+        }
+    }
+}
+
+@Composable
+fun LeadMetricCard(
+    title: String,
+    value: String,
+    change: String,
+    changeLabel: String,
+    icon: ImageVector,
+    iconBackgroundColor: Color
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "No leads yet. Tap the '+' button to add one.",
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = title,
+                    style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.TrendingUp,
+                        contentDescription = null,
+                        tint = Color(0xFF4CAF50),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = change,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF4CAF50),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = changeLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = iconBackgroundColor,
+                modifier = Modifier.size(56.dp)
             ) {
-                items(leads, key = { it.id }) { lead ->
-                    LeadListItem(lead = lead, onClick = { onLeadClicked(lead.id) })
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
@@ -92,81 +367,217 @@ fun LeadsScreen(
 }
 
 @Composable
-fun LeadListItem(
-    lead: Lead,
-    onClick: () -> Unit
+fun LeadCard(
+    name: String,
+    company: String,
+    position: String,
+    email: String,
+    score: String,
+    priority: String,
+    estimatedValue: String,
+    source: String,
+    created: String,
+    status: String,
+    statusColor: Color
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            Text(
-                text = lead.companyName,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Contact: ${lead.contactPerson}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Status: ${lead.status}",
-                    style = MaterialTheme.typography.bodySmall,
+                    text = name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = statusColor.copy(alpha = 0.2f)
+                ) {
+                    Text(
+                        text = status,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = statusColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Business,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = company,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = position,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Email,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = String.format("$%,.2f", lead.value),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    text = email,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            HorizontalDivider()
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Score",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = score,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Priority",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Surface(
+                        shape = MaterialTheme.shapes.small,
+                        color = Color(0xFFFFEBEE)
+                    ) {
+                        Text(
+                            text = priority,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFFD32F2F),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Est. Value",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = estimatedValue,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Source",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = source,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Created",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = created,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { /* TODO: View lead */ },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("View")
+                }
+                OutlinedButton(
+                    onClick = { /* TODO: Edit lead */ },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Edit")
+                }
+                IconButton(
+                    onClick = { /* TODO: Delete lead */ }
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Button(
+                onClick = { /* TODO: Convert to customer */ },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4CAF50)
+                )
+            ) {
+                Text("Convert to Customer")
+            }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LeadsScreenPreview() {
-    val sampleLeads = listOf(
-        Lead(1, "Innovate Corp", "John Doe", "Contacted", 15000.0),
-        Lead(2, "Tech Solutions", "Jane Smith", "New", 25000.0),
-        Lead(3, "Synergy Inc.", "Peter Jones", "Qualified", 5000.0)
-    )
-    TooGoodCrmTheme {
-        LeadsScreen(
-            leads = sampleLeads,
-            onAddLeadClicked = {},
-            onLeadClicked = {},
-            onLogoutClicked = {}
-        )
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun LeadsScreenEmptyPreview() {
-    TooGoodCrmTheme {
-        LeadsScreen(
-            leads = emptyList(),
-            onAddLeadClicked = {},
-            onLeadClicked = {},
-            onLogoutClicked = {}
-        )
     }
 }
