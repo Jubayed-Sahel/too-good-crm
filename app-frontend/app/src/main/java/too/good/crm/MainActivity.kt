@@ -1,23 +1,16 @@
+// app/src/main/java/too/good/crm/MainActivity.kt
 package too.good.crm
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -25,7 +18,10 @@ import androidx.navigation.compose.rememberNavController
 import too.good.crm.features.dashboard.DashboardScreen
 import too.good.crm.features.login.LoginScreen
 import too.good.crm.features.signup.SignupScreen
+import too.good.crm.ui.components.PrimaryButton
+import too.good.crm.ui.components.SecondaryButton
 import too.good.crm.ui.theme.TooGoodCrmTheme
+import too.good.crm.ui.theme.DesignTokens
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,7 +30,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             TooGoodCrmTheme {
                 val navController = rememberNavController()
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                Scaffold(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(DesignTokens.Colors.Gray50)
+                ) { innerPadding ->
                     NavHost(
                         navController = navController,
                         startDestination = "main",
@@ -46,7 +46,7 @@ class MainActivity : ComponentActivity() {
                         composable("login") {
                             LoginScreen(
                                 onLoginClicked = {
-                                    navController.navigate("dashboard"){
+                                    navController.navigate("dashboard") {
                                         popUpTo("main") { inclusive = true }
                                     }
                                 },
@@ -58,14 +58,13 @@ class MainActivity : ComponentActivity() {
                         composable("signup") {
                             SignupScreen(
                                 onSignUpClicked = {
-                                    navController.navigate("dashboard"){
+                                    navController.navigate("dashboard") {
                                         popUpTo("main") { inclusive = true }
                                     }
                                 },
                                 onLoginClicked = {
                                     navController.popBackStack()
                                 }
-
                             )
                         }
                         composable("dashboard") {
@@ -80,7 +79,6 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-
                     }
                 }
             }
@@ -93,25 +91,21 @@ fun MainScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .background(DesignTokens.Colors.Gray50)
+            .padding(DesignTokens.Spacing.Space6),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Button(onClick = { navController.navigate("login") }) {
-            Text("Login")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { navController.navigate("signup") }) {
-            Text("Sign Up")
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun MainScreenPreview() {
-    TooGoodCrmTheme {
-        val navController = rememberNavController()
-        MainScreen(navController)
+        PrimaryButton(
+            text = "Login",
+            onClick = { navController.navigate("login") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
+        SecondaryButton(
+            text = "Sign Up",
+            onClick = { navController.navigate("signup") },
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
