@@ -12,7 +12,7 @@ from crmApp.viewsets import (
     LoginViewSet,
     LogoutViewSet,
     ChangePasswordViewSet,
-    RefreshTokenViewSet,
+    # RefreshTokenViewSet removed - using simple Token auth
     # Organization
     OrganizationViewSet,
     UserOrganizationViewSet,
@@ -28,6 +28,8 @@ from crmApp.viewsets import (
     PipelineViewSet,
     PipelineStageViewSet,
     DealViewSet,
+    # Analytics
+    AnalyticsViewSet,
 )
 
 # Create router
@@ -39,7 +41,7 @@ router.register(r'user-profiles', UserProfileViewSet, basename='user-profile')
 router.register(r'auth/login', LoginViewSet, basename='login')
 router.register(r'auth/logout', LogoutViewSet, basename='logout')
 router.register(r'auth/change-password', ChangePasswordViewSet, basename='change-password')
-router.register(r'auth/refresh-tokens', RefreshTokenViewSet, basename='refresh-token')
+# router.register(r'auth/refresh-tokens', RefreshTokenViewSet, basename='refresh-token')  # Removed - using Token auth
 
 # Organization endpoints
 router.register(r'organizations', OrganizationViewSet, basename='organization')
@@ -58,6 +60,9 @@ router.register(r'leads', LeadViewSet, basename='lead')
 router.register(r'pipelines', PipelineViewSet, basename='pipeline')
 router.register(r'pipeline-stages', PipelineStageViewSet, basename='pipeline-stage')
 router.register(r'deals', DealViewSet, basename='deal')
+
+# Analytics endpoints
+router.register(r'analytics', AnalyticsViewSet, basename='analytics')
 
 # URL patterns
 urlpatterns = [

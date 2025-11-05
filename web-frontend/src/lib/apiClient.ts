@@ -30,10 +30,10 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor - Add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('authToken');
     
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Token ${token}`;
     }
 
     // Log request in development
@@ -82,38 +82,15 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        // Try to refresh token
-        const refreshToken = localStorage.getItem('refresh_token');
-        
-        if (refreshToken) {
-          const response = await axios.post(
-            `${API_CONFIG.BASE_URL}/auth/refresh/`,
-            { refresh: refreshToken }
-          );
-
-          const { access } = response.data;
-          localStorage.setItem('access_token', access);
-
-          // Retry original request with new token
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${access}`;
-          }
-
-          return apiClient(originalRequest);
-        }
-      } catch (refreshError) {
-        // Refresh failed - clear auth and redirect to login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
-        
-        return Promise.reject(refreshError);
+      // Token is invalid - clear auth data and redirect to login
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
       }
+      
+      return Promise.reject(error);
     }
 
     // Handle 403 Forbidden

@@ -123,7 +123,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
 class LoginSerializer(serializers.Serializer):
     """Serializer for user login"""
-    email = serializers.EmailField(required=True)
+    username = serializers.CharField(required=True)
     password = serializers.CharField(
         required=True,
         write_only=True,
@@ -131,15 +131,32 @@ class LoginSerializer(serializers.Serializer):
     )
     
     def validate(self, attrs):
-        email = attrs.get('email')
+        username_or_email = attrs.get('username')
         password = attrs.get('password')
         
-        if email and password:
-            user = authenticate(
-                request=self.context.get('request'),
-                username=email,
-                password=password
-            )
+        if username_or_email and password:
+            user = None
+            
+            # Since USERNAME_FIELD is 'email', authenticate expects email
+            # Try to find user by email or username
+            if '@' in username_or_email:
+                # Input looks like email, authenticate directly
+                user = authenticate(
+                    request=self.context.get('request'),
+                    email=username_or_email,
+                    password=password
+                )
+            else:
+                # Input is username, get email and authenticate
+                try:
+                    user_obj = User.objects.get(username=username_or_email)
+                    user = authenticate(
+                        request=self.context.get('request'),
+                        email=user_obj.email,
+                        password=password
+                    )
+                except User.DoesNotExist:
+                    pass
             
             if not user:
                 raise serializers.ValidationError(
@@ -154,7 +171,7 @@ class LoginSerializer(serializers.Serializer):
                 )
         else:
             raise serializers.ValidationError(
-                'Must include "email" and "password".',
+                'Must include "username" and "password".',
                 code='authorization'
             )
         

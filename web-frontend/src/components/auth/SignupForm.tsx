@@ -23,7 +23,7 @@ const SignupForm = () => {
     username: "",
     email: "",
     password: "",
-    password2: "",
+    password_confirm: "",
     first_name: "",
     last_name: "",
   });
@@ -58,10 +58,10 @@ const SignupForm = () => {
       }
     }
 
-    if (!formData.password2) {
-      newErrors.password2 = "Please confirm your password";
-    } else if (formData.password !== formData.password2) {
-      newErrors.password2 = "Passwords do not match";
+    if (!formData.password_confirm) {
+      newErrors.password_confirm = "Please confirm your password";
+    } else if (formData.password !== formData.password_confirm) {
+      newErrors.password_confirm = "Passwords do not match";
     }
 
     if (!formData.first_name) {
@@ -294,16 +294,16 @@ const SignupForm = () => {
                 <Field 
                   label="Confirm Password" 
                   required
-                  invalid={!!errors.password2}
-                  errorText={errors.password2}
+                  invalid={!!errors.password_confirm}
+                  errorText={errors.password_confirm}
                 >
                   <Box position="relative" w="full">
                     <Input
                       type={showPassword2 ? "text" : "password"}
                       placeholder="Confirm your password"
-                      value={formData.password2}
+                      value={formData.password_confirm}
                       onChange={(e) =>
-                        setFormData({ ...formData, password2: e.target.value })
+                        setFormData({ ...formData, password_confirm: e.target.value })
                       }
                       size="md"
                       h="10"
