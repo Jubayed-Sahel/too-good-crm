@@ -1,27 +1,40 @@
+
 package too.good.crm.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import too.good.crm.ui.theme.DesignTokens
 
 val AppTypography = Typography(
     bodyLarge = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 16.sp
-    )
-    /* Other default text styles to override
-    button = TextStyle(
-        fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.W500,
-        fontSize = 14.sp
+        fontWeight = DesignTokens.Typography.FontWeightNormal,
+        fontSize = DesignTokens.Typography.FontSizeMd
     ),
-    caption = TextStyle(
+    bodyMedium = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp
+        fontWeight = DesignTokens.Typography.FontWeightNormal,
+        fontSize = DesignTokens.Typography.FontSizeSm
+    ),
+    bodySmall = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = DesignTokens.Typography.FontWeightNormal,
+        fontSize = DesignTokens.Typography.FontSizeXs
+    ),
+    titleLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = DesignTokens.Typography.FontWeightSemiBold,
+        fontSize = DesignTokens.Typography.FontSize2xl
+    ),
+    titleMedium = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = DesignTokens.Typography.FontWeightMedium,
+        fontSize = DesignTokens.Typography.FontSizeXl
+    ),
+    labelLarge = TextStyle(
+        fontFamily = FontFamily.Default,
+        fontWeight = DesignTokens.Typography.FontWeightMedium,
+        fontSize = DesignTokens.Typography.FontSizeSm
     )
-    */
 )

@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import too.good.crm.ui.theme.Purple500
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -32,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.text.input.VisualTransformation
+import too.good.crm.ui.theme.DesignTokens
 
 @Composable
 fun SignupScreen(
@@ -74,7 +74,7 @@ fun SignupScreen(
             shape = RoundedCornerShape(8.dp),
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Purple500,
+                focusedBorderColor = DesignTokens.Colors.Purple500,
                 unfocusedBorderColor = Color.LightGray
             )
         )
@@ -88,7 +88,7 @@ fun SignupScreen(
             shape = RoundedCornerShape(8.dp),
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Purple500,
+                focusedBorderColor = DesignTokens.Colors.Purple500,
                 unfocusedBorderColor = Color.LightGray
             )
         )
@@ -106,7 +106,7 @@ fun SignupScreen(
                 shape = RoundedCornerShape(8.dp),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Purple500,
+                    focusedBorderColor = DesignTokens.Colors.Purple500,
                     unfocusedBorderColor = Color.LightGray
                 )
             )
@@ -118,7 +118,7 @@ fun SignupScreen(
                 shape = RoundedCornerShape(8.dp),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Purple500,
+                    focusedBorderColor = DesignTokens.Colors.Purple500,
                     unfocusedBorderColor = Color.LightGray
                 )
             )
@@ -143,7 +143,7 @@ fun SignupScreen(
             },
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Purple500,
+                focusedBorderColor = DesignTokens.Colors.Purple500,
                 unfocusedBorderColor = Color.LightGray
             )
         )
@@ -167,7 +167,7 @@ fun SignupScreen(
             },
             singleLine = true,
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Purple500,
+                focusedBorderColor = DesignTokens.Colors.Purple500,
                 unfocusedBorderColor = Color.LightGray
             )
         )
@@ -179,7 +179,7 @@ fun SignupScreen(
                 .fillMaxWidth()
                 .height(48.dp),
             shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Purple500)
+            colors = ButtonDefaults.buttonColors(containerColor = DesignTokens.Colors.Purple500)
         ) {
             Text("Sign Up")
         }
@@ -195,7 +195,7 @@ fun SignupScreen(
                     .fillMaxWidth()
                     .height(48.dp),
                 shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Purple500)
+                colors = ButtonDefaults.buttonColors(containerColor = DesignTokens.Colors.Purple500)
             ) {
                 Text("Sign In")
             }

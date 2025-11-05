@@ -16,8 +16,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,7 +23,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import too.good.crm.ui.theme.Purple500
+import too.good.crm.ui.theme.DesignTokens
 
 @Composable
 fun LoginScreen(
@@ -62,7 +60,7 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Purple500,
+                focusedBorderColor = DesignTokens.Colors.Purple500,
                 unfocusedBorderColor = Color.LightGray,
             )
         )
@@ -75,7 +73,7 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(8.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Purple500,
+                focusedBorderColor = DesignTokens.Colors.Purple500,
                 unfocusedBorderColor = Color.LightGray,
             )
         )
@@ -86,7 +84,7 @@ fun LoginScreen(
                 .fillMaxWidth()
                 .height(40.dp),
             shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Purple500)
+            colors = ButtonDefaults.buttonColors(containerColor = DesignTokens.Colors.Purple500)
         ) {
             Text("Login", color = Color.White)
         }

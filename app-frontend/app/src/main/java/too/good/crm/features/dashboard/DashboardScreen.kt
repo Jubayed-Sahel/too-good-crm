@@ -18,7 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import too.good.crm.ui.theme.Purple500
+import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.theme.TooGoodCrmTheme
 
 // Data class to represent a dashboard navigation item
@@ -47,7 +47,7 @@ fun DashboardScreen(
             TopAppBar(
                 title = { Text("Dashboard") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Purple500, // From DESIGN_TOKENS
+                    containerColor = DesignTokens.Colors.Purple500, //
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
@@ -105,7 +105,7 @@ fun DashboardCard(
                 imageVector = item.icon,
                 contentDescription = "${item.title} Icon",
                 modifier = Modifier.size(48.dp),
-                tint = Purple500 // Use primary color for icons
+                tint = DesignTokens.Colors.Purple500 // Use primary color for icons
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
