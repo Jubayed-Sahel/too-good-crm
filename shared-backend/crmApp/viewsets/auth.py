@@ -10,11 +10,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import login, logout
 from django.utils import timezone
 
-from crmApp.models import User, RefreshToken as RefreshTokenModel
+from crmApp.models import User, UserProfile, RefreshToken as RefreshTokenModel
 from crmApp.serializers import (
     UserSerializer,
     UserCreateSerializer,
     UserUpdateSerializer,
+    UserProfileSerializer,
+    UserProfileCreateSerializer,
     LoginSerializer,
     ChangePasswordSerializer,
     RefreshTokenSerializer,
@@ -44,7 +46,7 @@ class UserViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
-        """Get current user profile"""
+        """Get current user profile with all profiles"""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
     
@@ -59,6 +61,102 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(UserSerializer(request.user).data)
+    
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def profiles(self, request, pk=None):
+        """Get all profiles for a specific user"""
+        user = self.get_object()
+        profiles = user.user_profiles.all()
+        organization_id = request.query_params.get('organization_id')
+        
+        if organization_id:
+            profiles = profiles.filter(organization_id=organization_id)
+        
+        serializer = UserProfileSerializer(profiles, many=True)
+        return Response(serializer.data)
+
+
+class UserProfileViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for UserProfile management (multi-tenancy).
+    Manages user profiles across organizations (vendor, employee, customer).
+    """
+    queryset = UserProfile.objects.all()
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return UserProfileCreateSerializer
+        return UserProfileSerializer
+    
+    def get_queryset(self):
+        """Filter profiles based on user permissions"""
+        queryset = UserProfile.objects.all()
+        
+        # Filter by user
+        user_id = self.request.query_params.get('user_id')
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        
+        # Filter by organization
+        organization_id = self.request.query_params.get('organization_id')
+        if organization_id:
+            queryset = queryset.filter(organization_id=organization_id)
+        
+        # Filter by profile type
+        profile_type = self.request.query_params.get('profile_type')
+        if profile_type:
+            queryset = queryset.filter(profile_type=profile_type)
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        return queryset
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def activate(self, request, pk=None):
+        """Activate a user profile"""
+        profile = self.get_object()
+        profile.activate()
+        return Response({
+            'message': 'Profile activated successfully.',
+            'profile': UserProfileSerializer(profile).data
+        })
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def deactivate(self, request, pk=None):
+        """Deactivate a user profile"""
+        profile = self.get_object()
+        profile.deactivate()
+        return Response({
+            'message': 'Profile deactivated successfully.',
+            'profile': UserProfileSerializer(profile).data
+        })
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def suspend(self, request, pk=None):
+        """Suspend a user profile"""
+        profile = self.get_object()
+        profile.suspend()
+        return Response({
+            'message': 'Profile suspended successfully.',
+            'profile': UserProfileSerializer(profile).data
+        })
+    
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_profiles(self, request):
+        """Get all profiles for the current authenticated user"""
+        profiles = request.user.user_profiles.all()
+        organization_id = request.query_params.get('organization_id')
+        
+        if organization_id:
+            profiles = profiles.filter(organization_id=organization_id)
+        
+        serializer = UserProfileSerializer(profiles, many=True)
+        return Response(serializer.data)
 
 
 class LoginViewSet(viewsets.ViewSet):
