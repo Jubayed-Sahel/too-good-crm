@@ -1,28 +1,36 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, VStack, SimpleGrid, HStack, Badge, Button } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { Card } from '../components/common';
 import { VendorContactDialog } from '../components/common/VendorContactDialog';
-import { FiMail, FiPhone, FiExternalLink, FiPackage } from 'react-icons/fi';
+import {
+  VendorStats,
+  VendorFilters,
+  VendorTable,
+  type Vendor,
+} from '../components/client-vendors';
 
 const ClientVendorsPage = () => {
   const navigate = useNavigate();
-  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [isLoading] = useState(false);
 
   const handleViewOrders = (vendorName: string) => {
     // Navigate to orders page with vendor filter
     navigate('/client/orders', { state: { vendorFilter: vendorName } });
   };
 
-  const handleContact = (vendor: any) => {
+  const handleContact = (vendor: Vendor) => {
     setSelectedVendor(vendor);
     setIsContactDialogOpen(true);
   };
 
   // Mock vendor data
-  const vendors = [
+  const vendors: Vendor[] = [
     {
       id: 1,
       name: 'Tech Solutions Inc',
@@ -32,7 +40,7 @@ const ClientVendorsPage = () => {
       email: 'contact@techsolutions.com',
       phone: '+1 (555) 123-4567',
       totalOrders: 12,
-      totalSpent: '$8,500',
+      totalSpent: 8500,
       lastOrder: '2 days ago',
       rating: 4.8,
     },
@@ -45,7 +53,7 @@ const ClientVendorsPage = () => {
       email: 'hello@marketingpro.com',
       phone: '+1 (555) 234-5678',
       totalOrders: 8,
-      totalSpent: '$5,200',
+      totalSpent: 5200,
       lastOrder: '1 week ago',
       rating: 4.9,
     },
@@ -58,7 +66,7 @@ const ClientVendorsPage = () => {
       email: 'info@designstudio.com',
       phone: '+1 (555) 345-6789',
       totalOrders: 15,
-      totalSpent: '$6,750',
+      totalSpent: 6750,
       lastOrder: '3 days ago',
       rating: 5.0,
     },
@@ -71,7 +79,7 @@ const ClientVendorsPage = () => {
       email: 'support@cloudservices.com',
       phone: '+1 (555) 456-7890',
       totalOrders: 5,
-      totalSpent: '$12,000',
+      totalSpent: 12000,
       lastOrder: '5 days ago',
       rating: 4.7,
     },
@@ -80,156 +88,126 @@ const ClientVendorsPage = () => {
       name: 'Content Creators Hub',
       category: 'Content Creation',
       description: 'Video production, photography, and copywriting',
-      status: 'Active',
+      status: 'Inactive',
       email: 'create@contenthub.com',
       phone: '+1 (555) 567-8901',
       totalOrders: 10,
-      totalSpent: '$4,800',
-      lastOrder: '1 week ago',
+      totalSpent: 4800,
+      lastOrder: '2 months ago',
       rating: 4.6,
+    },
+    {
+      id: 6,
+      name: 'Data Analytics Pro',
+      category: 'Data Science',
+      description: 'Business intelligence and data visualization',
+      status: 'Active',
+      email: 'data@analyticspro.com',
+      phone: '+1 (555) 678-9012',
+      totalOrders: 7,
+      totalSpent: 9200,
+      lastOrder: '1 week ago',
+      rating: 4.9,
     },
   ];
 
+  // Get unique categories for filter
+  const categories = useMemo(() => {
+    return Array.from(new Set(vendors.map(v => v.category)));
+  }, []);
+
+  // Filter vendors
+  const filteredVendors = useMemo(() => {
+    return vendors.filter(vendor => {
+      const matchesSearch = vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           vendor.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           vendor.description.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === 'all' || vendor.category === categoryFilter;
+      const matchesStatus = statusFilter === 'all' || vendor.status.toLowerCase() === statusFilter.toLowerCase();
+      return matchesSearch && matchesCategory && matchesStatus;
+    });
+  }, [vendors, searchQuery, categoryFilter, statusFilter]);
+
+  // Calculate stats
+  const stats = useMemo(() => ({
+    totalVendors: vendors.length,
+    activeVendors: vendors.filter(v => v.status === 'Active').length,
+    totalOrders: vendors.reduce((sum, v) => sum + v.totalOrders, 0),
+    totalSpent: vendors.reduce((sum, v) => sum + v.totalSpent, 0),
+  }), [vendors]);
+
   return (
     <DashboardLayout title="My Vendors">
-      <VStack align="stretch" gap={6}>
+      <VStack gap={5} align="stretch">
         {/* Page Header */}
         <Box>
-          <Heading size="2xl" color="gray.900" mb={2}>
+          <Heading size="xl" mb={2}>
             My Vendors
           </Heading>
-          <Text fontSize="md" color="gray.600">
-            Manage your relationships with {vendors.length} active vendors
+          <Text color="gray.600" fontSize="sm">
+            Manage your vendor relationships and view order history
           </Text>
         </Box>
 
-        {/* Vendors Grid */}
-        <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6}>
-          {vendors.map((vendor) => (
-            <Card key={vendor.id}>
-              <VStack align="stretch" gap={4}>
-                {/* Header */}
-                <HStack justify="space-between" align="start">
-                  <Box flex={1}>
-                    <Heading size="lg" color="gray.900" mb={1}>
-                      {vendor.name}
-                    </Heading>
-                    <Badge
-                      colorPalette="blue"
-                      size="sm"
-                      textTransform="capitalize"
-                    >
-                      {vendor.category}
-                    </Badge>
-                  </Box>
-                  <Badge
-                    colorPalette="green"
-                    size="lg"
-                    textTransform="capitalize"
-                  >
-                    {vendor.status}
-                  </Badge>
-                </HStack>
+        {/* Stats Cards */}
+        <VendorStats {...stats} />
 
-                {/* Description */}
-                <Text fontSize="sm" color="gray.600">
-                  {vendor.description}
+        {/* Filters */}
+        <VendorFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          categoryFilter={categoryFilter}
+          onCategoryChange={setCategoryFilter}
+          statusFilter={statusFilter}
+          onStatusChange={setStatusFilter}
+          categories={categories}
+        />
+
+        {/* Loading State */}
+        {isLoading ? (
+          <Box display="flex" justifyContent="center" py={12}>
+            <Spinner size="xl" color="blue.500" />
+          </Box>
+        ) : (
+          <>
+            {/* Vendor Table */}
+            <VendorTable
+              vendors={filteredVendors}
+              onContact={handleContact}
+              onViewOrders={handleViewOrders}
+            />
+
+            {/* Empty State */}
+            {filteredVendors.length === 0 && (
+              <Box
+                textAlign="center"
+                py={12}
+                px={6}
+                bg="gray.50"
+                borderRadius="lg"
+              >
+                <Heading size="lg" color="gray.600" mb={2}>
+                  No vendors found
+                </Heading>
+                <Text color="gray.500" fontSize="md">
+                  {searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
+                    ? 'Try adjusting your filters'
+                    : 'Get started by adding your first vendor'}
                 </Text>
-
-                {/* Stats */}
-                <SimpleGrid columns={3} gap={3}>
-                  <Box textAlign="center" p={2} bg="gray.50" borderRadius="md">
-                    <Text fontSize="xl" fontWeight="bold" color="gray.900">
-                      {vendor.totalOrders}
-                    </Text>
-                    <Text fontSize="xs" color="gray.600">
-                      Orders
-                    </Text>
-                  </Box>
-                  <Box textAlign="center" p={2} bg="gray.50" borderRadius="md">
-                    <Text fontSize="xl" fontWeight="bold" color="blue.600">
-                      {vendor.totalSpent}
-                    </Text>
-                    <Text fontSize="xs" color="gray.600">
-                      Total Spent
-                    </Text>
-                  </Box>
-                  <Box textAlign="center" p={2} bg="gray.50" borderRadius="md">
-                    <Text fontSize="xl" fontWeight="bold" color="orange.600">
-                      {vendor.rating}
-                    </Text>
-                    <Text fontSize="xs" color="gray.600">
-                      Rating
-                    </Text>
-                  </Box>
-                </SimpleGrid>
-
-                {/* Contact Info */}
-                <VStack align="stretch" gap={2}>
-                  <HStack gap={2}>
-                    <FiMail size={16} color="#667eea" />
-                    <Text fontSize="sm" color="gray.700">
-                      {vendor.email}
-                    </Text>
-                  </HStack>
-                  <HStack gap={2}>
-                    <FiPhone size={16} color="#667eea" />
-                    <Text fontSize="sm" color="gray.700">
-                      {vendor.phone}
-                    </Text>
-                  </HStack>
-                </VStack>
-
-                {/* Last Order */}
-                <Box p={3} bg="blue.50" borderRadius="md">
-                  <Text fontSize="xs" color="blue.700" fontWeight="semibold" mb={1}>
-                    LAST ORDER
-                  </Text>
-                  <Text fontSize="sm" color="blue.900" fontWeight="medium">
-                    {vendor.lastOrder}
-                  </Text>
-                </Box>
-
-                {/* Actions */}
-                <HStack gap={2}>
-                  <Button
-                    colorPalette="blue"
-                    flex={1}
-                    size="sm"
-                    onClick={() => handleViewOrders(vendor.name)}
-                  >
-                    <HStack gap={2}>
-                      <FiPackage size={16} />
-                      <Text>View Orders</Text>
-                    </HStack>
-                  </Button>
-                  <Button
-                    colorPalette="purple"
-                    variant="outline"
-                    flex={1}
-                    size="sm"
-                    onClick={() => handleContact(vendor)}
-                  >
-                    <HStack gap={2}>
-                      <FiExternalLink size={16} />
-                      <Text>Contact</Text>
-                    </HStack>
-                  </Button>
-                </HStack>
-              </VStack>
-            </Card>
-          ))}
-        </SimpleGrid>
-
-        {/* Contact Dialog */}
-        {selectedVendor && (
-          <VendorContactDialog
-            isOpen={isContactDialogOpen}
-            onClose={() => setIsContactDialogOpen(false)}
-            vendor={selectedVendor}
-          />
+              </Box>
+            )}
+          </>
         )}
       </VStack>
+
+      {/* Contact Dialog */}
+      {selectedVendor && (
+        <VendorContactDialog
+          isOpen={isContactDialogOpen}
+          onClose={() => setIsContactDialogOpen(false)}
+          vendor={selectedVendor}
+        />
+      )}
     </DashboardLayout>
   );
 };

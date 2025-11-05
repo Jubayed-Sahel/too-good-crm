@@ -8,6 +8,7 @@ from rest_framework.routers import DefaultRouter
 from crmApp.viewsets import (
     # Auth
     UserViewSet,
+    UserProfileViewSet,
     LoginViewSet,
     LogoutViewSet,
     ChangePasswordViewSet,
@@ -34,6 +35,7 @@ router = DefaultRouter()
 
 # Auth endpoints
 router.register(r'users', UserViewSet, basename='user')
+router.register(r'user-profiles', UserProfileViewSet, basename='user-profile')
 router.register(r'auth/login', LoginViewSet, basename='login')
 router.register(r'auth/logout', LogoutViewSet, basename='logout')
 router.register(r'auth/change-password', ChangePasswordViewSet, basename='change-password')
