@@ -14,7 +14,7 @@ import {
   Stack,
   Portal,
 } from '@chakra-ui/react';
-import { FiChevronDown, FiCheck, FiUsers } from 'react-icons/fi';
+import { FiChevronDown, FiCheck } from 'react-icons/fi';
 import { useUserOrganizations, useCurrentOrganization, useSwitchOrganization } from '@/hooks';
 
 const OrganizationSwitcher = () => {
@@ -46,10 +46,11 @@ const OrganizationSwitcher = () => {
     };
   }, [isOpen]);
 
-  const handleSwitch = (orgId: string) => {
-    if (orgId === currentOrg?.id) return;
+  const handleSwitch = (orgId: string | number) => {
+    const orgIdStr = typeof orgId === 'number' ? orgId.toString() : orgId;
+    if (orgIdStr === currentOrg?.id?.toString()) return;
     
-    switchOrganization.mutate(orgId, {
+    switchOrganization.mutate(orgIdStr, {
       onSuccess: () => {
         setIsOpen(false);
       },
@@ -69,7 +70,7 @@ const OrganizationSwitcher = () => {
     return null;
   }
 
-  const planName = currentOrg.subscription?.planName || 'Free';
+  const planName = currentOrg.subscription_plan || 'Free';
 
   return (
     <Box position="relative">
@@ -132,8 +133,7 @@ const OrganizationSwitcher = () => {
             </Box>
 
             <Stack gap={0} maxH="400px" overflowY="auto">
-              {organizations.map((userOrg) => {
-                const org = userOrg.organization;
+              {organizations.map((org) => {
                 const isActive = org.id === currentOrg.id;
 
                 return (
@@ -174,17 +174,8 @@ const OrganizationSwitcher = () => {
                           </Text>
                           <HStack gap={2} flexWrap="wrap">
                             <Text fontSize="xs" color="gray.500">
-                              {org.subscription?.planName || 'Free'}
+                              {org.subscription_plan || 'Free'}
                             </Text>
-                            <Text fontSize="xs" color="gray.300">
-                              •
-                            </Text>
-                            <HStack gap={1}>
-                              <FiUsers size={10} />
-                              <Text fontSize="xs" color="gray.500">
-                                {userOrg.role}
-                              </Text>
-                            </HStack>
                           </HStack>
                         </VStack>
                       </HStack>

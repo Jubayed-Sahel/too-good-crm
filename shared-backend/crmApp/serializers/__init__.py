@@ -94,6 +94,10 @@ from .activity import (
     ActivityUpdateSerializer,
 )
 
+from .notification import (
+    NotificationPreferencesSerializer,
+)
+
 __all__ = [
     # Auth
     'UserSerializer',
@@ -174,4 +178,7 @@ __all__ = [
     'ActivityListSerializer',
     'ActivityCreateSerializer',
     'ActivityUpdateSerializer',
+    
+    # Notification
+    'NotificationPreferencesSerializer',
 ]

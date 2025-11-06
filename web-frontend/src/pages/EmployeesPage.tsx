@@ -7,6 +7,7 @@
  * - Delegates presentation to EmployeesPageContent component
  */
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { EmployeesPageContent, EmployeesPageLoading } from '../components/employees';
@@ -15,6 +16,7 @@ import { useEmployees } from '@/hooks/useEmployees';
 import type { Employee } from '@/services';
 
 const EmployeesPage = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
@@ -48,8 +50,7 @@ const EmployeesPage = () => {
 
   // Action handlers
   const handleEdit = (employee: Employee) => {
-    console.log('Edit employee:', employee);
-    // TODO: Implement edit functionality
+    navigate(`/employees/${employee.id}/edit`);
   };
 
   const handleDelete = (employee: Employee) => {
@@ -60,8 +61,20 @@ const EmployeesPage = () => {
   };
 
   const handleView = (employee: Employee) => {
-    console.log('View employee:', employee);
-    // TODO: Implement view functionality
+    navigate(`/employees/${employee.id}`);
+  };
+
+  const handleBulkDelete = (employeeIds: string[]) => {
+    if (confirm(`Are you sure you want to delete ${employeeIds.length} employee(s)?`)) {
+      console.log('Bulk delete employees:', employeeIds);
+      // TODO: Implement bulk delete functionality
+    }
+  };
+
+  const handleBulkExport = (employeeIds: string[]) => {
+    console.log('Bulk export employees:', employeeIds);
+    // TODO: Implement bulk export functionality
+    alert(`Exporting ${employeeIds.length} employee(s)`);
   };
 
   // Error state
@@ -102,6 +115,8 @@ const EmployeesPage = () => {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}
+        onBulkDelete={handleBulkDelete}
+        onBulkExport={handleBulkExport}
         onInviteEmployee={() => setIsInviteDialogOpen(true)}
         isInviteDialogOpen={isInviteDialogOpen}
         onCloseInviteDialog={() => setIsInviteDialogOpen(false)}

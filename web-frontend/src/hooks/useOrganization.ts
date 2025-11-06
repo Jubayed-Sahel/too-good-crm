@@ -76,7 +76,7 @@ export function useUpdateOrganization() {
       organizationService.updateOrganization(id, data),
     onSuccess: (updatedOrg) => {
       queryClient.invalidateQueries({ queryKey: organizationKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: organizationKeys.detail(updatedOrg.id) });
+      queryClient.invalidateQueries({ queryKey: organizationKeys.detail(updatedOrg.id.toString()) });
       queryClient.invalidateQueries({ queryKey: organizationKeys.current() });
     },
   });

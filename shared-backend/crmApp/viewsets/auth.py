@@ -76,6 +76,29 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer.save()
         return Response(UserSerializer(request.user).data)
     
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def change_password(self, request):
+        """Change current user's password"""
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user = request.user
+        
+        # Check old password
+        if not user.check_password(serializer.validated_data['old_password']):
+            return Response(
+                {'old_password': ['Wrong password.']},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Set new password
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        
+        return Response({
+            'message': 'Password changed successfully.'
+        }, status=status.HTTP_200_OK)
+    
     @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
     def profiles(self, request, pk=None):
         """Get all profiles for a specific user"""

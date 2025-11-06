@@ -49,8 +49,8 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
   const updateProfile = useUpdateProfile();
   
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    first_name: '',
+    last_name: '',
     phone: '',
     title: '',
     department: '',
@@ -63,8 +63,8 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
   useEffect(() => {
     if (profile) {
       setFormData({
-        firstName: profile.firstName || '',
-        lastName: profile.lastName || '',
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
         phone: profile.phone || '',
         title: profile.title || '',
         department: profile.department || '',
@@ -89,7 +89,7 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
     if (!profile) return;
 
     updateProfile.mutate(
-      { userId: profile.id, data: formData },
+      formData,
       {
         onSuccess: () => {
           toaster.create({
@@ -150,7 +150,7 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
               fontSize="2xl"
               fontWeight="bold"
             >
-              {profile.firstName[0]}{profile.lastName[0]}
+              {profile.first_name?.[0]}{profile.last_name?.[0]}
             </Box>
             <VStack align="start" gap={2}>
               <Button size="sm" colorPalette="blue">
@@ -187,8 +187,8 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
                     <FiUser size={16} />
                   </Box>
                   <Input
-                    name="firstName"
-                    value={formData.firstName}
+                    name="first_name"
+                    value={formData.first_name}
                     onChange={handleChange}
                     size="md"
                     pl="40px"
@@ -199,8 +199,8 @@ const ProfileSettings = ({ onSave }: ProfileSettingsProps) => {
 
               <Field label="Last Name" required>
                 <Input
-                  name="lastName"
-                  value={formData.lastName}
+                  name="last_name"
+                  value={formData.last_name}
                   onChange={handleChange}
                   size="md"
                   borderRadius="lg"

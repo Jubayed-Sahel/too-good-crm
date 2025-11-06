@@ -48,9 +48,9 @@ export interface RoleFilters {
 }
 
 class RoleService {
-  private readonly baseUrl = '/rbac/roles';
-  private readonly permissionsUrl = '/rbac/permissions';
-  private readonly userRolesUrl = '/rbac/user-roles';
+  private readonly baseUrl = '/roles';
+  private readonly permissionsUrl = '/permissions';
+  private readonly userRolesUrl = '/user-roles';
 
   /**
    * Get all roles

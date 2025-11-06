@@ -30,6 +30,8 @@ export interface EmployeesPageContentProps {
   onEdit?: (employee: Employee) => void;
   onDelete?: (employee: Employee) => void;
   onView?: (employee: Employee) => void;
+  onBulkDelete?: (employeeIds: string[]) => void;
+  onBulkExport?: (employeeIds: string[]) => void;
   onInviteEmployee: () => void;
   onRoleUpdate?: () => void;
   
@@ -46,6 +48,8 @@ export const EmployeesPageContent: React.FC<EmployeesPageContentProps> = ({
   onEdit,
   onDelete,
   onView,
+  onBulkDelete,
+  onBulkExport,
   onInviteEmployee,
   onRoleUpdate,
 }) => {
@@ -110,6 +114,8 @@ export const EmployeesPageContent: React.FC<EmployeesPageContentProps> = ({
         onEdit={onEdit}
         onDelete={onDelete}
         onView={onView}
+        onBulkDelete={onBulkDelete}
+        onBulkExport={onBulkExport}
         onRoleUpdate={onRoleUpdate}
       />
     </VStack>

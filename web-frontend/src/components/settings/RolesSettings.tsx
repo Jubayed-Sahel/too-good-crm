@@ -53,13 +53,19 @@ const RolesSettings = () => {
   const fetchRoles = async () => {
     setIsLoading(true);
     try {
-      const fetchedRoles = await roleService.getRoles();
+      const response: any = await roleService.getRoles();
+      console.log('Raw roles response:', response);
+      
+      // Handle paginated response or direct array
+      const fetchedRoles: Role[] = Array.isArray(response) ? response : (response.results || response.data || []);
+      console.log('Parsed roles:', fetchedRoles);
+      
       setRoles(fetchedRoles);
       
       // Fetch permission counts for each role
       const counts: Record<number, number> = {};
       await Promise.all(
-        fetchedRoles.map(async (role) => {
+        fetchedRoles.map(async (role: Role) => {
           try {
             const rolePerms = await roleService.getRolePermissions(role.id);
             counts[role.id] = rolePerms.length;
@@ -84,7 +90,13 @@ const RolesSettings = () => {
 
   const fetchPermissions = async () => {
     try {
-      const fetchedPermissions = await roleService.getPermissions();
+      const response: any = await roleService.getPermissions();
+      console.log('Raw permissions response:', response);
+      
+      // Handle paginated response or direct array
+      const fetchedPermissions: Permission[] = Array.isArray(response) ? response : (response.results || response.data || []);
+      console.log('Parsed permissions:', fetchedPermissions);
+      
       setPermissions(fetchedPermissions);
     } catch (error: any) {
       console.error('Error fetching permissions:', error);

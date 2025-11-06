@@ -14,6 +14,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     total_value = serializers.SerializerMethodField()
     company = serializers.CharField(source='company_name', read_only=True)  # Alias for frontend compatibility
+    zip_code = serializers.CharField(source='postal_code', read_only=True)  # Alias for frontend compatibility
     
     class Meta:
         model = Customer
@@ -21,7 +22,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
             'id', 'code', 'name', 'first_name', 'last_name', 'full_name',
             'email', 'phone', 'company', 'company_name',
             'customer_type', 'status', 'assigned_to', 'assigned_to_name',
-            'total_value', 'address', 'city', 'state', 'country', 'postal_code',
+            'total_value', 'address', 'city', 'state', 'country', 'postal_code', 'zip_code',
             'notes', 'website', 'created_at', 'updated_at'
         ]
     
@@ -54,6 +55,7 @@ class CustomerSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     customer_type_display = serializers.CharField(source='get_customer_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)  # Alias for frontend compatibility
     
     class Meta:
         model = Customer
@@ -64,7 +66,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             'website', 'customer_type', 'customer_type_display',
             'status', 'status_display', 'industry', 'rating',
             'assigned_to', 'payment_terms', 'credit_limit',
-            'tax_id', 'address', 'city', 'state', 'postal_code',
+            'tax_id', 'address', 'city', 'state', 'postal_code', 'zip_code',
             'country', 'source', 'tags', 'notes',
             'converted_from_lead', 'converted_at',
             'created_at', 'updated_at'

@@ -1,28 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, VStack, Button, Input, Textarea, NativeSelectRoot, NativeSelectField, Grid, HStack, Spinner } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { Card } from '../components/common';
 import { toaster } from '../components/ui/toaster';
-import { IssueStats, IssueFilters, IssuesTable } from '../components/client-issues';
-import type { Issue } from '../components/client-issues';
-import { FiXCircle } from 'react-icons/fi';
+import { IssueStats, IssueFilters, IssuesTable, CreateIssueDialog } from '../components/client-issues';
+import type { Issue, CreateIssueData } from '../components/client-issues';
 
 const ClientIssuesPage = () => {
   const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    vendor: '',
-    orderNumber: '',
-    priority: 'medium',
-    category: 'general',
-  });
 
   // Mock data for issues
   const issues: Issue[] = [
@@ -77,18 +66,6 @@ const ClientIssuesPage = () => {
       createdAt: '2024-02-23',
       updatedAt: '2024-02-24',
     },
-  ];
-
-  const vendors = ['Tech Solutions Inc', 'Marketing Pro', 'Design Studio', 'Cloud Services', 'Content Creators'];
-  
-  const categories = [
-    { value: 'general', label: 'General Issue' },
-    { value: 'delivery', label: 'Delivery Delay' },
-    { value: 'quality', label: 'Quality Issue' },
-    { value: 'billing', label: 'Billing Problem' },
-    { value: 'communication', label: 'Communication Issue' },
-    { value: 'technical', label: 'Technical Problem' },
-    { value: 'other', label: 'Other' },
   ];
 
   // Filter issues based on search and filters
@@ -149,35 +126,14 @@ const ClientIssuesPage = () => {
     // In real app, make API call to delete
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!formData.title || !formData.description || !formData.vendor) {
-      toaster.create({
-        title: 'Missing Information',
-        description: 'Please fill in all required fields',
-        type: 'error',
-        duration: 3000,
-      });
-      return;
-    }
-
+  const handleSubmit = (data: CreateIssueData) => {
     toaster.create({
       title: 'Issue Submitted',
-      description: `Your issue "${formData.title}" has been logged and will be addressed soon.`,
+      description: `Your issue "${data.title}" has been logged and will be addressed soon.`,
       type: 'success',
       duration: 5000,
     });
 
-    // Reset form
-    setFormData({
-      title: '',
-      description: '',
-      vendor: '',
-      orderNumber: '',
-      priority: 'medium',
-      category: 'general',
-    });
     setIsCreateDialogOpen(false);
   };
 
@@ -214,7 +170,7 @@ const ClientIssuesPage = () => {
         />
 
         {/* Loading State */}
-        {isLoading ? (
+        {false ? (
           <Box display="flex" justifyContent="center" py={12}>
             <Spinner size="xl" color="blue.500" />
           </Box>
@@ -228,134 +184,12 @@ const ClientIssuesPage = () => {
               onDelete={handleDelete}
             />
 
-            {/* Create Issue Form */}
-            {isCreateDialogOpen && (
-              <Card>
-                <form onSubmit={handleSubmit}>
-                  <VStack align="stretch" gap={5}>
-                    <HStack justify="space-between">
-                      <Heading size="lg" color="gray.900">
-                        Lodge New Issue
-                      </Heading>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setIsCreateDialogOpen(false)}
-                      >
-                        <FiXCircle size={20} />
-                      </Button>
-                    </HStack>
-
-                    <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
-                      <Box>
-                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                          Issue Title *
-                        </Text>
-                        <Input
-                          value={formData.title}
-                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                          placeholder="Brief description of the issue"
-                          size="lg"
-                          required
-                        />
-                      </Box>
-
-                      <Box>
-                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                          Vendor *
-                        </Text>
-                        <NativeSelectRoot size="lg">
-                          <NativeSelectField
-                            value={formData.vendor}
-                            onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
-                          >
-                            <option value="">Select vendor</option>
-                            {vendors.map(vendor => (
-                              <option key={vendor} value={vendor}>{vendor}</option>
-                            ))}
-                          </NativeSelectField>
-                        </NativeSelectRoot>
-                      </Box>
-
-                      <Box>
-                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                          Category *
-                        </Text>
-                        <NativeSelectRoot size="lg">
-                          <NativeSelectField
-                            value={formData.category}
-                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                          >
-                            {categories.map(cat => (
-                              <option key={cat.value} value={cat.value}>{cat.label}</option>
-                            ))}
-                          </NativeSelectField>
-                        </NativeSelectRoot>
-                      </Box>
-
-                      <Box>
-                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                          Priority *
-                        </Text>
-                        <NativeSelectRoot size="lg">
-                          <NativeSelectField
-                            value={formData.priority}
-                            onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                          >
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                            <option value="urgent">Urgent</option>
-                          </NativeSelectField>
-                        </NativeSelectRoot>
-                      </Box>
-
-                      <Box>
-                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                          Related Order Number (Optional)
-                        </Text>
-                        <Input
-                          value={formData.orderNumber}
-                          onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
-                          placeholder="e.g., ORD-2024-001"
-                          size="lg"
-                        />
-                      </Box>
-                    </Grid>
-
-                    <Box>
-                      <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                        Description *
-                      </Text>
-                      <Textarea
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        placeholder="Provide detailed information about the issue..."
-                        rows={6}
-                        size="lg"
-                        required
-                      />
-                    </Box>
-
-                    <HStack gap={3} justify="flex-end">
-                      <Button
-                        variant="outline"
-                        onClick={() => setIsCreateDialogOpen(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="submit"
-                        colorPalette="blue"
-                        size="lg"
-                      >
-                        Submit Issue
-                      </Button>
-                    </HStack>
-                  </VStack>
-                </form>
-              </Card>
-            )}
+            {/* Create Issue Dialog */}
+            <CreateIssueDialog
+              isOpen={isCreateDialogOpen}
+              onClose={() => setIsCreateDialogOpen(false)}
+              onSubmit={handleSubmit}
+            />
           </>
         )}
       </VStack>

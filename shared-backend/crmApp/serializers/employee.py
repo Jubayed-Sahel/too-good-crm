@@ -37,6 +37,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     employment_type_display = serializers.CharField(source='get_employment_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)  # Alias for frontend compatibility
     
     class Meta:
         model = Employee
@@ -47,7 +48,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             'employment_type', 'employment_type_display',
             'hire_date', 'termination_date', 'status', 'status_display',
             'emergency_contact', 'salary', 'commission_rate', 'manager',
-            'address', 'city', 'state', 'zip_code', 'country',
+            'address', 'city', 'state', 'postal_code', 'zip_code', 'country',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'code', 'user_profile', 'created_at', 'updated_at']

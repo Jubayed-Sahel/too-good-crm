@@ -74,9 +74,9 @@ export interface UpdateProfileData {
 }
 
 export interface ChangePasswordData {
-  currentPassword: string;
-  newPassword: string;
-  confirmPassword: string;
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
 }
 
 export interface UpdateSettingsData {

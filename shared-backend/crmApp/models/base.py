@@ -37,6 +37,16 @@ class AddressMixin(models.Model):
     
     class Meta:
         abstract = True
+    
+    @property
+    def zip_code(self):
+        """Alias for postal_code for frontend compatibility"""
+        return self.postal_code
+    
+    @zip_code.setter  
+    def zip_code(self, value):
+        """Setter for zip_code alias"""
+        self.postal_code = value
 
 
 class ContactInfoMixin(models.Model):

@@ -44,7 +44,7 @@ const ActivityDetailPage = () => {
       
       try {
         setIsLoading(true);
-        const data = await getActivity(id);
+        const data = await getActivity(Number(id));
         if (data) {
           setActivity(data);
         } else {
@@ -94,12 +94,10 @@ const ActivityDetailPage = () => {
     switch (status) {
       case 'completed':
         return 'green';
-      case 'pending':
-        return 'orange';
       case 'scheduled':
         return 'blue';
-      case 'failed':
-        return 'red';
+      case 'in_progress':
+        return 'orange';
       case 'cancelled':
         return 'gray';
       default:
@@ -126,7 +124,7 @@ const ActivityDetailPage = () => {
     if (!id || !confirm('Are you sure you want to delete this activity?')) return;
 
     try {
-      await deleteActivity(id);
+      await deleteActivity(Number(id));
       toaster.create({
         title: 'Activity deleted',
         description: 'Activity has been successfully deleted.',
@@ -176,8 +174,8 @@ const ActivityDetailPage = () => {
     );
   }
 
-  const Icon = getActivityIcon(activity.type);
-  const activityColor = getActivityColor(activity.type);
+  const Icon = getActivityIcon(activity.activity_type);
+  const activityColor = getActivityColor(activity.activity_type);
 
   return (
     <DashboardLayout title={`Activity: ${activity.title}`}>
@@ -229,7 +227,7 @@ const ActivityDetailPage = () => {
                       size="lg"
                       textTransform="capitalize"
                     >
-                      {activity.type}
+                      {activity.activity_type}
                     </Badge>
                   </HStack>
                 </VStack>
@@ -263,14 +261,14 @@ const ActivityDetailPage = () => {
               <HStack gap={2}>
                 <FiUser size={18} />
                 <Text fontSize="md" fontWeight="medium">
-                  {activity.customerName}
+                  {activity.customer_name}
                 </Text>
               </HStack>
-              {activity.duration && (
+              {activity.duration_minutes && (
                 <HStack gap={2}>
                   <FiClock size={18} />
                   <Text fontSize="md" fontWeight="medium">
-                    {activity.duration} minutes
+                    {activity.duration_minutes} minutes
                   </Text>
                 </HStack>
               )}
@@ -302,24 +300,6 @@ const ActivityDetailPage = () => {
                 </Text>
               </Box>
 
-              {activity.notes && (
-                <Box>
-                  <Text
-                    fontSize="xs"
-                    fontWeight="semibold"
-                    color="gray.500"
-                    textTransform="uppercase"
-                    letterSpacing="wider"
-                    mb={2}
-                  >
-                    Notes
-                  </Text>
-                  <Text fontSize="md" color="gray.700">
-                    {activity.notes}
-                  </Text>
-                </Box>
-              )}
-
               <Box>
                 <Text
                   fontSize="xs"
@@ -332,7 +312,7 @@ const ActivityDetailPage = () => {
                   Created By
                 </Text>
                 <Text fontSize="md" color="gray.700" fontWeight="medium">
-                  {activity.createdBy}
+                  {activity.created_by}
                 </Text>
               </Box>
             </VStack>
@@ -345,7 +325,7 @@ const ActivityDetailPage = () => {
                 Contact Information
               </Heading>
 
-              {activity.type === 'call' && activity.phoneNumber && (
+              {activity.activity_type === 'call' && activity.phone_number && (
                 <Box>
                   <Text
                     fontSize="xs"
@@ -360,15 +340,15 @@ const ActivityDetailPage = () => {
                   <HStack gap={2}>
                     <FiPhone size={16} color="#667eea" />
                     <Text fontSize="md" color="gray.700" fontWeight="medium">
-                      {activity.phoneNumber}
+                      {activity.phone_number}
                     </Text>
                   </HStack>
                 </Box>
               )}
 
-              {activity.type === 'email' && (
+              {activity.activity_type === 'email' && (
                 <>
-                  {activity.emailSubject && (
+                  {activity.email_subject && (
                     <Box>
                       <Text
                         fontSize="xs"
@@ -381,11 +361,11 @@ const ActivityDetailPage = () => {
                         Email Subject
                       </Text>
                       <Text fontSize="md" color="gray.700" fontWeight="medium">
-                        {activity.emailSubject}
+                        {activity.email_subject}
                       </Text>
                     </Box>
                   )}
-                  {activity.emailBody && (
+                  {activity.email_body && (
                     <Box>
                       <Text
                         fontSize="xs"
@@ -398,14 +378,14 @@ const ActivityDetailPage = () => {
                         Email Body
                       </Text>
                       <Text fontSize="md" color="gray.700" whiteSpace="pre-wrap">
-                        {activity.emailBody}
+                        {activity.email_body}
                       </Text>
                     </Box>
                   )}
                 </>
               )}
 
-              {activity.type === 'telegram' && activity.telegramUsername && (
+              {activity.activity_type === 'telegram' && activity.telegram_username && (
                 <Box>
                   <Text
                     fontSize="xs"
@@ -420,7 +400,7 @@ const ActivityDetailPage = () => {
                   <HStack gap={2}>
                     <FiMessageSquare size={16} color="#667eea" />
                     <Text fontSize="md" color="gray.700" fontWeight="medium">
-                      @{activity.telegramUsername}
+                      @{activity.telegram_username}
                     </Text>
                   </HStack>
                 </Box>
@@ -449,12 +429,12 @@ const ActivityDetailPage = () => {
                     CREATED
                   </Text>
                   <Text fontSize="sm" color="gray.700" fontWeight="medium">
-                    {formatDate(activity.createdAt)}
+                    {formatDate(activity.created_at)}
                   </Text>
                 </VStack>
               </HStack>
 
-              {activity.scheduledAt && (
+              {activity.scheduled_at && (
                 <HStack gap={4} p={3} bg="gray.50" borderRadius="md">
                   <Box
                     p={2}
@@ -469,13 +449,13 @@ const ActivityDetailPage = () => {
                       SCHEDULED
                     </Text>
                     <Text fontSize="sm" color="gray.700" fontWeight="medium">
-                      {formatDate(activity.scheduledAt)}
+                      {formatDate(activity.scheduled_at)}
                     </Text>
                   </VStack>
                 </HStack>
               )}
 
-              {activity.completedAt && (
+              {activity.completed_at && (
                 <HStack gap={4} p={3} bg="gray.50" borderRadius="md">
                   <Box
                     p={2}
@@ -490,7 +470,7 @@ const ActivityDetailPage = () => {
                       COMPLETED
                     </Text>
                     <Text fontSize="sm" color="gray.700" fontWeight="medium">
-                      {formatDate(activity.completedAt)}
+                      {formatDate(activity.completed_at)}
                     </Text>
                   </VStack>
                 </HStack>
