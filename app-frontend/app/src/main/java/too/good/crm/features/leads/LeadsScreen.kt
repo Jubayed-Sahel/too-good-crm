@@ -1,6 +1,5 @@
 package too.good.crm.features.leads
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,6 +20,11 @@ fun LeadsScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    // Debug: Log when this screen is composed
+    LaunchedEffect(Unit) {
+        println("🎯 LeadsScreen: Screen is now being composed!")
+    }
+
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("All Statuses") }
     var selectedSource by remember { mutableStateOf("All Sources") }
@@ -29,21 +33,22 @@ fun LeadsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Leads") },
+                title = {
+                    Column {
+                        Text("Leads")
+                        Text(
+                            "🎯 LEADS PAGE ACTIVE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Yellow
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* TODO: Profile */ }) {
-                        Icon(Icons.Default.Person, contentDescription = "Profile")
-                    }
-                    Switch(
-                        checked = false,
-                        onCheckedChange = { /* TODO: Dark mode */ },
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
                     IconButton(onClick = { /* TODO: Notifications */ }) {
                         Icon(Icons.Default.Notifications, contentDescription = "Notifications")
                     }

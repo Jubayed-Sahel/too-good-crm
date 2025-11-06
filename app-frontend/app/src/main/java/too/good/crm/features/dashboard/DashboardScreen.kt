@@ -182,7 +182,10 @@ fun NavigationDrawerContent(
                 icon = { Icon(Icons.Default.Person, contentDescription = null) },
                 label = { Text("Leads") },
                 selected = false,
-                onClick = { onNavigate("leads") }
+                onClick = {
+                    println("🟡 DashboardScreen: Leads item clicked!")
+                    onNavigate("leads")
+                }
             )
             NavigationDrawerItem(
                 icon = { Icon(Icons.Default.Event, contentDescription = null) },
