@@ -19,6 +19,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import too.good.crm.data.ActiveMode
+import too.good.crm.data.UserSession
+import too.good.crm.ui.components.AppScaffoldWithDrawer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,28 +32,26 @@ fun SettingsScreen(
     var darkMode by remember { mutableStateOf(false) }
     var notificationsEnabled by remember { mutableStateOf(true) }
     var emailNotifications by remember { mutableStateOf(true) }
+    var activeMode by remember { mutableStateOf(UserSession.activeMode) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Settings") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        }
-    ) { innerPadding ->
+    AppScaffoldWithDrawer(
+        title = "Settings",
+        activeMode = activeMode,
+        onModeChanged = { newMode ->
+            activeMode = newMode
+            UserSession.activeMode = newMode
+            // Navigate to appropriate dashboard when mode changes
+            if (newMode == ActiveMode.CLIENT) {
+                onNavigate("client-dashboard")
+            } else {
+                onNavigate("dashboard")
+            }
+        },
+        onNavigate = onNavigate,
+        onLogout = onBack
+    ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
                 .background(Color(0xFFF9FAFB))
                 .verticalScroll(rememberScrollState())
