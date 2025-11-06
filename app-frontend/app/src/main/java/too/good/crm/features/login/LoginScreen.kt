@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import too.good.crm.ui.theme.DesignTokens
+import too.good.crm.data.UserSession
 
 @Composable
 fun LoginScreen(
@@ -32,6 +33,12 @@ fun LoginScreen(
 ) {
 //    var email by rememberSaveable { mutableStateOf("") }
 //    var password by rememberSaveable { mutableStateOf("") }
+
+    // Initialize user with both roles on login
+    fun handleLogin() {
+        UserSession.currentUser = UserSession.getSampleUser()
+        onLoginClicked()
+    }
 
     Column(
         modifier = Modifier
@@ -79,7 +86,7 @@ fun LoginScreen(
         )
         Spacer(modifier = Modifier.height(24.dp))
         Button(
-            onClick = onLoginClicked,
+            onClick = { handleLogin() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(40.dp),

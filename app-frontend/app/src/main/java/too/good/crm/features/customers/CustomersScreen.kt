@@ -18,6 +18,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import too.good.crm.data.ActiveMode
+import too.good.crm.data.UserSession
+import too.good.crm.ui.components.AppScaffoldWithDrawer
 import java.text.NumberFormat
 import java.util.*
 
@@ -31,6 +34,8 @@ fun CustomersScreen(
     var filterStatus by remember { mutableStateOf<CustomerStatus?>(null) }
     val customers = remember { CustomerSampleData.getCustomers() }
 
+    var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+
     val filteredCustomers = customers.filter { customer ->
         val matchesSearch = searchQuery.isEmpty() ||
                 customer.name.contains(searchQuery, ignoreCase = true) ||
@@ -40,40 +45,24 @@ fun CustomersScreen(
         matchesSearch && matchesFilter
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Customers") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* Filter */ }) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filter")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { /* Add Customer */ },
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Customer")
+    AppScaffoldWithDrawer(
+        title = "Customers",
+        activeMode = activeMode,
+        onModeChanged = { newMode ->
+            activeMode = newMode
+            UserSession.activeMode = newMode
+            // Navigate to appropriate dashboard when mode changes
+            if (newMode == ActiveMode.CLIENT) {
+                onNavigate("client-dashboard")
+            } else {
+                onNavigate("dashboard")
             }
-        }
-    ) { innerPadding ->
+        },
+        onNavigate = onNavigate,
+        onLogout = onBack
+    ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
                 .background(Color(0xFFF9FAFB))
                 .padding(16.dp)
