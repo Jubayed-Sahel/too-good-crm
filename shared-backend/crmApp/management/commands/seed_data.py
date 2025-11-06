@@ -7,7 +7,7 @@ from django.contrib.auth import get_user_model
 from crmApp.models import (
     Organization, UserOrganization,
     Role, Permission, RolePermission,
-    Employee, Customer, Lead, Deal, Pipeline, PipelineStage
+    Employee, Customer, Lead, Deal, Pipeline, PipelineStage, Activity
 )
 
 User = get_user_model()
@@ -114,6 +114,133 @@ class Command(BaseCommand):
                     permission=permission
                 )
         
+        # Create sample employees
+        employee_users_data = [
+            {
+                'username': 'john.sales',
+                'email': 'john.sales@democompany.com',
+                'password': 'pass123',
+                'first_name': 'John',
+                'last_name': 'Smith',
+                'employee': {
+                    'code': 'EMP001',
+                    'job_title': 'Sales Manager',
+                    'department': 'Sales',
+                    'employment_type': 'full_time',
+                    'status': 'active',
+                }
+            },
+            {
+                'username': 'sarah.sales',
+                'email': 'sarah.sales@democompany.com',
+                'password': 'pass123',
+                'first_name': 'Sarah',
+                'last_name': 'Johnson',
+                'employee': {
+                    'code': 'EMP002',
+                    'job_title': 'Sales Representative',
+                    'department': 'Sales',
+                    'employment_type': 'full_time',
+                    'status': 'active',
+                }
+            },
+            {
+                'username': 'michael.sales',
+                'email': 'michael.sales@democompany.com',
+                'password': 'pass123',
+                'first_name': 'Michael',
+                'last_name': 'Chen',
+                'employee': {
+                    'code': 'EMP003',
+                    'job_title': 'Sales Representative',
+                    'department': 'Sales',
+                    'employment_type': 'full_time',
+                    'status': 'active',
+                }
+            },
+            {
+                'username': 'emily.account',
+                'email': 'emily.account@democompany.com',
+                'password': 'pass123',
+                'first_name': 'Emily',
+                'last_name': 'Davis',
+                'employee': {
+                    'code': 'EMP004',
+                    'job_title': 'Account Manager',
+                    'department': 'Sales',
+                    'employment_type': 'full_time',
+                    'status': 'active',
+                }
+            },
+            {
+                'username': 'david.sales',
+                'email': 'david.sales@democompany.com',
+                'password': 'pass123',
+                'first_name': 'David',
+                'last_name': 'Wilson',
+                'employee': {
+                    'code': 'EMP005',
+                    'job_title': 'Sales Representative',
+                    'department': 'Sales',
+                    'employment_type': 'full_time',
+                    'status': 'active',
+                }
+            },
+        ]
+        
+        employees_created = 0
+        for emp_data in employee_users_data:
+            # Create user if not exists
+            emp_user, user_created = User.objects.get_or_create(
+                email=emp_data['email'],
+                defaults={
+                    'username': emp_data['username'],
+                    'first_name': emp_data['first_name'],
+                    'last_name': emp_data['last_name'],
+                }
+            )
+            
+            if user_created:
+                emp_user.set_password(emp_data['password'])
+                emp_user.save()
+            
+            # Create employee if not exists
+            employee, created = Employee.objects.get_or_create(
+                organization=org,
+                code=emp_data['employee']['code'],
+                defaults={
+                    'user': emp_user,
+                    'first_name': emp_data['first_name'],
+                    'last_name': emp_data['last_name'],
+                    'job_title': emp_data['employee']['job_title'],
+                    'department': emp_data['employee']['department'],
+                    'employment_type': emp_data['employee']['employment_type'],
+                    'status': emp_data['employee']['status'],
+                    'role': sales_role,
+                }
+            )
+            
+            if created:
+                employees_created += 1
+                
+                # Create user-organization relationship
+                UserOrganization.objects.get_or_create(
+                    user=emp_user,
+                    organization=org,
+                    defaults={
+                        'is_active': True,
+                        'is_owner': False,
+                    }
+                )
+        
+        if employees_created > 0:
+            self.stdout.write(self.style.SUCCESS(f'✓ Created {employees_created} employees'))
+        else:
+            self.stdout.write('⚠ Employees already exist')
+        
+        # Get employees for assigning to entities
+        employees = list(Employee.objects.filter(organization=org))
+        
         # Create sample customers
         customer_data = [
             {
@@ -178,7 +305,11 @@ class Command(BaseCommand):
         ]
         
         created_count = 0
-        for data in customer_data:
+        for idx, data in enumerate(customer_data):
+            # Assign employees in a round-robin fashion
+            if employees:
+                data['assigned_to'] = employees[idx % len(employees)]
+            
             customer, created = Customer.objects.get_or_create(
                 organization=org,
                 code=data['code'],
@@ -260,7 +391,11 @@ class Command(BaseCommand):
         ]
         
         created_count = 0
-        for data in lead_data:
+        for idx, data in enumerate(lead_data):
+            # Assign employees in a round-robin fashion
+            if employees:
+                data['assigned_to'] = employees[idx % len(employees)]
+            
             lead, created = Lead.objects.get_or_create(
                 organization=org,
                 code=data['code'],
@@ -379,10 +514,14 @@ class Command(BaseCommand):
             ]
             
             created_count = 0
-            for data in deal_data:
+            for idx, data in enumerate(deal_data):
                 # Get or create deal and set probability from stage
                 stage = data['stage']
                 data['probability'] = stage.probability
+                
+                # Assign employees in a round-robin fashion
+                if employees:
+                    data['assigned_to'] = employees[idx % len(employees)]
                 
                 deal, created = Deal.objects.get_or_create(
                     organization=org,
@@ -394,6 +533,116 @@ class Command(BaseCommand):
             
             if created_count > 0:
                 self.stdout.write(self.style.SUCCESS(f'✓ Created {created_count} deals'))
+        
+        # Create sample activities
+        if customers_list:
+            from datetime import timedelta
+            from django.utils import timezone
+            now = timezone.now()
+            
+            activity_data = [
+                {
+                    'activity_type': 'call',
+                    'title': 'Initial consultation call',
+                    'description': 'Discussed product requirements and pricing options',
+                    'customer': customers_list[0],
+                    'customer_name': customers_list[0].name,
+                    'phone_number': '+1-555-1001',
+                    'call_duration': 1800,  # 30 minutes in seconds
+                    'status': 'completed',
+                    'duration_minutes': 30,
+                    'completed_at': now - timedelta(days=2),
+                },
+                {
+                    'activity_type': 'email',
+                    'title': 'Follow-up email with proposal',
+                    'description': 'Sent detailed proposal and pricing breakdown',
+                    'customer': customers_list[1],
+                    'customer_name': customers_list[1].name,
+                    'email_subject': 'Your Custom Proposal - CRM Solutions',
+                    'email_body': 'Dear customer, please find attached our proposal...',
+                    'status': 'completed',
+                    'completed_at': now - timedelta(days=1),
+                },
+                {
+                    'activity_type': 'telegram',
+                    'title': 'Quick update via Telegram',
+                    'description': 'Shared update about new features',
+                    'customer': customers_list[2] if len(customers_list) > 2 else customers_list[0],
+                    'customer_name': customers_list[2].name if len(customers_list) > 2 else customers_list[0].name,
+                    'telegram_username': '@acme_contact',
+                    'status': 'completed',
+                    'completed_at': now,
+                },
+                {
+                    'activity_type': 'meeting',
+                    'title': 'Product demo meeting',
+                    'description': 'Scheduled product demonstration and Q&A session',
+                    'customer': customers_list[3] if len(customers_list) > 3 else customers_list[0],
+                    'customer_name': customers_list[3].name if len(customers_list) > 3 else customers_list[0].name,
+                    'meeting_location': 'Virtual - Zoom',
+                    'meeting_url': 'https://zoom.us/j/example',
+                    'status': 'scheduled',
+                    'scheduled_at': now + timedelta(days=3),
+                    'duration_minutes': 60,
+                },
+                {
+                    'activity_type': 'task',
+                    'title': 'Prepare contract documentation',
+                    'description': 'Create and review contract for new client',
+                    'customer': customers_list[4] if len(customers_list) > 4 else customers_list[0],
+                    'customer_name': customers_list[4].name if len(customers_list) > 4 else customers_list[0].name,
+                    'task_priority': 'high',
+                    'task_due_date': (now + timedelta(days=5)).date(),
+                    'status': 'in_progress',
+                },
+                {
+                    'activity_type': 'note',
+                    'title': 'Important client preference',
+                    'description': 'Customer prefers email communication over phone calls',
+                    'customer': customers_list[0],
+                    'customer_name': customers_list[0].name,
+                    'is_pinned': True,
+                    'status': 'completed',
+                    'completed_at': now,
+                },
+                {
+                    'activity_type': 'call',
+                    'title': 'Scheduled follow-up call',
+                    'description': 'Discuss implementation timeline and next steps',
+                    'customer': customers_list[1],
+                    'customer_name': customers_list[1].name,
+                    'phone_number': '+1-555-1002',
+                    'status': 'scheduled',
+                    'scheduled_at': now + timedelta(days=2),
+                    'duration_minutes': 45,
+                },
+                {
+                    'activity_type': 'email',
+                    'title': 'Send onboarding documentation',
+                    'description': 'Share getting started guide and training materials',
+                    'customer': customers_list[2] if len(customers_list) > 2 else customers_list[0],
+                    'customer_name': customers_list[2].name if len(customers_list) > 2 else customers_list[0].name,
+                    'email_subject': 'Welcome to Our Platform - Getting Started',
+                    'email_body': 'Welcome! Here are the resources to help you get started...',
+                    'status': 'scheduled',
+                    'scheduled_at': now + timedelta(days=1),
+                },
+            ]
+            
+            created_count = 0
+            for data in activity_data:
+                activity, created = Activity.objects.get_or_create(
+                    organization=org,
+                    title=data['title'],
+                    activity_type=data['activity_type'],
+                    defaults={**data, 'created_by': user}
+                )
+                if created:
+                    created_count += 1
+            
+            if created_count > 0:
+                self.stdout.write(self.style.SUCCESS(f'✓ Created {created_count} activities'))
         
         self.stdout.write(self.style.SUCCESS('\n✅ Database seeding completed!'))
         self.stdout.write(f'\nLogin credentials:')

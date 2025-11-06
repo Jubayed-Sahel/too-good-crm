@@ -31,6 +31,10 @@ from .deal import (
     PipelineStageViewSet,
     DealViewSet,
 )
+from .issue import IssueViewSet
+from .order import OrderViewSet
+from .payment import PaymentViewSet
+from .activity import ActivityViewSet
 from .analytics import AnalyticsViewSet
 
 __all__ = [
@@ -59,6 +63,12 @@ __all__ = [
     'PipelineViewSet',
     'PipelineStageViewSet',
     'DealViewSet',
+    
+    # New Models
+    'IssueViewSet',
+    'OrderViewSet',
+    'PaymentViewSet',
+    'ActivityViewSet',
     
     # Analytics
     'AnalyticsViewSet',

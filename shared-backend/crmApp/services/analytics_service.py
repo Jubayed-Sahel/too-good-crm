@@ -62,7 +62,7 @@ class AnalyticsService:
         expected_revenue = deals.filter(
             is_won=False,
             is_lost=False
-        ).aggregate(total=Sum('expected_revenue'))['expected_revenue'] or 0
+        ).aggregate(total=Sum('expected_revenue'))['total'] or 0
         
         # Win rate
         closed_deals = won_deals + deals.filter(is_lost=True).count()
@@ -243,7 +243,7 @@ class AnalyticsService:
         Returns:
             List of employee performance data
         """
-        employees = Employee.objects.filter(organization=organization)
+        employees = Employee.objects.filter(organization=organization).select_related('user')
         
         performance = []
         for employee in employees:
@@ -275,13 +275,23 @@ class AnalyticsService:
                 is_lost=False
             ).aggregate(total=Sum('value'))['total'] or 0
             
+            # Employee info with user data
+            employee_data = {
+                'id': employee.id,
+                'code': employee.code,
+                'department': employee.department,
+                'designation': employee.job_title or employee.department,
+            }
+            
+            # Add user information if available
+            if employee.user:
+                employee_data['user'] = {
+                    'first_name': employee.user.first_name,
+                    'last_name': employee.user.last_name,
+                }
+            
             performance.append({
-                'employee': {
-                    'id': employee.id,
-                    'code': employee.code,
-                    'department': employee.department,
-                    'designation': employee.designation,
-                },
+                'employee': employee_data,
                 'customers': customer_count,
                 'leads': {
                     'total': total_leads,

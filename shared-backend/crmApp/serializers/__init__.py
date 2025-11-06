@@ -65,6 +65,35 @@ from .deal import (
     DealListSerializer,
 )
 
+from .issue import (
+    IssueSerializer,
+    IssueListSerializer,
+    IssueCreateSerializer,
+    IssueUpdateSerializer,
+)
+
+from .order import (
+    OrderItemSerializer,
+    OrderSerializer,
+    OrderListSerializer,
+    OrderCreateSerializer,
+    OrderUpdateSerializer,
+)
+
+from .payment import (
+    PaymentSerializer,
+    PaymentListSerializer,
+    PaymentCreateSerializer,
+    PaymentUpdateSerializer,
+)
+
+from .activity import (
+    ActivitySerializer,
+    ActivityListSerializer,
+    ActivityCreateSerializer,
+    ActivityUpdateSerializer,
+)
+
 __all__ = [
     # Auth
     'UserSerializer',
@@ -120,4 +149,29 @@ __all__ = [
     'DealCreateSerializer',
     'DealUpdateSerializer',
     'DealListSerializer',
+    
+    # Issue
+    'IssueSerializer',
+    'IssueListSerializer',
+    'IssueCreateSerializer',
+    'IssueUpdateSerializer',
+    
+    # Order
+    'OrderItemSerializer',
+    'OrderSerializer',
+    'OrderListSerializer',
+    'OrderCreateSerializer',
+    'OrderUpdateSerializer',
+    
+    # Payment
+    'PaymentSerializer',
+    'PaymentListSerializer',
+    'PaymentCreateSerializer',
+    'PaymentUpdateSerializer',
+    
+    # Activity
+    'ActivitySerializer',
+    'ActivityListSerializer',
+    'ActivityCreateSerializer',
+    'ActivityUpdateSerializer',
 ]

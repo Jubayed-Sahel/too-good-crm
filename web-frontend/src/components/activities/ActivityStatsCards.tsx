@@ -1,9 +1,12 @@
 import { SimpleGrid } from '@chakra-ui/react';
 import { StatCard } from '../dashboard';
 import { FiActivity, FiCheckCircle, FiClock, FiCalendar } from 'react-icons/fi';
-import type { ActivityStats } from '@/types/activity.types';
 
-interface ActivityStatsProps extends ActivityStats {
+interface ActivityStatsProps {
+  totalActivities: number;
+  completedActivities: number;
+  pendingActivities: number;
+  scheduledActivities: number;
   isLoading?: boolean;
 }
 

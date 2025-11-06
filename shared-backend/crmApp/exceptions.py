@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.http import Http404
+from django.db import IntegrityError
 import logging
 
 logger = logging.getLogger(__name__)
@@ -43,6 +44,16 @@ def custom_exception_handler(exc, context):
             'status_code': status.HTTP_404_NOT_FOUND
         }
         return Response(data, status=status.HTTP_404_NOT_FOUND)
+    
+    # Handle IntegrityError (database constraints)
+    if isinstance(exc, IntegrityError):
+        data = {
+            'error': 'Database Integrity Error',
+            'details': 'A database constraint was violated. This may be due to duplicate data or invalid foreign key references.',
+            'status_code': status.HTTP_400_BAD_REQUEST
+        }
+        logger.error(f"IntegrityError: {str(exc)}")
+        return Response(data, status=status.HTTP_400_BAD_REQUEST)
     
     # If response is available, format it consistently
     if response is not None:

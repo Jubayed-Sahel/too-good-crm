@@ -97,26 +97,6 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
         onView={onView}
       />
 
-      {/* Empty State */}
-      {mappedCustomers.length === 0 && (
-        <Box
-          textAlign="center"
-          py={12}
-          px={6}
-          bg="gray.50"
-          borderRadius="lg"
-        >
-          <Heading size="lg" color="gray.600" mb={2}>
-            No customers found
-          </Heading>
-          <Text color="gray.500" fontSize="md">
-            {searchQuery || statusFilter !== 'all'
-              ? 'Try adjusting your filters'
-              : 'Get started by adding your first customer'}
-          </Text>
-        </Box>
-      )}
-
       {/* Create Customer Dialog */}
       <CreateCustomerDialog
         isOpen={isCreateDialogOpen}

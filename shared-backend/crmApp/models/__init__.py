@@ -48,6 +48,21 @@ from .deal import (
     PipelineStage,
 )
 
+# Issue models
+from .issue import Issue
+
+# Order models
+from .order import (
+    Order,
+    OrderItem,
+)
+
+# Payment model
+from .payment import Payment
+
+# Activity model
+from .activity import Activity
+
 # Export all models for backward compatibility
 __all__ = [
     # Authentication
@@ -76,4 +91,11 @@ __all__ = [
     'Deal',
     'Pipeline',
     'PipelineStage',
+    
+    # Operations
+    'Issue',
+    'Order',
+    'OrderItem',
+    'Payment',
+    'Activity',
 ]

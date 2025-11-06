@@ -2,6 +2,16 @@
  * Centralized type definitions for the application
  */
 
+// Export new types modules
+export * from './analytics.types';
+export * from './issue.types';
+export * from './order.types';
+export * from './payment.types';
+
+// Export activity types first (used by Customer interface below)
+export * from './activity.types';
+export * from './auth.types';
+
 // User types (Legacy - to be replaced)
 export interface User {
   id: number;
@@ -108,22 +118,6 @@ export interface Deal {
 
 export type DealStage = 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'closed-won' | 'closed-lost';
 
-// Activity types
-export interface Activity {
-  id: number;
-  customer: number;
-  deal?: number;
-  activity_type: 'call' | 'email' | 'meeting' | 'note' | 'task';
-  subject: string;
-  description: string;
-  scheduled_at?: string;
-  completed_at?: string;
-  is_completed: boolean;
-  created_by?: User;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Tag {
   id: number;
   name: string;
@@ -133,23 +127,34 @@ export interface Tag {
 // Analytics types
 export interface DashboardStats {
   customers: CustomerStats;
+  leads: LeadStats;
   deals: DealStats;
-  user_stats: UserStats;
+  revenue: RevenueStats;
 }
 
 export interface CustomerStats {
   total: number;
-  new_this_month: number;
-  by_status: Record<string, number>;
+  active: number;
+  growth: number;
+}
+
+export interface LeadStats {
+  total: number;
+  qualified: number;
+  conversion_rate: number;
 }
 
 export interface DealStats {
   total: number;
-  open: number;
+  active: number;  // Open deals (not yet won or lost)
   won: number;
-  total_won_value: number;
-  pipeline_value: number;
   win_rate: number;
+}
+
+export interface RevenueStats {
+  total: number;  // Total revenue from won deals
+  pipeline_value: number;  // Value of active deals
+  expected: number;  // Expected revenue based on probability
 }
 
 export interface UserStats {
@@ -185,3 +190,8 @@ export * from './user.types';
 
 // Export Phase 2 types
 export * from './lead.types';
+
+// Export Phase 3 types - New models
+export * from './issue.types';
+export * from './order.types';
+export * from './payment.types';

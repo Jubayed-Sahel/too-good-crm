@@ -28,8 +28,8 @@ interface ActivitiesTableProps {
   activities: Activity[];
   isLoading?: boolean;
   onView?: (activity: Activity) => void;
-  onDelete?: (activityId: string) => void;
-  onMarkComplete?: (activityId: string) => void;
+  onDelete?: (activityId: number) => void;
+  onMarkComplete?: (activityId: number) => void;
 }
 
 const getActivityIcon = (type: ActivityType) => {
@@ -57,11 +57,10 @@ const getActivityColor = (type: ActivityType) => {
 };
 
 const getStatusColor = (status: ActivityStatus) => {
-  const colors = {
+  const colors: Record<ActivityStatus, string> = {
     completed: 'green',
-    pending: 'orange',
+    in_progress: 'orange',
     scheduled: 'blue',
-    failed: 'red',
     cancelled: 'gray',
   };
   return colors[status] || 'gray';
@@ -113,8 +112,8 @@ export const ActivitiesTable = ({
   const MobileView = () => (
     <VStack gap={3} align="stretch">
       {activities.map((activity) => {
-        const Icon = getActivityIcon(activity.type);
-        const typeColor = getActivityColor(activity.type);
+        const Icon = getActivityIcon(activity.activity_type);
+        const typeColor = getActivityColor(activity.activity_type);
 
         return (
           <Card key={activity.id} p={4}>
@@ -159,7 +158,7 @@ export const ActivitiesTable = ({
               <HStack gap={1.5} pt={2} borderTopWidth="1px" borderColor="gray.100">
                 <FiUser size={14} color="#718096" />
                 <Text fontSize="sm" color="gray.700" fontWeight="medium">
-                  {activity.customerName}
+                  {activity.customer_name}
                 </Text>
               </HStack>
 
@@ -168,14 +167,14 @@ export const ActivitiesTable = ({
                 <VStack align="start" gap={0}>
                   <Text fontSize="xs" color="gray.500">Created</Text>
                   <Text fontSize="sm" color="gray.600">
-                    {formatDate(activity.createdAt)}
+                    {formatDate(activity.created_at)}
                   </Text>
                 </VStack>
-                {activity.scheduledAt && activity.status === 'scheduled' && (
+                {activity.scheduled_at && activity.status === 'scheduled' && (
                   <VStack align="end" gap={0}>
                     <Text fontSize="xs" color="gray.500">Due Date</Text>
                     <Text fontSize="sm" color="blue.600" fontWeight="medium">
-                      {formatDate(activity.scheduledAt)}
+                      {formatDate(activity.scheduled_at)}
                     </Text>
                   </VStack>
                 )}
@@ -183,7 +182,7 @@ export const ActivitiesTable = ({
 
               {/* Created By */}
               <Flex justify="space-between" align="center" pt={2} borderTopWidth="1px" borderColor="gray.100">
-                <Text fontSize="xs" color="gray.500">Created by: <Text as="span" color="gray.600" fontWeight="medium">{activity.createdBy}</Text></Text>
+                <Text fontSize="xs" color="gray.500">Created by: <Text as="span" color="gray.600" fontWeight="medium">User #{activity.created_by}</Text></Text>
               </Flex>
 
               {/* Actions */}
@@ -250,8 +249,8 @@ export const ActivitiesTable = ({
           </Table.Header>
           <Table.Body>
             {activities.map((activity) => {
-              const Icon = getActivityIcon(activity.type);
-              const typeColor = getActivityColor(activity.type);
+              const Icon = getActivityIcon(activity.activity_type);
+              const typeColor = getActivityColor(activity.activity_type);
 
               return (
                 <Table.Row key={activity.id} _hover={{ bg: 'gray.50' }}>
@@ -277,7 +276,7 @@ export const ActivitiesTable = ({
                   </Table.Cell>
                   <Table.Cell>
                     <Text fontSize="sm" color="gray.700" fontWeight="medium">
-                      {activity.customerName}
+                      {activity.customer_name}
                     </Text>
                   </Table.Cell>
                   <Table.Cell>
@@ -293,18 +292,18 @@ export const ActivitiesTable = ({
                   <Table.Cell>
                     <VStack align="start" gap={0}>
                       <Text fontSize="sm" color="gray.700">
-                        {formatDate(activity.createdAt)}
+                        {formatDate(activity.created_at)}
                       </Text>
-                      {activity.scheduledAt && activity.status === 'scheduled' && (
+                      {activity.scheduled_at && activity.status === 'scheduled' && (
                         <Text fontSize="xs" color="blue.600" fontWeight="medium">
-                          Due: {formatDate(activity.scheduledAt)}
+                          Due: {formatDate(activity.scheduled_at)}
                         </Text>
                       )}
                     </VStack>
                   </Table.Cell>
                   <Table.Cell>
                     <Text fontSize="sm" color="gray.600">
-                      {activity.createdBy}
+                      User #{activity.created_by}
                     </Text>
                   </Table.Cell>
                   <Table.Cell>
