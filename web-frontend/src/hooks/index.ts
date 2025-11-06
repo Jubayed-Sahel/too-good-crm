@@ -7,6 +7,7 @@ export { useAuth } from './useAuth';
 export { useCustomers } from './useCustomers';
 export { useDeals } from './useDeals';
 export { useDashboardStats } from './useDashboardStats';
+export { useEmployees } from './useEmployees';
 export * from './useLeads';
 export * from './useAnalytics';
 export * from './useSalesPage';

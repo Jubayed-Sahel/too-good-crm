@@ -26,6 +26,7 @@ const SignupForm = () => {
     password_confirm: "",
     first_name: "",
     last_name: "",
+    organization_name: "", // Add organization name for vendors
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showPassword2, setShowPassword2] = useState(false);
@@ -70,6 +71,10 @@ const SignupForm = () => {
 
     if (!formData.last_name) {
       newErrors.last_name = "Last name is required";
+    }
+
+    if (!formData.organization_name) {
+      newErrors.organization_name = "Organization name is required";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -246,6 +251,26 @@ const SignupForm = () => {
                     />
                   </Field>
                 </Box>
+
+                <Field 
+                  label="Organization Name" 
+                  required
+                  invalid={!!errors.organization_name}
+                  errorText={errors.organization_name}
+                  helperText="This will be your company/organization name"
+                >
+                  <Input
+                    type="text"
+                    placeholder="Enter your organization name"
+                    value={formData.organization_name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, organization_name: e.target.value })
+                    }
+                    size="md"
+                    h="10"
+                    borderRadius="lg"
+                  />
+                </Field>
 
                 <Field 
                   label="Password" 

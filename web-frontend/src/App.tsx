@@ -16,6 +16,7 @@ import EditCustomerPage from './pages/EditCustomerPage'
 import ActivitiesPage from './pages/ActivitiesPage'
 import ActivityDetailPage from './pages/ActivityDetailPage'
 import AnalyticsPage from './pages/AnalyticsPage'
+import EmployeesPage from './pages/EmployeesPage'
 import SettingsPage from './pages/SettingsPage'
 import ClientDashboardPage from './pages/ClientDashboardPage'
 import ClientVendorsPage from './pages/ClientVendorsPage'
@@ -49,6 +50,7 @@ function App() {
           <Route path="/activities" element={<ActivitiesPage />} />
           <Route path="/activities/:id" element={<ActivityDetailPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/employees" element={<EmployeesPage />} />
           <Route path="/settings" element={<SettingsPage />} />
 
           {/* Client Routes */}

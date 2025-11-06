@@ -21,7 +21,7 @@ class Employee(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
     STATUS_CHOICES = [
         ('active', 'Active'),
         ('inactive', 'Inactive'),
-        ('on_leave', 'On Leave'),
+        ('on-leave', 'On Leave'),
         ('terminated', 'Terminated'),
     ]
     

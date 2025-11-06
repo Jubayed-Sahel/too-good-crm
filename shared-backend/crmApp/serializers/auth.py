@@ -92,12 +92,18 @@ class UserCreateSerializer(serializers.ModelSerializer):
         validators=[validate_password]
     )
     password_confirm = serializers.CharField(write_only=True, required=True)
+    organization_name = serializers.CharField(
+        write_only=True,
+        required=False,
+        help_text="Organization name for vendor signup"
+    )
     
     class Meta:
         model = User
         fields = [
             'email', 'username', 'first_name', 'last_name',
-            'password', 'password_confirm', 'phone', 'profile_image'
+            'password', 'password_confirm', 'phone', 'profile_image',
+            'organization_name'
         ]
     
     def validate(self, attrs):
@@ -108,8 +114,40 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
+        from crmApp.models import Organization, UserOrganization
+        from django.utils.text import slugify
+        
         validated_data.pop('password_confirm')
+        organization_name = validated_data.pop('organization_name', None)
+        
+        # Create user
         user = User.objects.create_user(**validated_data)
+        
+        # Create organization for vendor signup
+        if organization_name:
+            # Generate unique slug
+            base_slug = slugify(organization_name)
+            slug = base_slug
+            counter = 1
+            while Organization.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            
+            # Create organization
+            organization = Organization.objects.create(
+                name=organization_name,
+                slug=slug,
+                email=user.email
+            )
+            
+            # Link user to organization as owner
+            UserOrganization.objects.create(
+                user=user,
+                organization=organization,
+                is_owner=True,
+                is_active=True
+            )
+        
         return user
 
 

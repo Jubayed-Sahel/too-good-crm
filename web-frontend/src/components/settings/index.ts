@@ -6,3 +6,4 @@ export { default as TeamSettings } from './TeamSettings';
 export { default as NotificationSettings } from './NotificationSettings';
 export { default as SecuritySettings } from './SecuritySettings';
 export { default as BillingSettings } from './BillingSettings';
+export { default as RolesSettings } from './RolesSettings';

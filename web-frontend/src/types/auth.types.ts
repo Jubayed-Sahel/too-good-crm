@@ -1,13 +1,13 @@
 // Authentication Types
 
-export type UserRole = 'vendor' | 'employee';
+export type UserType = 'vendor' | 'employee';
 
 export type EmployeeSubRole = 'super_admin' | 'manager' | 'sales' | 'marketing';
 
 export interface LoginFormData {
   email: string;
   password: string;
-  role: UserRole;
+  role: UserType;
 }
 
 export interface SignupFormData {
@@ -15,14 +15,14 @@ export interface SignupFormData {
   email: string;
   password: string;
   confirmPassword: string;
-  role: UserRole;
+  role: UserType;
 }
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
+  role: UserType;
   employeeSubRole?: EmployeeSubRole;
   organizationId?: string;
   createdAt: string;
