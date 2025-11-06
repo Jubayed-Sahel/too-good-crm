@@ -10,3 +10,10 @@ export { organizationService } from './organization.service';
 export { rbacService } from './rbac.service';
 export { userService } from './user.service';
 export { leadService } from './lead.service';
+
+// New model services
+export { issueService } from './issue.service';
+export { orderService } from './order.service';
+export { paymentService } from './payment.service';
+export { activityService } from './activity.service';
+export { getActivities, getActivity, createActivity, deleteActivity, getActivityStats } from './activity.service';

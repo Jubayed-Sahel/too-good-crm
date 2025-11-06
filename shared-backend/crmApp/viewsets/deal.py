@@ -205,7 +205,7 @@ class DealViewSet(viewsets.ModelViewSet):
             'won': queryset.filter(is_won=True).count(),
             'lost': queryset.filter(is_lost=True).count(),
             'open': queryset.filter(is_won=False, is_lost=False).count(),
-            'by_stage': {},
+            'by_stage': [],
             'by_priority': {
                 'low': queryset.filter(priority='low').count(),
                 'medium': queryset.filter(priority='medium').count(),
@@ -221,10 +221,11 @@ class DealViewSet(viewsets.ModelViewSet):
         )
         for stage in stages:
             if stage['stage__name']:
-                stats['by_stage'][stage['stage__name']] = {
+                stats['by_stage'].append({
+                    'stage_name': stage['stage__name'],
                     'count': stage['count'],
-                    'value': float(stage['total_value'] or 0)
-                }
+                    'total_value': float(stage['total_value'] or 0)
+                })
         
         return Response(stats)
     

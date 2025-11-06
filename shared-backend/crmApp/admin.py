@@ -5,7 +5,8 @@ from .models import (
     Organization, UserOrganization,
     Role, Permission, RolePermission, UserRole,
     Employee, Vendor, Customer, Lead,
-    Pipeline, PipelineStage, Deal
+    Pipeline, PipelineStage, Deal,
+    Issue, Order, OrderItem, Payment, Activity
 )
 
 
@@ -108,6 +109,45 @@ class VendorAdmin(admin.ModelAdmin):
     list_display = ('name', 'contact_person', 'email', 'status', 'organization', 'created_at')
     list_filter = ('status', 'vendor_type', 'created_at')
     search_fields = ('name', 'contact_person', 'email', 'code')
+
+
+@admin.register(Issue)
+class IssueAdmin(admin.ModelAdmin):
+    list_display = ('issue_number', 'title', 'vendor', 'priority', 'status', 'organization', 'created_at')
+    list_filter = ('priority', 'category', 'status', 'created_at')
+    search_fields = ('issue_number', 'title', 'description')
+    ordering = ('-created_at',)
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    list_display = ('order_number', 'title', 'vendor', 'customer', 'order_type', 'total_amount', 'status', 'organization', 'created_at')
+    list_filter = ('order_type', 'status', 'created_at')
+    search_fields = ('order_number', 'title', 'description')
+    ordering = ('-created_at',)
+
+
+@admin.register(OrderItem)
+class OrderItemAdmin(admin.ModelAdmin):
+    list_display = ('order', 'product_name', 'quantity', 'unit_price', 'total_price')
+    list_filter = ('order__order_type',)
+    search_fields = ('product_name', 'description', 'order__order_number')
+
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('payment_number', 'invoice_number', 'vendor', 'customer', 'amount', 'payment_type', 'payment_method', 'status', 'organization', 'created_at')
+    list_filter = ('payment_type', 'payment_method', 'status', 'created_at')
+    search_fields = ('payment_number', 'invoice_number', 'reference_number', 'transaction_id')
+    ordering = ('-created_at',)
+
+
+@admin.register(Activity)
+class ActivityAdmin(admin.ModelAdmin):
+    list_display = ('title', 'activity_type', 'customer_name', 'status', 'scheduled_at', 'organization', 'created_at')
+    list_filter = ('activity_type', 'status', 'created_at', 'scheduled_at')
+    search_fields = ('title', 'description', 'customer_name')
+    ordering = ('-created_at',)
 
 
 # Register other models without custom admin

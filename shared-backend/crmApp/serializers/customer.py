@@ -13,15 +13,16 @@ class CustomerListSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
     total_value = serializers.SerializerMethodField()
+    company = serializers.CharField(source='company_name', read_only=True)  # Alias for frontend compatibility
     
     class Meta:
         model = Customer
         fields = [
             'id', 'code', 'name', 'first_name', 'last_name', 'full_name',
-            'email', 'phone', 'company', 'job_title',
+            'email', 'phone', 'company', 'company_name',
             'customer_type', 'status', 'assigned_to', 'assigned_to_name',
             'total_value', 'address', 'city', 'state', 'country', 'postal_code',
-            'notes', 'website', 'created_at', 'updated_at', 'created_by'
+            'notes', 'website', 'created_at', 'updated_at'
         ]
     
     def get_assigned_to_name(self, obj):

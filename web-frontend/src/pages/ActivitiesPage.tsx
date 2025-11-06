@@ -11,13 +11,7 @@ import { ActivityTypeMenu } from '../components/activities/ActivityTypeMenu';
 import { CreateCallDialog, type CallData } from '../components/activities/CreateCallDialog';
 import { SendEmailDialog, type EmailData } from '../components/activities/SendEmailDialog';
 import { SendTelegramDialog, type TelegramData } from '../components/activities/SendTelegramDialog';
-import {
-  getActivities,
-  getActivityStats,
-  createActivity,
-  updateActivityStatus,
-  deleteActivity,
-} from '../services/activity.service';
+import { activityService } from '../services/activity.service';
 import type { Activity, ActivityType, ActivityStatus, ActivityFilters, ActivityStats } from '../types/activity.types';
 
 export const ActivitiesPage = () => {
@@ -25,17 +19,33 @@ export const ActivitiesPage = () => {
   const { isClientMode } = useAccountMode();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [stats, setStats] = useState<ActivityStats>({
-    totalActivities: 0,
-    completedActivities: 0,
-    pendingActivities: 0,
-    scheduledActivities: 0,
-    callsCount: 0,
-    emailsCount: 0,
-    telegramCount: 0,
+    total: 0,
+    by_status: {
+      scheduled: 0,
+      in_progress: 0,
+      completed: 0,
+      cancelled: 0,
+    },
+    by_type: {
+      call: 0,
+      email: 0,
+      telegram: 0,
+      meeting: 0,
+      note: 0,
+      task: 0,
+    },
   });
+
+  // Compute display stats from backend stats
+  const displayStats = {
+    totalActivities: stats.total,
+    completedActivities: stats.by_status.completed,
+    pendingActivities: stats.by_status.in_progress,
+    scheduledActivities: stats.by_status.scheduled,
+  };
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<ActivityFilters>({
-    searchQuery: '',
+    search: '',
   });
 
   // Dialog states
@@ -48,8 +58,8 @@ export const ActivitiesPage = () => {
   const loadActivities = async () => {
     try {
       setIsLoading(true);
-      const data = await getActivities(filters);
-      setActivities(data);
+      const response = await activityService.getAll(filters);
+      setActivities(response.results);
     } catch (error) {
       toaster.create({
         title: 'Error loading activities',
@@ -65,7 +75,7 @@ export const ActivitiesPage = () => {
   // Load stats
   const loadStats = async () => {
     try {
-      const statsData = await getActivityStats();
+      const statsData = await activityService.getStats();
       setStats(statsData);
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -79,12 +89,12 @@ export const ActivitiesPage = () => {
 
   // Filter handlers
   const handleSearch = (searchQuery: string) => {
-    setFilters({ ...filters, searchQuery });
+    setFilters({ ...filters, search: searchQuery });
   };
 
   const handleTypeChange = (value: string) => {
-    const type = value === 'all' ? undefined : (value as ActivityType);
-    setFilters({ ...filters, type });
+    const activity_type = value === 'all' ? undefined : (value as ActivityType);
+    setFilters({ ...filters, activity_type });
   };
 
   const handleStatusChange = (value: string) => {
@@ -93,7 +103,7 @@ export const ActivitiesPage = () => {
   };
 
   const handleClearFilters = () => {
-    setFilters({ searchQuery: '' });
+    setFilters({ search: '' });
   };
 
   // Action handlers
@@ -103,13 +113,13 @@ export const ActivitiesPage = () => {
 
   const handleCreateCall = async (data: CallData) => {
     try {
-      await createActivity({
-        type: 'call',
+      await activityService.create({
+        activity_type: 'call',
         title: data.title,
         description: data.notes || '',
-        customerName: data.customerName,
-        customerId: '1', // TODO: Get from customer selection
-        phoneNumber: data.phoneNumber,
+        customer: 1, // TODO: Get from customer selection
+        status: 'completed',
+        phone_number: data.phoneNumber,
       });
 
       toaster.create({
@@ -133,14 +143,14 @@ export const ActivitiesPage = () => {
 
   const handleSendEmail = async (data: EmailData) => {
     try {
-      await createActivity({
-        type: 'email',
+      await activityService.create({
+        activity_type: 'email',
         title: data.subject,
         description: data.body,
-        customerName: data.customerName,
-        customerId: '1', // TODO: Get from customer selection
-        emailSubject: data.subject,
-        emailBody: data.body,
+        customer: 1, // TODO: Get from customer selection
+        status: 'completed',
+        email_subject: data.subject,
+        email_body: data.body,
       });
 
       toaster.create({
@@ -164,13 +174,13 @@ export const ActivitiesPage = () => {
 
   const handleSendTelegram = async (data: TelegramData) => {
     try {
-      await createActivity({
-        type: 'telegram',
+      await activityService.create({
+        activity_type: 'telegram',
         title: `Telegram message to ${data.customerName}`,
         description: data.message,
-        customerName: data.customerName,
-        customerId: '1', // TODO: Get from customer selection
-        telegramUsername: data.telegramUsername,
+        customer: 1, // TODO: Get from customer selection
+        status: 'completed',
+        telegram_username: data.telegramUsername,
       });
 
       toaster.create({
@@ -192,9 +202,9 @@ export const ActivitiesPage = () => {
     }
   };
 
-  const handleMarkComplete = async (activityId: string) => {
+  const handleMarkComplete = async (activityId: number) => {
     try {
-      await updateActivityStatus(activityId, 'completed');
+      await activityService.complete(activityId);
       
       toaster.create({
         title: 'Activity completed',
@@ -215,11 +225,11 @@ export const ActivitiesPage = () => {
     }
   };
 
-  const handleDeleteActivity = async (activityId: string) => {
+  const handleDeleteActivity = async (activityId: number) => {
     if (!confirm('Are you sure you want to delete this activity?')) return;
 
     try {
-      await deleteActivity(activityId);
+      await activityService.delete(activityId);
       
       toaster.create({
         title: 'Activity deleted',
@@ -258,12 +268,12 @@ export const ActivitiesPage = () => {
         </Box>
 
         {/* Stats Cards */}
-        <ActivityStatsCards {...stats} />
+        <ActivityStatsCards {...displayStats} />
 
         {/* Filters Bar */}
         <ActivityFiltersBar
-          searchQuery={filters.searchQuery || ''}
-          typeFilter={(filters.type as ActivityType | 'all') || 'all'}
+          searchQuery={filters.search || ''}
+          typeFilter={(filters.activity_type as ActivityType | 'all') || 'all'}
           statusFilter={(filters.status as ActivityStatus | 'all') || 'all'}
           onSearchChange={handleSearch}
           onTypeChange={handleTypeChange}
@@ -287,26 +297,6 @@ export const ActivitiesPage = () => {
               onMarkComplete={handleMarkComplete}
               onDelete={handleDeleteActivity}
             />
-
-            {/* Empty State */}
-            {activities.length === 0 && (
-              <Box
-                textAlign="center"
-                py={12}
-                px={6}
-                bg="gray.50"
-                borderRadius="lg"
-              >
-                <Heading size="lg" color="gray.600" mb={2}>
-                  No activities found
-                </Heading>
-                <Text color="gray.500" fontSize="md">
-                  {filters.searchQuery || filters.type || filters.status
-                    ? 'Try adjusting your filters'
-                    : 'Get started by creating your first activity'}
-                </Text>
-              </Box>
-            )}
           </>
         )}
       </VStack>

@@ -73,6 +73,7 @@ class Customer(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
             models.Index(fields=['assigned_to']),
             models.Index(fields=['user', 'organization']),
         ]
+        ordering = ['-created_at']  # Default ordering to prevent pagination warnings
     
     def __str__(self):
         return f"{self.name} ({self.organization.name})"

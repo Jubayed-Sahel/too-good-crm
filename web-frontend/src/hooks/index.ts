@@ -8,6 +8,8 @@ export { useCustomers } from './useCustomers';
 export { useDeals } from './useDeals';
 export { useDashboardStats } from './useDashboardStats';
 export * from './useLeads';
+export * from './useAnalytics';
+export * from './useSalesPage';
 
 // Page-specific hooks
 export { useDealsPage } from './useDealsPage';

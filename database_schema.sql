@@ -565,89 +565,176 @@ CREATE TABLE products (
     UNIQUE KEY unique_org_product_code (organization_id, product_code)
 );
 
--- Orders Table
-CREATE TABLE orders (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    organization_id INT NOT NULL,
-    order_number VARCHAR(50),
-    customer_id INT,
-    account_id INT,
-    deal_id INT,
-    order_date DATE NOT NULL,
-    expected_delivery_date DATE,
-    actual_delivery_date DATE,
-    order_status ENUM('draft', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled') DEFAULT 'draft',
-    payment_status ENUM('unpaid', 'partially_paid', 'paid', 'refunded') DEFAULT 'unpaid',
-    subtotal DECIMAL(15,2) NOT NULL DEFAULT 0,
-    tax_amount DECIMAL(15,2) DEFAULT 0,
-    discount_amount DECIMAL(15,2) DEFAULT 0,
-    shipping_cost DECIMAL(15,2) DEFAULT 0,
-    total_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
-    assigned_employee_id INT,
-    shipping_address TEXT,
-    shipping_city VARCHAR(100),
-    shipping_state VARCHAR(100),
-    shipping_country VARCHAR(100),
-    shipping_postal_code VARCHAR(20),
-    billing_address TEXT,
-    billing_city VARCHAR(100),
-    billing_state VARCHAR(100),
-    billing_country VARCHAR(100),
-    billing_postal_code VARCHAR(20),
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
-    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
-    FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
-    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE SET NULL,
-    FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
-    UNIQUE KEY unique_org_order_number (organization_id, order_number)
-);
-
--- Order Details Table
-CREATE TABLE order_details (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    order_id INT NOT NULL,
-    product_id INT,
-    product_name VARCHAR(255) NOT NULL,
-    quantity INT NOT NULL,
-    unit_price DECIMAL(15,2) NOT NULL,
-    discount_percentage DECIMAL(5,2) DEFAULT 0,
-    discount_amount DECIMAL(15,2) DEFAULT 0,
-    tax_rate DECIMAL(5,2) DEFAULT 0,
-    tax_amount DECIMAL(15,2) DEFAULT 0,
-    line_total DECIMAL(15,2) NOT NULL,
-    notes TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL
-);
-
--- Activities Table
+-- Activities Table (Updated with new fields)
 CREATE TABLE activities (
     id INT PRIMARY KEY AUTO_INCREMENT,
     organization_id INT NOT NULL,
-    activity_type ENUM('call', 'meeting', 'email', 'task', 'note', 'demo', 'other') NOT NULL,
-    subject VARCHAR(255) NOT NULL,
+    activity_type ENUM('call', 'email', 'telegram', 'meeting', 'note', 'task') NOT NULL,
+    title VARCHAR(255) NOT NULL,
     description TEXT,
-    activity_date DATETIME NOT NULL,
+    customer_id INT,
+    lead_id INT,
+    deal_id INT,
+    customer_name VARCHAR(255),
+    -- Activity-specific fields
+    -- For calls
+    phone_number VARCHAR(20),
+    call_duration INT COMMENT 'Duration in seconds',
+    call_recording_url VARCHAR(500),
+    -- For emails
+    email_subject VARCHAR(255),
+    email_body TEXT,
+    email_to VARCHAR(255),
+    email_from VARCHAR(255),
+    email_attachments JSON,
+    -- For telegram
+    telegram_username VARCHAR(100),
+    telegram_message TEXT,
+    telegram_chat_id VARCHAR(100),
+    -- For meetings
+    meeting_location VARCHAR(255),
+    meeting_url VARCHAR(500),
+    attendees JSON,
+    -- For tasks
+    task_priority ENUM('low', 'medium', 'high'),
+    task_due_date DATE,
+    -- Status and timeline
+    status ENUM('scheduled', 'in_progress', 'completed', 'cancelled') DEFAULT 'scheduled',
+    scheduled_at DATETIME,
+    completed_at DATETIME,
     duration_minutes INT,
-    status ENUM('scheduled', 'completed', 'cancelled', 'rescheduled') DEFAULT 'scheduled',
-    priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
-    outcome VARCHAR(255),
-    related_to_type ENUM('lead', 'customer', 'account', 'deal', 'order') NOT NULL,
-    related_to_id INT NOT NULL,
+    -- Assignment
     assigned_employee_id INT,
-    created_by_employee_id INT,
-    reminder_datetime DATETIME,
-    notes TEXT,
+    created_by_user_id INT,
+    -- Additional metadata
+    tags JSON,
+    attachments JSON,
+    is_pinned BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE SET NULL,
+    FOREIGN KEY (deal_id) REFERENCES deals(id) ON DELETE SET NULL,
     FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
-    FOREIGN KEY (created_by_employee_id) REFERENCES employees(id) ON DELETE SET NULL
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Issues Table (New table for tracking vendor and order issues)
+CREATE TABLE issues (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    organization_id INT NOT NULL,
+    code VARCHAR(50),
+    issue_number VARCHAR(50) NOT NULL UNIQUE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    vendor_id INT,
+    order_id INT,
+    priority ENUM('low', 'medium', 'high', 'urgent') DEFAULT 'medium',
+    category ENUM('general', 'delivery', 'quality', 'billing', 'communication', 'technical', 'other') DEFAULT 'general',
+    status ENUM('open', 'in_progress', 'resolved', 'closed') DEFAULT 'open',
+    assigned_to_employee_id INT,
+    created_by_user_id INT,
+    resolved_at DATETIME,
+    resolved_by_employee_id INT,
+    resolution_notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_to_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (resolved_by_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_org_code (organization_id, code)
+);
+
+-- Orders Table (Updated with new fields)
+DROP TABLE IF EXISTS order_details;
+DROP TABLE IF EXISTS orders;
+
+CREATE TABLE orders (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    organization_id INT NOT NULL,
+    code VARCHAR(50),
+    order_number VARCHAR(50) NOT NULL UNIQUE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    vendor_id INT,
+    customer_id INT,
+    order_type ENUM('purchase', 'service', 'subscription', 'maintenance') DEFAULT 'purchase',
+    status ENUM('draft', 'pending', 'approved', 'in_progress', 'completed', 'cancelled') DEFAULT 'draft',
+    total_amount DECIMAL(12,2) DEFAULT 0.00,
+    currency VARCHAR(3) DEFAULT 'USD',
+    tax_amount DECIMAL(12,2),
+    discount_amount DECIMAL(12,2),
+    order_date DATE NOT NULL,
+    expected_delivery DATE,
+    actual_delivery DATE,
+    assigned_to_employee_id INT,
+    created_by_user_id INT,
+    notes TEXT,
+    terms_and_conditions TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    FOREIGN KEY (assigned_to_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_org_code (organization_id, code)
+);
+
+-- Order Items Table (Updated)
+CREATE TABLE order_items (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    product_name VARCHAR(255) NOT NULL,
+    description TEXT,
+    sku VARCHAR(100),
+    quantity DECIMAL(10,2) NOT NULL,
+    unit_price DECIMAL(12,2) NOT NULL,
+    total_price DECIMAL(12,2) NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+);
+
+-- Payments Table (Updated - separate from subscription payments)
+DROP TABLE IF EXISTS payment_line_items;
+
+CREATE TABLE crm_payments (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    organization_id INT NOT NULL,
+    code VARCHAR(50),
+    payment_number VARCHAR(50) NOT NULL UNIQUE,
+    invoice_number VARCHAR(50),
+    reference_number VARCHAR(100),
+    order_id INT,
+    vendor_id INT,
+    customer_id INT,
+    payment_type ENUM('incoming', 'outgoing') DEFAULT 'outgoing',
+    payment_method ENUM('bank_transfer', 'credit_card', 'debit_card', 'check', 'cash', 'paypal', 'stripe', 'other') DEFAULT 'bank_transfer',
+    amount DECIMAL(12,2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'USD',
+    payment_date DATE NOT NULL,
+    due_date DATE,
+    status ENUM('pending', 'processing', 'completed', 'failed', 'refunded', 'cancelled') DEFAULT 'pending',
+    transaction_id VARCHAR(255),
+    processed_at DATETIME,
+    processed_by_employee_id INT,
+    notes TEXT,
+    created_by_user_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL,
+    FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE SET NULL,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
+    FOREIGN KEY (processed_by_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_org_code (organization_id, code)
 );
 
 -- Samples Table
@@ -774,8 +861,34 @@ CREATE INDEX idx_orders_date ON orders(order_date);
 
 CREATE INDEX idx_activities_org ON activities(organization_id);
 CREATE INDEX idx_activities_type ON activities(activity_type);
-CREATE INDEX idx_activities_date ON activities(activity_date);
-CREATE INDEX idx_activities_related ON activities(related_to_type, related_to_id);
+CREATE INDEX idx_activities_status ON activities(status);
+CREATE INDEX idx_activities_scheduled ON activities(scheduled_at);
+CREATE INDEX idx_activities_completed ON activities(completed_at);
+CREATE INDEX idx_activities_customer ON activities(customer_id);
+CREATE INDEX idx_activities_lead ON activities(lead_id);
+CREATE INDEX idx_activities_deal ON activities(deal_id);
+CREATE INDEX idx_activities_assigned ON activities(assigned_employee_id);
+
+CREATE INDEX idx_issues_org ON issues(organization_id);
+CREATE INDEX idx_issues_status ON issues(status);
+CREATE INDEX idx_issues_priority ON issues(priority);
+CREATE INDEX idx_issues_category ON issues(category);
+CREATE INDEX idx_issues_vendor ON issues(vendor_id);
+CREATE INDEX idx_issues_order ON issues(order_id);
+CREATE INDEX idx_issues_assigned ON issues(assigned_to_employee_id);
+CREATE INDEX idx_issues_number ON issues(issue_number);
+
+CREATE INDEX idx_order_items_order ON order_items(order_id);
+
+CREATE INDEX idx_crm_payments_org ON crm_payments(organization_id);
+CREATE INDEX idx_crm_payments_status ON crm_payments(status);
+CREATE INDEX idx_crm_payments_type ON crm_payments(payment_type);
+CREATE INDEX idx_crm_payments_order ON crm_payments(order_id);
+CREATE INDEX idx_crm_payments_vendor ON crm_payments(vendor_id);
+CREATE INDEX idx_crm_payments_customer ON crm_payments(customer_id);
+CREATE INDEX idx_crm_payments_number ON crm_payments(payment_number);
+CREATE INDEX idx_crm_payments_date ON crm_payments(payment_date);
+CREATE INDEX idx_crm_payments_due_date ON crm_payments(due_date);
 
 CREATE INDEX idx_samples_org ON samples(organization_id);
 CREATE INDEX idx_samples_status ON samples(status);

@@ -28,6 +28,11 @@ from crmApp.viewsets import (
     PipelineViewSet,
     PipelineStageViewSet,
     DealViewSet,
+    # New Models
+    IssueViewSet,
+    OrderViewSet,
+    PaymentViewSet,
+    ActivityViewSet,
     # Analytics
     AnalyticsViewSet,
 )
@@ -60,6 +65,12 @@ router.register(r'leads', LeadViewSet, basename='lead')
 router.register(r'pipelines', PipelineViewSet, basename='pipeline')
 router.register(r'pipeline-stages', PipelineStageViewSet, basename='pipeline-stage')
 router.register(r'deals', DealViewSet, basename='deal')
+
+# New Model endpoints
+router.register(r'issues', IssueViewSet, basename='issue')
+router.register(r'orders', OrderViewSet, basename='order')
+router.register(r'payments', PaymentViewSet, basename='payment')
+router.register(r'activities', ActivityViewSet, basename='activity')
 
 # Analytics endpoints
 router.register(r'analytics', AnalyticsViewSet, basename='analytics')
