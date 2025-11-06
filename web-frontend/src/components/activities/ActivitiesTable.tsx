@@ -9,6 +9,7 @@ import {
   Flex,
   Button,
 } from '@chakra-ui/react';
+import { Checkbox } from '../ui/checkbox';
 import { Card, ResponsiveTable } from '../common';
 import {
   FiPhone,
@@ -22,6 +23,7 @@ import {
   FiCheckCircle,
   FiUser,
 } from 'react-icons/fi';
+import { useState } from 'react';
 import type { Activity, ActivityType, ActivityStatus } from '@/types/activity.types';
 
 interface ActivitiesTableProps {
@@ -30,6 +32,9 @@ interface ActivitiesTableProps {
   onView?: (activity: Activity) => void;
   onDelete?: (activityId: number) => void;
   onMarkComplete?: (activityId: number) => void;
+  onBulkDelete?: (activityIds: number[]) => void;
+  onBulkExport?: (activityIds: number[]) => void;
+  onBulkComplete?: (activityIds: number[]) => void;
 }
 
 const getActivityIcon = (type: ActivityType) => {
@@ -82,7 +87,49 @@ export const ActivitiesTable = ({
   onView,
   onDelete,
   onMarkComplete,
+  onBulkDelete,
+  onBulkExport,
+  onBulkComplete,
 }: ActivitiesTableProps) => {
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(activities.map(a => a.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedIds([...selectedIds, id]);
+    } else {
+      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+    }
+  };
+
+  const handleBulkDeleteClick = () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} activity(ies)?`)) {
+      onBulkDelete?.(selectedIds);
+      setSelectedIds([]);
+    }
+  };
+
+  const handleBulkExportClick = () => {
+    if (selectedIds.length === 0) return;
+    onBulkExport?.(selectedIds);
+  };
+
+  const handleBulkCompleteClick = () => {
+    if (selectedIds.length === 0) return;
+    onBulkComplete?.(selectedIds);
+    setSelectedIds([]);
+  };
+
+  const isAllSelected = selectedIds.length === activities.length && activities.length > 0;
+
   if (isLoading) {
     return (
       <Card>
@@ -234,11 +281,60 @@ export const ActivitiesTable = ({
 
   // Desktop Table View
   const DesktopView = () => (
-    <Card>
+    <Card p={0} overflow="hidden">
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <Box bg="purple.50" borderBottomWidth="1px" borderColor="purple.200" px={4} py={3}>
+          <HStack justify="space-between" flexWrap="wrap" gap={2}>
+            <Text fontSize="sm" fontWeight="medium" color="purple.900">
+              {selectedIds.length} activity(ies) selected
+            </Text>
+            <HStack gap={2}>
+              {onBulkComplete && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="green"
+                  onClick={handleBulkCompleteClick}
+                >
+                  Mark as Complete
+                </Button>
+              )}
+              {onBulkExport && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="purple"
+                  onClick={handleBulkExportClick}
+                >
+                  Export Selected
+                </Button>
+              )}
+              {onBulkDelete && (
+                <Button
+                  size="sm"
+                  variant="solid"
+                  colorPalette="red"
+                  onClick={handleBulkDeleteClick}
+                >
+                  Delete Selected
+                </Button>
+              )}
+            </HStack>
+          </HStack>
+        </Box>
+      )}
+
       <Box overflowX="auto">
         <Table.Root size="md">
           <Table.Header>
             <Table.Row>
+              <Table.ColumnHeader px={4} py={3} width="50px">
+                <Checkbox
+                  checked={isAllSelected}
+                  onCheckedChange={(details) => handleSelectAll(details.checked as boolean)}
+                />
+              </Table.ColumnHeader>
               <Table.ColumnHeader>Activity</Table.ColumnHeader>
               <Table.ColumnHeader>Customer</Table.ColumnHeader>
               <Table.ColumnHeader>Status</Table.ColumnHeader>
@@ -251,10 +347,20 @@ export const ActivitiesTable = ({
             {activities.map((activity) => {
               const Icon = getActivityIcon(activity.activity_type);
               const typeColor = getActivityColor(activity.activity_type);
+              const isSelected = selectedIds.includes(activity.id);
 
               return (
-                <Table.Row key={activity.id} _hover={{ bg: 'gray.50' }}>
-                  <Table.Cell>
+                <Table.Row 
+                  key={activity.id} 
+                  _hover={{ bg: 'gray.50' }}
+                  bg={isSelected ? 'purple.50' : 'transparent'}
+                >
+                  <Table.Cell px={4}>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(details) => handleSelectOne(activity.id, details.checked as boolean)}
+                    />
+                  </Table.Cell>                  <Table.Cell>
                     <HStack gap={3}>
                       <Box
                         p={2}

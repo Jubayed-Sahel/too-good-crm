@@ -1,28 +1,70 @@
-import { useState } from 'react';
-import { Box, Button, Input, VStack, HStack, Text, Grid, Badge } from '@chakra-ui/react';
+import { useState, useEffect } from 'react';
+import { Box, Button, Input, VStack, HStack, Text, Grid, Badge, Spinner } from '@chakra-ui/react';
 import { Card } from '../common';
 import { Field } from '../ui/field';
 import CustomSelect from '../ui/CustomSelect';
 import { FiGlobe, FiMail, FiPhone } from 'react-icons/fi';
+import { organizationService, type Organization } from '@/services/organization.service';
+import { toaster } from '../ui/toaster';
 
 const OrganizationSettings = () => {
+  const [organization, setOrganization] = useState<Organization | null>(null);
   const [formData, setFormData] = useState({
-    organizationName: 'LeadGrid Inc.',
-    industry: 'Software & Technology',
-    companySize: '51-200',
-    website: 'https://leadgrid.com',
-    email: 'contact@leadgrid.com',
-    phone: '+1 (555) 987-6543',
-    address: '456 Enterprise Ave',
-    city: 'San Francisco',
-    state: 'CA',
-    zipCode: '94102',
-    country: 'United States',
-    timezone: 'America/Los_Angeles',
-    currency: 'USD',
+    organizationName: '',
+    industry: '',
+    companySize: '',
+    website: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: '',
+    country: '',
+    timezone: '',
+    currency: '',
   });
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    loadOrganization();
+  }, []);
+
+  const loadOrganization = async () => {
+    try {
+      setIsLoading(true);
+      const org = await organizationService.getCurrentOrganization();
+      setOrganization(org);
+      
+      // Populate form with organization data
+      setFormData({
+        organizationName: org.name || '',
+        industry: org.industry || '',
+        companySize: '', // Not in backend model, use settings
+        website: org.website || '',
+        email: org.email || '',
+        phone: org.phone || '',
+        address: org.address || '',
+        city: org.city || '',
+        state: org.state || '',
+        zipCode: org.zip_code || '',
+        country: org.country || '',
+        timezone: org.settings?.timezone || '',
+        currency: org.settings?.currency || '',
+      });
+    } catch (error) {
+      console.error('Failed to load organization:', error);
+      toaster.create({
+        title: 'Error',
+        description: 'Failed to load organization details',
+        type: 'error',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
@@ -31,14 +73,75 @@ const OrganizationSettings = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setTimeout(() => {
-      alert('Organization settings updated successfully!');
-      setIsLoading(false);
-    }, 1000);
+    
+    if (!organization) {
+      toaster.create({
+        title: 'Error',
+        description: 'No organization found',
+        type: 'error',
+      });
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      
+      await organizationService.updateOrganization(organization.id, {
+        name: formData.organizationName,
+        industry: formData.industry,
+        website: formData.website,
+        email: formData.email,
+        phone: formData.phone,
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zip_code: formData.zipCode,
+        country: formData.country,
+        settings: {
+          ...organization.settings,
+          timezone: formData.timezone,
+          currency: formData.currency,
+        },
+      });
+
+      toaster.create({
+        title: 'Success',
+        description: 'Organization settings updated successfully',
+        type: 'success',
+      });
+      
+      // Reload organization data
+      await loadOrganization();
+    } catch (error) {
+      console.error('Failed to update organization:', error);
+      toaster.create({
+        title: 'Error',
+        description: 'Failed to update organization settings',
+        type: 'error',
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <Box textAlign="center" py={8}>
+        <Spinner size="lg" />
+        <Text mt={4} color="gray.500">Loading organization details...</Text>
+      </Box>
+    );
+  }
+
+  if (!organization) {
+    return (
+      <Card variant="elevated">
+        <Text color="gray.500" textAlign="center">No organization found</Text>
+      </Card>
+    );
+  }
 
   return (
     <VStack align="stretch" gap={6}>
@@ -274,14 +377,14 @@ const OrganizationSettings = () => {
             </Grid>
 
             <HStack justify="flex-end" pt={2}>
-              <Button variant="outline" size="md">
+              <Button variant="outline" size="md" onClick={loadOrganization}>
                 Cancel
               </Button>
               <Button
                 type="submit"
                 colorPalette="blue"
                 size="md"
-                loading={isLoading}
+                loading={isSaving}
               >
                 Save Changes
               </Button>

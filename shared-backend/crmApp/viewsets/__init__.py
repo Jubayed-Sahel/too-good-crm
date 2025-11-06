@@ -1,28 +1,34 @@
 """
 ViewSets package for CRM Application
+Centralized exports for all API viewsets organized by domain
 """
 
+# Authentication & Authorization
 from .auth import (
     UserViewSet,
     UserProfileViewSet,
     LoginViewSet,
     LogoutViewSet,
     ChangePasswordViewSet,
-    # RefreshTokenViewSet removed - using simple Token auth
 )
 
-from .organization import (
-    OrganizationViewSet,
-    UserOrganizationViewSet,
-)
-
+# RBAC (Role-Based Access Control)
 from .rbac import (
     PermissionViewSet,
     RoleViewSet,
     UserRoleViewSet,
 )
 
+# Organization Management
+from .organization import (
+    OrganizationViewSet,
+    UserOrganizationViewSet,
+)
+
+# User & Employee Management
 from .employee import EmployeeViewSet
+
+# CRM Core Entities
 from .vendor import VendorViewSet
 from .customer import CustomerViewSet
 from .lead import LeadViewSet
@@ -31,32 +37,41 @@ from .deal import (
     PipelineStageViewSet,
     DealViewSet,
 )
+
+# Operations & Activities
 from .issue import IssueViewSet
 from .order import OrderViewSet
 from .payment import PaymentViewSet
 from .activity import ActivityViewSet
+
+# Settings & Preferences
+from .notification import NotificationPreferencesViewSet
+
+# Analytics & Reporting
 from .analytics import AnalyticsViewSet
 
+
 __all__ = [
-    # Auth
+    # Authentication & Authorization
     'UserViewSet',
     'UserProfileViewSet',
     'LoginViewSet',
     'LogoutViewSet',
     'ChangePasswordViewSet',
-    # 'RefreshTokenViewSet' removed - using simple Token auth
-    
-    # Organization
-    'OrganizationViewSet',
-    'UserOrganizationViewSet',
     
     # RBAC
     'PermissionViewSet',
     'RoleViewSet',
     'UserRoleViewSet',
     
-    # CRM
+    # Organization Management
+    'OrganizationViewSet',
+    'UserOrganizationViewSet',
+    
+    # User & Employee Management
     'EmployeeViewSet',
+    
+    # CRM Core
     'VendorViewSet',
     'CustomerViewSet',
     'LeadViewSet',
@@ -64,11 +79,14 @@ __all__ = [
     'PipelineStageViewSet',
     'DealViewSet',
     
-    # New Models
+    # Operations
     'IssueViewSet',
     'OrderViewSet',
     'PaymentViewSet',
     'ActivityViewSet',
+    
+    # Settings
+    'NotificationPreferencesViewSet',
     
     # Analytics
     'AnalyticsViewSet',

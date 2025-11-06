@@ -33,6 +33,7 @@ from crmApp.viewsets import (
     OrderViewSet,
     PaymentViewSet,
     ActivityViewSet,
+    NotificationPreferencesViewSet,
     # Analytics
     AnalyticsViewSet,
 )
@@ -71,6 +72,7 @@ router.register(r'issues', IssueViewSet, basename='issue')
 router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'payments', PaymentViewSet, basename='payment')
 router.register(r'activities', ActivityViewSet, basename='activity')
+router.register(r'notification-preferences', NotificationPreferencesViewSet, basename='notification-preferences')
 
 # Analytics endpoints
 router.register(r'analytics', AnalyticsViewSet, basename='analytics')

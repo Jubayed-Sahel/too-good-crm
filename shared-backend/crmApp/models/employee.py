@@ -12,8 +12,8 @@ class Employee(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
     Linked to User through UserProfile for multi-tenancy.
     """
     EMPLOYMENT_TYPE_CHOICES = [
-        ('full_time', 'Full Time'),
-        ('part_time', 'Part Time'),
+        ('full-time', 'Full Time'),
+        ('part-time', 'Part Time'),
         ('contract', 'Contract'),
         ('intern', 'Intern'),
     ]
@@ -37,7 +37,7 @@ class Employee(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
     # Employment details
     job_title = models.CharField(max_length=100, null=True, blank=True)
     department = models.CharField(max_length=100, null=True, blank=True)
-    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, default='full_time')
+    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, default='full-time')
     hire_date = models.DateField(null=True, blank=True)
     termination_date = models.DateField(null=True, blank=True)
     emergency_contact = models.CharField(max_length=255, null=True, blank=True)

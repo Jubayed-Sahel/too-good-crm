@@ -120,9 +120,6 @@ const EmployeeTable = ({
             {/* Header */}
             <Flex justify="space-between" align="start">
               <VStack align="start" gap={1} flex={1}>
-                <Text fontWeight="bold" fontSize="md" color="gray.900">
-                  {employee.first_name} {employee.last_name}
-                </Text>
                 <Text fontSize="sm" color="gray.600">
                   {employee.job_title || 'No Job Title'}
                 </Text>
@@ -277,147 +274,118 @@ const EmployeeTable = ({
           <Table.Header>
             <Table.Row bg="gray.50">
               {onBulkDelete && (
-                <Table.ColumnHeader px={4} py={3} width="50px">
+                <Table.ColumnHeader px={2} py={2} width="35px">
                   <Checkbox
                     checked={isAllSelected}
                     onCheckedChange={(details) => handleSelectAll(details.checked as boolean)}
                   />
                 </Table.ColumnHeader>
               )}
-              <Table.ColumnHeader>Employee</Table.ColumnHeader>
-              <Table.ColumnHeader>Job Title</Table.ColumnHeader>
-              <Table.ColumnHeader>Role</Table.ColumnHeader>
-              <Table.ColumnHeader>Contact</Table.ColumnHeader>
-              <Table.ColumnHeader>Department</Table.ColumnHeader>
-              <Table.ColumnHeader>Status</Table.ColumnHeader>
-              <Table.ColumnHeader>Employee ID</Table.ColumnHeader>
+              <Table.ColumnHeader px={2} py={2}>Job Title</Table.ColumnHeader>
+              <Table.ColumnHeader px={2} py={2}>Role</Table.ColumnHeader>
+              <Table.ColumnHeader px={2} py={2}>Email</Table.ColumnHeader>
+              <Table.ColumnHeader px={2} py={2}>Department</Table.ColumnHeader>
               {(onView || onEdit || onDelete) && (
-                <Table.ColumnHeader textAlign="center">Actions</Table.ColumnHeader>
+                <Table.ColumnHeader px={2} py={2} textAlign="center" width="130px">Actions</Table.ColumnHeader>
               )}
             </Table.Row>
           </Table.Header>
           <Table.Body>
-            {employees.map((employee) => (
-              <Table.Row key={employee.id} _hover={{ bg: 'gray.50' }}>
-                {onBulkDelete && (
-                  <Table.Cell px={4} py={3}>
-                    <Checkbox
-                      checked={selectedIds.includes(employee.id.toString())}
-                      onCheckedChange={(details) => 
-                        handleSelectOne(employee.id.toString(), details.checked as boolean)
-                      }
-                    />
+            {employees.map((employee) => {
+              const isSelected = selectedIds.includes(employee.id.toString());
+              
+              return (
+                <Table.Row 
+                  key={employee.id} 
+                  _hover={{ bg: 'gray.50' }}
+                  bg={isSelected ? 'purple.50' : 'transparent'}
+                >
+                  {onBulkDelete && (
+                    <Table.Cell px={2} py={2}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(details) => 
+                          handleSelectOne(employee.id.toString(), details.checked as boolean)
+                        }
+                      />
+                    </Table.Cell>
+                  )}
+                  <Table.Cell px={2} py={2}>
+                    <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
+                      {employee.job_title || '-'}
+                    </Text>
                   </Table.Cell>
-                )}
-                <Table.Cell>
-                  <Text fontWeight="semibold" fontSize="sm" color="gray.900">
-                    {employee.first_name} {employee.last_name}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell>
-                  <Text fontSize="sm" color="gray.600">
-                    {employee.job_title || 'No Job Title'}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell>
-                  <Badge
-                    colorPalette="purple"
-                    variant="subtle"
-                    fontSize="xs"
-                  >
-                    {employee.role_name || 'No Role'}
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell>
-                  <VStack align="flex-start" gap={0}>
-                    <HStack gap={1}>
-                      <FiMail size={12} color="#718096" />
-                      <Text fontSize="sm" color="gray.600">
-                        {employee.email}
-                      </Text>
-                    </HStack>
-                    {employee.phone && (
-                      <HStack gap={1}>
-                        <FiPhone size={12} color="#718096" />
-                        <Text fontSize="xs" color="gray.500">
-                          {employee.phone}
-                        </Text>
-                      </HStack>
-                    )}
-                  </VStack>
-                </Table.Cell>
-                <Table.Cell>
-                  <Text fontSize="sm" color="gray.600">
-                    {employee.department || 'N/A'}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell>
-                  <Badge
-                    colorPalette={getStatusColor(employee.status)}
-                    borderRadius="full"
-                    px={3}
-                    py={1}
-                    textTransform="capitalize"
-                    fontSize="xs"
-                  >
-                    {employee.status.replace('-', ' ')}
-                  </Badge>
-                </Table.Cell>
-                <Table.Cell>
-                  <Text fontSize="sm" color="gray.600">
-                    {employee.code}
-                  </Text>
-                </Table.Cell>
-                {(onView || onEdit || onDelete) && (
-                  <Table.Cell>
-                    <HStack gap={1} justify="center">
-                      {onView && (
+                  <Table.Cell px={2} py={2}>
+                    <Badge
+                      colorPalette="purple"
+                      variant="subtle"
+                      fontSize="xs"
+                      size="sm"
+                    >
+                      {employee.role_name || 'No Role'}
+                    </Badge>
+                  </Table.Cell>
+                  <Table.Cell px={2} py={2}>
+                    <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
+                      {employee.email}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell px={2} py={2}>
+                    <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
+                      {employee.department || '-'}
+                    </Text>
+                  </Table.Cell>
+                  {(onView || onEdit || onDelete) && (
+                    <Table.Cell px={2} py={2}>
+                      <HStack gap={0} justify="center">
+                        {onView && (
+                          <IconButton
+                            aria-label="View employee"
+                            size="xs"
+                            variant="ghost"
+                            colorPalette="purple"
+                            onClick={() => onView(employee)}
+                          >
+                            <FiEye size={14} />
+                          </IconButton>
+                        )}
                         <IconButton
-                          aria-label="View employee"
-                          size="sm"
+                          aria-label="Manage role"
+                          size="xs"
                           variant="ghost"
                           colorPalette="purple"
-                          onClick={() => onView(employee)}
+                          onClick={() => handleManageRole(employee)}
                         >
-                          <FiEye size={16} />
+                          <FiUser size={14} />
                         </IconButton>
-                      )}
-                      <IconButton
-                        aria-label="Manage role"
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="purple"
-                        onClick={() => handleManageRole(employee)}
-                      >
-                        <FiUser size={16} />
-                      </IconButton>
-                      {onEdit && (
-                        <IconButton
-                          aria-label="Edit employee"
-                          size="sm"
-                          variant="ghost"
-                          colorPalette="blue"
-                          onClick={() => onEdit(employee)}
-                        >
-                          <FiEdit size={16} />
-                        </IconButton>
-                      )}
-                      {onDelete && (
-                        <IconButton
-                          aria-label="Delete employee"
-                          size="sm"
-                          variant="ghost"
-                          colorPalette="red"
-                          onClick={() => onDelete(employee)}
-                        >
-                          <FiTrash2 size={16} />
-                        </IconButton>
-                      )}
-                    </HStack>
-                  </Table.Cell>
-                )}
-              </Table.Row>
-            ))}
+                        {onEdit && (
+                          <IconButton
+                            aria-label="Edit employee"
+                            size="xs"
+                            variant="ghost"
+                            colorPalette="blue"
+                            onClick={() => onEdit(employee)}
+                          >
+                            <FiEdit size={14} />
+                          </IconButton>
+                        )}
+                        {onDelete && (
+                          <IconButton
+                            aria-label="Delete employee"
+                            size="xs"
+                            variant="ghost"
+                            colorPalette="red"
+                            onClick={() => onDelete(employee)}
+                          >
+                            <FiTrash2 size={14} />
+                          </IconButton>
+                        )}
+                      </HStack>
+                    </Table.Cell>
+                  )}
+                </Table.Row>
+              );
+            })}
           </Table.Body>
         </Table.Root>
       </Box>

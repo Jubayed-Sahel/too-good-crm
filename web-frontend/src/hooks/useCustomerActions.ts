@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { MappedCustomer } from './useCustomersPage';
+import { customerService } from '@/services/customer.service';
+import { toaster } from '@/components/ui/toaster';
 
 /**
  * Props for useCustomerActions hook
@@ -17,7 +19,7 @@ export interface UseCustomerActionsReturn {
   handleEdit: (customer: MappedCustomer) => void;
   handleDelete: (customer: MappedCustomer) => void;
   handleView: (customer: MappedCustomer) => void;
-  handleCreateCustomer: (data: any) => void;
+  handleCreateCustomer: (data: any) => Promise<void>;
   
   // Loading state
   isSubmitting: boolean;
@@ -65,17 +67,25 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
     try {
       setIsSubmitting(true);
       
-      // TODO: Implement API call to delete customer
-      // await customerService.deleteCustomer(parseInt(customer.id));
+      // Call API to delete customer
+      await customerService.deleteCustomer(parseInt(customer.id));
       
       // Show success message
-      alert(`Customer ${customer.name} deleted successfully!`);
+      toaster.create({
+        title: 'Customer deleted successfully',
+        description: `Customer ${customer.name} has been deleted.`,
+        type: 'success',
+      });
       
       // Call success callback to refresh data
       onSuccess?.();
     } catch (error) {
       console.error('Error deleting customer:', error);
-      alert('Failed to delete customer. Please try again.');
+      toaster.create({
+        title: 'Failed to delete customer',
+        description: 'Please try again.',
+        type: 'error',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -98,17 +108,25 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
     try {
       setIsSubmitting(true);
       
-      // TODO: Implement API call to create customer
-      // await customerService.createCustomer(data);
+      // Call API to create customer
+      await customerService.createCustomer(data);
       
       // Show success message
-      alert(`Customer "${data.fullName}" created successfully!`);
+      toaster.create({
+        title: 'Customer created successfully',
+        description: `Customer "${data.fullName}" has been created.`,
+        type: 'success',
+      });
       
       // Call success callback to refresh data
       onSuccess?.();
     } catch (error) {
       console.error('Error creating customer:', error);
-      alert('Failed to create customer. Please try again.');
+      toaster.create({
+        title: 'Failed to create customer',
+        description: 'Please try again.',
+        type: 'error',
+      });
       throw error; // Re-throw to let caller handle if needed
     } finally {
       setIsSubmitting(false);

@@ -2,42 +2,64 @@ import { useState } from 'react';
 import { Box, Button, Input, VStack, HStack, Text } from '@chakra-ui/react';
 import { Card } from '../common';
 import { Field } from '../ui/field';
-import { FiLock, FiShield } from 'react-icons/fi';
+import { FiLock } from 'react-icons/fi';
+import { userProfileService } from '@/services/userProfile.service';
+import { toaster } from '../ui/toaster';
 
 const SecuritySettings = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handlePasswordChange = (e: React.FormEvent) => {
+  const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
-      alert('New passwords do not match');
+      toaster.create({
+        title: 'Error',
+        description: 'New passwords do not match',
+        type: 'error',
+      });
       return;
     }
 
-    setIsLoading(true);
-    setTimeout(() => {
-      alert('Password changed successfully!');
+    if (newPassword.length < 8) {
+      toaster.create({
+        title: 'Error',
+        description: 'Password must be at least 8 characters long',
+        type: 'error',
+      });
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      await userProfileService.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+
+      toaster.create({
+        title: 'Success',
+        description: 'Password changed successfully',
+        type: 'success',
+      });
+
+      // Clear form
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+    } catch (error: any) {
+      console.error('Failed to change password:', error);
+      toaster.create({
+        title: 'Error',
+        description: error.response?.data?.detail || error.response?.data?.error || 'Failed to change password',
+        type: 'error',
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
-  };
-
-  const handleEnable2FA = () => {
-    setTwoFactorEnabled(true);
-    alert('Two-factor authentication enabled. Scan the QR code with your authenticator app.');
-  };
-
-  const handleDisable2FA = () => {
-    if (window.confirm('Are you sure you want to disable two-factor authentication?')) {
-      setTwoFactorEnabled(false);
-      alert('Two-factor authentication disabled');
     }
   };
 
@@ -111,63 +133,6 @@ const SecuritySettings = () => {
             </HStack>
           </VStack>
         </form>
-      </Card>
-
-      {/* Two-Factor Authentication */}
-      <Card variant="elevated">
-        <VStack align="stretch" gap={4}>
-          <HStack gap={2}>
-            <FiShield size={18} color="#3182CE" />
-            <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-              Two-Factor Authentication
-            </Text>
-          </HStack>
-
-          <Box>
-            <Text fontSize="sm" color="gray.600" mb={3}>
-              Add an extra layer of security to your account by requiring a verification code in addition to your password.
-            </Text>
-            
-            {twoFactorEnabled ? (
-              <VStack align="stretch" gap={3}>
-                <HStack p={3} bg="green.50" borderRadius="md" gap={2}>
-                  <Box color="green.600">
-                    <FiShield size={20} />
-                  </Box>
-                  <Text fontSize="sm" color="green.700" fontWeight="medium">
-                    Two-factor authentication is enabled
-                  </Text>
-                </HStack>
-                <Button
-                  variant="outline"
-                  colorPalette="red"
-                  size="md"
-                  onClick={handleDisable2FA}
-                >
-                  Disable Two-Factor Authentication
-                </Button>
-              </VStack>
-            ) : (
-              <VStack align="stretch" gap={3}>
-                <HStack p={3} bg="orange.50" borderRadius="md" gap={2}>
-                  <Box color="orange.600">
-                    <FiShield size={20} />
-                  </Box>
-                  <Text fontSize="sm" color="orange.700" fontWeight="medium">
-                    Two-factor authentication is not enabled
-                  </Text>
-                </HStack>
-                <Button
-                  colorPalette="blue"
-                  size="md"
-                  onClick={handleEnable2FA}
-                >
-                  Enable Two-Factor Authentication
-                </Button>
-              </VStack>
-            )}
-          </Box>
-        </VStack>
       </Card>
 
       {/* Active Sessions */}

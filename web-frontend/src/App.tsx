@@ -17,6 +17,8 @@ import ActivitiesPage from './pages/ActivitiesPage'
 import ActivityDetailPage from './pages/ActivityDetailPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import EmployeesPage from './pages/EmployeesPage'
+import EmployeeDetailPage from './pages/EmployeeDetailPage'
+import EditEmployeePage from './pages/EditEmployeePage'
 import SettingsPage from './pages/SettingsPage'
 import ClientDashboardPage from './pages/ClientDashboardPage'
 import ClientVendorsPage from './pages/ClientVendorsPage'
@@ -51,6 +53,8 @@ function App() {
           <Route path="/activities/:id" element={<ActivityDetailPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/employees" element={<EmployeesPage />} />
+          <Route path="/employees/:id" element={<EmployeeDetailPage />} />
+          <Route path="/employees/:id/edit" element={<EditEmployeePage />} />
           <Route path="/settings" element={<SettingsPage />} />
 
           {/* Client Routes */}

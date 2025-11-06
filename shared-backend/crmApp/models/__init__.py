@@ -63,6 +63,9 @@ from .payment import Payment
 # Activity model
 from .activity import Activity
 
+# Notification model
+from .notification import NotificationPreferences
+
 # Export all models for backward compatibility
 __all__ = [
     # Authentication
@@ -98,4 +101,7 @@ __all__ = [
     'OrderItem',
     'Payment',
     'Activity',
+    
+    # Notifications
+    'NotificationPreferences',
 ]

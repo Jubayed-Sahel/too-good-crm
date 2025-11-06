@@ -10,9 +10,9 @@ import type {
   UpdateLeadData,
   ConvertLeadData,
   LeadFilters,
-  LeadStats,
   PaginatedResponse,
 } from '@/types';
+import type { LeadStats } from '@/types/lead.types';
 
 class LeadService {
   /**

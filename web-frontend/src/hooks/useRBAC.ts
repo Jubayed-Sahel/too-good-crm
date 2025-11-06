@@ -39,7 +39,7 @@ export function usePermissions() {
 export function useRoles(organizationId: string) {
   return useQuery({
     queryKey: rbacKeys.roles(organizationId),
-    queryFn: () => rbacService.getRoles(organizationId),
+    queryFn: () => rbacService.getRoles(),
     enabled: !!organizationId,
   });
 }
@@ -50,7 +50,7 @@ export function useRoles(organizationId: string) {
 export function useRole(id: string) {
   return useQuery({
     queryKey: rbacKeys.role(id),
-    queryFn: () => rbacService.getRole(id),
+    queryFn: () => rbacService.getRole(Number(id)),
     enabled: !!id,
   });
 }
@@ -61,7 +61,7 @@ export function useRole(id: string) {
 export function useUserRoles(userId: string, organizationId: string) {
   return useQuery({
     queryKey: rbacKeys.userRoles(userId, organizationId),
-    queryFn: () => rbacService.getUserRoles(userId, organizationId),
+    queryFn: () => rbacService.getUserRoles({ user_id: Number(userId) }),
     enabled: !!(userId && organizationId),
   });
 }
@@ -72,7 +72,7 @@ export function useUserRoles(userId: string, organizationId: string) {
 export function useUserPermissions(userId: string, organizationId: string) {
   return useQuery({
     queryKey: rbacKeys.userPermissions(userId, organizationId),
-    queryFn: () => rbacService.getUserPermissions(userId, organizationId),
+    queryFn: () => rbacService.getUserPermissions(Number(userId), Number(organizationId)),
     enabled: !!(userId && organizationId),
   });
 }
@@ -83,7 +83,7 @@ export function useUserPermissions(userId: string, organizationId: string) {
 export function useHasPermission(userId: string, organizationId: string, check: PermissionCheck) {
   return useQuery({
     queryKey: [...rbacKeys.userPermissions(userId, organizationId), 'check', check],
-    queryFn: () => rbacService.checkPermission(userId, organizationId, check),
+    queryFn: () => rbacService.checkPermission(Number(userId), Number(organizationId), check),
     enabled: !!(userId && organizationId && check),
   });
 }
@@ -95,8 +95,8 @@ export function useCreateRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ organizationId, data }: { organizationId: string; data: CreateRoleData }) =>
-      rbacService.createRole(organizationId, data),
+    mutationFn: ({ data }: { organizationId: string; data: CreateRoleData }) =>
+      rbacService.createRole(data),
     onSuccess: (_result, variables) => {
       queryClient.invalidateQueries({ queryKey: rbacKeys.roles(variables.organizationId) });
     },
@@ -111,10 +111,10 @@ export function useUpdateRole() {
 
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateRoleData }) =>
-      rbacService.updateRole(id, data),
+      rbacService.updateRole(Number(id), data),
     onSuccess: (updatedRole) => {
-      queryClient.invalidateQueries({ queryKey: rbacKeys.role(updatedRole.id) });
-      queryClient.invalidateQueries({ queryKey: rbacKeys.roles(updatedRole.organizationId) });
+      queryClient.invalidateQueries({ queryKey: rbacKeys.role(updatedRole.id.toString()) });
+      queryClient.invalidateQueries({ queryKey: rbacKeys.roles(updatedRole.organization.toString()) });
     },
   });
 }
@@ -126,7 +126,7 @@ export function useDeleteRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => rbacService.deleteRole(id),
+    mutationFn: (id: string) => rbacService.deleteRole(Number(id)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: rbacKeys.all });
     },
@@ -141,13 +141,13 @@ export function useAssignRole() {
 
   return useMutation({
     mutationFn: ({ organizationId, data }: { organizationId: string; data: AssignRoleData }) =>
-      rbacService.assignRole(organizationId, data),
+      rbacService.assignRole(Number(organizationId), data),
     onSuccess: (userRole) => {
       queryClient.invalidateQueries({ 
-        queryKey: rbacKeys.userRoles(userRole.userId, userRole.organizationId) 
+        queryKey: rbacKeys.userRoles(userRole.user.toString(), userRole.organization.toString()) 
       });
       queryClient.invalidateQueries({ 
-        queryKey: rbacKeys.userPermissions(userRole.userId, userRole.organizationId) 
+        queryKey: rbacKeys.userPermissions(userRole.user.toString(), userRole.organization.toString()) 
       });
     },
   });
@@ -160,7 +160,7 @@ export function useRemoveRole() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (userRoleId: string) => rbacService.removeRole(userRoleId),
+    mutationFn: (userRoleId: string) => rbacService.removeRole(Number(userRoleId)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: rbacKeys.all });
     },

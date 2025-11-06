@@ -1,6 +1,6 @@
 import { SimpleGrid } from '@chakra-ui/react';
 import { StatCard } from '../dashboard';
-import type { LeadStats as LeadStatsType } from '../../types';
+import type { LeadStats as DashboardLeadStats } from '../../types/lead.types';
 import { 
   FiTrendingUp,
   FiUsers, 
@@ -9,7 +9,7 @@ import {
 } from 'react-icons/fi';
 
 interface LeadStatsProps {
-  stats: LeadStatsType;
+  stats?: DashboardLeadStats;
   isLoading?: boolean;
 }
 
@@ -18,31 +18,31 @@ export const LeadStats = ({ stats, isLoading = false }: LeadStatsProps) => {
     <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={5}>
       <StatCard
         title="Total Leads"
-        value={isLoading ? '...' : stats.totalLeads.toString()}
+        value={isLoading || !stats ? '...' : stats.totalLeads.toString()}
         icon={<FiUsers />}
         iconBg="purple.100"
         iconColor="purple.600"
         change="+12%"
       />
       <StatCard
-        title="New Leads"
-        value={isLoading ? '...' : (stats.statusCounts.new || 0).toString()}
-        icon={<FiTrendingUp />}
-        iconBg="pink.100"
-        iconColor="pink.600"
-        change="+8%"
-      />
-      <StatCard
         title="Qualified"
-        value={isLoading ? '...' : (stats.statusCounts.qualified || 0).toString()}
+        value={isLoading || !stats ? '...' : stats.statusCounts.qualified.toString()}
         icon={<FiAward />}
         iconBg="blue.100"
         iconColor="blue.600"
         change="+15%"
       />
       <StatCard
-        title="Converted"
-        value={isLoading ? '...' : (stats.statusCounts.converted || 0).toString()}
+        title="Conversion Rate"
+        value={isLoading || !stats ? '...' : `${(stats.conversionRate * 100).toFixed(1)}%`}
+        icon={<FiTrendingUp />}
+        iconBg="pink.100"
+        iconColor="pink.600"
+        change="+8%"
+      />
+      <StatCard
+        title="New This Month"
+        value={isLoading || !stats ? '...' : stats.statusCounts.new.toString()}
         icon={<FiCheckCircle />}
         iconBg="green.100"
         iconColor="green.600"

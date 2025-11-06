@@ -46,6 +46,11 @@ export interface CreateRoleRequest {
   permission_ids?: number[];
 }
 
+// Alias for backward compatibility with hooks
+export type CreateRoleData = CreateRoleRequest;
+export type UpdateRoleData = Partial<CreateRoleRequest>;
+export type AssignRoleData = AssignRoleRequest;
+
 export interface CreatePermissionRequest {
   resource: string;
   action: string;
