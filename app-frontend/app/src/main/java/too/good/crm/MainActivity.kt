@@ -30,6 +30,11 @@ import too.good.crm.features.sales.SalesScreen
 import too.good.crm.features.activities.ActivitiesScreen
 import too.good.crm.features.analytics.AnalyticsScreen
 import too.good.crm.features.settings.SettingsScreen
+import too.good.crm.features.client.ClientDashboardScreen
+import too.good.crm.features.client.MyVendorsScreen
+import too.good.crm.features.client.orders.MyOrdersScreen
+import too.good.crm.features.client.payment.PaymentScreen
+import too.good.crm.features.client.issues.IssuesScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -151,6 +156,60 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("settings") {
                             SettingsScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+
+                        // Client Side Routes
+                        composable("client-dashboard") {
+                            ClientDashboardScreen(
+                                onLogoutClicked = {
+                                    navController.navigate("main") {
+                                        popUpTo("client-dashboard") { inclusive = true }
+                                    }
+                                },
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                }
+                            )
+                        }
+                        composable("my-vendors") {
+                            MyVendorsScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("my-orders") {
+                            MyOrdersScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("payments") {
+                            PaymentScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("issues") {
+                            IssuesScreen(
                                 onNavigate = { route ->
                                     navController.navigate(route)
                                 },

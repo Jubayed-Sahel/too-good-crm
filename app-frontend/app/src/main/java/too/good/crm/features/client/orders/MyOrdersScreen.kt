@@ -1,4 +1,4 @@
-package too.good.crm.features.deals
+package too.good.crm.features.client.orders
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,39 +19,42 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.features.client.Order
+import too.good.crm.features.client.OrderSampleData
+import too.good.crm.features.client.OrderStatus
 import java.text.NumberFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DealsScreen(
+fun MyOrdersScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    var filterStage by remember { mutableStateOf<DealStage?>(null) }
-    val deals = remember { DealSampleData.getDeals() }
+    var filterStatus by remember { mutableStateOf<OrderStatus?>(null) }
+    val orders = remember { OrderSampleData.getOrders() }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
 
-    val filteredDeals = deals.filter { deal ->
+    val filteredOrders = orders.filter { order ->
         val matchesSearch = searchQuery.isEmpty() ||
-                deal.title.contains(searchQuery, ignoreCase = true) ||
-                deal.customerName.contains(searchQuery, ignoreCase = true)
-        val matchesFilter = filterStage == null || deal.stage == filterStage
+                order.orderNumber.contains(searchQuery, ignoreCase = true) ||
+                order.vendorName.contains(searchQuery, ignoreCase = true)
+        val matchesFilter = filterStatus == null || order.status == filterStatus
         matchesSearch && matchesFilter
     }
 
     AppScaffoldWithDrawer(
-        title = "Deals",
+        title = "My Orders",
         activeMode = activeMode,
         onModeChanged = { newMode ->
             activeMode = newMode
             UserSession.activeMode = newMode
             // Navigate to appropriate dashboard when mode changes
-            if (newMode == ActiveMode.CLIENT) {
-                onNavigate("client-dashboard")
-            } else {
+            if (newMode == ActiveMode.VENDOR) {
                 onNavigate("dashboard")
+            } else {
+                onNavigate("client-dashboard")
             }
         },
         onNavigate = onNavigate,
@@ -66,13 +68,13 @@ fun DealsScreen(
         ) {
             // Header
             Text(
-                text = "Deals",
+                text = "My Orders",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Track your sales pipeline and manage deals",
+                text = "Track and manage your purchase orders",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF6B7280)
             )
@@ -84,29 +86,29 @@ fun DealsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatCard(
+                OrderStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Total",
-                    value = deals.size.toString(),
-                    color = MaterialTheme.colorScheme.primary
+                    value = orders.size.toString(),
+                    color = Color(0xFF3B82F6)
                 )
-                StatCard(
+                OrderStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Active",
-                    value = deals.count { it.status == DealStatus.ACTIVE }.toString(),
+                    value = orders.count { it.status != OrderStatus.DELIVERED && it.status != OrderStatus.CANCELLED }.toString(),
                     color = Color(0xFFF59E0B)
                 )
-                StatCard(
+                OrderStatCard(
                     modifier = Modifier.weight(1f),
-                    title = "Won",
-                    value = deals.count { it.status == DealStatus.WON }.toString(),
+                    title = "Delivered",
+                    value = orders.count { it.status == OrderStatus.DELIVERED }.toString(),
                     color = Color(0xFF22C55E)
                 )
-                StatCard(
+                OrderStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Value",
-                    value = "$${deals.filter { it.status == DealStatus.ACTIVE }.sumOf { it.value }.toInt() / 1000}K",
-                    color = Color(0xFF8B5CF6)
+                    value = "$${(orders.sumOf { it.amount } / 1000).toInt()}K",
+                    color = Color(0xFF3B82F6)
                 )
             }
 
@@ -117,7 +119,7 @@ fun DealsScreen(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search deals...") },
+                placeholder = { Text("Search orders...") },
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null)
                 },
@@ -131,18 +133,19 @@ fun DealsScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = Color(0xFF3B82F6)
                 )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Deals List
+            // Orders List
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(filteredDeals) { deal ->
-                    DealCard(deal = deal)
+                items(filteredOrders) { order ->
+                    OrderCard(order = order)
                 }
             }
         }
@@ -150,7 +153,7 @@ fun DealsScreen(
 }
 
 @Composable
-fun DealCard(deal: Deal) {
+fun OrderCard(order: Order) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -164,117 +167,81 @@ fun DealCard(deal: Deal) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Title and Value
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = deal.title,
+                        text = order.orderNumber,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = order.vendorName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color(0xFF6B7280)
+                    )
+                }
+                OrderStatusBadge(status = order.status)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = NumberFormat.getCurrencyInstance(Locale.US).format(order.amount),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF3B82F6)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "${order.items} items",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B7280)
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                            Icons.Default.Business,
+                            Icons.Default.CalendarToday,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(14.dp),
                             tint = Color(0xFF6B7280)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = deal.customerName,
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = order.orderDate,
+                            style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF6B7280)
                         )
                     }
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = NumberFormat.getCurrencyInstance(Locale.US).format(deal.value),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF22C55E)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    DealStageBadge(stage = deal.stage)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Progress Bar
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Probability",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
-                    )
-                    Text(
-                        text = "${deal.probability}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                LinearProgressIndicator(
-                    progress = { deal.probability / 100f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = when {
-                        deal.probability >= 75 -> Color(0xFF22C55E)
-                        deal.probability >= 50 -> Color(0xFFF59E0B)
-                        else -> Color(0xFFEF4444)
-                    },
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Footer Info
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.CalendarToday,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF6B7280)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Close: ${deal.expectedCloseDate}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF6B7280)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = deal.owner,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
-                    )
+                    if (order.deliveryDate != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.LocalShipping,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = Color(0xFF22C55E)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = order.deliveryDate,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFF22C55E)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -282,37 +249,32 @@ fun DealCard(deal: Deal) {
 }
 
 @Composable
-fun DealStageBadge(stage: DealStage) {
-    val (backgroundColor, textColor, text) = when (stage) {
-        DealStage.PROSPECTING -> Triple(
-            Color(0xFF3B82F6).copy(alpha = 0.1f),
-            Color(0xFF3B82F6),
-            "Prospecting"
-        )
-        DealStage.QUALIFICATION -> Triple(
-            Color(0xFF8B5CF6).copy(alpha = 0.1f),
-            Color(0xFF8B5CF6),
-            "Qualification"
-        )
-        DealStage.PROPOSAL -> Triple(
+fun OrderStatusBadge(status: OrderStatus) {
+    val (backgroundColor, textColor, text) = when (status) {
+        OrderStatus.PENDING -> Triple(
             Color(0xFFF59E0B).copy(alpha = 0.1f),
             Color(0xFFF59E0B),
-            "Proposal"
+            "Pending"
         )
-        DealStage.NEGOTIATION -> Triple(
-            Color(0xFFEC4899).copy(alpha = 0.1f),
-            Color(0xFFEC4899),
-            "Negotiation"
+        OrderStatus.PROCESSING -> Triple(
+            Color(0xFF3B82F6).copy(alpha = 0.1f),
+            Color(0xFF3B82F6),
+            "Processing"
         )
-        DealStage.CLOSED_WON -> Triple(
+        OrderStatus.SHIPPED -> Triple(
+            Color(0xFF8B5CF6).copy(alpha = 0.1f),
+            Color(0xFF8B5CF6),
+            "Shipped"
+        )
+        OrderStatus.DELIVERED -> Triple(
             Color(0xFF22C55E).copy(alpha = 0.1f),
             Color(0xFF22C55E),
-            "Won"
+            "Delivered"
         )
-        DealStage.CLOSED_LOST -> Triple(
+        OrderStatus.CANCELLED -> Triple(
             Color(0xFFEF4444).copy(alpha = 0.1f),
             Color(0xFFEF4444),
-            "Lost"
+            "Cancelled"
         )
     }
 
@@ -332,7 +294,7 @@ fun DealStageBadge(stage: DealStage) {
 }
 
 @Composable
-fun StatCard(
+fun OrderStatCard(
     modifier: Modifier = Modifier,
     title: String,
     value: String,
