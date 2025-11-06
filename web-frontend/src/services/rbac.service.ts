@@ -1,295 +1,329 @@
 /**
- * RBAC (Role-Based Access Control) Service with Mock Data
+ * RBAC (Role-Based Access Control) Service
+ * Connects to Django backend RBAC endpoints
  */
 
+import api from '@/lib/apiClient';
 import type {
   Role,
   Permission,
   UserRole,
-  CreateRoleData,
-  UpdateRoleData,
-  AssignRoleData,
-  PermissionCheck,
+  CreateRoleRequest,
+  CreatePermissionRequest,
+  AssignRoleRequest,
+  BulkAssignRoleRequest,
+  UpdatePermissionsRequest,
+  ToggleActiveRequest,
+  AssignPermissionRequest,
+  RemovePermissionRequest,
+  RoleWithUsers,
+  UserRolesResponse,
+  AvailableResource,
+  AvailableAction,
+  BulkAssignResponse,
+  BulkRemoveResponse,
+  AssignPermissionResponse,
+  RemovePermissionResponse,
+  UpdatePermissionsResponse,
+  UserPermissions,
 } from '@/types';
 
-// Mock permissions data
-const mockPermissions: Permission[] = [
-  // Leads permissions
-  { id: '1', name: 'leads.create', resource: 'leads', action: 'create', description: 'Create new leads', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '2', name: 'leads.read', resource: 'leads', action: 'read', description: 'View leads', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '3', name: 'leads.update', resource: 'leads', action: 'update', description: 'Update leads', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '4', name: 'leads.delete', resource: 'leads', action: 'delete', description: 'Delete leads', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  
-  // Customers permissions
-  { id: '5', name: 'customers.create', resource: 'customers', action: 'create', description: 'Create new customers', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '6', name: 'customers.read', resource: 'customers', action: 'read', description: 'View customers', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '7', name: 'customers.update', resource: 'customers', action: 'update', description: 'Update customers', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '8', name: 'customers.delete', resource: 'customers', action: 'delete', description: 'Delete customers', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  
-  // Deals permissions
-  { id: '9', name: 'deals.create', resource: 'deals', action: 'create', description: 'Create new deals', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '10', name: 'deals.read', resource: 'deals', action: 'read', description: 'View deals', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '11', name: 'deals.update', resource: 'deals', action: 'update', description: 'Update deals', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '12', name: 'deals.delete', resource: 'deals', action: 'delete', description: 'Delete deals', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  
-  // Settings permissions
-  { id: '13', name: 'settings.manage', resource: 'settings', action: 'manage', description: 'Manage organization settings', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '14', name: 'roles.manage', resource: 'roles', action: 'manage', description: 'Manage roles and permissions', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  { id: '15', name: 'users.manage', resource: 'users', action: 'manage', description: 'Manage users', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-  
-  // Reports permissions
-  { id: '16', name: 'reports.read', resource: 'reports', action: 'read', description: 'View reports', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-];
-
-// Mock roles data
-const mockRoles: Role[] = [
-  {
-    id: '1',
-    name: 'admin',
-    displayName: 'Admin',
-    description: 'Full access to all features',
-    organizationId: '1',
-    isSystem: true,
-    permissions: mockPermissions,
-    userCount: 2,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '2',
-    name: 'sales_manager',
-    displayName: 'Sales Manager',
-    description: 'Manage sales team and view reports',
-    organizationId: '1',
-    isSystem: false,
-    permissions: mockPermissions.filter(p => 
-      ['leads', 'customers', 'deals', 'reports'].includes(p.resource)
-    ),
-    userCount: 3,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '3',
-    name: 'sales_rep',
-    displayName: 'Sales Representative',
-    description: 'Manage own leads, customers, and deals',
-    organizationId: '1',
-    isSystem: false,
-    permissions: mockPermissions.filter(p => 
-      ['leads', 'customers', 'deals'].includes(p.resource) && p.action !== 'delete'
-    ),
-    userCount: 8,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '4',
-    name: 'viewer',
-    displayName: 'Viewer',
-    description: 'Read-only access',
-    organizationId: '1',
-    isSystem: false,
-    permissions: mockPermissions.filter(p => p.action === 'read'),
-    userCount: 5,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-  },
-];
-
-// Mock user roles
-const mockUserRoles: UserRole[] = [
-  {
-    id: '1',
-    userId: '1',
-    roleId: '1',
-    organizationId: '1',
-    role: mockRoles[0],
-    assignedAt: '2024-01-15T10:00:00Z',
-    assignedBy: '1',
-  },
-];
-
-// Simulated delay
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
 class RBACService {
+  private readonly baseUrl = '/api';
+
+  // ============ Permission Endpoints ============
+
   /**
-   * Get all permissions
+   * Get all permissions for the organization
    */
-  async getPermissions(): Promise<Permission[]> {
-    await delay(300);
-    return mockPermissions;
+  async getPermissions(filters?: { resource?: string; action?: string }): Promise<Permission[]> {
+    return api.get<Permission[]>(`${this.baseUrl}/permissions/`, {
+      params: filters,
+    });
   }
 
   /**
-   * Get all roles for organization
+   * Get single permission by ID
    */
-  async getRoles(organizationId: string): Promise<Role[]> {
-    await delay(400);
-    return mockRoles.filter(r => r.organizationId === organizationId);
+  async getPermission(id: number): Promise<Permission> {
+    return api.get<Permission>(`${this.baseUrl}/permissions/${id}/`);
   }
 
   /**
-   * Get role by ID
+   * Create new permission
    */
-  async getRole(id: string): Promise<Role> {
-    await delay(300);
-    const role = mockRoles.find(r => r.id === id);
-    if (!role) throw new Error('Role not found');
-    return role;
+  async createPermission(data: CreatePermissionRequest): Promise<Permission> {
+    return api.post<Permission>(`${this.baseUrl}/permissions/`, data);
+  }
+
+  /**
+   * Update permission
+   */
+  async updatePermission(id: number, data: Partial<CreatePermissionRequest>): Promise<Permission> {
+    return api.patch<Permission>(`${this.baseUrl}/permissions/${id}/`, data);
+  }
+
+  /**
+   * Delete permission
+   */
+  async deletePermission(id: number): Promise<void> {
+    await api.delete(`${this.baseUrl}/permissions/${id}/`);
+  }
+
+  /**
+   * Get available resources in the system
+   */
+  async getAvailableResources(): Promise<AvailableResource[]> {
+    return api.get<AvailableResource[]>(
+      `${this.baseUrl}/permissions/available_resources/`
+    );
+  }
+
+  /**
+   * Get available actions (optionally filtered by resource)
+   */
+  async getAvailableActions(resource?: string): Promise<AvailableAction[]> {
+    return api.get<AvailableAction[]>(
+      `${this.baseUrl}/permissions/available_actions/`,
+      { params: resource ? { resource } : undefined }
+    );
+  }
+
+  // ============ Role Endpoints ============
+
+  /**
+   * Get all roles for the organization
+   */
+  async getRoles(): Promise<Role[]> {
+    return api.get<Role[]>(`${this.baseUrl}/roles/`);
+  }
+
+  /**
+   * Get single role by ID (with permissions)
+   */
+  async getRole(id: number): Promise<Role> {
+    return api.get<Role>(`${this.baseUrl}/roles/${id}/`);
   }
 
   /**
    * Create new role
    */
-  async createRole(organizationId: string, data: CreateRoleData): Promise<Role> {
-    await delay(700);
-    
-    const permissions = mockPermissions.filter(p => 
-      data.permissionIds.includes(p.id)
-    );
-
-    const newRole: Role = {
-      id: String(mockRoles.length + 1),
-      name: data.name.toLowerCase().replace(/\s+/g, '_'),
-      displayName: data.displayName,
-      description: data.description,
-      organizationId,
-      isSystem: false,
-      permissions,
-      userCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    mockRoles.push(newRole);
-    return newRole;
+  async createRole(data: CreateRoleRequest): Promise<Role> {
+    return api.post<Role>(`${this.baseUrl}/roles/`, data);
   }
 
   /**
    * Update role
    */
-  async updateRole(id: string, data: UpdateRoleData): Promise<Role> {
-    await delay(600);
-    
-    const index = mockRoles.findIndex(r => r.id === id);
-    if (index === -1) throw new Error('Role not found');
-    if (mockRoles[index].isSystem) throw new Error('Cannot update system role');
-
-    const permissions = data.permissionIds 
-      ? mockPermissions.filter(p => data.permissionIds!.includes(p.id))
-      : mockRoles[index].permissions;
-
-    mockRoles[index] = {
-      ...mockRoles[index],
-      displayName: data.displayName || mockRoles[index].displayName,
-      description: data.description !== undefined ? data.description : mockRoles[index].description,
-      permissions,
-      updatedAt: new Date().toISOString(),
-    };
-
-    return mockRoles[index];
+  async updateRole(id: number, data: Partial<CreateRoleRequest>): Promise<Role> {
+    return api.patch<Role>(`${this.baseUrl}/roles/${id}/`, data);
   }
 
   /**
    * Delete role
    */
-  async deleteRole(id: string): Promise<void> {
-    await delay(500);
-    
-    const index = mockRoles.findIndex(r => r.id === id);
-    if (index === -1) throw new Error('Role not found');
-    if (mockRoles[index].isSystem) throw new Error('Cannot delete system role');
-    
-    mockRoles.splice(index, 1);
+  async deleteRole(id: number): Promise<void> {
+    await api.delete(`${this.baseUrl}/roles/${id}/`);
   }
 
   /**
-   * Get user roles
+   * Get all permissions for a role
    */
-  async getUserRoles(userId: string, organizationId: string): Promise<UserRole[]> {
-    await delay(300);
-    return mockUserRoles.filter(
-      ur => ur.userId === userId && ur.organizationId === organizationId
+  async getRolePermissions(roleId: number): Promise<Permission[]> {
+    return api.get<Permission[]>(`${this.baseUrl}/roles/${roleId}/permissions/`);
+  }
+
+  /**
+   * Get all users assigned to a role
+   */
+  async getRoleUsers(roleId: number): Promise<RoleWithUsers> {
+    const users = await api.get<{ users: RoleWithUsers['users'] }>(
+      `${this.baseUrl}/roles/${roleId}/users/`
     );
+    const role = await this.getRole(roleId);
+    return { ...role, users: users.users };
+  }
+
+  /**
+   * Assign permission to role
+   */
+  async assignPermissionToRole(
+    roleId: number,
+    data: AssignPermissionRequest
+  ): Promise<AssignPermissionResponse> {
+    return api.post<AssignPermissionResponse>(
+      `${this.baseUrl}/roles/${roleId}/assign_permission/`,
+      data
+    );
+  }
+
+  /**
+   * Remove permission from role
+   */
+  async removePermissionFromRole(
+    roleId: number,
+    data: RemovePermissionRequest
+  ): Promise<RemovePermissionResponse> {
+    return api.post<RemovePermissionResponse>(
+      `${this.baseUrl}/roles/${roleId}/remove_permission/`,
+      data
+    );
+  }
+
+  /**
+   * Update all permissions for a role at once
+   */
+  async updateRolePermissions(
+    roleId: number,
+    data: UpdatePermissionsRequest
+  ): Promise<UpdatePermissionsResponse> {
+    return api.post<UpdatePermissionsResponse>(
+      `${this.baseUrl}/roles/${roleId}/update_permissions/`,
+      data
+    );
+  }
+
+  // ============ UserRole Endpoints ============
+
+  /**
+   * Get all user role assignments
+   */
+  async getUserRoles(filters?: { user_id?: number; role_id?: number }): Promise<UserRole[]> {
+    return api.get<UserRole[]>(`${this.baseUrl}/user-roles/`, {
+      params: filters,
+    });
+  }
+
+  /**
+   * Get single user role by ID
+   */
+  async getUserRole(id: number): Promise<UserRole> {
+    return api.get<UserRole>(`${this.baseUrl}/user-roles/${id}/`);
   }
 
   /**
    * Assign role to user
    */
-  async assignRole(organizationId: string, data: AssignRoleData): Promise<UserRole> {
-    await delay(500);
-    
-    const role = mockRoles.find(r => r.id === data.roleId);
-    if (!role) throw new Error('Role not found');
-
-    const userRole: UserRole = {
-      id: String(mockUserRoles.length + 1),
-      userId: data.userId,
-      roleId: data.roleId,
-      organizationId,
-      role,
-      assignedAt: new Date().toISOString(),
-      assignedBy: '1',
-    };
-
-    mockUserRoles.push(userRole);
-    return userRole;
+  async assignRoleToUser(data: AssignRoleRequest): Promise<UserRole> {
+    return api.post<UserRole>(`${this.baseUrl}/user-roles/`, data);
   }
 
   /**
-   * Remove role from user
+   * Remove user role assignment
    */
-  async removeRole(userRoleId: string): Promise<void> {
-    await delay(400);
-    
-    const index = mockUserRoles.findIndex(ur => ur.id === userRoleId);
-    if (index === -1) throw new Error('User role not found');
-    
-    mockUserRoles.splice(index, 1);
+  async removeRoleFromUser(userRoleId: number): Promise<void> {
+    await api.delete(`${this.baseUrl}/user-roles/${userRoleId}/`);
   }
 
   /**
-   * Check if user has permission
+   * Bulk assign role to multiple users
    */
-  async checkPermission(userId: string, organizationId: string, check: PermissionCheck): Promise<boolean> {
-    await delay(200);
-    
-    const userRoles = mockUserRoles.filter(
-      ur => ur.userId === userId && ur.organizationId === organizationId
+  async bulkAssignRole(data: BulkAssignRoleRequest): Promise<BulkAssignResponse> {
+    return api.post<BulkAssignResponse>(
+      `${this.baseUrl}/user-roles/bulk_assign/`,
+      data
     );
-
-    for (const userRole of userRoles) {
-      const hasPermission = userRole.role.permissions.some(
-        p => p.resource === check.resource && p.action === check.action
-      );
-      if (hasPermission) return true;
-    }
-
-    return false;
   }
 
   /**
-   * Get all user permissions
+   * Bulk remove role from multiple users
    */
-  async getUserPermissions(userId: string, organizationId: string): Promise<Permission[]> {
-    await delay(300);
-    
-    const userRoles = mockUserRoles.filter(
-      ur => ur.userId === userId && ur.organizationId === organizationId
+  async bulkRemoveRole(data: BulkAssignRoleRequest): Promise<BulkRemoveResponse> {
+    return api.post<BulkRemoveResponse>(
+      `${this.baseUrl}/user-roles/bulk_remove/`,
+      data
     );
+  }
 
-    const permissionsMap = new Map<string, Permission>();
-    
-    userRoles.forEach(userRole => {
-      userRole.role.permissions.forEach(permission => {
-        permissionsMap.set(permission.id, permission);
-      });
+  /**
+   * Get all users assigned to a specific role
+   */
+  async getUsersByRole(roleId: number): Promise<UserRole[]> {
+    return api.get<UserRole[]>(`${this.baseUrl}/user-roles/by_role/`, {
+      params: { role_id: roleId },
     });
+  }
 
-    return Array.from(permissionsMap.values());
+  /**
+   * Get all roles assigned to a specific user
+   */
+  async getRolesByUser(userId: number): Promise<UserRolesResponse> {
+    return api.get<UserRolesResponse>(`${this.baseUrl}/user-roles/by_user/`, {
+      params: { user_id: userId },
+    });
+  }
+
+  /**
+   * Toggle user role active status
+   */
+  async toggleUserRoleActive(data: ToggleActiveRequest): Promise<{ message: string; is_active: boolean }> {
+    return api.post<{ message: string; is_active: boolean }>(
+      `${this.baseUrl}/user-roles/toggle_active/`,
+      data
+    );
+  }
+
+  // ============ Permission Checking (Client-side helpers) ============
+
+  /**
+   * Check if current user has a specific permission
+   * Note: This checks cached permissions. For real-time checks, use backend validation.
+   */
+  hasPermission(userPermissions: UserPermissions, resource: string, action: string): boolean {
+    return userPermissions.permissions.some(
+      (p) => p.resource === resource && p.action === action
+    );
+  }
+
+  /**
+   * Check if current user has any of the specified permissions
+   */
+  hasAnyPermission(
+    userPermissions: UserPermissions,
+    checks: Array<{ resource: string; action: string }>
+  ): boolean {
+    return checks.some((check) => this.hasPermission(userPermissions, check.resource, check.action));
+  }
+
+  /**
+   * Check if current user has all of the specified permissions
+   */
+  hasAllPermissions(
+    userPermissions: UserPermissions,
+    checks: Array<{ resource: string; action: string }>
+  ): boolean {
+    return checks.every((check) => this.hasPermission(userPermissions, check.resource, check.action));
+  }
+
+  /**
+   * Get all unique resources from permissions
+   */
+  getResourcesFromPermissions(permissions: Permission[]): string[] {
+    const resources = new Set(permissions.map((p) => p.resource));
+    return Array.from(resources).sort();
+  }
+
+  /**
+   * Get all unique actions from permissions
+   */
+  getActionsFromPermissions(permissions: Permission[]): string[] {
+    const actions = new Set(permissions.map((p) => p.action));
+    return Array.from(actions).sort();
+  }
+
+  /**
+   * Group permissions by resource
+   */
+  groupPermissionsByResource(permissions: Permission[]): Record<string, Permission[]> {
+    return permissions.reduce((acc, perm) => {
+      if (!acc[perm.resource]) {
+        acc[perm.resource] = [];
+      }
+      acc[perm.resource].push(perm);
+      return acc;
+    }, {} as Record<string, Permission[]>);
   }
 }
 
 export const rbacService = new RBACService();
+

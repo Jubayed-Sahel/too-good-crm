@@ -186,6 +186,76 @@ class Command(BaseCommand):
                     'status': 'active',
                 }
             },
+            {
+                'username': 'lisa.support',
+                'email': 'lisa.support@democompany.com',
+                'password': 'pass123',
+                'first_name': 'Lisa',
+                'last_name': 'Anderson',
+                'employee': {
+                    'code': 'EMP006',
+                    'job_title': 'Support Specialist',
+                    'department': 'Customer Support',
+                    'employment_type': 'full_time',
+                    'status': 'active',
+                }
+            },
+            {
+                'username': 'robert.hr',
+                'email': 'robert.hr@democompany.com',
+                'password': 'pass123',
+                'first_name': 'Robert',
+                'last_name': 'Martinez',
+                'employee': {
+                    'code': 'EMP007',
+                    'job_title': 'HR Manager',
+                    'department': 'Human Resources',
+                    'employment_type': 'full_time',
+                    'status': 'active',
+                }
+            },
+            {
+                'username': 'jennifer.marketing',
+                'email': 'jennifer.marketing@democompany.com',
+                'password': 'pass123',
+                'first_name': 'Jennifer',
+                'last_name': 'Taylor',
+                'employee': {
+                    'code': 'EMP008',
+                    'job_title': 'Marketing Specialist',
+                    'department': 'Marketing',
+                    'employment_type': 'part_time',
+                    'status': 'active',
+                }
+            },
+            {
+                'username': 'james.intern',
+                'email': 'james.intern@democompany.com',
+                'password': 'pass123',
+                'first_name': 'James',
+                'last_name': 'Brown',
+                'employee': {
+                    'code': 'EMP009',
+                    'job_title': 'Sales Intern',
+                    'department': 'Sales',
+                    'employment_type': 'intern',
+                    'status': 'active',
+                }
+            },
+            {
+                'username': 'mary.leave',
+                'email': 'mary.leave@democompany.com',
+                'password': 'pass123',
+                'first_name': 'Mary',
+                'last_name': 'Garcia',
+                'employee': {
+                    'code': 'EMP010',
+                    'job_title': 'Senior Sales Representative',
+                    'department': 'Sales',
+                    'employment_type': 'full_time',
+                    'status': 'on-leave',
+                }
+            },
         ]
         
         employees_created = 0
@@ -212,6 +282,8 @@ class Command(BaseCommand):
                     'user': emp_user,
                     'first_name': emp_data['first_name'],
                     'last_name': emp_data['last_name'],
+                    'email': emp_data['email'],  # Add email field
+                    'phone': '+1-555-0' + emp_data['employee']['code'][-3:],  # Generate phone from code
                     'job_title': emp_data['employee']['job_title'],
                     'department': emp_data['employee']['department'],
                     'employment_type': emp_data['employee']['employment_type'],

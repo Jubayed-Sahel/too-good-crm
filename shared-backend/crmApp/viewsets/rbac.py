@@ -6,19 +6,22 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db import transaction
 
-from crmApp.models import Permission, Role, RolePermission, UserRole
+from crmApp.models import Permission, Role, RolePermission, UserRole, Employee, User
 from crmApp.serializers import (
     PermissionSerializer,
     RoleSerializer,
     RoleCreateSerializer,
     UserRoleSerializer,
 )
+from crmApp.services import RBACService
 
 
 class PermissionViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Permission management.
+    Vendors can create custom permissions for their organization.
     """
     queryset = Permission.objects.all()
     serializer_class = PermissionSerializer
@@ -33,6 +36,18 @@ class PermissionViewSet(viewsets.ModelViewSet):
         
         return Permission.objects.filter(organization_id__in=user_orgs)
     
+    def perform_create(self, serializer):
+        """Ensure permission is created for user's organization"""
+        # Get user's primary organization
+        user_org = self.request.user.user_organizations.filter(
+            is_active=True
+        ).first()
+        
+        if not user_org:
+            raise ValueError('User must belong to an organization')
+        
+        serializer.save(organization=user_org.organization)
+    
     @action(detail=False, methods=['get'])
     def by_resource(self, request):
         """Group permissions by resource"""
@@ -45,11 +60,39 @@ class PermissionViewSet(viewsets.ModelViewSet):
             grouped[perm.resource].append(PermissionSerializer(perm).data)
         
         return Response(grouped)
+    
+    @action(detail=False, methods=['get'])
+    def available_resources(self, request):
+        """Get list of available resources"""
+        user_org = request.user.user_organizations.filter(
+            is_active=True
+        ).first()
+        
+        if not user_org:
+            return Response({'resources': []})
+        
+        resources = RBACService.get_available_resources(user_org.organization)
+        return Response({'resources': resources})
+    
+    @action(detail=False, methods=['get'])
+    def available_actions(self, request):
+        """Get list of available actions, optionally filtered by resource"""
+        user_org = request.user.user_organizations.filter(
+            is_active=True
+        ).first()
+        
+        if not user_org:
+            return Response({'actions': []})
+        
+        resource = request.query_params.get('resource')
+        actions = RBACService.get_available_actions(user_org.organization, resource)
+        return Response({'actions': actions})
 
 
 class RoleViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Role management.
+    Vendors can create custom roles and assign permissions.
     """
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
@@ -66,7 +109,28 @@ class RoleViewSet(viewsets.ModelViewSet):
             is_active=True
         ).values_list('organization_id', flat=True)
         
-        return Role.objects.filter(organization_id__in=user_orgs)
+        return Role.objects.filter(
+            organization_id__in=user_orgs
+        ).prefetch_related('role_permissions__permission')
+    
+    def perform_create(self, serializer):
+        """Create role for user's organization"""
+        user_org = self.request.user.user_organizations.filter(
+            is_active=True
+        ).first()
+        
+        if not user_org:
+            raise ValueError('User must belong to an organization')
+        
+        # Auto-generate slug from name
+        from django.utils.text import slugify
+        name = serializer.validated_data.get('name')
+        slug = slugify(name)
+        
+        serializer.save(
+            organization=user_org.organization,
+            slug=slug
+        )
     
     @action(detail=True, methods=['post'])
     def assign_permission(self, request, pk=None):
@@ -86,12 +150,15 @@ class RoleViewSet(viewsets.ModelViewSet):
                 organization=role.organization
             )
             
-            RolePermission.objects.get_or_create(
+            role_perm, created = RolePermission.objects.get_or_create(
                 role=role,
                 permission=permission
             )
             
-            return Response({'message': 'Permission assigned successfully.'})
+            return Response({
+                'message': 'Permission assigned successfully.',
+                'created': created
+            })
         except Permission.DoesNotExist:
             return Response(
                 {'error': 'Permission not found'},
@@ -104,29 +171,362 @@ class RoleViewSet(viewsets.ModelViewSet):
         role = self.get_object()
         permission_id = request.data.get('permission_id')
         
-        RolePermission.objects.filter(
+        if not permission_id:
+            return Response(
+                {'error': 'permission_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        deleted_count, _ = RolePermission.objects.filter(
             role=role,
             permission_id=permission_id
         ).delete()
         
-        return Response({'message': 'Permission removed successfully.'})
+        return Response({
+            'message': 'Permission removed successfully.',
+            'removed': deleted_count > 0
+        })
+    
+    @action(detail=True, methods=['post'])
+    @transaction.atomic
+    def update_permissions(self, request, pk=None):
+        """
+        Update all permissions for a role at once.
+        Replaces existing permissions with new set.
+        """
+        role = self.get_object()
+        permission_ids = request.data.get('permission_ids', [])
+        
+        if not isinstance(permission_ids, list):
+            return Response(
+                {'error': 'permission_ids must be a list'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Remove all existing permissions
+        RolePermission.objects.filter(role=role).delete()
+        
+        # Add new permissions
+        permissions = Permission.objects.filter(
+            id__in=permission_ids,
+            organization=role.organization
+        )
+        
+        created_count = 0
+        for permission in permissions:
+            RolePermission.objects.create(
+                role=role,
+                permission=permission
+            )
+            created_count += 1
+        
+        return Response({
+            'message': f'Updated {created_count} permissions for role.',
+            'permission_count': created_count
+        })
+    
+    @action(detail=True, methods=['get'])
+    def permissions(self, request, pk=None):
+        """Get all permissions for this role"""
+        role = self.get_object()
+        permissions = Permission.objects.filter(
+            role_permissions__role=role
+        )
+        serializer = PermissionSerializer(permissions, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def users(self, request, pk=None):
+        """Get all users assigned to this role"""
+        role = self.get_object()
+        
+        # Users from UserRole
+        user_roles = UserRole.objects.filter(
+            role=role,
+            is_active=True
+        ).select_related('user')
+        
+        # Users from Employee.role
+        employees = Employee.objects.filter(
+            role=role,
+            status='active'
+        ).select_related('user')
+        
+        user_data = []
+        
+        # Add UserRole assignments
+        for ur in user_roles:
+            user_data.append({
+                'id': ur.user.id,
+                'email': ur.user.email,
+                'full_name': ur.user.full_name,
+                'source': 'user_role',
+                'assigned_at': ur.assigned_at
+            })
+        
+        # Add Employee role assignments
+        for emp in employees:
+            if emp.user:
+                user_data.append({
+                    'id': emp.user.id,
+                    'email': emp.user.email,
+                    'full_name': emp.user.full_name,
+                    'source': 'employee_role',
+                    'employee_code': emp.code
+                })
+        
+        return Response({'users': user_data})
 
 
 class UserRoleViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for UserRole assignments.
+    ViewSet for UserRole management.
+    Vendors can assign additional roles to employees beyond their primary role.
     """
     queryset = UserRole.objects.all()
     serializer_class = UserRoleSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        """Filter by user's organizations"""
+        """Filter user roles by organization"""
         user_orgs = self.request.user.user_organizations.filter(
             is_active=True
         ).values_list('organization_id', flat=True)
         
-        return UserRole.objects.filter(organization_id__in=user_orgs)
+        return UserRole.objects.filter(
+            organization_id__in=user_orgs
+        ).select_related('user', 'role', 'assigned_by')
+    
+    def perform_create(self, serializer):
+        """Create user role assignment"""
+        user_org = self.request.user.user_organizations.filter(
+            is_active=True
+        ).first()
+        
+        if not user_org:
+            raise ValueError('User must belong to an organization')
+        
+        serializer.save(
+            organization=user_org.organization,
+            assigned_by=self.request.user
+        )
+    
+    @action(detail=False, methods=['post'])
+    @transaction.atomic
+    def bulk_assign(self, request):
+        """
+        Assign a role to multiple users at once.
+        Expects: {role_id: int, user_ids: [int, ...]}
+        """
+        role_id = request.data.get('role_id')
+        user_ids = request.data.get('user_ids', [])
+        
+        if not role_id or not isinstance(user_ids, list):
+            return Response(
+                {'error': 'role_id and user_ids (list) are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user_org = request.user.user_organizations.filter(
+            is_active=True
+        ).first()
+        
+        if not user_org:
+            return Response(
+                {'error': 'User must belong to an organization'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            role = Role.objects.get(
+                id=role_id,
+                organization=user_org.organization
+            )
+        except Role.DoesNotExist:
+            return Response(
+                {'error': 'Role not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        created_count = 0
+        skipped_count = 0
+        
+        for user_id in user_ids:
+            try:
+                user = User.objects.get(id=user_id)
+                _, created = UserRole.objects.get_or_create(
+                    user=user,
+                    role=role,
+                    organization=user_org.organization,
+                    defaults={'assigned_by': request.user}
+                )
+                if created:
+                    created_count += 1
+                else:
+                    skipped_count += 1
+            except User.DoesNotExist:
+                skipped_count += 1
+        
+        return Response({
+            'message': f'Assigned role to {created_count} users.',
+            'created': created_count,
+            'skipped': skipped_count
+        })
+    
+    @action(detail=False, methods=['post'])
+    @transaction.atomic
+    def bulk_remove(self, request):
+        """
+        Remove a role from multiple users at once.
+        Expects: {role_id: int, user_ids: [int, ...]}
+        """
+        role_id = request.data.get('role_id')
+        user_ids = request.data.get('user_ids', [])
+        
+        if not role_id or not isinstance(user_ids, list):
+            return Response(
+                {'error': 'role_id and user_ids (list) are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user_org = request.user.user_organizations.filter(
+            is_active=True
+        ).first()
+        
+        if not user_org:
+            return Response(
+                {'error': 'User must belong to an organization'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        deleted_count, _ = UserRole.objects.filter(
+            role_id=role_id,
+            user_id__in=user_ids,
+            organization=user_org.organization
+        ).delete()
+        
+        return Response({
+            'message': f'Removed role from {deleted_count} users.',
+            'removed': deleted_count
+        })
+    
+    @action(detail=False, methods=['get'])
+    def by_role(self, request):
+        """
+        Get all user role assignments for a specific role.
+        Query param: role_id
+        """
+        role_id = request.query_params.get('role_id')
+        
+        if not role_id:
+            return Response(
+                {'error': 'role_id query parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user_org = request.user.user_organizations.filter(
+            is_active=True
+        ).first()
+        
+        if not user_org:
+            return Response(
+                {'error': 'User must belong to an organization'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user_roles = UserRole.objects.filter(
+            role_id=role_id,
+            organization=user_org.organization,
+            is_active=True
+        ).select_related('user', 'role', 'assigned_by')
+        
+        serializer = self.get_serializer(user_roles, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def by_user(self, request):
+        """
+        Get all role assignments for a specific user.
+        Query param: user_id
+        """
+        user_id = request.query_params.get('user_id')
+        
+        if not user_id:
+            return Response(
+                {'error': 'user_id query parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user_org = request.user.user_organizations.filter(
+            is_active=True
+        ).first()
+        
+        if not user_org:
+            return Response(
+                {'error': 'User must belong to an organization'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        user_roles = UserRole.objects.filter(
+            user_id=user_id,
+            organization=user_org.organization,
+            is_active=True
+        ).select_related('user', 'role', 'assigned_by')
+        
+        # Also get the employee's primary role if exists
+        employee_role = None
+        try:
+            employee = Employee.objects.get(
+                user_id=user_id,
+                organization=user_org.organization,
+                status='active'
+            )
+            if employee.role:
+                employee_role = {
+                    'id': employee.role.id,
+                    'name': employee.role.name,
+                    'slug': employee.role.slug,
+                    'is_primary': True
+                }
+        except Employee.DoesNotExist:
+            pass
+        
+        serializer = self.get_serializer(user_roles, many=True)
+        
+        return Response({
+            'user_roles': serializer.data,
+            'primary_role': employee_role
+        })
+    
+    @action(detail=False, methods=['post'])
+    def toggle_active(self, request):
+        """
+        Activate or deactivate a user role assignment.
+        Expects: {user_role_id: int, is_active: bool}
+        """
+        user_role_id = request.data.get('user_role_id')
+        is_active = request.data.get('is_active')
+        
+        if user_role_id is None or is_active is None:
+            return Response(
+                {'error': 'user_role_id and is_active are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            user_role = self.get_queryset().get(id=user_role_id)
+            user_role.is_active = is_active
+            user_role.save(update_fields=['is_active'])
+            
+            return Response({
+                'message': f'User role {"activated" if is_active else "deactivated"} successfully.',
+                'is_active': user_role.is_active
+            })
+        except UserRole.DoesNotExist:
+            return Response(
+                {'error': 'User role assignment not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
     
     @action(detail=False, methods=['get'])
     def my_roles(self, request):

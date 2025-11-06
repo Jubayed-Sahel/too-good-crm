@@ -12,6 +12,9 @@ export * from './payment.types';
 export * from './activity.types';
 export * from './auth.types';
 
+// Import Activity for use in this file
+import type { Activity } from './activity.types';
+
 // User types (Legacy - to be replaced)
 export interface User {
   id: number;
@@ -48,6 +51,7 @@ export interface RegisterData {
   password_confirm: string;
   first_name: string;
   last_name: string;
+  organization_name?: string; // Optional: creates new organization for vendor
 }
 
 // Customer types

@@ -15,6 +15,7 @@ import {
   FiCreditCard,
   FiAlertCircle,
 } from 'react-icons/fi';
+import { HiUserGroup } from 'react-icons/hi';
 import { useAccountMode } from '@/contexts/AccountModeContext';
 
 interface SidebarProps {
@@ -40,6 +41,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiUserPlus, label: 'Leads', path: '/leads' },
     { icon: FiActivity, label: 'Activities', path: '/activities' },
     { icon: FiBarChart2, label: 'Analytics', path: '/analytics' },
+    { icon: HiUserGroup, label: 'Team', path: '/employees' },
     { icon: FiSettings, label: 'Settings', path: '/settings' },
   ];
 

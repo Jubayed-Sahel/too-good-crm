@@ -3,8 +3,7 @@
  */
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { dealService } from '@/services';
-import type { Deal, DealStats, Pipeline, PipelineStage } from '@/types';
+import { dealService, type DealStats, type Pipeline } from '@/services';
 
 /**
  * Hook to manage sales pipeline page state and data
@@ -46,7 +45,7 @@ export const useSalesPage = () => {
   // Move deal to different stage mutation
   const moveDealMutation = useMutation({
     mutationFn: ({ dealId, stageId }: { dealId: number; stageId: number }) =>
-      dealService.moveStage(dealId, { stage_id: stageId }),
+      dealService.moveStage(dealId, { stage: stageId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       queryClient.invalidateQueries({ queryKey: ['deals', 'stats'] });
@@ -86,7 +85,10 @@ export const useSalesPage = () => {
   // Calculate stage value
   const getStageValue = (stageName: string) => {
     const stageDeals = getStageDeals(stageName);
-    return stageDeals.reduce((sum, deal) => sum + (deal.value || 0), 0);
+    return stageDeals.reduce((sum, deal) => {
+      const value = typeof deal.value === 'string' ? parseFloat(deal.value) : deal.value;
+      return sum + (value || 0);
+    }, 0);
   };
 
   // Move deal to different stage

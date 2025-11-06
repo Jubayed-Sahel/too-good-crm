@@ -10,6 +10,7 @@ from .customer_service import CustomerService
 from .lead_service import LeadService
 from .deal_service import DealService
 from .analytics_service import AnalyticsService
+from .rbac_service import RBACService
 
 __all__ = [
     'AuthService',
@@ -17,4 +18,5 @@ __all__ = [
     'LeadService',
     'DealService',
     'AnalyticsService',
+    'RBACService',
 ]
