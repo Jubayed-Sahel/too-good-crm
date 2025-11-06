@@ -77,11 +77,13 @@ class MainActivity : ComponentActivity() {
                                     }
                                 },
                                 onNavigate = { route ->
+                                    println("🔵 MainActivity: Navigating to: $route")
                                     navController.navigate(route)
                                 }
                             )
                         }
                         composable("leads") {
+                            println("🟢 MainActivity: Leads route composing")
                             LeadsScreen(
                                 onNavigate = { route ->
                                     navController.navigate(route)
