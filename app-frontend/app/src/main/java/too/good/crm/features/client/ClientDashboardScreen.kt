@@ -1,4 +1,4 @@
-package too.good.crm.features.dashboard
+package too.good.crm.features.client
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -12,31 +12,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-import too.good.crm.ui.theme.TooGoodCrmTheme
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(
+fun ClientDashboardScreen(
     onLogoutClicked: () -> Unit,
     onNavigate: (route: String) -> Unit
 ) {
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
 
     AppScaffoldWithDrawer(
-        title = "Dashboard",
+        title = "Client Dashboard",
         activeMode = activeMode,
         onModeChanged = { newMode ->
             activeMode = newMode
             UserSession.activeMode = newMode
-            // Navigate to client dashboard when switching to client mode
-            if (newMode == ActiveMode.CLIENT) {
-                onNavigate("client-dashboard")
+            // Navigate to appropriate dashboard when mode changes
+            if (newMode == ActiveMode.VENDOR) {
+                onNavigate("dashboard")
             }
         },
         onNavigate = onNavigate,
@@ -48,32 +45,41 @@ fun DashboardScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            WelcomeCard()
+            ClientWelcomeCard()
             Spacer(modifier = Modifier.height(16.dp))
-            MetricCard(
-                title = "TOTAL CUSTOMERS",
-                value = "1234",
-                change = "+12%",
-                changeLabel = "vs last month",
-                icon = Icons.Default.People,
+            ClientMetricCard(
+                title = "MY VENDORS",
+                value = "12",
+                change = "+3",
+                changeLabel = "new this month",
+                icon = Icons.Default.Store,
                 isPositive = true
             )
             Spacer(modifier = Modifier.height(16.dp))
-            MetricCard(
-                title = "ACTIVE DEALS",
-                value = "87",
-                change = "+8%",
+            ClientMetricCard(
+                title = "ACTIVE ORDERS",
+                value = "8",
+                change = "+5",
                 changeLabel = "vs last month",
-                icon = Icons.Default.Description,
+                icon = Icons.Default.ShoppingBag,
                 isPositive = true
             )
             Spacer(modifier = Modifier.height(16.dp))
-            MetricCard(
-                title = "REVENUE",
-                value = "$452,000",
-                change = "+23%",
+            ClientMetricCard(
+                title = "TOTAL SPENT",
+                value = "$24,500",
+                change = "+18%",
                 changeLabel = "vs last month",
-                icon = Icons.Default.AttachMoney,
+                icon = Icons.Default.Payment,
+                isPositive = true
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            ClientMetricCard(
+                title = "OPEN ISSUES",
+                value = "2",
+                change = "-1",
+                changeLabel = "vs last week",
+                icon = Icons.Default.ReportProblem,
                 isPositive = true
             )
         }
@@ -81,11 +87,11 @@ fun DashboardScreen(
 }
 
 @Composable
-fun WelcomeCard() {
+fun ClientWelcomeCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = Color(0xFF3B82F6).copy(alpha = 0.1f)
         )
     ) {
         Column(
@@ -94,18 +100,19 @@ fun WelcomeCard() {
                 .padding(20.dp)
         ) {
             Text(
-                text = "Good Evening! 👋",
-                style = MaterialTheme.typography.titleMedium
+                text = "Welcome Back! 👋",
+                style = MaterialTheme.typography.titleMedium,
+                color = Color(0xFF3B82F6)
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Welcome to Your Dashboard",
+                text = "Client Portal",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Track your sales pipeline, manage customer relationships, and grow your business",
+                text = "Manage your vendors, track orders, handle payments, and resolve issues",
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -114,20 +121,26 @@ fun WelcomeCard() {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { /* TODO: Navigate to Analytics */ },
-                    modifier = Modifier.weight(1f)
+                    onClick = { /* TODO: Navigate to Orders */ },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF3B82F6)
+                    )
                 ) {
-                    Icon(Icons.Default.TrendingUp, contentDescription = null)
+                    Icon(Icons.Default.ShoppingBag, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Analytics")
+                    Text("My Orders")
                 }
                 OutlinedButton(
-                    onClick = { /* TODO: Create new deal */ },
-                    modifier = Modifier.weight(1f)
+                    onClick = { /* TODO: Create new order */ },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFF3B82F6)
+                    )
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("New Deal")
+                    Text("New Order")
                 }
             }
         }
@@ -135,7 +148,7 @@ fun WelcomeCard() {
 }
 
 @Composable
-fun MetricCard(
+fun ClientMetricCard(
     title: String,
     value: String,
     change: String,
@@ -171,14 +184,14 @@ fun MetricCard(
                     Icon(
                         imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
                         contentDescription = null,
-                        tint = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                        tint = if (isPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = change,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
+                        color = if (isPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -191,14 +204,14 @@ fun MetricCard(
             }
             Surface(
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer,
+                color = Color(0xFF3B82F6).copy(alpha = 0.1f),
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        tint = Color(0xFF3B82F6)
                     )
                 }
             }
@@ -206,10 +219,3 @@ fun MetricCard(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun DashboardScreenPreview() {
-    TooGoodCrmTheme {
-        DashboardScreen(onLogoutClicked = {}, onNavigate = {})
-    }
-}
