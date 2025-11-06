@@ -19,25 +19,23 @@ import {
   FiEdit2,
   FiTrash2,
   FiBriefcase,
-  FiCalendar,
   FiDollarSign,
   FiArrowLeft,
   FiActivity,
   FiFileText,
-  FiGlobe,
   FiMapPin,
   FiTrendingUp,
   FiTarget,
 } from 'react-icons/fi';
 import { useLead } from '@/hooks';
-import type { LeadStatus, LeadPriority, LeadSource } from '@/types';
+import type { LeadQualificationStatus, LeadSource } from '@/types';
 
 const LeadDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: lead, isLoading, error } = useLead(id || '');
 
-  const getStatusColor = (status: LeadStatus) => {
+  const getStatusColor = (status: LeadQualificationStatus) => {
     switch (status) {
       case 'new':
         return 'blue';
@@ -45,29 +43,12 @@ const LeadDetailPage = () => {
         return 'cyan';
       case 'qualified':
         return 'green';
-      case 'proposal':
-        return 'purple';
-      case 'negotiation':
-        return 'orange';
+      case 'unqualified':
+        return 'yellow';
       case 'converted':
         return 'green';
       case 'lost':
         return 'red';
-      default:
-        return 'gray';
-    }
-  };
-
-  const getPriorityColor = (priority: LeadPriority) => {
-    switch (priority) {
-      case 'urgent':
-        return 'red';
-      case 'high':
-        return 'orange';
-      case 'medium':
-        return 'yellow';
-      case 'low':
-        return 'gray';
       default:
         return 'gray';
     }
@@ -78,9 +59,9 @@ const LeadDetailPage = () => {
       website: 'Website',
       referral: 'Referral',
       cold_call: 'Cold Call',
-      email: 'Email',
+      email_campaign: 'Email Campaign',
       social_media: 'Social Media',
-      trade_show: 'Trade Show',
+      event: 'Event',
       partner: 'Partner',
       other: 'Other',
     };
@@ -114,9 +95,9 @@ const LeadDetailPage = () => {
 
   const handleDelete = () => {
     if (!lead) return;
-    if (confirm(`Are you sure you want to delete lead ${lead.fullName}?`)) {
+    if (confirm(`Are you sure you want to delete lead ${lead.name}?`)) {
       // TODO: Implement delete functionality
-      alert(`Lead ${lead.fullName} deleted`);
+      alert(`Lead ${lead.name} deleted`);
       navigate('/leads');
     }
   };
@@ -124,7 +105,7 @@ const LeadDetailPage = () => {
   const handleConvert = () => {
     if (!lead) return;
     // TODO: Implement convert functionality
-    alert(`Convert ${lead.fullName} to customer`);
+    alert(`Convert ${lead.name} to customer`);
   };
 
   if (isLoading) {
@@ -178,7 +159,7 @@ const LeadDetailPage = () => {
   }
 
   return (
-    <DashboardLayout title={lead.fullName}>
+    <DashboardLayout title={lead.name}>
       <VStack align="stretch" gap={5}>
         {/* Back Button and Actions */}
         <HStack justify="space-between" align="center">
@@ -271,11 +252,11 @@ const LeadDetailPage = () => {
                   borderWidth="2px"
                   borderColor="whiteAlpha.400"
                 >
-                  {lead.firstName.charAt(0).toUpperCase()}
+                  {lead.name.charAt(0).toUpperCase()}
                 </Box>
                 <VStack align="start" gap={1}>
                   <Heading size={{ base: 'xl', md: '2xl' }}>
-                    {lead.fullName}
+                    {lead.name}
                   </Heading>
                   {lead.company && (
                     <HStack gap={2} opacity={0.9}>
@@ -283,17 +264,17 @@ const LeadDetailPage = () => {
                       <Text fontSize="lg">{lead.company}</Text>
                     </HStack>
                   )}
-                  {lead.title && (
+                  {lead.job_title && (
                     <HStack gap={2} opacity={0.85}>
                       <FiUser size={14} />
-                      <Text fontSize="md">{lead.title}</Text>
+                      <Text fontSize="md">{lead.job_title}</Text>
                     </HStack>
                   )}
                 </VStack>
               </HStack>
               <HStack gap={2}>
                 <Badge
-                  colorPalette={getStatusColor(lead.status)}
+                  colorPalette={getStatusColor(lead.qualification_status)}
                   size="lg"
                   variant="solid"
                   px={4}
@@ -302,24 +283,12 @@ const LeadDetailPage = () => {
                   textTransform="capitalize"
                   fontSize="md"
                 >
-                  {lead.status}
-                </Badge>
-                <Badge
-                  colorPalette={getPriorityColor(lead.priority)}
-                  size="lg"
-                  variant="solid"
-                  px={4}
-                  py={2}
-                  borderRadius="full"
-                  textTransform="capitalize"
-                  fontSize="md"
-                >
-                  {lead.priority}
+                  {lead.qualification_status}
                 </Badge>
               </HStack>
             </HStack>
 
-            {/* Lead Score */}
+            {/* Lead Score and Estimated Value */}
             <HStack
               p={4}
               bg="whiteAlpha.200"
@@ -336,7 +305,7 @@ const LeadDetailPage = () => {
                     Lead Score
                   </Text>
                   <Text fontSize="2xl" fontWeight="bold">
-                    {lead.score}/100
+                    {lead.lead_score}/100
                   </Text>
                 </VStack>
               </HStack>
@@ -346,7 +315,7 @@ const LeadDetailPage = () => {
                     Estimated Value
                   </Text>
                   <Text fontSize="2xl" fontWeight="bold">
-                    {formatCurrency(lead.estimatedValue)}
+                    {formatCurrency(lead.estimated_value)}
                   </Text>
                 </VStack>
                 <Box p={2} bg="whiteAlpha.300" borderRadius="md">
@@ -429,33 +398,6 @@ const LeadDetailPage = () => {
                   </HStack>
                 )}
 
-                {lead.website && (
-                  <HStack
-                    p={4}
-                    bg="gray.50"
-                    borderRadius="lg"
-                    borderWidth="1px"
-                    borderColor="gray.200"
-                  >
-                    <Box
-                      p={3}
-                      bg="green.100"
-                      borderRadius="lg"
-                      color="green.600"
-                    >
-                      <FiGlobe size={20} />
-                    </Box>
-                    <VStack align="start" gap={0.5} flex={1}>
-                      <Text fontSize="sm" fontWeight="semibold" color="gray.600">
-                        Website
-                      </Text>
-                      <Text fontSize="md" fontWeight="medium" color="gray.900">
-                        {lead.website}
-                      </Text>
-                    </VStack>
-                  </HStack>
-                )}
-
                 {(lead.city || lead.state || lead.country) && (
                   <HStack
                     p={4}
@@ -524,37 +466,14 @@ const LeadDetailPage = () => {
                     Assigned To
                   </Text>
                   <Text fontSize="md" fontWeight="bold" color="purple.900">
-                    {lead.assignedToName || 'Unassigned'}
+                    {lead.assigned_to_name || 'Unassigned'}
                   </Text>
                 </Box>
-
-                {lead.nextFollowUpAt && (
-                  <Box
-                    p={4}
-                    bg="green.50"
-                    borderRadius="lg"
-                    borderWidth="1px"
-                    borderColor="green.200"
-                    gridColumn={{ base: '1', sm: 'span 2' }}
-                  >
-                    <HStack gap={3} mb={2}>
-                      <Box p={2} bg="green.100" borderRadius="md" color="green.600">
-                        <FiCalendar size={20} />
-                      </Box>
-                      <Text fontSize="sm" fontWeight="semibold" color="green.800">
-                        Next Follow-up
-                      </Text>
-                    </HStack>
-                    <Text fontSize="md" fontWeight="bold" color="green.900">
-                      {formatDate(lead.nextFollowUpAt)}
-                    </Text>
-                  </Box>
-                )}
               </Grid>
             </Box>
 
-            {/* Description Card */}
-            {lead.description && (
+            {/* Notes Card */}
+            {lead.notes && (
               <Box
                 bg="white"
                 borderRadius="xl"
@@ -568,7 +487,7 @@ const LeadDetailPage = () => {
                     <FiFileText size={20} />
                   </Box>
                   <Heading size="lg" color="gray.800">
-                    Description
+                    Notes
                   </Heading>
                 </HStack>
                 <Box
@@ -579,7 +498,7 @@ const LeadDetailPage = () => {
                   borderColor="yellow.200"
                 >
                   <Text fontSize="md" color="gray.700" lineHeight="tall">
-                    {lead.description}
+                    {lead.notes}
                   </Text>
                 </Box>
               </Box>
@@ -617,26 +536,9 @@ const LeadDetailPage = () => {
                     Lead Created
                   </Text>
                   <Text fontSize="sm" color="gray.600" mt={1}>
-                    {formatDate(lead.createdAt)}
+                    {formatDate(lead.created_at)}
                   </Text>
                 </Box>
-
-                {lead.lastContactedAt && (
-                  <Box
-                    p={3}
-                    bg="gray.50"
-                    borderRadius="md"
-                    borderLeftWidth="3px"
-                    borderLeftColor="blue.500"
-                  >
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-                      Last Contacted
-                    </Text>
-                    <Text fontSize="sm" color="gray.600" mt={1}>
-                      {formatDate(lead.lastContactedAt)}
-                    </Text>
-                  </Box>
-                )}
 
                 <Box
                   p={3}
@@ -649,7 +551,7 @@ const LeadDetailPage = () => {
                     Last Updated
                   </Text>
                   <Text fontSize="sm" color="gray.600" mt={1}>
-                    {formatDate(lead.updatedAt)}
+                    {formatDate(lead.updated_at)}
                   </Text>
                 </Box>
               </VStack>

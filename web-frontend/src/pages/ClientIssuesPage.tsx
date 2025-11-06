@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, VStack, Button, Input, Textarea, NativeSelectRoot, NativeSelectField, Grid, HStack } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, Button, Input, Textarea, NativeSelectRoot, NativeSelectField, Grid, HStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { Card } from '../components/common';
 import { toaster } from '../components/ui/toaster';
@@ -11,6 +11,7 @@ import { FiXCircle } from 'react-icons/fi';
 const ClientIssuesPage = () => {
   const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -183,6 +184,16 @@ const ClientIssuesPage = () => {
   return (
     <DashboardLayout title="Issues">
       <VStack align="stretch" gap={5}>
+        {/* Page Header */}
+        <Box>
+          <Heading size="xl" color="gray.900" mb={2}>
+            Issues
+          </Heading>
+          <Text fontSize="sm" color="gray.600">
+            Track and manage issues related to vendors, orders and projects
+          </Text>
+        </Box>
+
         {/* Stats */}
         <IssueStats 
           total={stats.total}
@@ -202,141 +213,150 @@ const ClientIssuesPage = () => {
           onCreateIssue={() => setIsCreateDialogOpen(true)}
         />
 
-        {/* Issues Table */}
-        <IssuesTable
-          issues={filteredIssues}
-          onView={handleView}
-          onComplete={handleResolve}
-          onDelete={handleDelete}
-        />
+        {/* Loading State */}
+        {isLoading ? (
+          <Box display="flex" justifyContent="center" py={12}>
+            <Spinner size="xl" color="blue.500" />
+          </Box>
+        ) : (
+          <>
+            {/* Issues Table */}
+            <IssuesTable
+              issues={filteredIssues}
+              onView={handleView}
+              onComplete={handleResolve}
+              onDelete={handleDelete}
+            />
 
-        {/* Create Issue Form */}
-        {isCreateDialogOpen && (
-          <Card>
-            <form onSubmit={handleSubmit}>
-              <VStack align="stretch" gap={5}>
-                <HStack justify="space-between">
-                  <Heading size="lg" color="gray.900">
-                    Lodge New Issue
-                  </Heading>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    <FiXCircle size={20} />
-                  </Button>
-                </HStack>
-
-                <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
-                  <Box>
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                      Issue Title *
-                    </Text>
-                    <Input
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="Brief description of the issue"
-                      size="lg"
-                      required
-                    />
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                      Vendor *
-                    </Text>
-                    <NativeSelectRoot size="lg">
-                      <NativeSelectField
-                        value={formData.vendor}
-                        onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
+            {/* Create Issue Form */}
+            {isCreateDialogOpen && (
+              <Card>
+                <form onSubmit={handleSubmit}>
+                  <VStack align="stretch" gap={5}>
+                    <HStack justify="space-between">
+                      <Heading size="lg" color="gray.900">
+                        Lodge New Issue
+                      </Heading>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsCreateDialogOpen(false)}
                       >
-                        <option value="">Select vendor</option>
-                        {vendors.map(vendor => (
-                          <option key={vendor} value={vendor}>{vendor}</option>
-                        ))}
-                      </NativeSelectField>
-                    </NativeSelectRoot>
-                  </Box>
+                        <FiXCircle size={20} />
+                      </Button>
+                    </HStack>
 
-                  <Box>
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                      Category *
-                    </Text>
-                    <NativeSelectRoot size="lg">
-                      <NativeSelectField
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
+                      <Box>
+                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
+                          Issue Title *
+                        </Text>
+                        <Input
+                          value={formData.title}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          placeholder="Brief description of the issue"
+                          size="lg"
+                          required
+                        />
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
+                          Vendor *
+                        </Text>
+                        <NativeSelectRoot size="lg">
+                          <NativeSelectField
+                            value={formData.vendor}
+                            onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
+                          >
+                            <option value="">Select vendor</option>
+                            {vendors.map(vendor => (
+                              <option key={vendor} value={vendor}>{vendor}</option>
+                            ))}
+                          </NativeSelectField>
+                        </NativeSelectRoot>
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
+                          Category *
+                        </Text>
+                        <NativeSelectRoot size="lg">
+                          <NativeSelectField
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                          >
+                            {categories.map(cat => (
+                              <option key={cat.value} value={cat.value}>{cat.label}</option>
+                            ))}
+                          </NativeSelectField>
+                        </NativeSelectRoot>
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
+                          Priority *
+                        </Text>
+                        <NativeSelectRoot size="lg">
+                          <NativeSelectField
+                            value={formData.priority}
+                            onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                          >
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                          </NativeSelectField>
+                        </NativeSelectRoot>
+                      </Box>
+
+                      <Box>
+                        <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
+                          Related Order Number (Optional)
+                        </Text>
+                        <Input
+                          value={formData.orderNumber}
+                          onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
+                          placeholder="e.g., ORD-2024-001"
+                          size="lg"
+                        />
+                      </Box>
+                    </Grid>
+
+                    <Box>
+                      <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
+                        Description *
+                      </Text>
+                      <Textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Provide detailed information about the issue..."
+                        rows={6}
+                        size="lg"
+                        required
+                      />
+                    </Box>
+
+                    <HStack gap={3} justify="flex-end">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsCreateDialogOpen(false)}
                       >
-                        {categories.map(cat => (
-                          <option key={cat.value} value={cat.value}>{cat.label}</option>
-                        ))}
-                      </NativeSelectField>
-                    </NativeSelectRoot>
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                      Priority *
-                    </Text>
-                    <NativeSelectRoot size="lg">
-                      <NativeSelectField
-                        value={formData.priority}
-                        onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        colorPalette="blue"
+                        size="lg"
                       >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                      </NativeSelectField>
-                    </NativeSelectRoot>
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                      Related Order Number (Optional)
-                    </Text>
-                    <Input
-                      value={formData.orderNumber}
-                      onChange={(e) => setFormData({ ...formData, orderNumber: e.target.value })}
-                      placeholder="e.g., ORD-2024-001"
-                      size="lg"
-                    />
-                  </Box>
-                </Grid>
-
-                <Box>
-                  <Text fontSize="sm" fontWeight="semibold" color="gray.700" mb={2}>
-                    Description *
-                  </Text>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Provide detailed information about the issue..."
-                    rows={6}
-                    size="lg"
-                    required
-                  />
-                </Box>
-
-                <HStack gap={3} justify="flex-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    colorPalette="blue"
-                    size="lg"
-                  >
-                    Submit Issue
-                  </Button>
-                </HStack>
-              </VStack>
-            </form>
-          </Card>
+                        Submit Issue
+                      </Button>
+                    </HStack>
+                  </VStack>
+                </form>
+              </Card>
+            )}
+          </>
         )}
       </VStack>
     </DashboardLayout>

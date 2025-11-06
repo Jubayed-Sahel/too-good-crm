@@ -243,7 +243,7 @@ class OrganizationService {
   /**
    * Get organization members
    */
-  async getOrganizationMembers(organizationId: string): Promise<any[]> {
+  async getOrganizationMembers(_organizationId: string): Promise<any[]> {
     await delay(400);
     
     // Mock members data

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Button, Input, VStack, Text } from '@chakra-ui/react';
+import { Box, Button, Input, VStack, HStack, Text } from '@chakra-ui/react';
 import { Card } from '../../common';
 import { Field } from '../../ui/field';
 import { toaster } from '../../ui/toaster';
@@ -72,17 +72,19 @@ const ClientSecuritySettings = () => {
             </Field>
 
             <Field label="New Password" required>
-              <Input
-                type="password"
-                value={passwords.new}
-                onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                size="md"
-                borderRadius="lg"
-                placeholder="Enter new password"
-              />
-              <Text fontSize="xs" color="gray.500" mt={1}>
-                Must be at least 8 characters with uppercase, lowercase, and numbers
-              </Text>
+              <Box>
+                <Input
+                  type="password"
+                  value={passwords.new}
+                  onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                  size="md"
+                  borderRadius="lg"
+                  placeholder="Enter new password"
+                />
+                <Text fontSize="xs" color="gray.500" mt={1}>
+                  Must be at least 8 characters with uppercase, lowercase, and numbers
+                </Text>
+              </Box>
             </Field>
 
             <Field label="Confirm New Password" required>

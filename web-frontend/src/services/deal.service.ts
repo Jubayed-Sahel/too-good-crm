@@ -61,7 +61,7 @@ export interface DealCreateData {
   value: number;
   currency?: string;
   customer: number;
-  stage: number;
+  stage: number;  // Pipeline stage ID
   pipeline?: number;
   probability?: number;
   expected_close_date?: string;

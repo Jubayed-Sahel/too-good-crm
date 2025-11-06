@@ -2,7 +2,7 @@
  * Deals data hook
  */
 import { useState, useEffect } from 'react';
-import { dealService } from '@/services';
+import { dealService, type DealCreateData } from '@/services';
 import type { Deal, PaginatedResponse } from '@/types';
 
 export const useDeals = (params?: Record<string, any>) => {
@@ -33,7 +33,7 @@ export const useDeals = (params?: Record<string, any>) => {
     fetchDeals();
   }, [JSON.stringify(params)]);
 
-  const createDeal = async (data: Partial<Deal>) => {
+  const createDeal = async (data: DealCreateData) => {
     try {
       const newDeal = await dealService.createDeal(data);
       setDeals((prev) => [newDeal, ...prev]);
@@ -43,7 +43,7 @@ export const useDeals = (params?: Record<string, any>) => {
     }
   };
 
-  const updateDeal = async (id: number, data: Partial<Deal>) => {
+  const updateDeal = async (id: number, data: Partial<DealCreateData>) => {
     try {
       const updated = await dealService.updateDeal(id, data);
       setDeals((prev) => prev.map((deal) => (deal.id === id ? updated : deal)));

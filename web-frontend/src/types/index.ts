@@ -87,7 +87,9 @@ export interface Deal {
   customer: number;
   customer_name: string;
   value: string | number;
-  stage: DealStage;
+  stage: DealStage;  // Frontend enum string
+  stage_id?: number;  // Backend FK (optional for backward compat)
+  stage_name?: string;  // Human-readable stage name (optional)
   probability: number;
   expected_close_date?: string | null;
   actual_close_date?: string | null;

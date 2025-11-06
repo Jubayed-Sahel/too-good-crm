@@ -18,34 +18,22 @@ import CustomSelect from '../components/ui/CustomSelect';
 import { Card } from '../components/common';
 import { toaster } from '../components/ui/toaster';
 import { useLead, useUpdateLead } from '@/hooks';
-import type { UpdateLeadData, LeadSource, LeadStatus, LeadPriority } from '@/types';
+import type { UpdateLeadData, LeadSource, LeadStatus } from '@/types';
 
 const sourceOptions = [
   { value: 'website', label: 'Website' },
   { value: 'referral', label: 'Referral' },
   { value: 'cold_call', label: 'Cold Call' },
-  { value: 'email', label: 'Email' },
+  { value: 'email_campaign', label: 'Email Campaign' },
   { value: 'social_media', label: 'Social Media' },
-  { value: 'trade_show', label: 'Trade Show' },
+  { value: 'event', label: 'Event' },
   { value: 'partner', label: 'Partner' },
   { value: 'other', label: 'Other' },
 ];
 
 const statusOptions = [
-  { value: 'new', label: 'New' },
-  { value: 'contacted', label: 'Contacted' },
-  { value: 'qualified', label: 'Qualified' },
-  { value: 'proposal', label: 'Proposal' },
-  { value: 'negotiation', label: 'Negotiation' },
-  { value: 'converted', label: 'Converted' },
-  { value: 'lost', label: 'Lost' },
-];
-
-const priorityOptions = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
+  { value: 'active', label: 'Active' },
+  { value: 'inactive', label: 'Inactive' },
 ];
 
 export const EditLeadPage = () => {
@@ -56,48 +44,40 @@ export const EditLeadPage = () => {
   const updateLead = useUpdateLead();
 
   const [formData, setFormData] = useState<UpdateLeadData>({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     phone: '',
     company: '',
-    title: '',
-    website: '',
+    job_title: '',
     source: 'website',
-    status: 'new',
-    priority: 'medium',
-    score: 0,
-    estimatedValue: 0,
+    status: 'active',
+    estimated_value: 0,
     address: '',
     city: '',
     state: '',
     country: '',
-    postalCode: '',
-    description: '',
+    postal_code: '',
+    notes: '',
   });
 
   // Populate form when lead data loads
   useEffect(() => {
     if (lead) {
       setFormData({
-        firstName: lead.firstName,
-        lastName: lead.lastName,
+        name: lead.name,
         email: lead.email,
         phone: lead.phone || '',
         company: lead.company || '',
-        title: lead.title || '',
-        website: lead.website || '',
+        job_title: lead.job_title || '',
         source: lead.source,
         status: lead.status,
-        priority: lead.priority,
-        score: lead.score,
-        estimatedValue: lead.estimatedValue || 0,
+        estimated_value: lead.estimated_value || 0,
         address: lead.address || '',
         city: lead.city || '',
         state: lead.state || '',
         country: lead.country || '',
-        postalCode: lead.postalCode || '',
-        description: lead.description || '',
+        postal_code: lead.postal_code || '',
+        notes: lead.notes || '',
       });
     }
   }, [lead]);
@@ -130,7 +110,7 @@ export const EditLeadPage = () => {
     navigate('/leads');
   };
 
-  const isFormValid = formData.firstName && formData.lastName && formData.email;
+  const isFormValid = formData.name && formData.email;
 
   if (loadingLead) {
     return (
@@ -198,24 +178,12 @@ export const EditLeadPage = () => {
               <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                 <VStack gap={1} align="stretch">
                   <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                    First Name *
+                    Full Name *
                   </Text>
                   <Input
-                    placeholder="John"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    size="md"
-                  />
-                </VStack>
-
-                <VStack gap={1} align="stretch">
-                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                    Last Name *
-                  </Text>
-                  <Input
-                    placeholder="Doe"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    placeholder="John Doe"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     size="md"
                   />
                 </VStack>
@@ -272,21 +240,8 @@ export const EditLeadPage = () => {
                   </Text>
                   <Input
                     placeholder="Sales Manager"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    size="md"
-                  />
-                </VStack>
-
-                <VStack gap={1} align="stretch" gridColumn={{ base: '1', md: 'span 2' }}>
-                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                    Website
-                  </Text>
-                  <Input
-                    type="url"
-                    placeholder="https://company.com"
-                    value={formData.website}
-                    onChange={(e) => setFormData({ ...formData, website: e.target.value })}
+                    value={formData.job_title}
+                    onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
                     size="md"
                   />
                 </VStack>
@@ -331,49 +286,16 @@ export const EditLeadPage = () => {
 
                 <VStack gap={1} align="stretch">
                   <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                    Priority
-                  </Text>
-                  <CustomSelect
-                    options={priorityOptions}
-                    value={formData.priority as string}
-                    onChange={(value: string) => setFormData({ 
-                      ...formData, 
-                      priority: value as LeadPriority 
-                    })}
-                    placeholder="Select priority"
-                  />
-                </VStack>
-
-                <VStack gap={1} align="stretch">
-                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                    Lead Score (0-100)
-                  </Text>
-                  <Input
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="75"
-                    value={formData.score || ''}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      score: e.target.value ? Number(e.target.value) : 0 
-                    })}
-                    size="md"
-                  />
-                </VStack>
-
-                <VStack gap={1} align="stretch" gridColumn={{ base: '1', md: 'span 2' }}>
-                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
                     Estimated Value ($)
                   </Text>
                   <Input
                     type="number"
                     min="0"
                     placeholder="50000"
-                    value={formData.estimatedValue || ''}
+                    value={formData.estimated_value || ''}
                     onChange={(e) => setFormData({ 
                       ...formData, 
-                      estimatedValue: e.target.value ? Number(e.target.value) : 0 
+                      estimated_value: e.target.value ? Number(e.target.value) : 0 
                     })}
                     size="md"
                   />
@@ -429,8 +351,8 @@ export const EditLeadPage = () => {
                   </Text>
                   <Input
                     placeholder="94105"
-                    value={formData.postalCode}
-                    onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                    value={formData.postal_code}
+                    onChange={(e) => setFormData({ ...formData, postal_code: e.target.value })}
                     size="md"
                   />
                 </VStack>
@@ -456,12 +378,12 @@ export const EditLeadPage = () => {
               </Heading>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  Description
+                  Notes
                 </Text>
                 <Textarea
                   placeholder="Add notes about this lead..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   rows={4}
                   size="md"
                 />
