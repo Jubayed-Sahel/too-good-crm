@@ -26,6 +26,10 @@ import too.good.crm.features.login.LoginScreen
 import too.good.crm.features.leads.LeadsScreen
 import too.good.crm.features.customers.CustomersScreen
 import too.good.crm.features.deals.DealsScreen
+import too.good.crm.features.sales.SalesScreen
+import too.good.crm.features.activities.ActivitiesScreen
+import too.good.crm.features.analytics.AnalyticsScreen
+import too.good.crm.features.settings.SettingsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -107,6 +111,46 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("deals") {
                             DealsScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("sales") {
+                            SalesScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("activities") {
+                            ActivitiesScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("analytics") {
+                            AnalyticsScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("settings") {
+                            SettingsScreen(
                                 onNavigate = { route ->
                                     navController.navigate(route)
                                 },
