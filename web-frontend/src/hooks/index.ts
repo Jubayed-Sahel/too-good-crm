@@ -9,6 +9,12 @@ export { useDeals } from './useDeals';
 export { useDashboardStats } from './useDashboardStats';
 export * from './useLeads';
 
+// Page-specific hooks
+export { useDealsPage } from './useDealsPage';
+export { useDealActions } from './useDealActions';
+export { useCustomersPage } from './useCustomersPage';
+export { useCustomerActions } from './useCustomerActions';
+
 // Multi-tenancy & RBAC hooks
 export * from './useOrganization';
 export * from './useRBAC';

@@ -19,7 +19,7 @@ import {
   Text,
 } from '@chakra-ui/react';
 import CustomSelect from '../ui/CustomSelect';
-import type { CreateLeadData, LeadSource, LeadPriority } from '../../types';
+import type { CreateLeadData, LeadSource } from '../../types';
 import { FiPlus } from 'react-icons/fi';
 
 interface CreateLeadDialogProps {
@@ -33,18 +33,11 @@ const sourceOptions = [
   { value: 'website', label: 'Website' },
   { value: 'referral', label: 'Referral' },
   { value: 'cold_call', label: 'Cold Call' },
-  { value: 'email', label: 'Email' },
+  { value: 'email_campaign', label: 'Email Campaign' },
   { value: 'social_media', label: 'Social Media' },
-  { value: 'trade_show', label: 'Trade Show' },
+  { value: 'event', label: 'Event' },
   { value: 'partner', label: 'Partner' },
   { value: 'other', label: 'Other' },
-];
-
-const priorityOptions = [
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
 ];
 
 export const CreateLeadDialog = ({ 
@@ -54,16 +47,14 @@ export const CreateLeadDialog = ({
   isLoading = false,
 }: CreateLeadDialogProps) => {
   const [formData, setFormData] = useState<CreateLeadData>({
-    firstName: '',
-    lastName: '',
+    organization: 1, // TODO: Get from context
+    name: '',
     email: '',
     phone: '',
     company: '',
-    title: '',
-    jobTitle: '',
+    job_title: '',
     source: 'website',
-    priority: 'medium',
-    estimatedValue: undefined,
+    estimated_value: undefined,
     notes: '',
   });
 
@@ -74,22 +65,20 @@ export const CreateLeadDialog = ({
 
   const handleClose = () => {
     setFormData({
-      firstName: '',
-      lastName: '',
+      organization: 1,
+      name: '',
       email: '',
       phone: '',
       company: '',
-      title: '',
-      jobTitle: '',
+      job_title: '',
       source: 'website',
-      priority: 'medium',
-      estimatedValue: undefined,
+      estimated_value: undefined,
       notes: '',
     });
     onClose();
   };
 
-  const isFormValid = formData.firstName && formData.lastName && formData.company;
+  const isFormValid = formData.name && formData.company && formData.email;
 
   return (
     <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size={{ base: 'full', md: 'lg' }}>
@@ -106,37 +95,24 @@ export const CreateLeadDialog = ({
 
         <DialogBody>
           <VStack gap={4} align="stretch">
-            {/* Name Fields */}
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-              <VStack gap={1} align="stretch">
-                <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  First Name *
-                </Text>
-                <Input
-                  placeholder="John"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  size="sm"
-                />
-              </VStack>
-              <VStack gap={1} align="stretch">
-                <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  Last Name *
-                </Text>
-                <Input
-                  placeholder="Doe"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  size="sm"
-                />
-              </VStack>
-            </SimpleGrid>
+            {/* Name Field */}
+            <VStack gap={1} align="stretch">
+              <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                Full Name *
+              </Text>
+              <Input
+                placeholder="John Doe"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                size="sm"
+              />
+            </VStack>
 
             {/* Contact Fields */}
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  Email
+                  Email *
                 </Text>
                 <Input
                   type="email"
@@ -179,38 +155,25 @@ export const CreateLeadDialog = ({
                 </Text>
                 <Input
                   placeholder="Marketing Director"
-                  value={formData.jobTitle}
-                  onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                  value={formData.job_title}
+                  onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
                   size="sm"
                 />
               </VStack>
             </SimpleGrid>
 
-            {/* Source and Priority */}
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-              <VStack gap={1} align="stretch">
-                <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  Source
-                </Text>
-                <CustomSelect
-                  options={sourceOptions}
-                  value={formData.source}
-                  onChange={(value: string) => setFormData({ ...formData, source: value as LeadSource })}
-                  placeholder="Select source"
-                />
-              </VStack>
-              <VStack gap={1} align="stretch">
-                <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  Priority
-                </Text>
-                <CustomSelect
-                  options={priorityOptions}
-                  value={formData.priority || ''}
-                  onChange={(value: string) => setFormData({ ...formData, priority: value as LeadPriority })}
-                  placeholder="Select priority"
-                />
-              </VStack>
-            </SimpleGrid>
+            {/* Source */}
+            <VStack gap={1} align="stretch">
+              <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                Source
+              </Text>
+              <CustomSelect
+                options={sourceOptions}
+                value={formData.source}
+                onChange={(value: string) => setFormData({ ...formData, source: value as LeadSource })}
+                placeholder="Select source"
+              />
+            </VStack>
 
             {/* Estimated Value */}
             <VStack gap={1} align="stretch">
@@ -220,10 +183,10 @@ export const CreateLeadDialog = ({
               <Input
                 type="number"
                 placeholder="50000"
-                value={formData.estimatedValue || ''}
+                value={formData.estimated_value || ''}
                 onChange={(e) => setFormData({ 
                   ...formData, 
-                  estimatedValue: e.target.value ? Number(e.target.value) : undefined 
+                  estimated_value: e.target.value ? Number(e.target.value) : undefined 
                 })}
                 size="sm"
               />

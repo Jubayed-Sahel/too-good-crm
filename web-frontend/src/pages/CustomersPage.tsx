@@ -1,109 +1,52 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
+import { Box, Heading, Text } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
-  CustomerTable,
-  CustomerFilters,
-  CustomerStats,
-  CreateCustomerDialog,
+  CustomersPageContent,
+  CustomersPageLoading,
 } from '../components/customers';
-import { useCustomers } from '@/hooks';
+import { useCustomers, useCustomersPage, useCustomerActions } from '@/hooks';
 
+/**
+ * CustomersPage - Container Component
+ * 
+ * This component follows the Container/Presenter pattern:
+ * - Fetches data using custom hooks
+ * - Manages state using useCustomersPage hook
+ * - Handles actions using useCustomerActions hook
+ * - Delegates presentation to CustomersPageContent component
+ * 
+ * Responsibilities:
+ * - Compose hooks together
+ * - Handle error states
+ * - Pass props to presentation component
+ * 
+ * No business logic or UI implementation details here.
+ */
 const CustomersPage = () => {
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  
-  // Fetch customers data
-  const { customers, isLoading, error } = useCustomers();
+  // Data fetching
+  const { customers, isLoading, error, refetch } = useCustomers();
 
-  // Filter customers based on search and status
-  const filteredCustomers = useMemo(() => {
-    if (!customers) return [];
-    
-    return customers.filter((customer) => {
-      const matchesSearch =
-        searchQuery === '' ||
-        customer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (customer.company && customer.company.toLowerCase().includes(searchQuery.toLowerCase()));
+  // State management & filtering
+  const {
+    searchQuery,
+    setSearchQuery,
+    statusFilter,
+    setStatusFilter,
+    isCreateDialogOpen,
+    setIsCreateDialogOpen,
+    mappedCustomers,
+    stats,
+  } = useCustomersPage(customers);
 
-      const matchesStatus =
-        statusFilter === 'all' || customer.status === statusFilter;
+  // Action handlers
+  const {
+    handleEdit,
+    handleDelete,
+    handleView,
+    handleCreateCustomer,
+  } = useCustomerActions({ onSuccess: refetch });
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [customers, searchQuery, statusFilter]);
-
-  // Calculate stats
-  const stats = useMemo(() => {
-    if (!customers) {
-      return {
-        totalCustomers: 0,
-        activeCustomers: 0,
-        inactiveCustomers: 0,
-        totalRevenue: 0,
-      };
-    }
-
-    const total = customers.length;
-    const active = customers.filter((c) => c.status?.toLowerCase() === 'active').length;
-    const inactive = customers.filter((c) => c.status?.toLowerCase() === 'inactive').length;
-    const revenue = 0; // Backend doesn't provide this field yet
-
-    return {
-      totalCustomers: total,
-      activeCustomers: active,
-      inactiveCustomers: inactive,
-      totalRevenue: revenue,
-    };
-  }, [customers]);
-
-  // Map API customers to component format
-  const mappedCustomers = useMemo(() => {
-    if (!customers) return [];
-    return filteredCustomers.map((customer) => ({
-      id: customer.id.toString(),
-      name: customer.full_name,
-      email: customer.email,
-      phone: customer.phone || '',
-      company: customer.company || '',
-      status: (customer.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'pending',
-      totalValue: 0, // Backend doesn't provide this yet
-      lastContact: customer.updated_at || customer.created_at,
-    }));
-  }, [customers, filteredCustomers]);
-
-  const handleEdit = (customer: any) => {
-    console.log('Edit customer:', customer);
-    navigate(`/customers/${customer.id}/edit`);
-  };
-
-  const handleDelete = (customer: any) => {
-    console.log('Delete customer:', customer);
-    // TODO: Implement delete confirmation
-    if (confirm(`Are you sure you want to delete ${customer.name}?`)) {
-      alert(`Customer ${customer.name} deleted`);
-    }
-  };
-
-  const handleView = (customer: any) => {
-    console.log('View customer:', customer);
-    navigate(`/customers/${customer.id}`);
-  };
-
-  const handleAddCustomer = () => {
-    setIsCreateDialogOpen(true);
-  };
-
-  const handleCreateCustomer = (data: any) => {
-    console.log('Create customer:', data);
-    // TODO: Implement API call to create customer
-    alert(`Customer "${data.fullName}" created successfully!`);
-  };
-
+  // Error state
   if (error) {
     return (
       <DashboardLayout title="Customers">
@@ -119,74 +62,32 @@ const CustomersPage = () => {
     );
   }
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Customers">
+        <CustomersPageLoading />
+      </DashboardLayout>
+    );
+  }
+
+  // Main content
   return (
     <DashboardLayout title="Customers">
-      <VStack gap={5} align="stretch">
-        {/* Page Header */}
-        <Box>
-          <Heading size="xl" mb={2}>
-            Customers
-          </Heading>
-          <Text color="gray.600" fontSize="sm">
-            Manage your customer relationships and track interactions
-          </Text>
-        </Box>
-
-        {/* Stats Cards */}
-        <CustomerStats {...stats} />
-
-        {/* Filters */}
-        <CustomerFilters
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-          onAddCustomer={handleAddCustomer}
-        />
-
-        {/* Loading State */}
-        {isLoading ? (
-          <Box display="flex" justifyContent="center" py={12}>
-            <Spinner size="xl" color="purple.500" />
-          </Box>
-        ) : (
-          <>
-            {/* Customer Table */}
-            <CustomerTable
-              customers={mappedCustomers}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onView={handleView}
-            />
-
-            {/* Empty State */}
-            {mappedCustomers.length === 0 && (
-              <Box
-                textAlign="center"
-                py={12}
-                px={6}
-                bg="gray.50"
-                borderRadius="lg"
-              >
-                <Heading size="lg" color="gray.600" mb={2}>
-                  No customers found
-                </Heading>
-                <Text color="gray.500" fontSize="md">
-                  {searchQuery || statusFilter !== 'all'
-                    ? 'Try adjusting your filters'
-                    : 'Get started by adding your first customer'}
-                </Text>
-              </Box>
-            )}
-          </>
-        )}
-      </VStack>
-
-      {/* Create Customer Dialog */}
-      <CreateCustomerDialog
-        isOpen={isCreateDialogOpen}
-        onClose={() => setIsCreateDialogOpen(false)}
-        onSubmit={handleCreateCustomer}
+      <CustomersPageContent
+        mappedCustomers={mappedCustomers}
+        stats={stats}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onView={handleView}
+        onAddCustomer={() => setIsCreateDialogOpen(true)}
+        onCreateCustomer={handleCreateCustomer}
+        isCreateDialogOpen={isCreateDialogOpen}
+        onCloseCreateDialog={() => setIsCreateDialogOpen(false)}
       />
     </DashboardLayout>
   );

@@ -1,7 +1,7 @@
 import { Box, HStack, Input, Button, Stack } from '@chakra-ui/react';
 import { FiSearch, FiFilter, FiPlus } from 'react-icons/fi';
 import CustomSelect from '../ui/CustomSelect';
-import type { LeadFilters as LeadFiltersType, LeadStatus, LeadSource, LeadPriority } from '../../types';
+import type { LeadFilters as LeadFiltersType, LeadStatus, LeadSource } from '../../types';
 
 interface LeadFiltersProps {
   filters: LeadFiltersType;
@@ -26,19 +26,11 @@ const sourceOptions = [
   { value: 'website', label: 'Website' },
   { value: 'referral', label: 'Referral' },
   { value: 'cold_call', label: 'Cold Call' },
-  { value: 'email', label: 'Email' },
+  { value: 'email_campaign', label: 'Email Campaign' },
   { value: 'social_media', label: 'Social Media' },
-  { value: 'trade_show', label: 'Trade Show' },
+  { value: 'event', label: 'Event' },
   { value: 'partner', label: 'Partner' },
   { value: 'other', label: 'Other' },
-];
-
-const priorityOptions = [
-  { value: '', label: 'All Priorities' },
-  { value: 'low', label: 'Low' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'high', label: 'High' },
-  { value: 'urgent', label: 'Urgent' },
 ];
 
 export const LeadFilters = ({ filters, onFilterChange, onAddLead }: LeadFiltersProps) => {
@@ -88,16 +80,6 @@ export const LeadFilters = ({ filters, onFilterChange, onAddLead }: LeadFiltersP
           value={filters.source || ''}
           onChange={(value: string) => onFilterChange({ ...filters, source: (value || undefined) as LeadSource | undefined })}
           options={sourceOptions}
-          width={{ base: '100%', md: 'auto' }}
-          minWidth="160px"
-          accentColor="purple"
-        />
-
-        {/* Priority Filter */}
-        <CustomSelect
-          value={filters.priority || ''}
-          onChange={(value: string) => onFilterChange({ ...filters, priority: (value || undefined) as LeadPriority | undefined })}
-          options={priorityOptions}
           width={{ base: '100%', md: 'auto' }}
           minWidth="160px"
           accentColor="purple"

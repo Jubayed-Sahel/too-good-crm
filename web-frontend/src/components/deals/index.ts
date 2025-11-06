@@ -3,5 +3,7 @@ export { default as DealsFilters } from './DealsFilters';
 export { default as DealsStats } from './DealsStats';
 export { default as CreateDealDialog } from './CreateDealDialog';
 export { default as EditDealDialog } from './EditDealDialog';
+export { DealsPageContent } from './DealsPageContent';
+export { DealsPageLoading } from './DealsPageLoading';
 export type { Deal } from './DealsTable';
 export type { EditDealData } from './EditDealDialog';

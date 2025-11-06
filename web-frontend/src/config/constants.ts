@@ -1,32 +1,8 @@
 /**
  * Application constants
+ * 
+ * Note: API configuration is in api.config.ts
  */
-
-// API Configuration
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
-
-export const API_ENDPOINTS = {
-  AUTH: {
-    REGISTER: '/auth/register/',
-    LOGIN: '/auth/login/',
-    LOGOUT: '/auth/logout/',
-    PROFILE: '/auth/profile/',
-  },
-  CUSTOMERS: {
-    LIST: '/customers/',
-    DETAIL: (id: number) => `/customers/${id}/`,
-    STATS: '/customers/stats/',
-    ADD_NOTE: (id: number) => `/customers/${id}/add_note/`,
-  },
-  DEALS: {
-    LIST: '/deals/',
-    DETAIL: (id: number) => `/deals/${id}/`,
-    PIPELINE_STATS: '/deals/pipeline_stats/',
-  },
-  ANALYTICS: {
-    DASHBOARD: '/analytics/dashboard/',
-  },
-} as const;
 
 // Local Storage Keys
 export const STORAGE_KEYS = {

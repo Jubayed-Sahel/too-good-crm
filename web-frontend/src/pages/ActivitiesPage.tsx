@@ -275,7 +275,7 @@ export const ActivitiesPage = () => {
         {/* Loading State */}
         {isLoading ? (
           <Box display="flex" justifyContent="center" py={12}>
-            <Spinner size="xl" color="purple.500" />
+            <Spinner size="xl" color="blue.500" />
           </Box>
         ) : (
           <>
