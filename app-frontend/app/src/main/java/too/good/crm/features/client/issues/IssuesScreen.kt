@@ -1,4 +1,4 @@
-package too.good.crm.features.deals
+package too.good.crm.features.client.issues
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -20,39 +19,38 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
-import java.text.NumberFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DealsScreen(
+fun IssuesScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    var filterStage by remember { mutableStateOf<DealStage?>(null) }
-    val deals = remember { DealSampleData.getDeals() }
+    var filterStatus by remember { mutableStateOf<IssueStatus?>(null) }
+    val issues = remember { IssueSampleData.getIssues() }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
 
-    val filteredDeals = deals.filter { deal ->
+    val filteredIssues = issues.filter { issue ->
         val matchesSearch = searchQuery.isEmpty() ||
-                deal.title.contains(searchQuery, ignoreCase = true) ||
-                deal.customerName.contains(searchQuery, ignoreCase = true)
-        val matchesFilter = filterStage == null || deal.stage == filterStage
+                issue.issueNumber.contains(searchQuery, ignoreCase = true) ||
+                issue.title.contains(searchQuery, ignoreCase = true) ||
+                issue.vendorName.contains(searchQuery, ignoreCase = true)
+        val matchesFilter = filterStatus == null || issue.status == filterStatus
         matchesSearch && matchesFilter
     }
 
     AppScaffoldWithDrawer(
-        title = "Deals",
+        title = "Issues",
         activeMode = activeMode,
         onModeChanged = { newMode ->
             activeMode = newMode
             UserSession.activeMode = newMode
             // Navigate to appropriate dashboard when mode changes
-            if (newMode == ActiveMode.CLIENT) {
-                onNavigate("client-dashboard")
-            } else {
+            if (newMode == ActiveMode.VENDOR) {
                 onNavigate("dashboard")
+            } else {
+                onNavigate("client-dashboard")
             }
         },
         onNavigate = onNavigate,
@@ -66,13 +64,13 @@ fun DealsScreen(
         ) {
             // Header
             Text(
-                text = "Deals",
+                text = "Issues & Support",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Track your sales pipeline and manage deals",
+                text = "Track and resolve issues with your vendors",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF6B7280)
             )
@@ -84,29 +82,29 @@ fun DealsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                StatCard(
+                IssueStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Total",
-                    value = deals.size.toString(),
-                    color = MaterialTheme.colorScheme.primary
+                    value = issues.size.toString(),
+                    color = Color(0xFF3B82F6)
                 )
-                StatCard(
+                IssueStatCard(
                     modifier = Modifier.weight(1f),
-                    title = "Active",
-                    value = deals.count { it.status == DealStatus.ACTIVE }.toString(),
+                    title = "Open",
+                    value = issues.count { it.status == IssueStatus.OPEN }.toString(),
+                    color = Color(0xFFEF4444)
+                )
+                IssueStatCard(
+                    modifier = Modifier.weight(1f),
+                    title = "In Progress",
+                    value = issues.count { it.status == IssueStatus.IN_PROGRESS }.toString(),
                     color = Color(0xFFF59E0B)
                 )
-                StatCard(
+                IssueStatCard(
                     modifier = Modifier.weight(1f),
-                    title = "Won",
-                    value = deals.count { it.status == DealStatus.WON }.toString(),
+                    title = "Resolved",
+                    value = issues.count { it.status == IssueStatus.RESOLVED || it.status == IssueStatus.CLOSED }.toString(),
                     color = Color(0xFF22C55E)
-                )
-                StatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Value",
-                    value = "$${deals.filter { it.status == DealStatus.ACTIVE }.sumOf { it.value }.toInt() / 1000}K",
-                    color = Color(0xFF8B5CF6)
                 )
             }
 
@@ -117,7 +115,7 @@ fun DealsScreen(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search deals...") },
+                placeholder = { Text("Search issues...") },
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null)
                 },
@@ -131,18 +129,19 @@ fun DealsScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = Color(0xFF3B82F6)
                 )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Deals List
+            // Issues List
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(filteredDeals) { deal ->
-                    DealCard(deal = deal)
+                items(filteredIssues) { issue ->
+                    IssueCard(issue = issue)
                 }
             }
         }
@@ -150,7 +149,7 @@ fun DealsScreen(
 }
 
 @Composable
-fun DealCard(deal: Deal) {
+fun IssueCard(issue: Issue) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -164,116 +163,80 @@ fun DealCard(deal: Deal) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Title and Value
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = deal.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Business,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = Color(0xFF6B7280)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Priority Indicator
+                    IssuePriorityBadge(priority = issue.priority)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
                         Text(
-                            text = deal.customerName,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF6B7280)
+                            text = issue.issueNumber,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF6B7280),
+                            fontSize = 11.sp
+                        )
+                        Text(
+                            text = issue.title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = NumberFormat.getCurrencyInstance(Locale.US).format(deal.value),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF22C55E)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    DealStageBadge(stage = deal.stage)
-                }
+                IssueStatusBadge(status = issue.status)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Progress Bar
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Probability",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
-                    )
-                    Text(
-                        text = "${deal.probability}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                LinearProgressIndicator(
-                    progress = { deal.probability / 100f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = when {
-                        deal.probability >= 75 -> Color(0xFF22C55E)
-                        deal.probability >= 50 -> Color(0xFFF59E0B)
-                        else -> Color(0xFFEF4444)
-                    },
-                )
-            }
+            Text(
+                text = issue.description,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFF6B7280),
+                maxLines = 2
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Footer Info
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Store,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = Color(0xFF3B82F6)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = issue.vendorName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color(0xFF6B7280),
+                        fontSize = 12.sp
+                    )
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.CalendarToday,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(14.dp),
                         tint = Color(0xFF6B7280)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Close: ${deal.expectedCloseDate}",
+                        text = issue.createdDate,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
-                    )
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF6B7280)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = deal.owner,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = Color(0xFF6B7280),
+                        fontSize = 12.sp
                     )
                 }
             }
@@ -282,37 +245,43 @@ fun DealCard(deal: Deal) {
 }
 
 @Composable
-fun DealStageBadge(stage: DealStage) {
-    val (backgroundColor, textColor, text) = when (stage) {
-        DealStage.PROSPECTING -> Triple(
-            Color(0xFF3B82F6).copy(alpha = 0.1f),
-            Color(0xFF3B82F6),
-            "Prospecting"
-        )
-        DealStage.QUALIFICATION -> Triple(
-            Color(0xFF8B5CF6).copy(alpha = 0.1f),
-            Color(0xFF8B5CF6),
-            "Qualification"
-        )
-        DealStage.PROPOSAL -> Triple(
-            Color(0xFFF59E0B).copy(alpha = 0.1f),
-            Color(0xFFF59E0B),
-            "Proposal"
-        )
-        DealStage.NEGOTIATION -> Triple(
-            Color(0xFFEC4899).copy(alpha = 0.1f),
-            Color(0xFFEC4899),
-            "Negotiation"
-        )
-        DealStage.CLOSED_WON -> Triple(
-            Color(0xFF22C55E).copy(alpha = 0.1f),
-            Color(0xFF22C55E),
-            "Won"
-        )
-        DealStage.CLOSED_LOST -> Triple(
+fun IssuePriorityBadge(priority: IssuePriority) {
+    val color = when (priority) {
+        IssuePriority.LOW -> Color(0xFF22C55E)
+        IssuePriority.MEDIUM -> Color(0xFF3B82F6)
+        IssuePriority.HIGH -> Color(0xFFF59E0B)
+        IssuePriority.URGENT -> Color(0xFFEF4444)
+    }
+
+    Box(
+        modifier = Modifier
+            .size(8.dp, 40.dp)
+            .background(color, RoundedCornerShape(4.dp))
+    )
+}
+
+@Composable
+fun IssueStatusBadge(status: IssueStatus) {
+    val (backgroundColor, textColor, text) = when (status) {
+        IssueStatus.OPEN -> Triple(
             Color(0xFFEF4444).copy(alpha = 0.1f),
             Color(0xFFEF4444),
-            "Lost"
+            "Open"
+        )
+        IssueStatus.IN_PROGRESS -> Triple(
+            Color(0xFFF59E0B).copy(alpha = 0.1f),
+            Color(0xFFF59E0B),
+            "In Progress"
+        )
+        IssueStatus.RESOLVED -> Triple(
+            Color(0xFF22C55E).copy(alpha = 0.1f),
+            Color(0xFF22C55E),
+            "Resolved"
+        )
+        IssueStatus.CLOSED -> Triple(
+            Color(0xFF6B7280).copy(alpha = 0.1f),
+            Color(0xFF6B7280),
+            "Closed"
         )
     }
 
@@ -332,7 +301,7 @@ fun DealStageBadge(stage: DealStage) {
 }
 
 @Composable
-fun StatCard(
+fun IssueStatCard(
     modifier: Modifier = Modifier,
     title: String,
     value: String,

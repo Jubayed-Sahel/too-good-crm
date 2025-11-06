@@ -1,4 +1,4 @@
-package too.good.crm.features.activities
+package too.good.crm.features.client.payment
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -13,46 +13,45 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import java.text.NumberFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ActivitiesScreen(
+fun PaymentScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    var filterType by remember { mutableStateOf<ActivityType?>(null) }
-    var filterStatus by remember { mutableStateOf<ActivityStatus?>(null) }
-    val activities = remember { ActivitySampleData.getActivities() }
+    var filterStatus by remember { mutableStateOf<PaymentStatus?>(null) }
+    val payments = remember { PaymentSampleData.getPayments() }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
 
-    val filteredActivities = activities.filter { activity ->
+    val filteredPayments = payments.filter { payment ->
         val matchesSearch = searchQuery.isEmpty() ||
-                activity.title.contains(searchQuery, ignoreCase = true) ||
-                activity.customerName.contains(searchQuery, ignoreCase = true)
-        val matchesType = filterType == null || activity.type == filterType
-        val matchesStatus = filterStatus == null || activity.status == filterStatus
-        matchesSearch && matchesType && matchesStatus
+                payment.paymentNumber.contains(searchQuery, ignoreCase = true) ||
+                payment.vendorName.contains(searchQuery, ignoreCase = true)
+        val matchesFilter = filterStatus == null || payment.status == filterStatus
+        matchesSearch && matchesFilter
     }
 
     AppScaffoldWithDrawer(
-        title = "Activities",
+        title = "Payments",
         activeMode = activeMode,
         onModeChanged = { newMode ->
             activeMode = newMode
             UserSession.activeMode = newMode
             // Navigate to appropriate dashboard when mode changes
-            if (newMode == ActiveMode.CLIENT) {
-                onNavigate("client-dashboard")
-            } else {
+            if (newMode == ActiveMode.VENDOR) {
                 onNavigate("dashboard")
+            } else {
+                onNavigate("client-dashboard")
             }
         },
         onNavigate = onNavigate,
@@ -66,13 +65,13 @@ fun ActivitiesScreen(
         ) {
             // Header
             Text(
-                text = "Activities",
+                text = "Payments",
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Track your tasks, meetings, calls, and follow-ups",
+                text = "Manage your payment history and upcoming dues",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color(0xFF6B7280)
             )
@@ -84,29 +83,23 @@ fun ActivitiesScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ActivityStatCard(
+                PaymentStatCard(
                     modifier = Modifier.weight(1f),
-                    title = "Total",
-                    value = activities.size.toString(),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                ActivityStatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Completed",
-                    value = activities.count { it.status == ActivityStatus.COMPLETED }.toString(),
+                    title = "Total Paid",
+                    value = "$${(payments.filter { it.status == PaymentStatus.PAID }.sumOf { it.amount } / 1000).toInt()}K",
                     color = Color(0xFF22C55E)
                 )
-                ActivityStatCard(
+                PaymentStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Pending",
-                    value = activities.count { it.status == ActivityStatus.PENDING }.toString(),
+                    value = payments.count { it.status == PaymentStatus.PENDING }.toString(),
                     color = Color(0xFFF59E0B)
                 )
-                ActivityStatCard(
+                PaymentStatCard(
                     modifier = Modifier.weight(1f),
-                    title = "Scheduled",
-                    value = activities.count { it.status == ActivityStatus.SCHEDULED }.toString(),
-                    color = Color(0xFF3B82F6)
+                    title = "Overdue",
+                    value = payments.count { it.status == PaymentStatus.OVERDUE }.toString(),
+                    color = Color(0xFFEF4444)
                 )
             }
 
@@ -117,7 +110,7 @@ fun ActivitiesScreen(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search activities...") },
+                placeholder = { Text("Search payments...") },
                 leadingIcon = {
                     Icon(Icons.Default.Search, contentDescription = null)
                 },
@@ -131,18 +124,19 @@ fun ActivitiesScreen(
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = Color(0xFF3B82F6)
                 )
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Activities List
+            // Payments List
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(filteredActivities) { activity ->
-                    ActivityCard(activity = activity)
+                items(filteredPayments) { payment ->
+                    PaymentCard(payment = payment)
                 }
             }
         }
@@ -150,7 +144,7 @@ fun ActivitiesScreen(
 }
 
 @Composable
-fun ActivityCard(activity: Activity) {
+fun PaymentCard(payment: Payment) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -165,17 +159,17 @@ fun ActivityCard(activity: Activity) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Type Icon
+            // Payment Icon
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = getActivityTypeColor(activity.type).copy(alpha = 0.1f),
+                color = Color(0xFF3B82F6).copy(alpha = 0.1f),
                 modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = getActivityTypeIcon(activity.type),
+                        imageVector = Icons.Default.Payment,
                         contentDescription = null,
-                        tint = getActivityTypeColor(activity.type),
+                        tint = Color(0xFF3B82F6),
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -183,73 +177,59 @@ fun ActivityCard(activity: Activity) {
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Activity Info
+            // Payment Info
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = activity.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
-                    ActivityStatusBadge(status = activity.status)
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Business,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF6B7280)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = activity.customerName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = Color(0xFF6B7280)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Due: ${activity.dueDate}",
-                            style = MaterialTheme.typography.bodySmall,
+                            text = payment.paymentNumber,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = payment.vendorName,
+                            style = MaterialTheme.typography.bodyMedium,
                             color = Color(0xFF6B7280)
                         )
                     }
+                    PaymentStatusBadge(status = payment.status)
+                }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = Color(0xFF6B7280)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = NumberFormat.getCurrencyInstance(Locale.US).format(payment.amount),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF3B82F6)
+                    )
+
+                    Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = activity.createdBy,
+                            text = payment.method,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF6B7280)
+                            color = Color(0xFF6B7280),
+                            fontSize = 12.sp
                         )
+                        if (payment.dueDate != null) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Due: ${payment.dueDate}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (payment.status == PaymentStatus.OVERDUE) Color(0xFFEF4444) else Color(0xFF6B7280),
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
             }
@@ -258,27 +238,27 @@ fun ActivityCard(activity: Activity) {
 }
 
 @Composable
-fun ActivityStatusBadge(status: ActivityStatus) {
+fun PaymentStatusBadge(status: PaymentStatus) {
     val (backgroundColor, textColor, text) = when (status) {
-        ActivityStatus.COMPLETED -> Triple(
+        PaymentStatus.PAID -> Triple(
             Color(0xFF22C55E).copy(alpha = 0.1f),
             Color(0xFF22C55E),
-            "Completed"
+            "Paid"
         )
-        ActivityStatus.PENDING -> Triple(
+        PaymentStatus.PENDING -> Triple(
             Color(0xFFF59E0B).copy(alpha = 0.1f),
             Color(0xFFF59E0B),
             "Pending"
         )
-        ActivityStatus.SCHEDULED -> Triple(
-            Color(0xFF3B82F6).copy(alpha = 0.1f),
-            Color(0xFF3B82F6),
-            "Scheduled"
-        )
-        ActivityStatus.OVERDUE -> Triple(
+        PaymentStatus.OVERDUE -> Triple(
             Color(0xFFEF4444).copy(alpha = 0.1f),
             Color(0xFFEF4444),
             "Overdue"
+        )
+        PaymentStatus.FAILED -> Triple(
+            Color(0xFFEF4444).copy(alpha = 0.1f),
+            Color(0xFFEF4444),
+            "Failed"
         )
     }
 
@@ -298,7 +278,7 @@ fun ActivityStatusBadge(status: ActivityStatus) {
 }
 
 @Composable
-fun ActivityStatCard(
+fun PaymentStatCard(
     modifier: Modifier = Modifier,
     title: String,
     value: String,
@@ -331,26 +311,6 @@ fun ActivityStatCard(
                 fontSize = 20.sp
             )
         }
-    }
-}
-
-fun getActivityTypeIcon(type: ActivityType): ImageVector {
-    return when (type) {
-        ActivityType.CALL -> Icons.Default.Phone
-        ActivityType.EMAIL -> Icons.Default.Email
-        ActivityType.MEETING -> Icons.Default.Event
-        ActivityType.TASK -> Icons.Default.CheckCircle
-        ActivityType.FOLLOW_UP -> Icons.Default.Update
-    }
-}
-
-fun getActivityTypeColor(type: ActivityType): Color {
-    return when (type) {
-        ActivityType.CALL -> Color(0xFF3B82F6)
-        ActivityType.EMAIL -> Color(0xFF8B5CF6)
-        ActivityType.MEETING -> Color(0xFF22C55E)
-        ActivityType.TASK -> Color(0xFFF59E0B)
-        ActivityType.FOLLOW_UP -> Color(0xFFEC4899)
     }
 }
 

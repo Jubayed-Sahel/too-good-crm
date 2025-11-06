@@ -13,6 +13,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import too.good.crm.data.ActiveMode
+import too.good.crm.data.UserSession
+import too.good.crm.ui.components.AppScaffoldWithDrawer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,51 +23,30 @@ fun LeadsScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    // Debug: Log when this screen is composed
-    LaunchedEffect(Unit) {
-        println("🎯 LeadsScreen: Screen is now being composed!")
-    }
-
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("All Statuses") }
     var selectedSource by remember { mutableStateOf("All Sources") }
     var selectedPriority by remember { mutableStateOf("All Priorities") }
+    var activeMode by remember { mutableStateOf(UserSession.activeMode) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Leads")
-                        Text(
-                            "🎯 LEADS PAGE ACTIVE",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.Yellow
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { /* TODO: Notifications */ }) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        }
-    ) { innerPadding ->
+    AppScaffoldWithDrawer(
+        title = "Leads",
+        activeMode = activeMode,
+        onModeChanged = { newMode ->
+            activeMode = newMode
+            UserSession.activeMode = newMode
+            // Navigate to appropriate dashboard when mode changes
+            if (newMode == ActiveMode.CLIENT) {
+                onNavigate("client-dashboard")
+            } else {
+                onNavigate("dashboard")
+            }
+        },
+        onNavigate = onNavigate,
+        onLogout = onBack
+    ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)

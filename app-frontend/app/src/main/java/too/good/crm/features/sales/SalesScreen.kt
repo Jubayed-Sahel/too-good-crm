@@ -16,6 +16,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import too.good.crm.data.ActiveMode
+import too.good.crm.data.UserSession
+import too.good.crm.ui.components.AppScaffoldWithDrawer
 import java.text.NumberFormat
 import java.util.*
 
@@ -25,27 +28,26 @@ fun SalesScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Sales") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
-                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        }
-    ) { innerPadding ->
+    var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+
+    AppScaffoldWithDrawer(
+        title = "Sales",
+        activeMode = activeMode,
+        onModeChanged = { newMode ->
+            activeMode = newMode
+            UserSession.activeMode = newMode
+            // Navigate to appropriate dashboard when mode changes
+            if (newMode == ActiveMode.CLIENT) {
+                onNavigate("client-dashboard")
+            } else {
+                onNavigate("dashboard")
+            }
+        },
+        onNavigate = onNavigate,
+        onLogout = onBack
+    ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(innerPadding)
                 .fillMaxSize()
                 .background(Color(0xFFF9FAFB))
                 .verticalScroll(rememberScrollState())
