@@ -24,6 +24,8 @@ import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.features.dashboard.DashboardScreen
 import too.good.crm.features.login.LoginScreen
 import too.good.crm.features.leads.LeadsScreen
+import too.good.crm.features.customers.CustomersScreen
+import too.good.crm.features.deals.DealsScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,6 +87,26 @@ class MainActivity : ComponentActivity() {
                         composable("leads") {
                             println("🟢 MainActivity: Leads route composing")
                             LeadsScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("customers") {
+                            CustomersScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("deals") {
+                            DealsScreen(
                                 onNavigate = { route ->
                                     navController.navigate(route)
                                 },
