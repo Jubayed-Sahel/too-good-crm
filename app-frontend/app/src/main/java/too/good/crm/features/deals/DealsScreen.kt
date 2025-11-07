@@ -237,13 +237,13 @@ fun DealCard(deal: Deal) {
                             Icons.Default.Business,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color(0xFF6B7280)
+                            tint = DesignTokens.Colors.OnSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = deal.customerName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF6B7280)
+                            color = DesignTokens.Colors.OnSurfaceVariant
                         )
                     }
                 }
@@ -253,7 +253,7 @@ fun DealCard(deal: Deal) {
                         text = NumberFormat.getCurrencyInstance(Locale.US).format(deal.value),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF22C55E)
+                        color = DesignTokens.Colors.Success
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     DealStageBadge(stage = deal.stage)
@@ -271,7 +271,7 @@ fun DealCard(deal: Deal) {
                     Text(
                         text = "Probability",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                     Text(
                         text = "${deal.probability}%",
@@ -288,9 +288,9 @@ fun DealCard(deal: Deal) {
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp)),
                     color = when {
-                        deal.probability >= 75 -> Color(0xFF22C55E)
-                        deal.probability >= 50 -> Color(0xFFF59E0B)
-                        else -> Color(0xFFEF4444)
+                        deal.probability >= 75 -> DesignTokens.Colors.Success
+                        deal.probability >= 50 -> DesignTokens.Colors.Warning
+                        else -> DesignTokens.Colors.Error
                     },
                 )
             }
@@ -307,13 +307,13 @@ fun DealCard(deal: Deal) {
                         Icons.Default.CalendarToday,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF6B7280)
+                        tint = DesignTokens.Colors.OnSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Close: ${deal.expectedCloseDate}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
 
@@ -322,13 +322,13 @@ fun DealCard(deal: Deal) {
                         Icons.Default.Person,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF6B7280)
+                        tint = DesignTokens.Colors.OnSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = deal.owner,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
             }
@@ -340,33 +340,33 @@ fun DealCard(deal: Deal) {
 fun DealStageBadge(stage: DealStage) {
     val (backgroundColor, textColor, text) = when (stage) {
         DealStage.PROSPECTING -> Triple(
-            Color(0xFF3B82F6).copy(alpha = 0.1f),
-            Color(0xFF3B82F6),
+            DesignTokens.Colors.Info.copy(alpha = 0.1f),
+            DesignTokens.Colors.Info,
             "Prospecting"
         )
         DealStage.QUALIFICATION -> Triple(
-            Color(0xFF8B5CF6).copy(alpha = 0.1f),
-            Color(0xFF8B5CF6),
+            DesignTokens.Colors.StatusScheduled.copy(alpha = 0.1f),
+            DesignTokens.Colors.StatusScheduled,
             "Qualification"
         )
         DealStage.PROPOSAL -> Triple(
-            Color(0xFFF59E0B).copy(alpha = 0.1f),
-            Color(0xFFF59E0B),
+            DesignTokens.Colors.Warning.copy(alpha = 0.1f),
+            DesignTokens.Colors.Warning,
             "Proposal"
         )
         DealStage.NEGOTIATION -> Triple(
-            Color(0xFFEC4899).copy(alpha = 0.1f),
-            Color(0xFFEC4899),
+            DesignTokens.Colors.PinkAccent.copy(alpha = 0.1f),
+            DesignTokens.Colors.PinkAccent,
             "Negotiation"
         )
         DealStage.CLOSED_WON -> Triple(
-            Color(0xFF22C55E).copy(alpha = 0.1f),
-            Color(0xFF22C55E),
+            DesignTokens.Colors.Success.copy(alpha = 0.1f),
+            DesignTokens.Colors.Success,
             "Won"
         )
         DealStage.CLOSED_LOST -> Triple(
-            Color(0xFFEF4444).copy(alpha = 0.1f),
-            Color(0xFFEF4444),
+            DesignTokens.Colors.Error.copy(alpha = 0.1f),
+            DesignTokens.Colors.Error,
             "Lost"
         )
     }
@@ -408,7 +408,7 @@ fun StatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 11.sp
             )
             Spacer(modifier = Modifier.height(4.dp))

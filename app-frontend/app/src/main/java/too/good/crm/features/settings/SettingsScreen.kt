@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +54,7 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
+                .background(DesignTokens.Colors.Background)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
@@ -67,7 +68,7 @@ fun SettingsScreen(
             Text(
                 text = "Manage your account and preferences",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -113,13 +114,13 @@ fun SettingsScreen(
                         Text(
                             text = "john.doe@company.com",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF6B7280)
+                            color = DesignTokens.Colors.OnSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Sales Manager",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF6B7280)
+                            color = DesignTokens.Colors.OnSurfaceVariant
                         )
                     }
 
@@ -140,7 +141,7 @@ fun SettingsScreen(
                 text = "Account",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -157,14 +158,14 @@ fun SettingsScreen(
                         subtitle = "Update your personal information",
                         onClick = { /* Navigate to edit profile */ }
                     )
-                    HorizontalDivider(color = Color(0xFFE5E7EB))
+                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
                     SettingsItem(
                         icon = Icons.Default.Lock,
                         title = "Change Password",
                         subtitle = "Update your password",
                         onClick = { /* Navigate to change password */ }
                     )
-                    HorizontalDivider(color = Color(0xFFE5E7EB))
+                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
                     SettingsItem(
                         icon = Icons.Default.Email,
                         title = "Email Preferences",
@@ -181,7 +182,7 @@ fun SettingsScreen(
                 text = "Preferences",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -199,7 +200,7 @@ fun SettingsScreen(
                         checked = darkMode,
                         onCheckedChange = { darkMode = it }
                     )
-                    HorizontalDivider(color = Color(0xFFE5E7EB))
+                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
                     SettingsSwitchItem(
                         icon = Icons.Default.Notifications,
                         title = "Notifications",
@@ -207,7 +208,7 @@ fun SettingsScreen(
                         checked = notificationsEnabled,
                         onCheckedChange = { notificationsEnabled = it }
                     )
-                    HorizontalDivider(color = Color(0xFFE5E7EB))
+                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
                     SettingsSwitchItem(
                         icon = Icons.Default.Email,
                         title = "Email Notifications",
@@ -225,7 +226,7 @@ fun SettingsScreen(
                 text = "Support & Information",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -242,21 +243,21 @@ fun SettingsScreen(
                         subtitle = "Get help or contact support",
                         onClick = { /* Navigate to help */ }
                     )
-                    HorizontalDivider(color = Color(0xFFE5E7EB))
+                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
                     SettingsItem(
                         icon = Icons.Default.Info,
                         title = "About",
                         subtitle = "App version and information",
                         onClick = { /* Navigate to about */ }
                     )
-                    HorizontalDivider(color = Color(0xFFE5E7EB))
+                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
                     SettingsItem(
                         icon = Icons.Default.Description,
                         title = "Privacy Policy",
                         subtitle = "Read our privacy policy",
                         onClick = { /* Navigate to privacy */ }
                     )
-                    HorizontalDivider(color = Color(0xFFE5E7EB))
+                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
                     SettingsItem(
                         icon = Icons.Default.Gavel,
                         title = "Terms of Service",
@@ -275,7 +276,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFEF4444)
+                    containerColor = DesignTokens.Colors.Error
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -299,7 +300,7 @@ fun SettingsScreen(
                 text = "Version 1.0.0",
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF9CA3AF),
+                color = DesignTokens.Colors.OnSurfaceTertiary,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
@@ -334,13 +335,13 @@ fun SettingsItem(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF111827)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 12.sp
             )
         }
@@ -348,7 +349,7 @@ fun SettingsItem(
         Icon(
             Icons.Default.ChevronRight,
             contentDescription = "Navigate",
-            tint = Color(0xFF9CA3AF),
+            tint = DesignTokens.Colors.OnSurfaceTertiary,
             modifier = Modifier.size(20.dp)
         )
     }
@@ -382,13 +383,13 @@ fun SettingsSwitchItem(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF111827)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 12.sp
             )
         }
@@ -400,7 +401,7 @@ fun SettingsSwitchItem(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = MaterialTheme.colorScheme.primary,
                 uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = Color(0xFFD1D5DB)
+                uncheckedTrackColor = DesignTokens.Colors.Outline
             )
         )
     }

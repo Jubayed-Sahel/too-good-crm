@@ -352,7 +352,7 @@ fun CustomerCard(customer: Customer) {
                 Text(
                     text = customer.company,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFF6B7280)
+                    color = DesignTokens.Colors.OnSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -366,13 +366,13 @@ fun CustomerCard(customer: Customer) {
                             Icons.Default.Email,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = Color(0xFF6B7280)
+                            tint = DesignTokens.Colors.OnSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = customer.email,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF6B7280)
+                            color = DesignTokens.Colors.OnSurfaceVariant
                         )
                     }
 
@@ -380,7 +380,7 @@ fun CustomerCard(customer: Customer) {
                         text = NumberFormat.getCurrencyInstance(Locale.US).format(customer.value),
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF22C55E)
+                        color = DesignTokens.Colors.Success
                     )
                 }
             }
@@ -388,7 +388,7 @@ fun CustomerCard(customer: Customer) {
             Icon(
                 Icons.Default.ChevronRight,
                 contentDescription = "View details",
-                tint = Color(0xFF9CA3AF)
+                tint = DesignTokens.Colors.OnSurfaceTertiary
             )
         }
     }
@@ -416,7 +416,7 @@ fun StatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 12.sp
             )
             Spacer(modifier = Modifier.height(4.dp))

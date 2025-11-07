@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +63,7 @@ fun TeamScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
+                .background(DesignTokens.Colors.Background)
                 .padding(16.dp)
         ) {
             // Header
@@ -75,7 +76,7 @@ fun TeamScreen(
             Text(
                 text = "Manage your team members and their roles",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -90,21 +91,21 @@ fun TeamScreen(
                     title = "Total",
                     value = teamMembers.size.toString(),
                     icon = Icons.Default.People,
-                    color = Color(0xFF667EEA)
+                    color = DesignTokens.Colors.Primary
                 )
                 TeamStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Active",
                     value = teamMembers.count { it.status == TeamStatus.ACTIVE }.toString(),
                     icon = Icons.Default.CheckCircle,
-                    color = Color(0xFF10B981)
+                    color = DesignTokens.Colors.Success
                 )
                 TeamStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Departments",
                     value = teamMembers.map { it.department }.distinct().size.toString(),
                     icon = Icons.Default.Business,
-                    color = Color(0xFF8B5CF6)
+                    color = DesignTokens.Colors.StatusScheduled
                 )
             }
 
@@ -125,12 +126,12 @@ fun TeamScreen(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = Color(0xFF9CA3AF)
+                            tint = DesignTokens.Colors.OnSurfaceTertiary
                         )
                     },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF667EEA),
-                        unfocusedBorderColor = Color(0xFFE5E7EB),
+                        focusedBorderColor = DesignTokens.Colors.Primary,
+                        unfocusedBorderColor = DesignTokens.Colors.OutlineVariant,
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White
                     ),
@@ -141,7 +142,7 @@ fun TeamScreen(
                 Button(
                     onClick = { /* Add member dialog */ },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF667EEA)
+                        containerColor = DesignTokens.Colors.Primary
                     ),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -230,12 +231,12 @@ fun TeamStatCard(
                 text = value,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1F2937)
+                color = DesignTokens.Colors.OnSurface
             )
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
         }
     }
@@ -283,12 +284,12 @@ fun TeamMemberCard(member: TeamMember) {
                         text = member.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1F2937)
+                        color = DesignTokens.Colors.OnSurface
                     )
                     Text(
                         text = member.email,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
@@ -313,7 +314,7 @@ fun TeamMemberCard(member: TeamMember) {
                         Text(
                             text = "• ${member.department}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF9CA3AF)
+                            color = DesignTokens.Colors.OnSurfaceTertiary
                         )
                     }
                 }
@@ -353,7 +354,7 @@ fun TeamMemberCard(member: TeamMember) {
                 Text(
                     text = "Active ${member.lastActive}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF9CA3AF),
+                    color = DesignTokens.Colors.OnSurfaceTertiary,
                     fontSize = 11.sp
                 )
             }
@@ -374,17 +375,17 @@ data class TeamMember(
 )
 
 enum class TeamRole(val displayName: String, val color: Color) {
-    ADMIN("Admin", Color(0xFFEF4444)),
-    MANAGER("Manager", Color(0xFF8B5CF6)),
-    SALES("Sales Rep", Color(0xFF3B82F6)),
-    SUPPORT("Support", Color(0xFF10B981)),
-    DEVELOPER("Developer", Color(0xFFF59E0B))
+    ADMIN("Admin", DesignTokens.Colors.Error),
+    MANAGER("Manager", DesignTokens.Colors.StatusScheduled),
+    SALES("Sales Rep", DesignTokens.Colors.Info),
+    SUPPORT("Support", DesignTokens.Colors.Success),
+    DEVELOPER("Developer", DesignTokens.Colors.Warning)
 }
 
 enum class TeamStatus(val displayName: String, val color: Color) {
-    ACTIVE("Active", Color(0xFF10B981)),
-    INACTIVE("Inactive", Color(0xFF6B7280)),
-    ON_LEAVE("On Leave", Color(0xFFF59E0B))
+    ACTIVE("Active", DesignTokens.Colors.Success),
+    INACTIVE("Inactive", DesignTokens.Colors.OnSurfaceVariant),
+    ON_LEAVE("On Leave", DesignTokens.Colors.Warning)
 }
 
 object TeamSampleData {

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,7 +60,7 @@ fun IssuesScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
+                .background(DesignTokens.Colors.Background)
                 .padding(16.dp)
         ) {
             // Header
@@ -72,7 +73,7 @@ fun IssuesScreen(
             Text(
                 text = "Track and resolve issues with your vendors",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -86,25 +87,25 @@ fun IssuesScreen(
                     modifier = Modifier.weight(1f),
                     title = "Total",
                     value = issues.size.toString(),
-                    color = Color(0xFF3B82F6)
+                    color = DesignTokens.Colors.Info
                 )
                 IssueStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Open",
                     value = issues.count { it.status == IssueStatus.OPEN }.toString(),
-                    color = Color(0xFFEF4444)
+                    color = DesignTokens.Colors.Error
                 )
                 IssueStatCard(
                     modifier = Modifier.weight(1f),
                     title = "In Progress",
                     value = issues.count { it.status == IssueStatus.IN_PROGRESS }.toString(),
-                    color = Color(0xFFF59E0B)
+                    color = DesignTokens.Colors.Warning
                 )
                 IssueStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Resolved",
                     value = issues.count { it.status == IssueStatus.RESOLVED || it.status == IssueStatus.CLOSED }.toString(),
-                    color = Color(0xFF22C55E)
+                    color = DesignTokens.Colors.Success
                 )
             }
 
@@ -130,7 +131,7 @@ fun IssuesScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color(0xFF3B82F6)
+                    focusedBorderColor = DesignTokens.Colors.Info
                 )
             )
 
@@ -179,7 +180,7 @@ fun IssueCard(issue: Issue) {
                         Text(
                             text = issue.issueNumber,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF6B7280),
+                            color = DesignTokens.Colors.OnSurfaceVariant,
                             fontSize = 11.sp
                         )
                         Text(
@@ -197,7 +198,7 @@ fun IssueCard(issue: Issue) {
             Text(
                 text = issue.description,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 maxLines = 2
             )
 
@@ -213,13 +214,13 @@ fun IssueCard(issue: Issue) {
                         Icons.Default.Store,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF3B82F6)
+                        tint = DesignTokens.Colors.Info
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = issue.vendorName,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280),
+                        color = DesignTokens.Colors.OnSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
@@ -229,13 +230,13 @@ fun IssueCard(issue: Issue) {
                         Icons.Default.CalendarToday,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = Color(0xFF6B7280)
+                        tint = DesignTokens.Colors.OnSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = issue.createdDate,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280),
+                        color = DesignTokens.Colors.OnSurfaceVariant,
                         fontSize = 12.sp
                     )
                 }
@@ -247,10 +248,10 @@ fun IssueCard(issue: Issue) {
 @Composable
 fun IssuePriorityBadge(priority: IssuePriority) {
     val color = when (priority) {
-        IssuePriority.LOW -> Color(0xFF22C55E)
-        IssuePriority.MEDIUM -> Color(0xFF3B82F6)
-        IssuePriority.HIGH -> Color(0xFFF59E0B)
-        IssuePriority.URGENT -> Color(0xFFEF4444)
+        IssuePriority.LOW -> DesignTokens.Colors.Success
+        IssuePriority.MEDIUM -> DesignTokens.Colors.Info
+        IssuePriority.HIGH -> DesignTokens.Colors.Warning
+        IssuePriority.URGENT -> DesignTokens.Colors.Error
     }
 
     Box(
@@ -264,23 +265,23 @@ fun IssuePriorityBadge(priority: IssuePriority) {
 fun IssueStatusBadge(status: IssueStatus) {
     val (backgroundColor, textColor, text) = when (status) {
         IssueStatus.OPEN -> Triple(
-            Color(0xFFEF4444).copy(alpha = 0.1f),
-            Color(0xFFEF4444),
+            DesignTokens.Colors.Error.copy(alpha = 0.1f),
+            DesignTokens.Colors.Error,
             "Open"
         )
         IssueStatus.IN_PROGRESS -> Triple(
-            Color(0xFFF59E0B).copy(alpha = 0.1f),
-            Color(0xFFF59E0B),
+            DesignTokens.Colors.Warning.copy(alpha = 0.1f),
+            DesignTokens.Colors.Warning,
             "In Progress"
         )
         IssueStatus.RESOLVED -> Triple(
-            Color(0xFF22C55E).copy(alpha = 0.1f),
-            Color(0xFF22C55E),
+            DesignTokens.Colors.Success.copy(alpha = 0.1f),
+            DesignTokens.Colors.Success,
             "Resolved"
         )
         IssueStatus.CLOSED -> Triple(
-            Color(0xFF6B7280).copy(alpha = 0.1f),
-            Color(0xFF6B7280),
+            DesignTokens.Colors.OnSurfaceVariant.copy(alpha = 0.1f),
+            DesignTokens.Colors.OnSurfaceVariant,
             "Closed"
         )
     }
@@ -322,7 +323,7 @@ fun IssueStatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 11.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
