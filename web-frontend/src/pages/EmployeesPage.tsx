@@ -17,6 +17,7 @@ import { toaster } from '../components/ui/toaster';
 import { useEmployees } from '@/hooks/useEmployees';
 import { employeeService } from '@/services';
 import type { Employee } from '@/services';
+import { exportData } from '@/utils';
 
 const EmployeesPage = () => {
   const navigate = useNavigate();
@@ -141,9 +142,39 @@ const EmployeesPage = () => {
   };
 
   const handleBulkExport = (employeeIds: string[]) => {
-    console.log('Bulk export employees:', employeeIds);
-    // TODO: Implement bulk export functionality
-    alert(`Exporting ${employeeIds.length} employee(s)`);
+    if (employeeIds.length === 0) return;
+
+    const selectedEmployees = filteredEmployees.filter(emp => 
+      employeeIds.includes(emp.id.toString())
+    );
+
+    if (selectedEmployees.length === 0) {
+      toaster.create({
+        title: 'Export unavailable',
+        description: 'No matching employees found for export. Please refresh and try again.',
+        type: 'warning',
+      });
+      return;
+    }
+
+    const exportRows = selectedEmployees.map((employee) => ({
+      ID: employee.id,
+      Name: `${employee.first_name} ${employee.last_name}`.trim(),
+      Email: employee.email,
+      Phone: employee.phone || '',
+      Department: employee.department || '',
+      Status: employee.status,
+      Role: employee.role_name || '',
+      'Job Title': employee.job_title || '',
+    }));
+
+    exportData(exportRows, 'employees', 'csv');
+
+    toaster.create({
+      title: 'Export complete',
+      description: `${selectedEmployees.length} employee(s) exported successfully.`,
+      type: 'success',
+    });
   };
 
   // Error state

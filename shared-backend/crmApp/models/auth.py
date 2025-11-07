@@ -177,7 +177,12 @@ class UserProfile(TimestampedModel):
     """
     User Profile model for multi-tenancy.
     Links a user to an organization with a specific profile type (vendor, employee, customer).
-    A user can have multiple profiles across different organizations.
+    
+    Constraints:
+    - A user can have ONLY ONE vendor profile (owns one organization)
+    - A user can have ONLY ONE employee profile (works in one organization)
+    - A user can have ONLY ONE customer profile (can be standalone)
+    - Each profile type is unique per user (enforced by unique constraint on user + profile_type)
     """
     PROFILE_TYPE_CHOICES = [
         ('vendor', 'Vendor'),
@@ -192,7 +197,7 @@ class UserProfile(TimestampedModel):
     ]
     
     user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='user_profiles')
-    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='user_profiles')
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='user_profiles', null=True, blank=True)
     profile_type = models.CharField(max_length=20, choices=PROFILE_TYPE_CHOICES)
     is_primary = models.BooleanField(default=False)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
@@ -203,14 +208,47 @@ class UserProfile(TimestampedModel):
         db_table = 'user_profiles'
         verbose_name = 'User Profile'
         verbose_name_plural = 'User Profiles'
-        unique_together = [('user', 'organization', 'profile_type')]
+        # Enforce ONE profile of each type per user
+        unique_together = [('user', 'profile_type')]
         indexes = [
             models.Index(fields=['user', 'organization']),
             models.Index(fields=['profile_type', 'status']),
         ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(profile_type='customer') | models.Q(organization__isnull=False),
+                name='customer_profile_no_org_required'
+            )
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(profile_type='customer') | models.Q(organization__isnull=False),
+                name='customer_profile_no_org_required'
+            )
+        ]
     
     def __str__(self):
-        return f"{self.user.email} - {self.get_profile_type_display()} @ {self.organization.name}"
+        org_name = self.organization.name if self.organization else 'No Organization'
+        return f"{self.user.email} - {self.get_profile_type_display()} @ {org_name}"
+    
+    def clean(self):
+        """Validate profile constraints."""
+        from django.core.exceptions import ValidationError
+        
+        # Vendor and employee profiles must have organization
+        if self.profile_type in ['vendor', 'employee'] and not self.organization:
+            raise ValidationError(f"{self.get_profile_type_display()} profile must have an organization.")
+        
+        # Check if user already has this profile type
+        existing = UserProfile.objects.filter(
+            user=self.user,
+            profile_type=self.profile_type
+        ).exclude(pk=self.pk)
+        
+        if existing.exists():
+            raise ValidationError(f"User already has a {self.get_profile_type_display()} profile.")
+        
+        super().clean()
     
     def activate(self):
         """Activate the user profile."""

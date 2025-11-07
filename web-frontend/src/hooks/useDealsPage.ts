@@ -13,7 +13,7 @@ interface DealsStats {
   totalValue: number;
 }
 
-interface MappedDeal {
+export interface MappedDeal {
   id: string;
   title: string;
   customer: string;
