@@ -1,4 +1,3 @@
-// app/src/main/java/too/good/crm/MainActivity.kt
 package too.good.crm
 
 import android.os.Bundle
@@ -15,26 +14,26 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import too.good.crm.features.signup.SignupScreen
-import too.good.crm.ui.components.PrimaryButton
-import too.good.crm.ui.components.SecondaryButton
-import too.good.crm.ui.theme.TooGoodCrmTheme
-import too.good.crm.ui.theme.DesignTokens
-
-import too.good.crm.features.dashboard.DashboardScreen
-import too.good.crm.features.login.LoginScreen
-import too.good.crm.features.leads.LeadsScreen
-import too.good.crm.features.customers.CustomersScreen
-import too.good.crm.features.deals.DealsScreen
-import too.good.crm.features.sales.SalesScreen
 import too.good.crm.features.activities.ActivitiesScreen
 import too.good.crm.features.analytics.AnalyticsScreen
-import too.good.crm.features.settings.SettingsScreen
 import too.good.crm.features.client.ClientDashboardScreen
 import too.good.crm.features.client.MyVendorsScreen
+import too.good.crm.features.client.issues.IssuesScreen
 import too.good.crm.features.client.orders.MyOrdersScreen
 import too.good.crm.features.client.payment.PaymentScreen
-import too.good.crm.features.client.issues.IssuesScreen
+import too.good.crm.features.customers.CustomersScreen
+import too.good.crm.features.dashboard.DashboardScreen
+import too.good.crm.features.deals.DealsScreen
+import too.good.crm.features.leads.LeadsScreen
+import too.good.crm.features.login.LoginScreen
+import too.good.crm.features.sales.SalesScreen
+import too.good.crm.features.settings.SettingsScreen
+import too.good.crm.features.signup.SignupScreen
+import too.good.crm.features.team.TeamScreen
+import too.good.crm.ui.components.PrimaryButton
+import too.good.crm.ui.components.SecondaryButton
+import too.good.crm.ui.theme.DesignTokens
+import too.good.crm.ui.theme.TooGoodCrmTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -156,6 +155,16 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("settings") {
                             SettingsScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("team") {
+                            TeamScreen(
                                 onNavigate = { route ->
                                     navController.navigate(route)
                                 },
