@@ -20,7 +20,7 @@ import { HiUserGroup } from 'react-icons/hi';
 import { useAccountMode } from '@/contexts/AccountModeContext';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { useAuth } from '@/hooks';
-import { useState } from 'react';
+import { useState, useMemo, useCallback, memo } from 'react';
 import { RoleSelectionDialog } from '../auth';
 import { toaster } from '../ui/toaster';
 
@@ -36,13 +36,21 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
 
-  const currentProfile = user?.primaryProfile || user?.profiles?.[0];
+  // Memoize current profile to prevent unnecessary recalculations
+  const currentProfile = useMemo(() => 
+    user?.primaryProfile || user?.profiles?.[0],
+    [user?.primaryProfile, user?.profiles]
+  );
 
-  const handleSignOut = async () => {
+  const handleSignOut = useCallback(async () => {
     await logout();
-  };
+  }, [logout]);
 
-  const handleSwitchRole = async (profileId: number) => {
+  const handleOpenRoleSwitcher = useCallback(() => {
+    setShowRoleSwitcher(true);
+  }, []);
+
+  const handleSwitchRole = useCallback(async (profileId: number) => {
     setIsSwitching(true);
     try {
       const selectedProfile = user?.profiles?.find(p => p.id === profileId);
@@ -68,7 +76,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       });
       // Only reset on error since page won't reload
     }
-  };
+  }, [switchRole, user?.profiles]);
 
   // Vendor menu items (full access)
   const vendorMenuItems = [
@@ -95,7 +103,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   ];
 
   // Filter menu items based on permissions
-  const getFilteredMenuItems = () => {
+  const menuItems = useMemo(() => {
     const items = isClientMode ? clientMenuItems : vendorMenuItems;
     
     // If vendor, show all items
@@ -105,9 +113,13 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     
     // Filter based on permissions
     return items.filter(item => canAccess(item.resource));
-  };
+  }, [isClientMode, isVendor, canAccess]);
 
-  const menuItems = getFilteredMenuItems();
+  // Check if user has multiple profiles (memoized)
+  const hasMultipleProfiles = useMemo(() => 
+    user?.profiles && user.profiles.length > 1,
+    [user?.profiles]
+  );
 
   return (
     <>
@@ -203,16 +215,16 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                       ? 'Independent Customer'
                       : currentProfile.organization_name || 'No Organization'}
                   </Text>
-                  {user?.profiles && user.profiles.length > 1 && (
+                  {hasMultipleProfiles && (
                     <Button
                       size="xs"
                       variant="ghost"
                       colorPalette="purple"
-                      onClick={() => setShowRoleSwitcher(true)}
+                      onClick={handleOpenRoleSwitcher}
                       w="full"
                     >
                       <FiRefreshCw size={12} />
-                      <Text ml={1}>Switch Profile ({user.profiles.length})</Text>
+                      <Text ml={1}>Switch Profile ({user?.profiles?.length})</Text>
                     </Button>
                   )}
                 </VStack>
@@ -273,8 +285,8 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
         </VStack>
       </Box>
 
-      {/* Role Switcher Dialog */}
-      {user?.profiles && (
+      {/* Role Switcher Dialog - Only render when needed */}
+      {showRoleSwitcher && user?.profiles && user.profiles.length > 0 && (
         <RoleSelectionDialog
           open={showRoleSwitcher}
           profiles={user.profiles}
@@ -286,4 +298,4 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   );
 };
 
-export default Sidebar;
+export default memo(Sidebar);
