@@ -19,7 +19,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
-import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.components.*
+import too.good.crm.ui.theme.DesignTokens
+import too.good.crm.ui.utils.*
 import java.text.NumberFormat
 import java.util.*
 
@@ -61,56 +63,109 @@ fun DealsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
-                .padding(16.dp)
+                .background(DesignTokens.Colors.Background)
+                .padding(
+                    responsivePadding(
+                        compact = DesignTokens.Spacing.Space4,
+                        medium = DesignTokens.Spacing.Space5,
+                        expanded = DesignTokens.Spacing.Space6
+                    )
+                ),
+            verticalArrangement = Arrangement.spacedBy(
+                responsiveSpacing(
+                    compact = DesignTokens.Spacing.Space4,
+                    medium = DesignTokens.Spacing.Space5
+                )
+            )
         ) {
-            // Header
-            Text(
-                text = "Deals",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Track your sales pipeline and manage deals",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Stats Cards
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // Header Section
+            Column(
+                verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
             ) {
-                StatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Total",
-                    value = deals.size.toString(),
-                    color = MaterialTheme.colorScheme.primary
+                Text(
+                    text = "Deals",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = DesignTokens.Typography.FontWeightBold,
+                    color = DesignTokens.Colors.OnSurface
                 )
-                StatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Active",
-                    value = deals.count { it.status == DealStatus.ACTIVE }.toString(),
-                    color = Color(0xFFF59E0B)
-                )
-                StatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Won",
-                    value = deals.count { it.status == DealStatus.WON }.toString(),
-                    color = Color(0xFF22C55E)
-                )
-                StatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Value",
-                    value = "$${deals.filter { it.status == DealStatus.ACTIVE }.sumOf { it.value }.toInt() / 1000}K",
-                    color = Color(0xFF8B5CF6)
+                Text(
+                    text = "Track your sales pipeline and manage deals",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = DesignTokens.Colors.OnSurfaceVariant
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Stats Grid - Responsive (1/2/3/4 columns based on screen)
+            ResponsiveGrid(
+                compactColumns = 2,
+                mediumColumns = 4,
+                expandedColumns = 4
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    StatCard(
+                        title = "TOTAL DEALS",
+                        value = deals.size.toString(),
+                        icon = {
+                            Icon(
+                                Icons.Default.Description,
+                                contentDescription = null,
+                                tint = DesignTokens.Colors.Primary
+                            )
+                        },
+                        change = "+12%",
+                        isPositive = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    StatCard(
+                        title = "ACTIVE",
+                        value = deals.count { it.status == DealStatus.ACTIVE }.toString(),
+                        icon = {
+                            Icon(
+                                Icons.Default.TrendingUp,
+                                contentDescription = null,
+                                tint = DesignTokens.Colors.Warning
+                            )
+                        },
+                        change = "+8%",
+                        isPositive = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    StatCard(
+                        title = "WON",
+                        value = deals.count { it.status == DealStatus.WON }.toString(),
+                        icon = {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = DesignTokens.Colors.Success
+                            )
+                        },
+                        change = "+15%",
+                        isPositive = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    StatCard(
+                        title = "PIPELINE VALUE",
+                        value = "$${deals.filter { it.status == DealStatus.ACTIVE }.sumOf { it.value }.toInt() / 1000}K",
+                        icon = {
+                            Icon(
+                                Icons.Default.AttachMoney,
+                                contentDescription = null,
+                                tint = DesignTokens.Colors.Secondary
+                            )
+                        },
+                        change = "+23%",
+                        isPositive = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
 
             // Search Bar
             OutlinedTextField(
