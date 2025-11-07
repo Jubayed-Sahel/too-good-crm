@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Too Good CRM - Vendor Mode Dimensions (Spacing, Sizing, Elevations) -->
+    
+    <!-- Spacing Scale (Material Design) -->
+    <dimen name="spacing_0">0dp</dimen>
+    <dimen name="spacing_1">4dp</dimen>
+    <dimen name="spacing_2">8dp</dimen>
+    <dimen name="spacing_3">12dp</dimen>
+    <dimen name="spacing_4">16dp</dimen>
+    <dimen name="spacing_5">20dp</dimen>
+    <dimen name="spacing_6">24dp</dimen>
+    <dimen name="spacing_7">28dp</dimen>
+    <dimen name="spacing_8">32dp</dimen>
+    <dimen name="spacing_10">40dp</dimen>
+    <dimen name="spacing_12">48dp</dimen>
+    <dimen name="spacing_16">64dp</dimen>
+    
+    <!-- Common Spacing Patterns -->
+    <dimen name="icon_padding">8dp</dimen>
+    <dimen name="card_padding">16dp</dimen>
+    <dimen name="card_padding_comfortable">20dp</dimen>
+    <dimen name="card_padding_spacious">24dp</dimen>
+    <dimen name="list_item_padding_horizontal">16dp</dimen>
+    <dimen name="list_item_padding_vertical">12dp</dimen>
+    <dimen name="section_margin">16dp</dimen>
+    <dimen name="section_margin_tablet">24dp</dimen>
+    <dimen name="item_spacing">8dp</dimen>
+    <dimen name="item_spacing_comfortable">12dp</dimen>
+    <dimen name="item_spacing_spacious">16dp</dimen>
+    
+    <!-- Border Radius (Corner Radii) -->
+    <dimen name="corner_radius_none">0dp</dimen>
+    <dimen name="corner_radius_extra_small">4dp</dimen>
+    <dimen name="corner_radius_small">8dp</dimen>
+    <dimen name="corner_radius_medium">12dp</dimen>
+    <dimen name="corner_radius_large">16dp</dimen>
+    <dimen name="corner_radius_extra_large">28dp</dimen>
+    <dimen name="corner_radius_full">9999dp</dimen>
+    
+    <!-- Component Specific Dimensions -->
+    
+    <!-- Buttons -->
+    <dimen name="button_height">40dp</dimen>
+    <dimen name="button_padding_horizontal">24dp</dimen>
+    <dimen name="button_padding_vertical">10dp</dimen>
+    <dimen name="button_corner_radius">20dp</dimen>
+    
+    <!-- FAB (Floating Action Button) -->
+    <dimen name="fab_size_standard">56dp</dimen>
+    <dimen name="fab_size_small">40dp</dimen>
+    <dimen name="fab_size_extended">96dp</dimen>
+    <dimen name="fab_icon_size">24dp</dimen>
+    <dimen name="fab_corner_radius_standard">16dp</dimen>
+    <dimen name="fab_corner_radius_small">12dp</dimen>
+    
+    <!-- Cards -->
+    <dimen name="card_corner_radius">12dp</dimen>
+    
+    <!-- Chips -->
+    <dimen name="chip_height">32dp</dimen>
+    <dimen name="chip_padding_horizontal">16dp</dimen>
+    <dimen name="chip_corner_radius">8dp</dimen>
+    <dimen name="chip_icon_size">18dp</dimen>
+    
+    <!-- Text Fields -->
+    <dimen name="text_field_padding_horizontal">16dp</dimen>
+    <dimen name="text_field_padding_vertical">16dp</dimen>
+    <dimen name="text_field_corner_radius">4dp</dimen>
+    <dimen name="text_field_border_width_default">1dp</dimen>
+    <dimen name="text_field_border_width_focused">2dp</dimen>
+    
+    <!-- List Items -->
+    <dimen name="list_item_height_single_line">56dp</dimen>
+    <dimen name="list_item_height_two_line">72dp</dimen>
+    <dimen name="list_item_height_three_line">88dp</dimen>
+    <dimen name="list_item_icon_size">24dp</dimen>
+    <dimen name="list_item_avatar_size">40dp</dimen>
+    
+    <!-- Bottom Navigation -->
+    <dimen name="bottom_navigation_height">80dp</dimen>
+    <dimen name="bottom_navigation_icon_size">24dp</dimen>
+    
+    <!-- Top App Bar -->
+    <dimen name="top_app_bar_height_small">64dp</dimen>
+    <dimen name="top_app_bar_height_medium">112dp</dimen>
+    <dimen name="top_app_bar_height_large">152dp</dimen>
+    <dimen name="top_app_bar_icon_size">24dp</dimen>
+    <dimen name="top_app_bar_padding_sides">16dp</dimen>
+    
+    <!-- Dialogs -->
+    <dimen name="dialog_width_min">280dp</dimen>
+    <dimen name="dialog_width_max">560dp</dimen>
+    <dimen name="dialog_corner_radius">28dp</dimen>
+    <dimen name="dialog_padding">24dp</dimen>
+    
+    <!-- Bottom Sheets -->
+    <dimen name="bottom_sheet_corner_radius">28dp</dimen>
+    <dimen name="bottom_sheet_drag_handle_width">32dp</dimen>
+    <dimen name="bottom_sheet_drag_handle_height">4dp</dimen>
+    <dimen name="bottom_sheet_padding_sides">16dp</dimen>
+    <dimen name="bottom_sheet_padding_top">24dp</dimen>
+    
+    <!-- Snackbars -->
+    <dimen name="snackbar_height_single_line">48dp</dimen>
+    <dimen name="snackbar_height_two_line">68dp</dimen>
+    <dimen name="snackbar_corner_radius">4dp</dimen>
+    <dimen name="snackbar_margin_sides">16dp</dimen>
+    <dimen name="snackbar_margin_bottom">16dp</dimen>
+    
+    <!-- Data Tables (Vendor Specific) -->
+    <dimen name="table_header_height">56dp</dimen>
+    <dimen name="table_row_height">52dp</dimen>
+    <dimen name="table_cell_padding_horizontal">16dp</dimen>
+    <dimen name="table_cell_padding_vertical">12dp</dimen>
+    
+    <!-- Icons -->
+    <dimen name="icon_size_small">18dp</dimen>
+    <dimen name="icon_size_standard">24dp</dimen>
+    <dimen name="icon_size_large">40dp</dimen>
+    <dimen name="icon_size_extra_large">48dp</dimen>
+    <dimen name="icon_size_huge">64dp</dimen>
+    
+    <!-- Avatars -->
+    <dimen name="avatar_size_extra_small">24dp</dimen>
+    <dimen name="avatar_size_small">32dp</dimen>
+    <dimen name="avatar_size_medium">40dp</dimen>
+    <dimen name="avatar_size_large">56dp</dimen>
+    <dimen name="avatar_size_extra_large">96dp</dimen>
+    
+    <!-- Touch Targets (Accessibility) -->
+    <dimen name="touch_target_minimum">48dp</dimen>
+    
+    <!-- Elevations (Material Design Levels) -->
+    <dimen name="elevation_level_0">0dp</dimen>
+    <dimen name="elevation_level_1">1dp</dimen>
+    <dimen name="elevation_level_2">2dp</dimen>
+    <dimen name="elevation_level_3">3dp</dimen>
+    <dimen name="elevation_level_4">4dp</dimen>
+    <dimen name="elevation_level_6">6dp</dimen>
+    <dimen name="elevation_level_8">8dp</dimen>
+    <dimen name="elevation_level_12">12dp</dimen>
+    <dimen name="elevation_level_16">16dp</dimen>
+    <dimen name="elevation_level_24">24dp</dimen>
+    
+    <!-- Product Images -->
+    <dimen name="product_image_thumbnail">48dp</dimen>
+    <dimen name="product_image_small">80dp</dimen>
+    <dimen name="product_image_medium">120dp</dimen>
+    <dimen name="product_image_large">240dp</dimen>
+</resources>

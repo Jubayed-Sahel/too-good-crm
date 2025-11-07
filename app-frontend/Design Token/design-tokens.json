@@ -1,0 +1,400 @@
+{
+  "metadata": {
+    "name": "Too Good CRM - Android Vendor Design System",
+    "version": "1.0.0",
+    "platform": "Android",
+    "framework": "Material Design 3 / Jetpack Compose",
+    "audience": "Vendor teams, business operations",
+    "updated": "2024"
+  },
+  "colors": {
+    "primary": {
+      "main": "#667eea",
+      "variant": "#764ba2",
+      "light": "#8a9df0",
+      "container": "#e8ebfa",
+      "onPrimary": "#ffffff",
+      "onContainer": "#764ba2"
+    },
+    "secondary": {
+      "main": "#5e72e4",
+      "variant": "#4f5fd8",
+      "container": "#e5e8fb",
+      "onSecondary": "#ffffff",
+      "onContainer": "#4f5fd8"
+    },
+    "tertiary": {
+      "main": "#8b5cf6",
+      "onTertiary": "#ffffff"
+    },
+    "semantic": {
+      "success": {
+        "main": "#10b981",
+        "light": "#d1fae5",
+        "dark": "#047857"
+      },
+      "warning": {
+        "main": "#f59e0b",
+        "light": "#fef3c7",
+        "dark": "#d97706"
+      },
+      "error": {
+        "main": "#ef4444",
+        "light": "#fee2e2",
+        "dark": "#dc2626"
+      },
+      "info": {
+        "main": "#3b82f6",
+        "light": "#dbeafe",
+        "dark": "#1e40af"
+      }
+    },
+    "surface": {
+      "main": "#ffffff",
+      "variant": "#f8fafc",
+      "tint": "#667eea"
+    },
+    "background": {
+      "main": "#f1f5f9",
+      "dark": "#e2e8f0"
+    },
+    "outline": {
+      "main": "#cbd5e1",
+      "variant": "#e2e8f0"
+    },
+    "text": {
+      "primary": "#1e293b",
+      "secondary": "#64748b",
+      "tertiary": "#94a3b8",
+      "onPrimary": "#ffffff",
+      "onSecondary": "#ffffff"
+    },
+    "status": {
+      "open": "#3b82f6",
+      "inProgress": "#f59e0b",
+      "completed": "#10b981",
+      "closed": "#64748b",
+      "failed": "#ef4444",
+      "pending": "#f59e0b",
+      "scheduled": "#8b5cf6"
+    },
+    "priority": {
+      "urgent": "#dc2626",
+      "high": "#f59e0b",
+      "medium": "#3b82f6",
+      "low": "#94a3b8"
+    },
+    "activityType": {
+      "call": "#3b82f6",
+      "email": "#8b5cf6",
+      "telegram": "#06b6d4",
+      "meeting": "#f59e0b",
+      "note": "#eab308",
+      "task": "#10b981"
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "default": "Roboto",
+      "display": "Roboto",
+      "monospace": "Roboto Mono"
+    },
+    "typeScale": {
+      "displayLarge": {
+        "size": "57sp",
+        "weight": 400,
+        "lineHeight": "64sp"
+      },
+      "displayMedium": {
+        "size": "45sp",
+        "weight": 400,
+        "lineHeight": "52sp"
+      },
+      "displaySmall": {
+        "size": "36sp",
+        "weight": 400,
+        "lineHeight": "44sp"
+      },
+      "headlineLarge": {
+        "size": "32sp",
+        "weight": 400,
+        "lineHeight": "40sp"
+      },
+      "headlineMedium": {
+        "size": "28sp",
+        "weight": 400,
+        "lineHeight": "36sp"
+      },
+      "headlineSmall": {
+        "size": "24sp",
+        "weight": 400,
+        "lineHeight": "32sp"
+      },
+      "titleLarge": {
+        "size": "22sp",
+        "weight": 500,
+        "lineHeight": "28sp"
+      },
+      "titleMedium": {
+        "size": "16sp",
+        "weight": 500,
+        "lineHeight": "24sp",
+        "letterSpacing": "0.15sp"
+      },
+      "titleSmall": {
+        "size": "14sp",
+        "weight": 500,
+        "lineHeight": "20sp",
+        "letterSpacing": "0.1sp"
+      },
+      "bodyLarge": {
+        "size": "16sp",
+        "weight": 400,
+        "lineHeight": "24sp",
+        "letterSpacing": "0.5sp"
+      },
+      "bodyMedium": {
+        "size": "14sp",
+        "weight": 400,
+        "lineHeight": "20sp",
+        "letterSpacing": "0.25sp"
+      },
+      "bodySmall": {
+        "size": "12sp",
+        "weight": 400,
+        "lineHeight": "16sp",
+        "letterSpacing": "0.4sp"
+      },
+      "labelLarge": {
+        "size": "14sp",
+        "weight": 500,
+        "lineHeight": "20sp",
+        "letterSpacing": "0.1sp"
+      },
+      "labelMedium": {
+        "size": "12sp",
+        "weight": 500,
+        "lineHeight": "16sp",
+        "letterSpacing": "0.5sp"
+      },
+      "labelSmall": {
+        "size": "11sp",
+        "weight": 500,
+        "lineHeight": "16sp",
+        "letterSpacing": "0.5sp"
+      }
+    },
+    "fontWeights": {
+      "light": 300,
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    }
+  },
+  "spacing": {
+    "scale": {
+      "0": "0dp",
+      "1": "4dp",
+      "2": "8dp",
+      "3": "12dp",
+      "4": "16dp",
+      "5": "20dp",
+      "6": "24dp",
+      "7": "28dp",
+      "8": "32dp",
+      "10": "40dp",
+      "12": "48dp",
+      "16": "64dp"
+    },
+    "patterns": {
+      "iconPadding": "8dp",
+      "cardPadding": "16dp",
+      "listItemPaddingHorizontal": "16dp",
+      "listItemPaddingVertical": "12dp",
+      "sectionMargin": "16dp",
+      "itemSpacing": "8dp",
+      "bottomSheetPaddingSides": "16dp",
+      "bottomSheetPaddingTopBottom": "24dp"
+    }
+  },
+  "elevation": {
+    "level0": "0dp",
+    "level1": "1dp",
+    "level2": "2dp",
+    "level3": "3dp",
+    "level4": "4dp",
+    "level6": "6dp",
+    "level8": "8dp",
+    "level12": "12dp",
+    "level16": "16dp",
+    "level24": "24dp"
+  },
+  "borderRadius": {
+    "none": "0dp",
+    "extraSmall": "4dp",
+    "small": "8dp",
+    "medium": "12dp",
+    "large": "16dp",
+    "extraLarge": "28dp",
+    "full": "9999dp"
+  },
+  "components": {
+    "button": {
+      "height": "40dp",
+      "paddingHorizontal": "24dp",
+      "paddingVertical": "10dp",
+      "cornerRadius": "20dp"
+    },
+    "fab": {
+      "sizeStandard": "56dp",
+      "sizeSmall": "40dp",
+      "sizeExtended": "96dp",
+      "elevationResting": "6dp",
+      "elevationPressed": "12dp",
+      "iconSize": "24dp",
+      "cornerRadiusStandard": "16dp",
+      "cornerRadiusSmall": "12dp"
+    },
+    "card": {
+      "elevationResting": "1dp",
+      "elevationDragged": "2dp",
+      "cornerRadius": "12dp",
+      "padding": "16dp"
+    },
+    "chip": {
+      "height": "32dp",
+      "paddingHorizontal": "16dp",
+      "cornerRadius": "8dp",
+      "iconSize": "18dp"
+    },
+    "textField": {
+      "paddingHorizontal": "16dp",
+      "paddingVertical": "16dp",
+      "cornerRadius": "4dp",
+      "borderWidthDefault": "1dp",
+      "borderWidthFocused": "2dp"
+    },
+    "listItem": {
+      "heightSingleLine": "56dp",
+      "heightTwoLine": "72dp",
+      "heightThreeLine": "88dp",
+      "paddingHorizontal": "16dp",
+      "paddingVertical": "8dp",
+      "iconSize": "24dp",
+      "avatarSize": "40dp"
+    },
+    "bottomNavigation": {
+      "height": "80dp",
+      "iconSize": "24dp",
+      "labelSize": "12sp"
+    },
+    "topAppBar": {
+      "heightSmall": "64dp",
+      "heightMedium": "112dp",
+      "heightLarge": "152dp",
+      "iconSize": "24dp",
+      "paddingSides": "16dp"
+    },
+    "dialog": {
+      "widthMin": "280dp",
+      "widthMax": "560dp",
+      "elevation": "24dp",
+      "cornerRadius": "28dp",
+      "padding": "24dp"
+    },
+    "bottomSheet": {
+      "cornerRadius": "28dp",
+      "elevationStandard": "1dp",
+      "elevationModal": "8dp",
+      "dragHandleWidth": "32dp",
+      "dragHandleHeight": "4dp",
+      "paddingSides": "16dp",
+      "paddingTop": "24dp"
+    },
+    "snackbar": {
+      "heightSingleLine": "48dp",
+      "heightTwoLine": "68dp",
+      "elevation": "6dp",
+      "cornerRadius": "4dp",
+      "marginSides": "16dp",
+      "marginBottom": "16dp",
+      "durationShort": "4000ms",
+      "durationLong": "10000ms"
+    }
+  },
+  "interactions": {
+    "touchTarget": {
+      "minimum": "48dp"
+    },
+    "stateLayerOpacity": {
+      "hover": "0.08",
+      "focus": "0.12",
+      "pressed": "0.12",
+      "dragged": "0.16",
+      "disabled": "0.38"
+    },
+    "rippleColor": "primary",
+    "rippleOpacity": "0.12"
+  },
+  "animations": {
+    "duration": {
+      "enter": "200ms",
+      "exit": "150ms",
+      "emphasized": "400ms"
+    },
+    "easing": {
+      "standard": "cubic-bezier(0.4, 0.0, 0.2, 1)",
+      "emphasized": "cubic-bezier(0.0, 0.0, 0.2, 1)",
+      "emphasizedAccelerate": "cubic-bezier(0.3, 0.0, 0.8, 0.15)"
+    }
+  },
+  "layout": {
+    "breakpoints": {
+      "compactWidth": "< 600dp",
+      "mediumWidth": "600dp - 839dp",
+      "expandedWidth": ">= 840dp",
+      "compactHeight": "< 480dp",
+      "mediumHeight": "480dp - 899dp",
+      "expandedHeight": ">= 900dp"
+    },
+    "grid": {
+      "columnsPhone": 4,
+      "columnsTabletPortrait": 8,
+      "columnsTabletLandscape": 12,
+      "gutterPhone": "16dp",
+      "gutterTablet": "24dp",
+      "marginPhone": "16dp",
+      "marginTablet": "24dp"
+    }
+  },
+  "icons": {
+    "sizes": {
+      "small": "18dp",
+      "standard": "24dp",
+      "large": "40dp",
+      "extraLarge": "48dp"
+    },
+    "style": "outlined",
+    "avatarSizes": {
+      "extraSmall": "24dp",
+      "small": "32dp",
+      "medium": "40dp",
+      "large": "56dp",
+      "extraLarge": "96dp"
+    }
+  },
+  "accessibility": {
+    "contrastRatios": {
+      "normalText": "4.5:1",
+      "largeText": "3:1",
+      "uiComponents": "3:1"
+    },
+    "focusIndicator": {
+      "width": "2dp",
+      "color": "primary"
+    },
+    "minTouchTarget": "48dp",
+    "minTextSize": "12sp"
+  }
+}
