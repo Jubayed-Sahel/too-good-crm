@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +59,7 @@ fun MyVendorsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
+                .background(DesignTokens.Colors.Background)
                 .padding(16.dp)
         ) {
             // Header
@@ -71,7 +72,7 @@ fun MyVendorsScreen(
             Text(
                 text = "Manage your vendor relationships and track partnerships",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -85,19 +86,19 @@ fun MyVendorsScreen(
                     modifier = Modifier.weight(1f),
                     title = "Total",
                     value = vendors.size.toString(),
-                    color = Color(0xFF3B82F6)
+                    color = DesignTokens.Colors.Info
                 )
                 VendorStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Active",
                     value = vendors.count { it.status == VendorStatus.ACTIVE }.toString(),
-                    color = Color(0xFF22C55E)
+                    color = DesignTokens.Colors.Success
                 )
                 VendorStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Orders",
                     value = vendors.sumOf { it.totalOrders }.toString(),
-                    color = Color(0xFF3B82F6)
+                    color = DesignTokens.Colors.Info
                 )
             }
 
@@ -123,7 +124,7 @@ fun MyVendorsScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color(0xFF3B82F6)
+                    focusedBorderColor = DesignTokens.Colors.Info
                 )
             )
 
@@ -171,7 +172,7 @@ fun VendorCard(vendor: Vendor) {
                     Text(
                         text = vendor.category,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
                 VendorStatusBadge(status = vendor.status)
@@ -188,27 +189,27 @@ fun VendorCard(vendor: Vendor) {
                         Icons.Default.Star,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = Color(0xFFFBBF24)
+                        tint = DesignTokens.Colors.ActivityNote
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "${vendor.rating}",
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1F2937)
+                        color = DesignTokens.Colors.OnSurface
                     )
                     Spacer(modifier = Modifier.width(12.dp))
                     Icon(
                         Icons.Default.ShoppingBag,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF3B82F6)
+                        tint = DesignTokens.Colors.Info
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "${vendor.totalOrders} orders",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
             }
@@ -224,13 +225,13 @@ fun VendorCard(vendor: Vendor) {
                         Icons.Default.Email,
                         contentDescription = null,
                         modifier = Modifier.size(14.dp),
-                        tint = Color(0xFF6B7280)
+                        tint = DesignTokens.Colors.OnSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = vendor.email,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
             }
@@ -242,13 +243,13 @@ fun VendorCard(vendor: Vendor) {
 fun VendorStatusBadge(status: VendorStatus) {
     val (backgroundColor, textColor, text) = when (status) {
         VendorStatus.ACTIVE -> Triple(
-            Color(0xFF22C55E).copy(alpha = 0.1f),
-            Color(0xFF22C55E),
+            DesignTokens.Colors.Success.copy(alpha = 0.1f),
+            DesignTokens.Colors.Success,
             "Active"
         )
         VendorStatus.INACTIVE -> Triple(
-            Color(0xFF6B7280).copy(alpha = 0.1f),
-            Color(0xFF6B7280),
+            DesignTokens.Colors.OnSurfaceVariant.copy(alpha = 0.1f),
+            DesignTokens.Colors.OnSurfaceVariant,
             "Inactive"
         )
     }
@@ -290,7 +291,7 @@ fun VendorStatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 11.sp
             )
             Spacer(modifier = Modifier.height(4.dp))

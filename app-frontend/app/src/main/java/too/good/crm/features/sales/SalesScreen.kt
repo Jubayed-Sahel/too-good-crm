@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 import java.text.NumberFormat
 import java.util.*
 
@@ -49,7 +50,7 @@ fun SalesScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
+                .background(DesignTokens.Colors.Background)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
@@ -63,7 +64,7 @@ fun SalesScreen(
             Text(
                 text = "Track your sales performance and revenue metrics",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -73,7 +74,7 @@ fun SalesScreen(
                 text = "Revenue Metrics",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -87,7 +88,7 @@ fun SalesScreen(
                     value = "$485K",
                     change = "+23%",
                     icon = Icons.Default.AttachMoney,
-                    color = Color(0xFF22C55E),
+                    color = DesignTokens.Colors.Success,
                     isPositive = true
                 )
                 SalesMetricCard(
@@ -96,7 +97,7 @@ fun SalesScreen(
                     value = "24",
                     change = "+12%",
                     icon = Icons.Default.CheckCircle,
-                    color = Color(0xFF8B5CF6),
+                    color = DesignTokens.Colors.StatusScheduled,
                     isPositive = true
                 )
             }
@@ -113,7 +114,7 @@ fun SalesScreen(
                     value = "$20.2K",
                     change = "+8%",
                     icon = Icons.Default.AttachMoney,
-                    color = Color(0xFF3B82F6),
+                    color = DesignTokens.Colors.Info,
                     isPositive = true
                 )
                 SalesMetricCard(
@@ -122,7 +123,7 @@ fun SalesScreen(
                     value = "68%",
                     change = "+5%",
                     icon = Icons.Default.Assessment,
-                    color = Color(0xFFF59E0B),
+                    color = DesignTokens.Colors.Warning,
                     isPositive = true
                 )
             }
@@ -134,7 +135,7 @@ fun SalesScreen(
                 text = "Monthly Performance",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -170,7 +171,7 @@ fun SalesScreen(
                 text = "Top Performers",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -236,13 +237,13 @@ fun SalesMetricCard(
                 )
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isPositive) Color(0xFF22C55E).copy(alpha = 0.1f) else Color(0xFFEF4444).copy(alpha = 0.1f)
+                    color = if (isPositive) DesignTokens.Colors.Success.copy(alpha = 0.1f) else DesignTokens.Colors.Error.copy(alpha = 0.1f)
                 ) {
                     Text(
                         text = change,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
+                        color = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
                         fontWeight = FontWeight.Medium,
                         fontSize = 11.sp
                     )
@@ -255,7 +256,7 @@ fun SalesMetricCard(
                 text = value,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF111827)
+                color = DesignTokens.Colors.OnSurface
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -263,7 +264,7 @@ fun SalesMetricCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
         }
     }
@@ -305,7 +306,7 @@ fun MonthlyPerformanceCard(
                     Text(
                         text = "$deals deals closed",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
 
@@ -313,7 +314,7 @@ fun MonthlyPerformanceCard(
                     text = NumberFormat.getCurrencyInstance(Locale.US).format(revenue),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF22C55E)
+                    color = DesignTokens.Colors.Success
                 )
             }
 
@@ -327,7 +328,7 @@ fun MonthlyPerformanceCard(
                     Text(
                         text = "Target Progress",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                     Text(
                         text = "$percentOfTarget% of ${NumberFormat.getCurrencyInstance(Locale.US).format(target)}",
@@ -343,11 +344,11 @@ fun MonthlyPerformanceCard(
                         .fillMaxWidth()
                         .height(8.dp),
                     color = when {
-                        progress >= 0.9f -> Color(0xFF22C55E)
-                        progress >= 0.7f -> Color(0xFFF59E0B)
-                        else -> Color(0xFFEF4444)
+                        progress >= 0.9f -> DesignTokens.Colors.Success
+                        progress >= 0.7f -> DesignTokens.Colors.Warning
+                        else -> DesignTokens.Colors.Error
                     },
-                    trackColor = Color(0xFFE5E7EB),
+                    trackColor = DesignTokens.Colors.OutlineVariant,
                 )
             }
         }
@@ -380,7 +381,7 @@ fun TopPerformerCard(
                     1 -> Color(0xFFFFD700).copy(alpha = 0.2f)
                     2 -> Color(0xFFC0C0C0).copy(alpha = 0.2f)
                     3 -> Color(0xFFCD7F32).copy(alpha = 0.2f)
-                    else -> Color(0xFF6B7280).copy(alpha = 0.1f)
+                    else -> DesignTokens.Colors.OnSurfaceVariant.copy(alpha = 0.1f)
                 },
                 modifier = Modifier.size(48.dp)
             ) {
@@ -393,7 +394,7 @@ fun TopPerformerCard(
                             1 -> Color(0xFFFFD700)
                             2 -> Color(0xFF808080)
                             3 -> Color(0xFFCD7F32)
-                            else -> Color(0xFF6B7280)
+                            else -> DesignTokens.Colors.OnSurfaceVariant
                         }
                     )
                 }
@@ -411,7 +412,7 @@ fun TopPerformerCard(
                 Text(
                     text = "$deals deals closed",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF6B7280)
+                    color = DesignTokens.Colors.OnSurfaceVariant
                 )
             }
 
@@ -419,7 +420,7 @@ fun TopPerformerCard(
                 text = NumberFormat.getCurrencyInstance(Locale.US).format(revenue),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF22C55E)
+                color = DesignTokens.Colors.Success
             )
         }
     }

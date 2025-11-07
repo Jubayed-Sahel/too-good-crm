@@ -80,6 +80,9 @@ object DesignTokens {
         val ActivityNote = Color(0xFFEAB308) // Yellow 500
         val ActivityTask = Color(0xFF10B981) // Green 500
 
+        // Special Accent Colors
+        val PinkAccent = Color(0xFFEC4899) // Pink 500 - for special accents
+
         val White = Color(0xFFFFFFFF)
         val Black = Color(0xFF000000)
     }

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.features.client.Order
 import too.good.crm.features.client.OrderSampleData
 import too.good.crm.features.client.OrderStatus
@@ -63,7 +64,7 @@ fun MyOrdersScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
+                .background(DesignTokens.Colors.Background)
                 .padding(16.dp)
         ) {
             // Header
@@ -76,7 +77,7 @@ fun MyOrdersScreen(
             Text(
                 text = "Track and manage your purchase orders",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -90,25 +91,25 @@ fun MyOrdersScreen(
                     modifier = Modifier.weight(1f),
                     title = "Total",
                     value = orders.size.toString(),
-                    color = Color(0xFF3B82F6)
+                    color = DesignTokens.Colors.Info
                 )
                 OrderStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Active",
                     value = orders.count { it.status != OrderStatus.DELIVERED && it.status != OrderStatus.CANCELLED }.toString(),
-                    color = Color(0xFFF59E0B)
+                    color = DesignTokens.Colors.Warning
                 )
                 OrderStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Delivered",
                     value = orders.count { it.status == OrderStatus.DELIVERED }.toString(),
-                    color = Color(0xFF22C55E)
+                    color = DesignTokens.Colors.Success
                 )
                 OrderStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Value",
                     value = "$${(orders.sumOf { it.amount } / 1000).toInt()}K",
-                    color = Color(0xFF3B82F6)
+                    color = DesignTokens.Colors.Info
                 )
             }
 
@@ -134,7 +135,7 @@ fun MyOrdersScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color(0xFF3B82F6)
+                    focusedBorderColor = DesignTokens.Colors.Info
                 )
             )
 
@@ -182,7 +183,7 @@ fun OrderCard(order: Order) {
                     Text(
                         text = order.vendorName,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
                 OrderStatusBadge(status = order.status)
@@ -200,13 +201,13 @@ fun OrderCard(order: Order) {
                         text = NumberFormat.getCurrencyInstance(Locale.US).format(order.amount),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF3B82F6)
+                        color = DesignTokens.Colors.Info
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "${order.items} items",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
 
@@ -216,13 +217,13 @@ fun OrderCard(order: Order) {
                             Icons.Default.CalendarToday,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = Color(0xFF6B7280)
+                            tint = DesignTokens.Colors.OnSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = order.orderDate,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF6B7280)
+                            color = DesignTokens.Colors.OnSurfaceVariant
                         )
                     }
                     if (order.deliveryDate != null) {
@@ -232,13 +233,13 @@ fun OrderCard(order: Order) {
                                 Icons.Default.LocalShipping,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp),
-                                tint = Color(0xFF22C55E)
+                                tint = DesignTokens.Colors.Success
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = order.deliveryDate,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color(0xFF22C55E)
+                                color = DesignTokens.Colors.Success
                             )
                         }
                     }
@@ -252,28 +253,28 @@ fun OrderCard(order: Order) {
 fun OrderStatusBadge(status: OrderStatus) {
     val (backgroundColor, textColor, text) = when (status) {
         OrderStatus.PENDING -> Triple(
-            Color(0xFFF59E0B).copy(alpha = 0.1f),
-            Color(0xFFF59E0B),
+            DesignTokens.Colors.Warning.copy(alpha = 0.1f),
+            DesignTokens.Colors.Warning,
             "Pending"
         )
         OrderStatus.PROCESSING -> Triple(
-            Color(0xFF3B82F6).copy(alpha = 0.1f),
-            Color(0xFF3B82F6),
+            DesignTokens.Colors.Info.copy(alpha = 0.1f),
+            DesignTokens.Colors.Info,
             "Processing"
         )
         OrderStatus.SHIPPED -> Triple(
-            Color(0xFF8B5CF6).copy(alpha = 0.1f),
-            Color(0xFF8B5CF6),
+            DesignTokens.Colors.StatusScheduled.copy(alpha = 0.1f),
+            DesignTokens.Colors.StatusScheduled,
             "Shipped"
         )
         OrderStatus.DELIVERED -> Triple(
-            Color(0xFF22C55E).copy(alpha = 0.1f),
-            Color(0xFF22C55E),
+            DesignTokens.Colors.Success.copy(alpha = 0.1f),
+            DesignTokens.Colors.Success,
             "Delivered"
         )
         OrderStatus.CANCELLED -> Triple(
-            Color(0xFFEF4444).copy(alpha = 0.1f),
-            Color(0xFFEF4444),
+            DesignTokens.Colors.Error.copy(alpha = 0.1f),
+            DesignTokens.Colors.Error,
             "Cancelled"
         )
     }
@@ -315,7 +316,7 @@ fun OrderStatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 11.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
