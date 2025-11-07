@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 import java.text.NumberFormat
 import java.util.*
 
@@ -60,7 +61,7 @@ fun PaymentScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
+                .background(DesignTokens.Colors.Background)
                 .padding(16.dp)
         ) {
             // Header
@@ -73,7 +74,7 @@ fun PaymentScreen(
             Text(
                 text = "Manage your payment history and upcoming dues",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -87,19 +88,19 @@ fun PaymentScreen(
                     modifier = Modifier.weight(1f),
                     title = "Total Paid",
                     value = "$${(payments.filter { it.status == PaymentStatus.PAID }.sumOf { it.amount } / 1000).toInt()}K",
-                    color = Color(0xFF22C55E)
+                    color = DesignTokens.Colors.Success
                 )
                 PaymentStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Pending",
                     value = payments.count { it.status == PaymentStatus.PENDING }.toString(),
-                    color = Color(0xFFF59E0B)
+                    color = DesignTokens.Colors.Warning
                 )
                 PaymentStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Overdue",
                     value = payments.count { it.status == PaymentStatus.OVERDUE }.toString(),
-                    color = Color(0xFFEF4444)
+                    color = DesignTokens.Colors.Error
                 )
             }
 
@@ -125,7 +126,7 @@ fun PaymentScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
                     unfocusedContainerColor = Color.White,
-                    focusedBorderColor = Color(0xFF3B82F6)
+                    focusedBorderColor = DesignTokens.Colors.Info
                 )
             )
 
@@ -162,14 +163,14 @@ fun PaymentCard(payment: Payment) {
             // Payment Icon
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = Color(0xFF3B82F6).copy(alpha = 0.1f),
+                color = DesignTokens.Colors.Info.copy(alpha = 0.1f),
                 modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Payment,
                         contentDescription = null,
-                        tint = Color(0xFF3B82F6),
+                        tint = DesignTokens.Colors.Info,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -194,7 +195,7 @@ fun PaymentCard(payment: Payment) {
                         Text(
                             text = payment.vendorName,
                             style = MaterialTheme.typography.bodyMedium,
-                            color = Color(0xFF6B7280)
+                            color = DesignTokens.Colors.OnSurfaceVariant
                         )
                     }
                     PaymentStatusBadge(status = payment.status)
@@ -211,14 +212,14 @@ fun PaymentCard(payment: Payment) {
                         text = NumberFormat.getCurrencyInstance(Locale.US).format(payment.amount),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF3B82F6)
+                        color = DesignTokens.Colors.Info
                     )
 
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
                             text = payment.method,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF6B7280),
+                            color = DesignTokens.Colors.OnSurfaceVariant,
                             fontSize = 12.sp
                         )
                         if (payment.dueDate != null) {
@@ -226,7 +227,7 @@ fun PaymentCard(payment: Payment) {
                             Text(
                                 text = "Due: ${payment.dueDate}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = if (payment.status == PaymentStatus.OVERDUE) Color(0xFFEF4444) else Color(0xFF6B7280),
+                                color = if (payment.status == PaymentStatus.OVERDUE) DesignTokens.Colors.Error else DesignTokens.Colors.OnSurfaceVariant,
                                 fontSize = 12.sp
                             )
                         }
@@ -241,23 +242,23 @@ fun PaymentCard(payment: Payment) {
 fun PaymentStatusBadge(status: PaymentStatus) {
     val (backgroundColor, textColor, text) = when (status) {
         PaymentStatus.PAID -> Triple(
-            Color(0xFF22C55E).copy(alpha = 0.1f),
-            Color(0xFF22C55E),
+            DesignTokens.Colors.Success.copy(alpha = 0.1f),
+            DesignTokens.Colors.Success,
             "Paid"
         )
         PaymentStatus.PENDING -> Triple(
-            Color(0xFFF59E0B).copy(alpha = 0.1f),
-            Color(0xFFF59E0B),
+            DesignTokens.Colors.Warning.copy(alpha = 0.1f),
+            DesignTokens.Colors.Warning,
             "Pending"
         )
         PaymentStatus.OVERDUE -> Triple(
-            Color(0xFFEF4444).copy(alpha = 0.1f),
-            Color(0xFFEF4444),
+            DesignTokens.Colors.Error.copy(alpha = 0.1f),
+            DesignTokens.Colors.Error,
             "Overdue"
         )
         PaymentStatus.FAILED -> Triple(
-            Color(0xFFEF4444).copy(alpha = 0.1f),
-            Color(0xFFEF4444),
+            DesignTokens.Colors.Error.copy(alpha = 0.1f),
+            DesignTokens.Colors.Error,
             "Failed"
         )
     }
@@ -299,7 +300,7 @@ fun PaymentStatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 11.sp
             )
             Spacer(modifier = Modifier.height(4.dp))

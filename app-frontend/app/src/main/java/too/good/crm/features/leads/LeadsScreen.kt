@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +74,7 @@ fun LeadsScreen(
                 change = "+12%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.People,
-                iconBackgroundColor = Color(0xFFF3E5F5)
+                iconBackgroundColor = DesignTokens.Colors.PrimaryContainer
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -84,7 +85,7 @@ fun LeadsScreen(
                 change = "+8%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.TrendingUp,
-                iconBackgroundColor = Color(0xFFFFEBEE)
+                iconBackgroundColor = DesignTokens.Colors.ErrorLight
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -95,7 +96,7 @@ fun LeadsScreen(
                 change = "+15%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.EmojiEvents,
-                iconBackgroundColor = Color(0xFFE3F2FD)
+                iconBackgroundColor = DesignTokens.Colors.InfoLight
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -106,7 +107,7 @@ fun LeadsScreen(
                 change = "+23%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.CheckCircle,
-                iconBackgroundColor = Color(0xFFE8F5E9)
+                iconBackgroundColor = DesignTokens.Colors.SuccessLight
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -259,7 +260,7 @@ fun LeadsScreen(
                 source = "Website",
                 created = "Mar 15, 2024",
                 status = "Qualified",
-                statusColor = Color(0xFF4CAF50)
+                statusColor = DesignTokens.Colors.Success
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -275,7 +276,7 @@ fun LeadsScreen(
                 source = "Referral",
                 created = "Mar 10, 2024",
                 status = "Proposal",
-                statusColor = Color(0xFFFF9800)
+                statusColor = DesignTokens.Colors.Warning
             )
         }
     }
@@ -318,14 +319,14 @@ fun LeadMetricCard(
                     Icon(
                         imageVector = Icons.Default.TrendingUp,
                         contentDescription = null,
-                        tint = Color(0xFF4CAF50),
+                        tint = DesignTokens.Colors.Success,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = change,
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color(0xFF4CAF50),
+                        color = DesignTokens.Colors.Success,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -471,12 +472,12 @@ fun LeadCard(
                     )
                     Surface(
                         shape = MaterialTheme.shapes.small,
-                        color = Color(0xFFFFEBEE)
+                        color = DesignTokens.Colors.ErrorLight
                     ) {
                         Text(
                             text = priority,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFD32F2F),
+                            color = DesignTokens.Colors.ErrorDark,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
@@ -560,7 +561,7 @@ fun LeadCard(
                 onClick = { /* TODO: Convert to customer */ },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF4CAF50)
+                    containerColor = DesignTokens.Colors.Success
                 )
             ) {
                 Text("Convert to Customer")

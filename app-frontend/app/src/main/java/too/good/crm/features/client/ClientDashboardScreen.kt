@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,7 +92,7 @@ fun ClientWelcomeCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFF3B82F6).copy(alpha = 0.1f)
+            containerColor = DesignTokens.Colors.Info.copy(alpha = 0.1f)
         )
     ) {
         Column(
@@ -102,7 +103,7 @@ fun ClientWelcomeCard() {
             Text(
                 text = "Welcome Back! 👋",
                 style = MaterialTheme.typography.titleMedium,
-                color = Color(0xFF3B82F6)
+                color = DesignTokens.Colors.Info
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -124,7 +125,7 @@ fun ClientWelcomeCard() {
                     onClick = { /* TODO: Navigate to Orders */ },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF3B82F6)
+                        containerColor = DesignTokens.Colors.Info
                     )
                 ) {
                     Icon(Icons.Default.ShoppingBag, contentDescription = null)
@@ -135,7 +136,7 @@ fun ClientWelcomeCard() {
                     onClick = { /* TODO: Create new order */ },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF3B82F6)
+                        contentColor = DesignTokens.Colors.Info
                     )
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
@@ -184,14 +185,14 @@ fun ClientMetricCard(
                     Icon(
                         imageVector = if (isPositive) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
                         contentDescription = null,
-                        tint = if (isPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
+                        tint = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = change,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
+                        color = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.width(4.dp))
@@ -204,14 +205,14 @@ fun ClientMetricCard(
             }
             Surface(
                 shape = MaterialTheme.shapes.medium,
-                color = Color(0xFF3B82F6).copy(alpha = 0.1f),
+                color = DesignTokens.Colors.Info.copy(alpha = 0.1f),
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = Color(0xFF3B82F6)
+                        tint = DesignTokens.Colors.Info
                     )
                 }
             }
