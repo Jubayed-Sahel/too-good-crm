@@ -8,3 +8,4 @@ export { VendorContactDialog } from './VendorContactDialog';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { CustomerAutocomplete } from './CustomerAutocomplete';
 export { ErrorState } from './ErrorState';
+export { default as ErrorBoundary } from './ErrorBoundary';

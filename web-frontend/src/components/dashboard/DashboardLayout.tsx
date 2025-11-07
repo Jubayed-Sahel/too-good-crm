@@ -1,6 +1,6 @@
 import { Box } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useState, useCallback, memo } from 'react';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 
@@ -12,15 +12,23 @@ interface DashboardLayoutProps {
 const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  const handleMenuClick = useCallback(() => {
+    setIsSidebarOpen(true);
+  }, []);
+
+  const handleSidebarClose = useCallback(() => {
+    setIsSidebarOpen(false);
+  }, []);
+
   return (
     <Box minH="100vh" bg="gray.50" overflowX="hidden" width="100%">
       {/* Sidebar */}
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar isOpen={isSidebarOpen} onClose={handleSidebarClose} />
 
       {/* Main Content Area */}
       <Box ml={{ base: 0, md: '280px' }} minH="100vh" width={{ base: '100%', md: 'calc(100% - 280px)' }} overflowX="hidden">
         {/* Mobile Top Bar */}
-        <TopBar onMenuClick={() => setIsSidebarOpen(true)} title={title} />
+        <TopBar onMenuClick={handleMenuClick} title={title} />
 
         {/* Page Content */}
         <Box 
@@ -44,4 +52,4 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   );
 };
 
-export default DashboardLayout;
+export default memo(DashboardLayout);

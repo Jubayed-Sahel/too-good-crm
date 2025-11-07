@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import {
   Box,
   Button,
@@ -258,4 +258,4 @@ const RoleSelectionDialog = ({
   );
 };
 
-export default RoleSelectionDialog;
+export default memo(RoleSelectionDialog);
