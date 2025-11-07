@@ -42,92 +42,103 @@
     }
   },
   "sharedDesignTokens": {
-    "brand": {
-      "vendor": {
+    "color": {
+      "brand": {
         "primary": "#667eea",
         "primaryVariant": "#764ba2",
-        "gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        "description": "Purple gradient for vendor/admin interfaces"
+        "gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
       },
       "client": {
         "primary": "#3b82f6",
         "primaryVariant": "#1e40af",
-        "gradient": "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)",
-        "description": "Blue gradient for client/customer interfaces (future)"
-      }
-    },
-    "semanticColors": {
-      "success": {
-        "main": "#10b981",
-        "light": "#d1fae5",
-        "dark": "#047857",
-        "usage": "Completed orders, successful operations, resolved issues"
+        "gradient": "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)"
       },
-      "warning": {
-        "main": "#f59e0b",
-        "light": "#fef3c7",
-        "dark": "#d97706",
-        "usage": "Pending orders, in-progress tasks, needs attention"
+      "neutral": {
+        "100": "#f3f4f6",
+        "200": "#e5e7eb",
+        "300": "#d1d5db",
+        "400": "#9ca3af",
+        "500": "#6b7280",
+        "600": "#4b5563",
+        "700": "#374151",
+        "800": "#1f2937",
+        "900": "#111827"
       },
-      "error": {
-        "main": "#ef4444",
-        "light": "#fee2e2",
-        "dark": "#dc2626",
-        "usage": "Failed operations, critical issues, urgent priority"
+      "semantic": {
+        "success": "#10b981",
+        "warning": "#f59e0b",
+        "error": "#ef4444",
+        "info": "#3b82f6"
       },
-      "info": {
-        "main": "#3b82f6",
-        "light": "#dbeafe",
-        "dark": "#1e40af",
-        "usage": "New items, open issues, information messages"
-      }
-    },
-    "statusColors": {
-      "open": "#3b82f6",
-      "inProgress": "#f59e0b",
-      "completed": "#10b981",
-      "closed": "#64748b",
-      "failed": "#ef4444",
-      "pending": "#f59e0b",
-      "scheduled": "#8b5cf6"
-    },
-    "priorityColors": {
-      "urgent": "#dc2626",
-      "high": "#f59e0b",
-      "medium": "#3b82f6",
-      "low": "#94a3b8"
-    },
-    "activityTypes": {
-      "call": "#3b82f6",
-      "email": "#8b5cf6",
-      "telegram": "#06b6d4",
-      "meeting": "#f59e0b",
-      "note": "#eab308",
-      "task": "#10b981"
-    },
-    "typography": {
-      "web": {
-        "fontFamily": "System font stack (Chakra UI default)",
-        "sizes": ["xs: 12px", "sm: 14px", "md: 16px", "lg: 18px", "xl: 20px", "2xl: 24px"]
+      "status": {
+        "open": "#3b82f6",
+        "inProgress": "#f59e0b",
+        "completed": "#10b981",
+        "closed": "#64748b",
+        "failed": "#ef4444",
+        "pending": "#f59e0b",
+        "scheduled": "#8b5cf6"
       },
-      "android": {
-        "fontFamily": "Roboto (Material Design default)",
-        "typeScale": "Material Design 3 (57sp Display to 11sp Label)"
+      "priority": {
+        "urgent": "#dc2626",
+        "high": "#f59e0b",
+        "medium": "#3b82f6",
+        "low": "#94a3b8"
+      },
+      "activity": {
+        "call": "#3b82f6",
+        "email": "#8b5cf6",
+        "telegram": "#06b6d4",
+        "meeting": "#f59e0b",
+        "note": "#eab308",
+        "task": "#10b981"
       }
     },
     "spacing": {
-      "web": {
-        "unit": "rem (4px increments)",
-        "scale": ["0.25rem (4px)", "0.5rem (8px)", "0.75rem (12px)", "1rem (16px)", "1.5rem (24px)", "2rem (32px)", "3rem (48px)"]
+      "xs": "0.25rem",
+      "sm": "0.5rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem"
+    },
+    "typography": {
+      "fontFamily": "Inter, system-ui, sans-serif",
+      "fontSizes": {
+        "xs": "12px",
+        "sm": "14px",
+        "md": "16px",
+        "lg": "18px",
+        "xl": "20px",
+        "2xl": "24px"
       },
-      "android": {
-        "unit": "dp (density-independent pixels)",
-        "scale": ["4dp", "8dp", "12dp", "16dp", "20dp", "24dp", "32dp", "48dp", "64dp"]
+      "fontWeights": {
+        "normal": 400,
+        "medium": 500,
+        "bold": 700
+      },
+      "lineHeights": {
+        "normal": "1.5",
+        "heading": "1.2"
       }
     },
-    "borderRadius": {
-      "web": ["2px", "6px", "8px", "12px", "16px", "9999px"],
-      "android": ["4dp", "8dp", "12dp", "16dp", "28dp", "9999dp"]
+    "radii": {
+      "sm": "2px",
+      "md": "6px",
+      "lg": "12px",
+      "xl": "16px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 1px 2px rgba(0,0,0,0.05)",
+      "md": "0 4px 6px rgba(0,0,0,0.10)",
+      "lg": "0 10px 15px rgba(0,0,0,0.15)"
+    },
+    "breakpoints": {
+      "sm": "30em",
+      "md": "48em",
+      "lg": "62em",
+      "xl": "80em"
     }
   },
   "vendorComponents": {
