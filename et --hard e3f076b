@@ -1,0 +1,91 @@
+[33m15e3ac8[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m App: Fixed Error
+[33m582dd03[m Updated Design Token
+[33me3f076b[m vibe: functionalities added to customer, deal and lead page
+[33mac1fa26[m vibe: form submission api in progress
+[33m59fee4a[m vibe: added team with roles & permissions
+[33m532d180[m vibe: vendor side pages api working
+[33mbad10f6[m Merge branch 'main' of https://github.com/prosk67/too-good-crm
+[33m038afc6[m vibe: api development in progress & design minor-fix
+[33m6083c4a[m Created Toggle option between vendor-client & Created Client Side Pages UI
+[33m77e7fa5[m Created Toggle option between vendor-client & Created Client side Pages
+[33m816db37[m App : Enabled client-vendor toggle option & Created All Client Pages
+[33m9e48b97[m Merge pull request #22 from Jubayed-Sahel/main
+[33m75dd2c5[m App: Done With full Vendor Side Ui
+[33m1c593ce[m App : Created deals and customers of vendor
+[33m0b93b28[m App: fixed the leads routing issue from other pages
+[33m262ccba[m App: fixed the leads routing issue from other pages
+[33mabac0a0[m vibe: api configuration almost done some things can break but not to worry we got AI
+[33ma51752f[m Merge pull request #20 from cyanide10/main
+[33m0434427[m Merge branch 'main' of https://github.com/cyanide10/too-good-crm
+[33mfe6722b[m Leads page created
+[33m259760d[m Created Design Token and Site map
+[33m05a2fae[m Created Design Token and Site map
+[33md380bd2[m vibe: markdowns removed
+[33m60c8f4e[m vibe: code organized
+[33m3400918[m vibe: authentication working
+[33m252c29d[m Merge pull request #18 from cyanide10/main
+[33mbba56f1[m Dashboard complete, sidebar and cards added
+[33m3fe14bd[m Complete client issues and Vendor Bug fix
+[33mf2d794a[m Complete client issues and Vendor Bug fix
+[33m1834b5d[m vibe: backend ready for api calls
+[33m523fe53[m Merge pull request #16 from cyanide10/main
+[33md97fb6c[m UI components added and all theme files reworked
+[33mad393d0[m vibe: database v2
+[33m5129603[m vibe: mobile responsiveness overflow issue solved
+[33m7c216e2[m vibe: mobile responsiveness update
+[33m130911f[m Created Full Client Side Ui  and fixed bugs of Vendor Side Ui
+[33m5cc9c1b[m Created Full Client Side Ui  and fixed bugs of Vendor side Ui
+[33ma0dfa93[m Merge pull request #14 from cyanide10/main
+[33m9f0d908[m Merge branch 'main' of https://github.com/cyanide10/too-good-crm
+[33mce60408[m Login updated and Dashboard added
+[33m49f7b57[m Created Activities Page
+[33m3cfc883[m Created Activities Page
+[33m9627dc5[m Merge pull request #12 from cyanide10/main
+[33m87f01c5[m Merge branch 'prosk67:main' into main
+[33me123488[m Sign Up page updated
+[33m35cd2c5[m Created and added Functionality to View and Edit Actions for Customers, Leads & Deals
+[33mc758e26[m Created and added Functionality to View and Edit Actions for Customers,Leads & Deals
+[33m9f74bce[m Created Edit and View Page For Customers,Deals & Leads
+[33m6cedd1b[m Added Functionality to Leads edit button & Fixed Analytics
+[33m60d12a5[m Added Functionality to Leads edit button & Fixed Analytics\
+[33m7e8898c[m Merge pull request #9 from cyanide10/main
+[33m47c5552[m Merge branch 'prosk67:main' into main
+[33m809592c[m Created Sales Page and made it Responsive
+[33m0fb6817[m vibe: seed data & tests
+[33m6179267[m Created Sales Page and made it Responsive
+[33m7516d7c[m Merge branch 'prosk67:main' into main
+[33m89e14c7[m App 'Sign Up' and 'Login' pages
+[33mb01dc1d[m Edited Customer View
+[33m923aed4[m Created Reactive Customer View
+[33mafa6809[m vibe: viewsets and api endpoints configured
+[33mb64dd18[m Created Customer view Landing Page
+[33m2423cad[m Merge pull request #6 from Jubayed-Sahel/main
+[33m3e5eb6b[m vibe: serializers added
+[33mb60b29b[m Merge branch 'prosk67:main' into main
+[33m5e7b244[m Added Customer Details Modal
+[33m39b9f38[m chore: moved design token to app frontend
+[33m9ebdb8a[m vibe: design token v2
+[33mac86611[m vibe: created models & migrations
+[33m4296586[m vibe: minor ui fixes
+[33ma699e9c[m vibe: modals added for creating customers and deals
+[33m1ba2796[m vibe: leads page & bulk edit enabled
+[33mc2aa3bc[m vibe: ui tweaks
+[33m9949f60[m Designed Settings Frontend
+[33m46d3681[m Edited Settings Part
+[33m2afeb28[m Designed Settings Part
+[33mcef482e[m ERD - v1
+[33m77ad025[m Created ERD.txt
+[33me0ab817[m Add files via upload
+[33m64cdc6a[m Designed Analytics part of Sidebar
+[33m49d0ca7[m Designed Analytics part of Sidebar
+[33m3a531c1[m vibe: chakra ui mcp configured
+[33m08d3ca8[m vibe: database v1
+[33md221c28[m vibe: created design token to unify frontend
+[33m3e6b7ab[m vibe: fixed design & code refactor
+[33m24993f2[m Merge pull request #2 from Jubayed-Sahel/main
+[33m75f99f7[m Designed Deals and Customers
+[33mf0eea9f[m vibe: applied chakra ui
+[33mc8f60cd[m Merge pull request #1 from Jubayed-Sahel/main
+[33m2669d16[m creating Web Login/Signup Page Demo-1
+[33m4e00b1a[m add: product requirement document
+[33m276aa00[m init: project setup
