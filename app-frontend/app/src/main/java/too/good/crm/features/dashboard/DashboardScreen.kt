@@ -9,16 +9,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-import too.good.crm.ui.theme.TooGoodCrmTheme
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,10 +44,10 @@ fun DashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+                .padding(DesignTokens.Spacing.Space4)
         ) {
             WelcomeCard()
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
             MetricCard(
                 title = "TOTAL CUSTOMERS",
                 value = "1234",
@@ -58,7 +56,7 @@ fun DashboardScreen(
                 icon = Icons.Default.People,
                 isPositive = true
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
             MetricCard(
                 title = "ACTIVE DEALS",
                 value = "87",
@@ -67,7 +65,7 @@ fun DashboardScreen(
                 icon = Icons.Default.Description,
                 isPositive = true
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
             MetricCard(
                 title = "REVENUE",
                 value = "$452,000",
@@ -85,48 +83,57 @@ fun WelcomeCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = DesignTokens.Colors.PrimaryContainer
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(DesignTokens.Padding.CardPaddingComfortable)
         ) {
             Text(
                 text = "Good Evening! 👋",
-                style = MaterialTheme.typography.titleMedium
+                style = MaterialTheme.typography.titleMedium,
+                color = DesignTokens.Colors.OnSurface
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
             Text(
                 text = "Welcome to Your Dashboard",
                 style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold
+                fontWeight = DesignTokens.Typography.FontWeightBold,
+                color = DesignTokens.Colors.OnSurface
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
             Text(
                 text = "Track your sales pipeline, manage customer relationships, and grow your business",
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
             ) {
                 Button(
                     onClick = { /* TODO: Navigate to Analytics */ },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DesignTokens.Colors.Primary
+                    )
                 ) {
                     Icon(Icons.Default.TrendingUp, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space2))
                     Text("Analytics")
                 }
                 OutlinedButton(
                     onClick = { /* TODO: Create new deal */ },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = DesignTokens.Colors.Primary
+                    )
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space2))
                     Text("New Deal")
                 }
             }
@@ -145,12 +152,15 @@ fun MetricCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level2),
+        colors = CardDefaults.cardColors(
+            containerColor = DesignTokens.Colors.Surface
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(DesignTokens.Padding.CardPaddingComfortable),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -158,47 +168,48 @@ fun MetricCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = DesignTokens.Colors.OnSurfaceVariant
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
                 Text(
                     text = value,
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = DesignTokens.Typography.FontWeightBold,
+                    color = DesignTokens.Colors.OnSurface
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
                         contentDescription = null,
-                        tint = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(16.dp)
+                        tint = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
+                        modifier = Modifier.size(DesignTokens.Heights.IconXs)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space1))
                     Text(
                         text = change,
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isPositive) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold
+                        color = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
+                        fontWeight = DesignTokens.Typography.FontWeightSemiBold
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space1))
                     Text(
                         text = changeLabel,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
             }
             Surface(
                 shape = MaterialTheme.shapes.medium,
-                color = MaterialTheme.colorScheme.secondaryContainer,
+                color = DesignTokens.Colors.SecondaryContainer,
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                        tint = DesignTokens.Colors.Secondary
                     )
                 }
             }
@@ -209,7 +220,22 @@ fun MetricCard(
 @Preview(showBackground = true)
 @Composable
 fun DashboardScreenPreview() {
-    TooGoodCrmTheme {
+    MaterialTheme(
+        colorScheme = lightColorScheme(
+            primary = DesignTokens.Colors.Primary,
+            onPrimary = DesignTokens.Colors.OnPrimary,
+            primaryContainer = DesignTokens.Colors.PrimaryContainer,
+            secondary = DesignTokens.Colors.Secondary,
+            onSecondary = DesignTokens.Colors.OnSecondary,
+            secondaryContainer = DesignTokens.Colors.SecondaryContainer,
+            error = DesignTokens.Colors.Error,
+            surface = DesignTokens.Colors.Surface,
+            onSurface = DesignTokens.Colors.OnSurface,
+            surfaceVariant = DesignTokens.Colors.SurfaceVariant,
+            onSurfaceVariant = DesignTokens.Colors.OnSurfaceVariant,
+            background = DesignTokens.Colors.Background
+        )
+    ) {
         DashboardScreen(onLogoutClicked = {}, onNavigate = {})
     }
 }
