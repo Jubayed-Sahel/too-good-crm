@@ -182,7 +182,7 @@ fun ClientMetricCard(
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                        imageVector = if (isPositive) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
                         contentDescription = null,
                         tint = if (isPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
                         modifier = Modifier.size(16.dp)

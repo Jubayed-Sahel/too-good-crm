@@ -112,7 +112,7 @@ fun SalesScreen(
                     title = "Avg Deal Size",
                     value = "$20.2K",
                     change = "+8%",
-                    icon = Icons.Default.TrendingUp,
+                    icon = Icons.Default.AttachMoney,
                     color = Color(0xFF3B82F6),
                     isPositive = true
                 )
@@ -121,7 +121,7 @@ fun SalesScreen(
                     title = "Win Rate",
                     value = "68%",
                     change = "+5%",
-                    icon = Icons.Default.ShowChart,
+                    icon = Icons.Default.Assessment,
                     color = Color(0xFFF59E0B),
                     isPositive = true
                 )
