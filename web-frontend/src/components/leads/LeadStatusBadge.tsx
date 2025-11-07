@@ -36,6 +36,23 @@ const statusConfig = {
 export const LeadStatusBadge = ({ status, size = 'md' }: LeadStatusBadgeProps) => {
   const config = statusConfig[status];
 
+  // Fallback for undefined or invalid status
+  if (!config) {
+    return (
+      <Badge
+        colorPalette="gray"
+        size={size}
+        borderRadius="full"
+        px={3}
+        py={1}
+        textTransform="capitalize"
+        fontSize="xs"
+      >
+        {status || 'Unknown'}
+      </Badge>
+    );
+  }
+
   return (
     <Badge
       colorPalette={config.colorPalette}

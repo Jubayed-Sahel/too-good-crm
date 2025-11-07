@@ -1,10 +1,9 @@
-import { Box, Heading, Text } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
   CustomersPageContent,
   CustomersPageLoading,
 } from '../components/customers';
-import { ConfirmDialog } from '../components/common';
+import { ConfirmDialog, ErrorState } from '../components/common';
 import { useCustomers, useCustomersPage, useCustomerActions } from '@/hooks';
 
 /**
@@ -55,14 +54,11 @@ const CustomersPage = () => {
   if (error) {
     return (
       <DashboardLayout title="Customers">
-        <Box textAlign="center" py={12}>
-          <Heading size="md" color="red.600" mb={2}>
-            Failed to load customers
-          </Heading>
-          <Text color="gray.500">
-            {error.message || 'Please try again later'}
-          </Text>
-        </Box>
+        <ErrorState
+          title="Failed to load customers"
+          error={error}
+          onRetry={refetch}
+        />
       </DashboardLayout>
     );
   }

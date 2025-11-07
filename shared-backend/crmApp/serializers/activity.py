@@ -34,7 +34,7 @@ class ActivityListSerializer(serializers.ModelSerializer):
         return obj.lead.name if obj.lead else None
     
     def get_deal_name(self, obj):
-        return obj.deal.deal_name if obj.deal else None
+        return obj.deal.title if obj.deal else None
     
     def get_assigned_to_name(self, obj):
         if obj.assigned_to:

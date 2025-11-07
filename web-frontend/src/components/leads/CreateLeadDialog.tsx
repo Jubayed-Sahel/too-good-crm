@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DialogRoot,
   DialogContent,
@@ -21,6 +21,7 @@ import {
 import CustomSelect from '../ui/CustomSelect';
 import type { CreateLeadData, LeadSource } from '../../types';
 import { FiPlus } from 'react-icons/fi';
+import { useAuth } from '@/hooks/useAuth';
 
 interface CreateLeadDialogProps {
   isOpen: boolean;
@@ -46,8 +47,9 @@ export const CreateLeadDialog = ({
   onSubmit,
   isLoading = false,
 }: CreateLeadDialogProps) => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<CreateLeadData>({
-    organization: 1, // TODO: Get from context
+    organization: user?.primaryOrganizationId || 1,
     name: '',
     email: '',
     phone: '',
@@ -58,6 +60,13 @@ export const CreateLeadDialog = ({
     notes: '',
   });
 
+  // Update organization when user changes
+  useEffect(() => {
+    if (user?.primaryOrganizationId) {
+      setFormData(prev => ({ ...prev, organization: user.primaryOrganizationId as number }));
+    }
+  }, [user?.primaryOrganizationId]);
+
   const handleSubmit = () => {
     onSubmit(formData);
     handleClose();
@@ -65,7 +74,7 @@ export const CreateLeadDialog = ({
 
   const handleClose = () => {
     setFormData({
-      organization: 1,
+      organization: user?.primaryOrganizationId || 1,
       name: '',
       email: '',
       phone: '',

@@ -124,12 +124,39 @@ class RoleViewSet(viewsets.ModelViewSet):
         
         # Auto-generate slug from name
         from django.utils.text import slugify
+        import uuid
         name = serializer.validated_data.get('name')
-        slug = slugify(name)
+        base_slug = slugify(name)
+        slug = base_slug
+        
+        # Ensure slug is unique within organization
+        counter = 1
+        while Role.objects.filter(
+            organization=user_org.organization,
+            slug=slug
+        ).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
         
         serializer.save(
             organization=user_org.organization,
             slug=slug
+        )
+    
+    def create(self, request, *args, **kwargs):
+        """Override create to return full role object"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        # Return full role using RoleSerializer
+        role = serializer.instance
+        response_serializer = RoleSerializer(role)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED,
+            headers=headers
         )
     
     @action(detail=True, methods=['post'])

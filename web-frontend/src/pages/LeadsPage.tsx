@@ -13,7 +13,8 @@ import {
   useLeads, 
   useLeadStats, 
   useCreateLead, 
-  useDeleteLead 
+  useDeleteLead,
+  useConvertLead,
 } from '../hooks';
 import type { LeadFilters as LeadFiltersType, CreateLeadData, Lead } from '../types';
 import { toaster } from '../components/ui/toaster';
@@ -40,6 +41,7 @@ export const LeadsPage = () => {
   // Mutations
   const createLead = useCreateLead();
   const deleteLead = useDeleteLead();
+  const convertLead = useConvertLead();
 
   const handleCreateLead = (data: CreateLeadData) => {
     createLead.mutate(data, {
@@ -93,11 +95,16 @@ export const LeadsPage = () => {
   };
 
   const handleConvertLead = (_lead: Lead) => {
-    // TODO: Implement convert lead dialog
-    toaster.create({
-      title: 'Convert Lead',
-      description: 'Convert lead feature coming soon',
-      type: 'info',
+    if (!_lead) return;
+
+    convertLead.mutate({ id: _lead.id, data: { customer_type: 'individual' } }, {
+      onSuccess: () => {
+        toaster.create({ title: 'Lead converted', description: 'Lead converted to customer successfully.', type: 'success' });
+      },
+      onError: (err: any) => {
+        console.error('Failed to convert lead:', err);
+        toaster.create({ title: 'Conversion failed', description: err?.message || 'Please try again.', type: 'error' });
+      }
     });
   };
 

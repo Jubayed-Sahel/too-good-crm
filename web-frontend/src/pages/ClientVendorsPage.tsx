@@ -9,6 +9,8 @@ import {
   VendorTable,
   type Vendor,
 } from '../components/client-vendors';
+import { useVendors } from '@/hooks';
+import type { VendorFilters as VendorFiltersType } from '@/types';
 
 const ClientVendorsPage = () => {
   const navigate = useNavigate();
@@ -17,7 +19,55 @@ const ClientVendorsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [isLoading] = useState(false);
+
+  // Build API filters (note: backend vendor doesn't have category)
+  const apiFilters: VendorFiltersType = useMemo(() => {
+    const filters: VendorFiltersType = {};
+    if (searchQuery) filters.search = searchQuery;
+    if (statusFilter !== 'all') filters.status = statusFilter as any;
+    return filters;
+  }, [searchQuery, statusFilter]);
+
+  // Fetch data from backend
+  const { data: vendorsData, isLoading, error } = useVendors(apiFilters);
+  const vendors = vendorsData?.results || [];
+
+  // Get unique categories for filter - use placeholder since backend doesn't have category
+  const categories = useMemo(() => {
+    return ['Software Development', 'Digital Marketing', 'Graphic Design', 'Cloud Infrastructure', 'Content Creation', 'Data Science'];
+  }, []);
+
+  // Map backend vendors to component format
+  const mappedVendors: Vendor[] = useMemo(() => {
+    let filtered = vendors.map(vendor => ({
+      id: vendor.id,
+      name: vendor.name,
+      category: 'General', // Backend doesn't have category field
+      description: '', // Backend vendor model doesn't have description in list
+      status: vendor.status === 'active' ? 'Active' : 'Inactive',
+      email: vendor.email || '',
+      phone: vendor.phone || '',
+      totalOrders: 0, // Would need to be calculated from orders
+      totalSpent: 0, // Would need to be calculated from orders
+      lastOrder: 'N/A',
+      rating: 0,
+    }));
+    
+    // Apply frontend category filter
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(v => v.category === categoryFilter);
+    }
+    
+    return filtered;
+  }, [vendors, categoryFilter]);
+
+  // Calculate stats
+  const stats = useMemo(() => ({
+    totalVendors: mappedVendors.length,
+    activeVendors: mappedVendors.filter(v => v.status === 'Active').length,
+    totalOrders: mappedVendors.reduce((sum, v) => sum + v.totalOrders, 0),
+    totalSpent: mappedVendors.reduce((sum, v) => sum + v.totalSpent, 0),
+  }), [mappedVendors]);
 
   const handleViewOrders = (vendorName: string) => {
     // Navigate to orders page with vendor filter
@@ -29,112 +79,32 @@ const ClientVendorsPage = () => {
     setIsContactDialogOpen(true);
   };
 
-  // Mock vendor data
-  const vendors: Vendor[] = [
-    {
-      id: 1,
-      name: 'Tech Solutions Inc',
-      category: 'Software Development',
-      description: 'Full-stack development and cloud solutions',
-      status: 'Active',
-      email: 'contact@techsolutions.com',
-      phone: '+1 (555) 123-4567',
-      totalOrders: 12,
-      totalSpent: 8500,
-      lastOrder: '2 days ago',
-      rating: 4.8,
-    },
-    {
-      id: 2,
-      name: 'Marketing Pro Agency',
-      category: 'Digital Marketing',
-      description: 'SEO, content marketing, and social media management',
-      status: 'Active',
-      email: 'hello@marketingpro.com',
-      phone: '+1 (555) 234-5678',
-      totalOrders: 8,
-      totalSpent: 5200,
-      lastOrder: '1 week ago',
-      rating: 4.9,
-    },
-    {
-      id: 3,
-      name: 'Design Studio Co',
-      category: 'Graphic Design',
-      description: 'Branding, UI/UX design, and visual content',
-      status: 'Active',
-      email: 'info@designstudio.com',
-      phone: '+1 (555) 345-6789',
-      totalOrders: 15,
-      totalSpent: 6750,
-      lastOrder: '3 days ago',
-      rating: 5.0,
-    },
-    {
-      id: 4,
-      name: 'Cloud Services Ltd',
-      category: 'Cloud Infrastructure',
-      description: 'AWS, Azure, and cloud architecture consulting',
-      status: 'Active',
-      email: 'support@cloudservices.com',
-      phone: '+1 (555) 456-7890',
-      totalOrders: 5,
-      totalSpent: 12000,
-      lastOrder: '5 days ago',
-      rating: 4.7,
-    },
-    {
-      id: 5,
-      name: 'Content Creators Hub',
-      category: 'Content Creation',
-      description: 'Video production, photography, and copywriting',
-      status: 'Inactive',
-      email: 'create@contenthub.com',
-      phone: '+1 (555) 567-8901',
-      totalOrders: 10,
-      totalSpent: 4800,
-      lastOrder: '2 months ago',
-      rating: 4.6,
-    },
-    {
-      id: 6,
-      name: 'Data Analytics Pro',
-      category: 'Data Science',
-      description: 'Business intelligence and data visualization',
-      status: 'Active',
-      email: 'data@analyticspro.com',
-      phone: '+1 (555) 678-9012',
-      totalOrders: 7,
-      totalSpent: 9200,
-      lastOrder: '1 week ago',
-      rating: 4.9,
-    },
-  ];
+  // Error state
+  if (error) {
+    return (
+      <DashboardLayout title="My Vendors">
+        <Box textAlign="center" py={12}>
+          <Heading size="md" color="red.600" mb={2}>
+            Failed to load vendors
+          </Heading>
+          <Text color="gray.500">
+            {error.message || 'Please try again later'}
+          </Text>
+        </Box>
+      </DashboardLayout>
+    );
+  }
 
-  // Get unique categories for filter
-  const categories = useMemo(() => {
-    return Array.from(new Set(vendors.map(v => v.category)));
-  }, []);
-
-  // Filter vendors
-  const filteredVendors = useMemo(() => {
-    return vendors.filter(vendor => {
-      const matchesSearch = vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           vendor.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           vendor.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = categoryFilter === 'all' || vendor.category === categoryFilter;
-      const matchesStatus = statusFilter === 'all' || vendor.status.toLowerCase() === statusFilter.toLowerCase();
-      return matchesSearch && matchesCategory && matchesStatus;
-    });
-  }, [vendors, searchQuery, categoryFilter, statusFilter]);
-
-  // Calculate stats
-  const stats = useMemo(() => ({
-    totalVendors: vendors.length,
-    activeVendors: vendors.filter(v => v.status === 'Active').length,
-    totalOrders: vendors.reduce((sum, v) => sum + v.totalOrders, 0),
-    totalSpent: vendors.reduce((sum, v) => sum + v.totalSpent, 0),
-  }), [vendors]);
+  // Loading state
+  if (isLoading) {
+    return (
+      <DashboardLayout title="My Vendors">
+        <Box display="flex" justifyContent="center" py={12}>
+          <Spinner size="xl" color="blue.500" />
+        </Box>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="My Vendors">
@@ -172,13 +142,13 @@ const ClientVendorsPage = () => {
           <>
             {/* Vendor Table */}
             <VendorTable
-              vendors={filteredVendors}
+              vendors={mappedVendors}
               onContact={handleContact}
               onViewOrders={handleViewOrders}
             />
 
             {/* Empty State */}
-            {filteredVendors.length === 0 && (
+            {mappedVendors.length === 0 && (
               <Box
                 textAlign="center"
                 py={12}

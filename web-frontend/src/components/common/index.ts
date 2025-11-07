@@ -6,3 +6,5 @@ export { default as ModeSwitcher } from './ModeSwitcher';
 export { default as ResponsiveTable } from './ResponsiveTable';
 export { VendorContactDialog } from './VendorContactDialog';
 export { default as ConfirmDialog } from './ConfirmDialog';
+export { CustomerAutocomplete } from './CustomerAutocomplete';
+export { ErrorState } from './ErrorState';

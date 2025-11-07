@@ -1,131 +1,75 @@
 import { useState, useMemo } from 'react';
-import { Box, Heading, Text, VStack } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { PaymentStats, PaymentFilters, PaymentsTable } from '../components/client-payments';
 import type { Payment } from '../components/client-payments';
+import { usePayments, usePaymentStats } from '@/hooks';
+import type { PaymentFilters as PaymentFiltersType } from '@/types';
 
 const ClientPaymentsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [vendorFilter, setVendorFilter] = useState('all');
 
-  // Mock data for payments
-  const payments: Payment[] = [
-    {
-      id: '1',
-      transactionId: 'TXN-2024-001',
-      orderNumber: 'ORD-2024-001',
-      vendor: 'Tech Solutions Inc',
-      amount: 4500,
-      status: 'paid',
-      paymentDate: '2024-02-15',
-      dueDate: '2024-02-15',
-      paymentMethod: 'Credit Card (****4532)',
-      description: 'Website Development - Final Payment',
-    },
-    {
-      id: '2',
-      transactionId: 'TXN-2024-002',
-      orderNumber: 'ORD-2024-002',
-      vendor: 'Marketing Pro',
-      amount: 1200,
-      status: 'paid',
-      paymentDate: '2024-02-01',
-      dueDate: '2024-02-01',
-      paymentMethod: 'Bank Transfer',
-      description: 'SEO Optimization - Monthly Fee',
-    },
-    {
-      id: '3',
-      transactionId: 'TXN-2024-003',
-      orderNumber: 'ORD-2024-003',
-      vendor: 'Design Studio',
-      amount: 3200,
-      status: 'paid',
-      paymentDate: '2024-02-20',
-      dueDate: '2024-02-20',
-      paymentMethod: 'Credit Card (****4532)',
-      description: 'Brand Identity - Full Package',
-    },
-    {
-      id: '4',
-      transactionId: 'TXN-2024-004',
-      orderNumber: 'ORD-2024-004',
-      vendor: 'Cloud Services',
-      amount: 2800,
-      status: 'pending',
-      dueDate: '2024-03-10',
-      paymentMethod: 'Pending',
-      description: 'Cloud Infrastructure - Setup Fee',
-    },
-    {
-      id: '5',
-      transactionId: 'TXN-2024-005',
-      orderNumber: 'ORD-2024-005',
-      vendor: 'Tech Solutions Inc',
-      amount: 4250,
-      status: 'pending',
-      dueDate: '2024-03-01',
-      paymentMethod: 'Pending',
-      description: 'Mobile App Development - Milestone 1',
-    },
-    {
-      id: '6',
-      transactionId: 'TXN-2024-006',
-      orderNumber: 'ORD-2024-006',
-      vendor: 'Marketing Pro',
-      amount: 950,
-      status: 'paid',
-      paymentDate: '2024-02-05',
-      dueDate: '2024-02-05',
-      paymentMethod: 'Credit Card (****4532)',
-      description: 'Social Media Management - Monthly',
-    },
-    {
-      id: '7',
-      transactionId: 'TXN-2024-007',
-      orderNumber: 'ORD-2024-007',
-      vendor: 'Content Creators',
-      amount: 1100,
-      status: 'overdue',
-      dueDate: '2024-02-25',
-      paymentMethod: 'Pending',
-      description: 'Video Production - Deposit',
-    },
-    {
-      id: '8',
-      transactionId: 'TXN-2024-008',
-      orderNumber: 'ORD-2024-002',
-      vendor: 'Marketing Pro',
-      amount: 1200,
-      status: 'pending',
-      dueDate: '2024-03-01',
-      paymentMethod: 'Pending',
-      description: 'SEO Optimization - Monthly Fee (March)',
-    },
-  ];
+  // Build API filters
+  const apiFilters: PaymentFiltersType = useMemo(() => {
+    const filters: PaymentFiltersType = {};
+    if (searchQuery) filters.search = searchQuery;
+    if (statusFilter !== 'all') filters.status = statusFilter as any;
+    if (vendorFilter !== 'all') filters.vendor = parseInt(vendorFilter);
+    return filters;
+  }, [searchQuery, statusFilter, vendorFilter]);
 
-  const filteredPayments = useMemo(() => {
-    return payments.filter(payment => {
-      const matchesSearch = payment.transactionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           payment.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           payment.vendor.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || payment.status === statusFilter;
-      const matchesVendor = vendorFilter === 'all' || payment.vendor === vendorFilter;
-      return matchesSearch && matchesStatus && matchesVendor;
+  // Fetch data from backend
+  const { data: paymentsData, isLoading, error } = usePayments(apiFilters);
+  const { data: statsData } = usePaymentStats();
+  
+  const payments = paymentsData?.results || [];
+
+  // Map backend payments to component format
+  const mappedPayments: Payment[] = useMemo(() => {
+    return payments.map(payment => {
+      const status = payment.status === 'completed' ? 'paid' : payment.status;
+      const isDue = payment.due_date && new Date(payment.due_date) < new Date() && payment.status === 'pending';
+      
+      return {
+        id: payment.id.toString(),
+        transactionId: payment.transaction_id || payment.payment_number,
+        orderNumber: payment.order_number || 'N/A',
+        vendor: payment.vendor_name || 'N/A',
+        amount: parseFloat(payment.amount.toString()),
+        status: isDue ? 'overdue' : status as any,
+        paymentDate: payment.payment_date || '',
+        dueDate: payment.due_date || '',
+        paymentMethod: payment.payment_method.replace('_', ' '),
+        description: payment.notes || payment.reference_number || '',
+      };
     });
-  }, [payments, searchQuery, statusFilter, vendorFilter]);
-
-  const vendors = useMemo(() => {
-    return Array.from(new Set(payments.map(payment => payment.vendor)));
   }, [payments]);
 
-  const stats = useMemo(() => ({
-    totalPaid: payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0),
-    totalPending: payments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0),
-    totalOverdue: payments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0),
-    count: payments.length,
-  }), [payments]);
+  // Get unique vendors for filter
+  const vendors = useMemo(() => {
+    const vendorNames = payments.map(p => p.vendor_name).filter(Boolean) as string[];
+    return Array.from(new Set(vendorNames));
+  }, [payments]);
+
+  // Map stats from backend
+  const stats = useMemo(() => {
+    if (!statsData) {
+      return {
+        totalPaid: mappedPayments.filter(p => p.status === 'paid').reduce((sum, p) => sum + p.amount, 0),
+        totalPending: mappedPayments.filter(p => p.status === 'pending').reduce((sum, p) => sum + p.amount, 0),
+        totalOverdue: mappedPayments.filter(p => p.status === 'overdue').reduce((sum, p) => sum + p.amount, 0),
+        count: mappedPayments.length,
+      };
+    }
+    return {
+      totalPaid: parseFloat((statsData.by_status?.completed || 0).toString()),
+      totalPending: parseFloat((statsData.by_status?.pending || 0).toString()),
+      totalOverdue: 0, // Backend doesn't track overdue separately
+      count: statsData.total || 0,
+    };
+  }, [statsData, mappedPayments]);
 
   const handlePayNow = (payment: Payment) => {
     console.log('Pay now:', payment);
@@ -136,6 +80,33 @@ const ClientPaymentsPage = () => {
     console.log('Download receipt:', payment);
     // Handle receipt download
   };
+
+  // Error state
+  if (error) {
+    return (
+      <DashboardLayout title="Payments">
+        <Box textAlign="center" py={12}>
+          <Heading size="md" color="red.600" mb={2}>
+            Failed to load payments
+          </Heading>
+          <Text color="gray.500">
+            {error.message || 'Please try again later'}
+          </Text>
+        </Box>
+      </DashboardLayout>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <DashboardLayout title="Payments">
+        <Box display="flex" justifyContent="center" py={12}>
+          <Spinner size="xl" color="blue.500" />
+        </Box>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Payments">
@@ -171,10 +142,30 @@ const ClientPaymentsPage = () => {
 
         {/* Payments Table */}
         <PaymentsTable
-          payments={filteredPayments}
+          payments={mappedPayments}
           onPayNow={handlePayNow}
           onDownloadReceipt={handleDownloadReceipt}
         />
+
+        {/* Empty State */}
+        {mappedPayments.length === 0 && (
+          <Box
+            textAlign="center"
+            py={12}
+            px={6}
+            bg="gray.50"
+            borderRadius="lg"
+          >
+            <Heading size="md" color="gray.600" mb={2}>
+              No payments found
+            </Heading>
+            <Text color="gray.500">
+              {searchQuery || statusFilter !== 'all' || vendorFilter !== 'all'
+                ? 'Try adjusting your filters'
+                : 'No payment records available'}
+            </Text>
+          </Box>
+        )}
       </VStack>
     </DashboardLayout>
   );

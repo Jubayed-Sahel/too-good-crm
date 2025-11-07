@@ -64,7 +64,25 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 email__icontains=search
             )
         
-        return queryset.select_related('user', 'manager', 'organization')
+        return queryset.select_related('user', 'manager', 'organization', 'role')
+    
+    def update(self, request, *args, **kwargs):
+        """Override update to ensure role is properly loaded"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        # Refresh from DB to get related role data
+        instance.refresh_from_db()
+        response_serializer = EmployeeSerializer(instance)
+        return Response(response_serializer.data)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Override partial_update to ensure role is properly loaded"""
+        kwargs['partial'] = True
+        return self.update(request, *args, **kwargs)
     
     @action(detail=False, methods=['get'])
     def departments(self, request):

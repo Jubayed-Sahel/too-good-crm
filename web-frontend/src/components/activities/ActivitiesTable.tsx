@@ -358,7 +358,8 @@ export const ActivitiesTable = ({
                       checked={isSelected}
                       onCheckedChange={(details) => handleSelectOne(activity.id, details.checked as boolean)}
                     />
-                  </Table.Cell>                  <Table.Cell>
+                  </Table.Cell>
+                  <Table.Cell>
                     <HStack gap={3}>
                       <Box
                         p={2}

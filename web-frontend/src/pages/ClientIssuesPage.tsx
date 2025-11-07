@@ -2,9 +2,11 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { toaster } from '../components/ui/toaster';
 import { IssueStats, IssueFilters, IssuesTable, CreateIssueDialog } from '../components/client-issues';
-import type { Issue, CreateIssueData } from '../components/client-issues';
+import { ErrorState } from '../components/common';
+import type { Issue as ComponentIssue, CreateIssueData as ComponentCreateIssueData } from '../components/client-issues';
+import { useIssues, useIssueStats, useIssueMutations } from '../hooks/useIssues';
+import type { Issue as BackendIssue, IssuePriority } from '../types';
 
 const ClientIssuesPage = () => {
   const navigate = useNavigate();
@@ -13,129 +15,102 @@ const ClientIssuesPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
 
-  // Mock data for issues
-  const issues: Issue[] = [
-    {
-      id: '1',
-      issueNumber: 'ISS-2024-001',
-      title: 'Delayed Project Delivery',
-      description: 'Website development project is 2 weeks behind schedule',
-      vendor: 'Tech Solutions Inc',
-      orderNumber: 'ORD-2024-001',
-      priority: 'high',
-      status: 'in_progress',
-      category: 'delivery',
-      createdAt: '2024-02-20',
-      updatedAt: '2024-02-22',
-    },
-    {
-      id: '2',
-      issueNumber: 'ISS-2024-002',
-      title: 'Invoice Discrepancy',
-      description: 'Received invoice amount does not match quoted price',
-      vendor: 'Marketing Pro',
-      orderNumber: 'ORD-2024-002',
-      priority: 'medium',
-      status: 'resolved',
-      category: 'billing',
-      createdAt: '2024-02-18',
-      updatedAt: '2024-02-19',
-    },
-    {
-      id: '3',
-      issueNumber: 'ISS-2024-003',
-      title: 'Poor Communication',
-      description: 'Vendor not responding to emails and messages',
-      vendor: 'Design Studio',
-      priority: 'medium',
-      status: 'open',
-      category: 'communication',
-      createdAt: '2024-02-25',
-      updatedAt: '2024-02-25',
-    },
-    {
-      id: '4',
-      issueNumber: 'ISS-2024-004',
-      title: 'Quality Issues',
-      description: 'Delivered work does not meet agreed specifications',
-      vendor: 'Content Creators',
-      orderNumber: 'ORD-2024-007',
-      priority: 'urgent',
-      status: 'in_progress',
-      category: 'quality',
-      createdAt: '2024-02-23',
-      updatedAt: '2024-02-24',
-    },
-  ];
+  // Build filter object for API
+  const apiFilters = useMemo(() => ({
+    search: searchQuery || undefined,
+    status: statusFilter !== 'all' ? (statusFilter as any) : undefined,
+    priority: priorityFilter !== 'all' ? (priorityFilter as IssuePriority) : undefined,
+  }), [searchQuery, statusFilter, priorityFilter]);
 
-  // Filter issues based on search and filters
-  const filteredIssues = useMemo(() => {
-    return issues.filter(issue => {
-      // Search filter
-      const searchLower = searchQuery.toLowerCase();
-      const matchesSearch = !searchQuery || 
-        issue.title.toLowerCase().includes(searchLower) ||
-        issue.description.toLowerCase().includes(searchLower) ||
-        issue.vendor.toLowerCase().includes(searchLower) ||
-        issue.issueNumber.toLowerCase().includes(searchLower);
+  // Fetch issues from backend
+  const { data: issuesData, isLoading, error } = useIssues(apiFilters);
+  const backendIssues = issuesData?.results || [];
 
-      // Status filter
-      const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
+  // Map backend issues to component format
+  const issues: ComponentIssue[] = useMemo(() => {
+    return backendIssues.map((issue: BackendIssue) => ({
+      id: issue.id.toString(),
+      issueNumber: issue.issue_number,
+      title: issue.title,
+      description: issue.description,
+      vendor: issue.vendor_name || `Vendor #${issue.vendor}`,
+      orderNumber: issue.order_number,
+      priority: issue.priority === 'critical' ? 'urgent' : issue.priority as 'low' | 'medium' | 'high' | 'urgent',
+      status: issue.status,
+      category: issue.category,
+      createdAt: issue.created_at,
+      updatedAt: issue.updated_at,
+    }));
+  }, [backendIssues]);
 
-      // Priority filter
-      const matchesPriority = priorityFilter === 'all' || issue.priority === priorityFilter;
+  // Fetch stats from backend
+  const { data: statsData } = useIssueStats();
 
-      return matchesSearch && matchesStatus && matchesPriority;
-    });
-  }, [issues, searchQuery, statusFilter, priorityFilter]);
+  // Mutations
+  const { createIssue, deleteIssue, resolveIssue } = useIssueMutations();
 
-  // Calculate stats
-  const stats = useMemo(() => ({
-    total: issues.length,
-    open: issues.filter(i => i.status === 'open').length,
-    inProgress: issues.filter(i => i.status === 'in_progress').length,
-    resolved: issues.filter(i => i.status === 'resolved').length,
-  }), [issues]);
+  // Calculate stats from backend data or use default
+  const stats = useMemo(() => {
+    if (statsData) {
+      return {
+        total: statsData.total || 0,
+        open: statsData.by_status?.open || 0,
+        inProgress: statsData.by_status?.in_progress || 0,
+        resolved: statsData.by_status?.resolved || 0,
+      };
+    }
+    return {
+      total: issues.length,
+      open: issues.filter(i => i.status === 'open').length,
+      inProgress: issues.filter(i => i.status === 'in_progress').length,
+      resolved: issues.filter(i => i.status === 'resolved').length,
+    };
+  }, [statsData, issues]);
 
   // Handlers
-  const handleView = (issue: Issue) => {
+  const handleView = (issue: ComponentIssue) => {
     navigate(`/client/issues/${issue.id}`);
   };
 
   const handleResolve = (issueId: string) => {
-    const issue = issues.find(i => i.id === issueId);
-    console.log('Complete issue:', issue);
-    toaster.create({
-      title: 'Issue Completed',
-      description: `Issue has been marked as complete.`,
-      type: 'success',
-      duration: 3000,
-    });
-    // In real app, make API call to update status
+    resolveIssue.mutate(Number(issueId));
   };
 
   const handleDelete = (issueId: string) => {
-    const issue = issues.find(i => i.id === issueId);
-    console.log('Delete issue:', issue);
-    toaster.create({
-      title: 'Issue Deleted',
-      description: `Issue has been deleted.`,
-      type: 'info',
-      duration: 3000,
-    });
-    // In real app, make API call to delete
+    deleteIssue.mutate(Number(issueId));
   };
 
-  const handleSubmit = (data: CreateIssueData) => {
-    toaster.create({
-      title: 'Issue Submitted',
-      description: `Your issue "${data.title}" has been logged and will be addressed soon.`,
-      type: 'success',
-      duration: 5000,
-    });
+  const handleSubmit = (data: ComponentCreateIssueData) => {
+    // Map component data to backend format
+    const backendData = {
+      title: data.title,
+      description: data.description,
+      priority: data.priority === 'urgent' ? 'critical' : data.priority as IssuePriority,
+      category: data.category as any,
+      status: 'open' as any, // New issues start as open
+      vendor: 1, // TODO: Get from vendor selection
+      order: data.orderNumber ? Number(data.orderNumber) : undefined,
+    };
 
-    setIsCreateDialogOpen(false);
+    createIssue.mutate(backendData, {
+      onSuccess: () => {
+        setIsCreateDialogOpen(false);
+      },
+    });
   };
+
+  // Error state
+  if (error) {
+    return (
+      <DashboardLayout title="Issues">
+        <ErrorState
+          title="Failed to load issues"
+          error={error}
+          onRetry={() => window.location.reload()}
+        />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="Issues">
@@ -170,7 +145,7 @@ const ClientIssuesPage = () => {
         />
 
         {/* Loading State */}
-        {false ? (
+        {isLoading ? (
           <Box display="flex" justifyContent="center" py={12}>
             <Spinner size="xl" color="blue.500" />
           </Box>
@@ -178,17 +153,27 @@ const ClientIssuesPage = () => {
           <>
             {/* Issues Table */}
             <IssuesTable
-              issues={filteredIssues}
+              issues={issues}
               onView={handleView}
               onComplete={handleResolve}
               onDelete={handleDelete}
             />
+
+            {/* Empty State */}
+            {issues.length === 0 && (
+              <Box textAlign="center" py={12}>
+                <Text color="gray.500" fontSize="lg">
+                  No issues found matching your filters
+                </Text>
+              </Box>
+            )}
 
             {/* Create Issue Dialog */}
             <CreateIssueDialog
               isOpen={isCreateDialogOpen}
               onClose={() => setIsCreateDialogOpen(false)}
               onSubmit={handleSubmit}
+              isLoading={createIssue.isPending}
             />
           </>
         )}
