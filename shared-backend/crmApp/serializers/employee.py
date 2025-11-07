@@ -62,6 +62,7 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(required=False, allow_null=True)
     manager_id = serializers.IntegerField(required=False, allow_null=True)
     role_id = serializers.IntegerField(required=False, allow_null=True)
+    zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)
     
     class Meta:
         model = Employee
@@ -72,6 +73,79 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
             'emergency_contact', 'salary', 'commission_rate', 'manager_id',
             'address', 'city', 'state', 'zip_code', 'country'
         ]
+    
+    def validate_email(self, value):
+        """Validate email is unique within organization"""
+        if not value:
+            return value
+        
+        organization = self.initial_data.get('organization')
+        if organization:
+            # Check if employee with this email exists in the organization
+            if Employee.objects.filter(
+                organization_id=organization,
+                email__iexact=value
+            ).exists():
+                raise serializers.ValidationError(
+                    "An employee with this email already exists in your organization."
+                )
+        
+        return value.lower()
+    
+    def validate_phone(self, value):
+        """Validate phone number format"""
+        if not value:
+            return value
+        
+        # Remove common separators
+        cleaned = value.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+        
+        # Check if it's mostly digits
+        if not cleaned.replace('+', '').isdigit():
+            raise serializers.ValidationError(
+                "Phone number should only contain digits, spaces, hyphens, and parentheses."
+            )
+        
+        # Check minimum length
+        if len(cleaned) < 10:
+            raise serializers.ValidationError(
+                "Phone number must be at least 10 digits."
+            )
+        
+        return value
+    
+    def validate_salary(self, value):
+        """Validate salary is positive"""
+        if value is not None and value < 0:
+            raise serializers.ValidationError(
+                "Salary cannot be negative."
+            )
+        return value
+    
+    def validate_commission_rate(self, value):
+        """Validate commission rate is between 0 and 100"""
+        if value is not None:
+            if value < 0 or value > 100:
+                raise serializers.ValidationError(
+                    "Commission rate must be between 0 and 100 percent."
+                )
+        return value
+    
+    def validate(self, attrs):
+        """Object-level validation"""
+        # Ensure first_name and last_name are provided
+        if not attrs.get('first_name') or not attrs.get('last_name'):
+            raise serializers.ValidationError(
+                "Both first name and last name are required."
+            )
+        
+        # If employment_type is contract, check hire_date is provided
+        if attrs.get('employment_type') == 'contract' and not attrs.get('hire_date'):
+            raise serializers.ValidationError({
+                'hire_date': "Hire date is required for contract employees."
+            })
+        
+        return attrs
     
     def create(self, validated_data):
         """Create employee and auto-create user profile if user is linked"""

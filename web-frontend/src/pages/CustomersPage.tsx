@@ -4,6 +4,7 @@ import {
   CustomersPageContent,
   CustomersPageLoading,
 } from '../components/customers';
+import { ConfirmDialog } from '../components/common';
 import { useCustomers, useCustomersPage, useCustomerActions } from '@/hooks';
 
 /**
@@ -44,6 +45,7 @@ const CustomersPage = () => {
     handleDelete,
     handleView,
     handleCreateCustomer,
+    deleteDialogState,
   } = useCustomerActions({ onSuccess: refetch });
 
   // Error state
@@ -88,6 +90,23 @@ const CustomersPage = () => {
         onCreateCustomer={handleCreateCustomer}
         isCreateDialogOpen={isCreateDialogOpen}
         onCloseCreateDialog={() => setIsCreateDialogOpen(false)}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialogState.isOpen}
+        onClose={deleteDialogState.onClose}
+        onConfirm={deleteDialogState.onConfirm}
+        title="Delete Customer"
+        message={
+          deleteDialogState.customer
+            ? `Are you sure you want to delete ${deleteDialogState.customer.name}? This action cannot be undone.`
+            : 'Are you sure you want to delete this customer?'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={false}
       />
     </DashboardLayout>
   );

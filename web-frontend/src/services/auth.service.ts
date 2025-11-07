@@ -4,7 +4,7 @@
  */
 import api from '@/lib/apiClient';
 import { API_CONFIG } from '@/config/api.config';
-import type { AuthResponse, LoginCredentials, RegisterData, User } from '@/types';
+import type { AuthResponse, LoginCredentials, RegisterData, User, UserProfile } from '@/types';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -34,12 +34,13 @@ class AuthService {
       data
     );
 
-    // Store token and user
-    this.setAuthData(response.token, response.user);
+    // Process user data and store
+    const processedUser = this.processUserData(response.user);
+    this.setAuthData(response.token, processedUser);
 
     return {
       token: response.token,
-      user: response.user,
+      user: processedUser,
       message: response.message || 'Registration successful',
     };
   }
@@ -53,12 +54,13 @@ class AuthService {
       credentials
     );
 
-    // Store token and user
-    this.setAuthData(response.token, response.user);
+    // Process user data and store
+    const processedUser = this.processUserData(response.user);
+    this.setAuthData(response.token, processedUser);
 
     return {
       token: response.token,
-      user: response.user,
+      user: processedUser,
       message: response.message || 'Login successful',
     };
   }
@@ -101,6 +103,21 @@ class AuthService {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Process user data to add computed properties
+   */
+  private processUserData(user: User): User {
+    // Find primary profile or first active profile
+    const primaryProfile = user.profiles?.find((p: UserProfile) => p.is_primary && p.status === 'active') 
+      || user.profiles?.find((p: UserProfile) => p.status === 'active');
+    
+    // Add computed properties
+    (user as any).primaryProfile = primaryProfile;
+    (user as any).primaryOrganizationId = primaryProfile?.organization;
+    
+    return user;
   }
 
   /**

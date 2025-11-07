@@ -12,7 +12,9 @@ import { Box, Heading, Text } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { EmployeesPageContent, EmployeesPageLoading } from '../components/employees';
 import { InviteEmployeeDialog } from '../components/employees/InviteEmployeeDialog';
+import { toaster } from '../components/ui/toaster';
 import { useEmployees } from '@/hooks/useEmployees';
+import { employeeService } from '@/services';
 import type { Employee } from '@/services';
 
 const EmployeesPage = () => {
@@ -53,10 +55,28 @@ const EmployeesPage = () => {
     navigate(`/employees/${employee.id}/edit`);
   };
 
-  const handleDelete = (employee: Employee) => {
-    if (confirm(`Are you sure you want to delete ${employee.first_name} ${employee.last_name}?`)) {
-      console.log('Delete employee:', employee);
-      // TODO: Implement delete functionality
+  const handleDelete = async (employee: Employee) => {
+    if (!confirm(`Are you sure you want to delete ${employee.first_name} ${employee.last_name}?`)) {
+      return;
+    }
+
+    try {
+      await employeeService.deleteEmployee(employee.id);
+      
+      toaster.create({
+        title: 'Employee deleted',
+        description: `${employee.first_name} ${employee.last_name} has been removed.`,
+        type: 'success',
+      });
+      
+      refetch();
+    } catch (error: any) {
+      console.error('Error deleting employee:', error);
+      toaster.create({
+        title: 'Failed to delete employee',
+        description: error.message || 'Please try again.',
+        type: 'error',
+      });
     }
   };
 
@@ -64,10 +84,31 @@ const EmployeesPage = () => {
     navigate(`/employees/${employee.id}`);
   };
 
-  const handleBulkDelete = (employeeIds: string[]) => {
-    if (confirm(`Are you sure you want to delete ${employeeIds.length} employee(s)?`)) {
-      console.log('Bulk delete employees:', employeeIds);
-      // TODO: Implement bulk delete functionality
+  const handleBulkDelete = async (employeeIds: string[]) => {
+    if (!confirm(`Are you sure you want to delete ${employeeIds.length} employee(s)?`)) {
+      return;
+    }
+
+    try {
+      // Delete employees one by one
+      await Promise.all(
+        employeeIds.map(id => employeeService.deleteEmployee(parseInt(id)))
+      );
+      
+      toaster.create({
+        title: 'Employees deleted',
+        description: `${employeeIds.length} employee(s) have been removed.`,
+        type: 'success',
+      });
+      
+      refetch();
+    } catch (error: any) {
+      console.error('Error deleting employees:', error);
+      toaster.create({
+        title: 'Failed to delete employees',
+        description: error.message || 'Please try again.',
+        type: 'error',
+      });
     }
   };
 

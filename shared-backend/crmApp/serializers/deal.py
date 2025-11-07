@@ -166,6 +166,41 @@ class DealCreateSerializer(serializers.ModelSerializer):
             'assigned_to', 'assigned_to_id', 'source', 'tags', 'notes'
         ]
     
+    def validate_value(self, value):
+        """Validate deal value is positive"""
+        if value is not None and value < 0:
+            raise serializers.ValidationError(
+                "Deal value cannot be negative."
+            )
+        return value
+    
+    def validate_probability(self, value):
+        """Validate probability is between 0 and 100"""
+        if value is not None:
+            if value < 0 or value > 100:
+                raise serializers.ValidationError(
+                    "Probability must be between 0 and 100 percent."
+                )
+        return value
+    
+    def validate_title(self, value):
+        """Validate title is not empty and has minimum length"""
+        if not value or len(value.strip()) < 3:
+            raise serializers.ValidationError(
+                "Deal title must be at least 3 characters long."
+            )
+        return value
+    
+    def validate_expected_close_date(self, value):
+        """Validate expected close date is not in the past"""
+        if value:
+            from datetime import date
+            if value < date.today():
+                raise serializers.ValidationError(
+                    "Expected close date cannot be in the past."
+                )
+        return value
+    
     def validate(self, attrs):
         # Handle backward compatibility for customer/customer_id
         if 'customer' in attrs:
@@ -176,6 +211,18 @@ class DealCreateSerializer(serializers.ModelSerializer):
             attrs['stage_id'] = attrs.pop('stage')
         if 'assigned_to' in attrs:
             attrs['assigned_to_id'] = attrs.pop('assigned_to')
+        
+        # Ensure customer is provided
+        if not attrs.get('customer_id'):
+            raise serializers.ValidationError({
+                'customer': "Customer is required for creating a deal."
+            })
+        
+        # Ensure title is provided
+        if not attrs.get('title'):
+            raise serializers.ValidationError({
+                'title': "Deal title is required."
+            })
         
         return attrs
 

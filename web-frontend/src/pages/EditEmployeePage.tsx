@@ -15,7 +15,9 @@ import { FiArrowLeft, FiSave } from 'react-icons/fi';
 import CustomSelect from '../components/ui/CustomSelect';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { Card } from '../components/common';
+import { toaster } from '../components/ui/toaster';
 import { useEmployees } from '../hooks/useEmployees';
+import { employeeService } from '@/services';
 
 const employmentTypeOptions = [
   { value: 'full-time', label: 'Full-time' },
@@ -85,12 +87,27 @@ const EditEmployeePage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Update employee:', formData);
-    // TODO: Implement API call to update employee
-    alert('Employee updated successfully!');
-    navigate(`/employees/${id}`);
+    
+    try {
+      await employeeService.updateEmployee(parseInt(id!), formData);
+      
+      toaster.create({
+        title: 'Employee updated successfully',
+        description: `${formData.first_name} ${formData.last_name}'s information has been updated.`,
+        type: 'success',
+      });
+      
+      navigate(`/employees/${id}`);
+    } catch (error: any) {
+      console.error('Error updating employee:', error);
+      toaster.create({
+        title: 'Failed to update employee',
+        description: error.message || 'Please try again.',
+        type: 'error',
+      });
+    }
   };
 
   if (isLoading) {
