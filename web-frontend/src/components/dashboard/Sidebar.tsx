@@ -22,6 +22,7 @@ import { usePermissions } from '@/contexts/PermissionContext';
 import { useAuth } from '@/hooks';
 import { useState } from 'react';
 import { RoleSelectionDialog } from '../auth';
+import { toaster } from '../ui/toaster';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -44,11 +45,27 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const handleSwitchRole = async (profileId: number) => {
     setIsSwitching(true);
     try {
+      const selectedProfile = user?.profiles?.find(p => p.id === profileId);
+      
+      toaster.create({
+        title: "Switching Profile",
+        description: `Switching to ${selectedProfile?.profile_type_display}...`,
+        type: "info",
+        duration: 2000,
+      });
+      
       await switchRole(profileId);
       // Note: Page will reload, so no need to reset state or close dialog
     } catch (error) {
       console.error('Failed to switch role:', error);
       setIsSwitching(false);
+      
+      toaster.create({
+        title: "Switch Failed",
+        description: "Failed to switch profile. Please try again.",
+        type: "error",
+        duration: 3000,
+      });
       // Only reset on error since page won't reload
     }
   };
@@ -172,25 +189,32 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                 <VStack align="stretch" gap={2}>
                   <HStack justify="space-between">
                     <Text fontSize="xs" color="gray.600" fontWeight="semibold">
-                      Current Context
+                      Active Profile
                     </Text>
-                    <Badge colorPalette={isVendor ? 'purple' : 'blue'} size="sm">
+                    <Badge colorPalette={
+                      currentProfile.profile_type === 'vendor' ? 'purple' :
+                      currentProfile.profile_type === 'employee' ? 'blue' : 'green'
+                    } size="sm">
                       {currentProfile.profile_type_display}
                     </Badge>
                   </HStack>
                   <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-                    {currentProfile.organization_name}
+                    {currentProfile.profile_type === 'customer' && !currentProfile.organization_name
+                      ? 'Independent Customer'
+                      : currentProfile.organization_name || 'No Organization'}
                   </Text>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    colorPalette="purple"
-                    onClick={() => setShowRoleSwitcher(true)}
-                    w="full"
-                  >
-                    <FiRefreshCw size={12} />
-                    <Text ml={1}>Switch Role</Text>
-                  </Button>
+                  {user?.profiles && user.profiles.length > 1 && (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      colorPalette="purple"
+                      onClick={() => setShowRoleSwitcher(true)}
+                      w="full"
+                    >
+                      <FiRefreshCw size={12} />
+                      <Text ml={1}>Switch Profile ({user.profiles.length})</Text>
+                    </Button>
+                  )}
                 </VStack>
               </Box>
             )}

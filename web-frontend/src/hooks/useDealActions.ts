@@ -9,6 +9,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { dealService } from '@/services/deal.service';
 import { useAuth } from '@/hooks/useAuth';
 import { toaster } from '@/components/ui/toaster';
+import { exportData } from '@/utils';
+import type { MappedDeal } from './useDealsPage';
 
 interface EditDealData {
   id: string;
@@ -34,6 +36,7 @@ interface UseDealActionsReturn {
   handleUpdateDeal: (data: EditDealData) => Promise<void>;
   handleDeleteDeal: (deal: any) => void;
   handleBulkDelete: (dealIds: string[]) => void;
+  handleBulkExport: (dealIds: string[], deals: MappedDeal[]) => void;
   handleViewDeal: (deal: any) => void;
   handleCreateDeal: (data: any) => Promise<void>;
   
@@ -227,6 +230,47 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
     setBulkDeleteDialogOpen(true);
   };
   
+  const handleBulkExport = (dealIds: string[], deals: MappedDeal[]) => {
+    if (dealIds.length === 0) return;
+
+    const selectedDeals = deals.filter(deal => dealIds.includes(deal.id));
+
+    if (selectedDeals.length === 0) {
+      toaster.create({
+        title: 'No deals exported',
+        description: 'Unable to match the selected deals. Please refresh and try again.',
+        type: 'warning',
+      });
+      return;
+    }
+
+    const formatStage = (stage: MappedDeal['stage']) =>
+      stage
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+
+    const exportRows = selectedDeals.map((deal) => ({
+      ID: deal.id,
+      Title: deal.title,
+      Customer: deal.customer,
+      Value: deal.value,
+      Stage: formatStage(deal.stage),
+      Probability: deal.probability,
+      'Expected Close': deal.expectedCloseDate,
+      Owner: deal.owner,
+      'Created Date': deal.createdDate,
+    }));
+
+    exportData(exportRows, 'deals', 'csv');
+
+    toaster.create({
+      title: 'Export complete',
+      description: `${selectedDeals.length} deal(s) exported successfully.`,
+      type: 'success',
+    });
+  };
+  
   const confirmBulkDelete = async () => {
     // Delete deals in parallel
     await Promise.all(
@@ -285,6 +329,7 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
     handleUpdateDeal,
     handleDeleteDeal,
     handleBulkDelete,
+  handleBulkExport,
     handleViewDeal,
     handleCreateDeal,
     

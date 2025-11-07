@@ -46,6 +46,7 @@ const CustomersPage = () => {
     handleView,
     handleCreateCustomer,
     handleBulkDelete,
+    handleBulkExport,
     deleteDialogState,
     bulkDeleteDialogState,
   } = useCustomerActions({ onSuccess: refetch });
@@ -89,6 +90,7 @@ const CustomersPage = () => {
         onDelete={handleDelete}
         onView={handleView}
         onBulkDelete={handleBulkDelete}
+        onBulkExport={handleBulkExport}
         onAddCustomer={() => setIsCreateDialogOpen(true)}
         onCreateCustomer={handleCreateCustomer}
         isCreateDialogOpen={isCreateDialogOpen}

@@ -97,15 +97,105 @@ export const API_CONFIG = {
       TYPES: '/vendors/types/',
     },
 
-    // RBAC
-    RBAC: {
-      ROLES: '/roles/',
-      ROLE_DETAIL: (id: number | string) => `/roles/${id}/`,
-      PERMISSIONS: '/permissions/',
-      PERMISSION_DETAIL: (id: number | string) => `/permissions/${id}/`,
+    // RBAC - Roles
+    ROLES: {
+      LIST: '/roles/',
+      DETAIL: (id: number | string) => `/roles/${id}/`,
+      PERMISSIONS: (id: number | string) => `/roles/${id}/permissions/`,
+      USERS: (id: number | string) => `/roles/${id}/users/`,
+      ASSIGN_PERMISSION: (id: number | string) => `/roles/${id}/assign_permission/`,
+      REMOVE_PERMISSION: (id: number | string) => `/roles/${id}/remove_permission/`,
+      UPDATE_PERMISSIONS: (id: number | string) => `/roles/${id}/update_permissions/`,
+    },
+
+    // RBAC - Permissions
+    PERMISSIONS: {
+      LIST: '/permissions/',
+      DETAIL: (id: number | string) => `/permissions/${id}/`,
+      BY_RESOURCE: '/permissions/by_resource/',
+      AVAILABLE_RESOURCES: '/permissions/available_resources/',
+      AVAILABLE_ACTIONS: '/permissions/available_actions/',
+    },
+
+    // RBAC - User Roles
+    USER_ROLES: {
+      LIST: '/user-roles/',
+      DETAIL: (id: number | string) => `/user-roles/${id}/`,
       MY_ROLES: '/user-roles/my_roles/',
-      ASSIGN_PERMISSION: (roleId: number | string) => `/roles/${roleId}/assign_permission/`,
-      REMOVE_PERMISSION: (roleId: number | string) => `/roles/${roleId}/remove_permission/`,
+      BY_ROLE: '/user-roles/by_role/',
+      BY_USER: '/user-roles/by_user/',
+      BULK_ASSIGN: '/user-roles/bulk_assign/',
+      BULK_REMOVE: '/user-roles/bulk_remove/',
+      TOGGLE_ACTIVE: '/user-roles/toggle_active/',
+    },
+
+    // Activities
+    ACTIVITIES: {
+      LIST: '/activities/',
+      DETAIL: (id: number | string) => `/activities/${id}/`,
+      STATS: '/activities/stats/',
+    },
+
+    // Issues
+    ISSUES: {
+      LIST: '/issues/',
+      DETAIL: (id: number | string) => `/issues/${id}/`,
+      STATS: '/issues/stats/',
+      RESOLVE: (id: number | string) => `/issues/${id}/resolve/`,
+      CLOSE: (id: number | string) => `/issues/${id}/close/`,
+      REOPEN: (id: number | string) => `/issues/${id}/reopen/`,
+    },
+
+    // Orders
+    ORDERS: {
+      LIST: '/orders/',
+      DETAIL: (id: number | string) => `/orders/${id}/`,
+      STATS: '/orders/stats/',
+      CANCEL: (id: number | string) => `/orders/${id}/cancel/`,
+      COMPLETE: (id: number | string) => `/orders/${id}/complete/`,
+      ITEMS: (id: number | string) => `/orders/${id}/items/`,
+    },
+
+    // Payments
+    PAYMENTS: {
+      LIST: '/payments/',
+      DETAIL: (id: number | string) => `/payments/${id}/`,
+      STATS: '/payments/stats/',
+      CONFIRM: (id: number | string) => `/payments/${id}/confirm/`,
+      REFUND: (id: number | string) => `/payments/${id}/refund/`,
+    },
+
+    // Notifications
+    NOTIFICATIONS: {
+      LIST: '/notification-preferences/',
+      DETAIL: (id: number | string) => `/notification-preferences/${id}/`,
+      MY_PREFERENCES: '/notification-preferences/my_preferences/',
+    },
+
+    // User Profiles
+    USER_PROFILES: {
+      LIST: '/user-profiles/',
+      DETAIL: (id: number | string) => `/user-profiles/${id}/`,
+      MY_PROFILES: '/user-profiles/my_profiles/',
+      ACTIVATE: (id: number | string) => `/user-profiles/${id}/activate/`,
+      DEACTIVATE: (id: number | string) => `/user-profiles/${id}/deactivate/`,
+      SUSPEND: (id: number | string) => `/user-profiles/${id}/suspend/`,
+    },
+
+    // Employee Invitations
+    EMPLOYEE_INVITATIONS: {
+      LIST: '/employee-invitations/',
+      DETAIL: (id: number | string) => `/employee-invitations/${id}/`,
+      SEND: '/employee-invitations/send/',
+      ACCEPT: (token: string) => `/employee-invitations/${token}/accept/`,
+      DECLINE: (token: string) => `/employee-invitations/${token}/decline/`,
+    },
+
+    // Role Selection
+    ROLE_SELECTION: {
+      AVAILABLE_ROLES: '/auth/role-selection/available_roles/',
+      SELECT_ROLE: '/auth/role-selection/select_role/',
+      CURRENT_ROLE: '/auth/role-selection/current_role/',
     },
 
     // Analytics

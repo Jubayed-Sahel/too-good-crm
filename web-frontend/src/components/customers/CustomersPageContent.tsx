@@ -27,6 +27,7 @@ export interface CustomersPageContentProps {
   onDelete: (customer: MappedCustomer) => void;
   onView: (customer: MappedCustomer) => void;
   onBulkDelete?: (customerIds: string[]) => void;
+  onBulkExport?: (customerIds: string[], allCustomers: MappedCustomer[]) => void;
   onAddCustomer: () => void;
   onCreateCustomer: (data: any) => void;
   
@@ -62,6 +63,7 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
   onDelete,
   onView,
   onBulkDelete,
+  onBulkExport,
   onAddCustomer,
   onCreateCustomer,
   isCreateDialogOpen,
@@ -98,6 +100,7 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
         onDelete={onDelete}
         onView={onView}
         onBulkDelete={onBulkDelete}
+        onBulkExport={onBulkExport ? (ids) => onBulkExport(ids, mappedCustomers) : undefined}
       />
 
       {/* Create Customer Dialog */}

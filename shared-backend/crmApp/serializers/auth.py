@@ -18,6 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
     """Full user serializer with all fields and profiles"""
     full_name = serializers.SerializerMethodField()
     profiles = serializers.SerializerMethodField()
+    organizations = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -26,7 +27,7 @@ class UserSerializer(serializers.ModelSerializer):
             'full_name', 'profile_image', 'phone', 'is_active',
             'is_verified', 'is_staff', 'two_factor_enabled',
             'last_login_at', 'email_verified_at', 'profiles',
-            'created_at', 'updated_at'
+            'organizations', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'last_login_at']
     
@@ -35,8 +36,25 @@ class UserSerializer(serializers.ModelSerializer):
     
     def get_profiles(self, obj):
         """Get all active user profiles"""
-        profiles = obj.user_profiles.filter(status='active')
+        profiles = obj.user_profiles.filter(status='active').select_related('organization')
         return UserProfileSerializer(profiles, many=True).data
+    
+    def get_organizations(self, obj):
+        """Get all organizations user belongs to with ownership status"""
+        from crmApp.models import UserOrganization
+        
+        user_orgs = UserOrganization.objects.filter(
+            user=obj,
+            is_active=True
+        ).select_related('organization')
+        
+        return [{
+            'id': uo.organization.id,
+            'name': uo.organization.name,
+            'slug': uo.organization.slug,
+            'is_owner': uo.is_owner,
+            'joined_at': uo.joined_at,
+        } for uo in user_orgs]
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -45,6 +63,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     organization_name = serializers.CharField(source='organization.name', read_only=True)
     user_email = serializers.CharField(source='user.email', read_only=True)
+    roles = serializers.SerializerMethodField()
+    is_owner = serializers.SerializerMethodField()
     
     class Meta:
         model = UserProfile
@@ -52,9 +72,61 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'id', 'user', 'user_email', 'organization', 'organization_name',
             'profile_type', 'profile_type_display', 'is_primary',
             'status', 'status_display', 'activated_at', 'deactivated_at',
-            'created_at', 'updated_at'
+            'roles', 'is_owner', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_roles(self, obj):
+        """Get user's roles for this organization"""
+        from crmApp.models import UserRole, Employee
+        
+        roles = []
+        
+        # Get Employee primary role
+        if obj.profile_type == 'employee':
+            try:
+                employee = Employee.objects.get(
+                    user=obj.user,
+                    organization=obj.organization,
+                    status='active'
+                )
+                if employee.role:
+                    roles.append({
+                        'id': employee.role.id,
+                        'name': employee.role.name,
+                        'slug': employee.role.slug,
+                        'is_primary': True
+                    })
+            except Employee.DoesNotExist:
+                pass
+        
+        # Get additional UserRole assignments
+        user_roles = UserRole.objects.filter(
+            user=obj.user,
+            organization=obj.organization,
+            is_active=True
+        ).select_related('role')
+        
+        for ur in user_roles:
+            roles.append({
+                'id': ur.role.id,
+                'name': ur.role.name,
+                'slug': ur.role.slug,
+                'is_primary': False
+            })
+        
+        return roles
+    
+    def get_is_owner(self, obj):
+        """Check if user is owner of this organization"""
+        from crmApp.models import UserOrganization
+        
+        return UserOrganization.objects.filter(
+            user=obj.user,
+            organization=obj.organization,
+            is_owner=True,
+            is_active=True
+        ).exists()
 
 
 class UserProfileCreateSerializer(serializers.ModelSerializer):
@@ -67,18 +139,24 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
         ]
     
     def validate(self, attrs):
-        """Validate that profile doesn't already exist"""
+        """Validate that profile doesn't already exist for this user"""
         user = attrs.get('user')
-        organization = attrs.get('organization')
         profile_type = attrs.get('profile_type')
         
+        # Check if user already has this profile type
         if UserProfile.objects.filter(
             user=user,
-            organization=organization,
             profile_type=profile_type
         ).exists():
             raise serializers.ValidationError(
-                f"User already has a {profile_type} profile for this organization."
+                f"User already has a {profile_type} profile. Each user can only have one profile of each type."
+            )
+        
+        # Validate organization requirement
+        organization = attrs.get('organization')
+        if profile_type in ['vendor', 'employee'] and not organization:
+            raise serializers.ValidationError(
+                f"{profile_type} profile must have an organization."
             )
         
         return attrs

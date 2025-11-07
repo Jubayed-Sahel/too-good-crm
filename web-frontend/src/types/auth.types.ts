@@ -1,6 +1,6 @@
 // Authentication Types
 
-export type UserType = 'vendor' | 'employee';
+export type UserType = 'vendor' | 'employee' | 'customer';
 
 export type EmployeeSubRole = 'super_admin' | 'manager' | 'sales' | 'marketing';
 

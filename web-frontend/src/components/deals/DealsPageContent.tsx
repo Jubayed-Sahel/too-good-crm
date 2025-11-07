@@ -11,10 +11,11 @@ import {
   EditDealDialog,
   type EditDealData 
 } from '../deals';
+import type { MappedDeal } from '@/hooks/useDealsPage';
 
 interface DealsPageContentProps {
   // Data
-  mappedDeals: any[];
+  mappedDeals: MappedDeal[];
   stats: {
     total: number;
     active: number;
@@ -42,6 +43,7 @@ interface DealsPageContentProps {
   onEditDeal: (deal: any) => void;
   onDeleteDeal: (deal: any) => void;
   onBulkDelete?: (dealIds: string[]) => void;
+  onBulkExport?: (dealIds: string[], allDeals: MappedDeal[]) => void;
   onViewDeal: (deal: any) => void;
 }
 
@@ -63,6 +65,7 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
   onEditDeal,
   onDeleteDeal,
   onBulkDelete,
+  onBulkExport,
   onViewDeal,
 }) => {
   return (
@@ -102,6 +105,7 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
           onDelete={onDeleteDeal}
           onView={onViewDeal}
           onBulkDelete={onBulkDelete}
+          onBulkExport={onBulkExport ? (ids) => onBulkExport(ids, mappedDeals) : undefined}
         />
       ) : (
         <Box

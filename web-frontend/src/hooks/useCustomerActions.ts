@@ -5,6 +5,7 @@ import type { MappedCustomer } from './useCustomersPage';
 import { customerService } from '@/services/customer.service';
 import { toaster } from '@/components/ui/toaster';
 import { useAuth } from './useAuth';
+import { exportData } from '@/utils';
 
 /**
  * Props for useCustomerActions hook
@@ -23,6 +24,7 @@ export interface UseCustomerActionsReturn {
   handleView: (customer: MappedCustomer) => void;
   handleCreateCustomer: (data: any) => Promise<void>;
   handleBulkDelete: (customerIds: string[]) => void;
+  handleBulkExport: (customerIds: string[], allCustomers: MappedCustomer[]) => void;
   
   // Delete confirmation state
   deleteDialogState: {
@@ -217,6 +219,37 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
   };
 
   /**
+   * Export customers to CSV
+   */
+  const handleBulkExport = (customerIds: string[], allCustomers: MappedCustomer[]) => {
+    if (customerIds.length === 0) return;
+    
+    // Filter selected customers
+    const selectedCustomers = allCustomers.filter(c => customerIds.includes(c.id));
+    
+    // Format data for export
+    const exportableData = selectedCustomers.map(customer => ({
+      ID: customer.id,
+      Name: customer.name,
+      Email: customer.email,
+      Phone: customer.phone || '',
+      Company: customer.company || '',
+      Status: customer.status,
+      'Total Value': customer.totalValue,
+      'Last Contact': customer.lastContact,
+    }));
+    
+    // Export to CSV
+    exportData(exportableData, 'customers', 'csv');
+    
+    toaster.create({
+      title: 'Export successful',
+      description: `${selectedCustomers.length} customer(s) exported.`,
+      type: 'success',
+    });
+  };
+
+  /**
    * Navigate to customer detail page
    */
   const handleView = (customer: MappedCustomer) => {
@@ -271,6 +304,7 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
     handleView,
     handleCreateCustomer,
     handleBulkDelete,
+    handleBulkExport,
     deleteDialogState: {
       isOpen: deleteDialogOpen,
       customer: customerToDelete,

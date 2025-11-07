@@ -40,6 +40,7 @@ const DealsPage = () => {
     handleUpdateDeal,
     handleDeleteDeal,
     handleBulkDelete,
+    handleBulkExport,
     handleViewDeal,
     handleCreateDeal,
     deleteDialogState,
@@ -90,6 +91,7 @@ const DealsPage = () => {
         }}
         onDeleteDeal={handleDeleteDeal}
         onBulkDelete={handleBulkDelete}
+        onBulkExport={handleBulkExport}
         onViewDeal={handleViewDeal}
       />
       

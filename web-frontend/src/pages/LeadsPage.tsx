@@ -17,6 +17,7 @@ import {
 } from '../hooks';
 import type { LeadFilters as LeadFiltersType, CreateLeadData, Lead } from '../types';
 import { toaster } from '../components/ui/toaster';
+import { exportData } from '@/utils';
 
 export const LeadsPage = () => {
   const navigate = useNavigate();
@@ -158,6 +159,42 @@ export const LeadsPage = () => {
     setLeadsToBulkDelete([]);
   };
 
+  const handleBulkExport = (leadIds: string[]) => {
+    if (leadIds.length === 0) return;
+
+    const selectedLeads = leads.filter(lead => leadIds.includes(lead.id.toString()));
+
+    if (selectedLeads.length === 0) {
+      toaster.create({
+        title: 'Export unavailable',
+        description: 'No matching leads found for export. Please refresh and try again.',
+        type: 'warning',
+      });
+      return;
+    }
+
+    const exportableRows = selectedLeads.map((lead) => ({
+      ID: lead.id,
+      Name: lead.name,
+      Email: lead.email,
+      Phone: lead.phone || '',
+      Company: lead.company || '',
+      Status: lead.qualification_status,
+      Score: lead.lead_score,
+      Source: lead.source,
+      'Estimated Value': lead.estimated_value ?? '',
+      'Created At': lead.created_at,
+    }));
+
+    exportData(exportableRows, 'leads', 'csv');
+
+    toaster.create({
+      title: 'Export complete',
+      description: `${selectedLeads.length} lead(s) exported successfully.`,
+      type: 'success',
+    });
+  };
+
   if (error) {
     return (
       <DashboardLayout title="Leads">
@@ -216,6 +253,7 @@ export const LeadsPage = () => {
                 onDelete={handleDeleteLead}
                 onConvert={handleConvertLead}
                 onBulkDelete={handleBulkDelete}
+                onBulkExport={handleBulkExport}
               />
             ) : (
               <Box
