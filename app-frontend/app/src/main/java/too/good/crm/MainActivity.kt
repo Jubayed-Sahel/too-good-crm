@@ -6,7 +6,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,19 +35,42 @@ import too.good.crm.features.team.TeamScreen
 import too.good.crm.ui.components.PrimaryButton
 import too.good.crm.ui.components.SecondaryButton
 import too.good.crm.ui.theme.DesignTokens
-import too.good.crm.ui.theme.TooGoodCrmTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            TooGoodCrmTheme {
+            MaterialTheme(
+                colorScheme = lightColorScheme(
+                    primary = DesignTokens.Colors.Primary,
+                    onPrimary = DesignTokens.Colors.OnPrimary,
+                    primaryContainer = DesignTokens.Colors.PrimaryContainer,
+                    onPrimaryContainer = DesignTokens.Colors.Primary,
+                    secondary = DesignTokens.Colors.Secondary,
+                    onSecondary = DesignTokens.Colors.OnSecondary,
+                    secondaryContainer = DesignTokens.Colors.SecondaryContainer,
+                    onSecondaryContainer = DesignTokens.Colors.Secondary,
+                    error = DesignTokens.Colors.Error,
+                    onError = DesignTokens.Colors.White,
+                    errorContainer = DesignTokens.Colors.ErrorLight,
+                    onErrorContainer = DesignTokens.Colors.ErrorDark,
+                    background = DesignTokens.Colors.Background,
+                    onBackground = DesignTokens.Colors.OnSurface,
+                    surface = DesignTokens.Colors.Surface,
+                    onSurface = DesignTokens.Colors.OnSurface,
+                    surfaceVariant = DesignTokens.Colors.SurfaceVariant,
+                    onSurfaceVariant = DesignTokens.Colors.OnSurfaceVariant,
+                    outline = DesignTokens.Colors.Outline,
+                    outlineVariant = DesignTokens.Colors.OutlineVariant,
+                    surfaceTint = DesignTokens.Colors.SurfaceTint
+                )
+            ) {
                 val navController = rememberNavController()
                 Scaffold(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(DesignTokens.Colors.Gray50)
+                        .background(DesignTokens.Colors.Background)
                 ) { innerPadding ->
                     NavHost(
                         navController = navController,
@@ -173,8 +198,6 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-
-                        // Client Side Routes
                         composable("client-dashboard") {
                             ClientDashboardScreen(
                                 onLogoutClicked = {
@@ -227,7 +250,6 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
-
                     }
                 }
             }
@@ -240,7 +262,7 @@ fun MainScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DesignTokens.Colors.Gray50)
+            .background(DesignTokens.Colors.Background)
             .padding(DesignTokens.Spacing.Space6),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
