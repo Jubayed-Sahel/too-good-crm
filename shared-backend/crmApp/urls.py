@@ -12,6 +12,8 @@ from crmApp.viewsets import (
     LoginViewSet,
     LogoutViewSet,
     ChangePasswordViewSet,
+    RoleSelectionViewSet,
+    EmployeeInvitationViewSet,
     # RefreshTokenViewSet removed - using simple Token auth
     # Organization
     OrganizationViewSet,
@@ -47,6 +49,8 @@ router.register(r'user-profiles', UserProfileViewSet, basename='user-profile')
 router.register(r'auth/login', LoginViewSet, basename='login')
 router.register(r'auth/logout', LogoutViewSet, basename='logout')
 router.register(r'auth/change-password', ChangePasswordViewSet, basename='change-password')
+router.register(r'auth/role-selection', RoleSelectionViewSet, basename='role-selection')
+router.register(r'employee-invitations', EmployeeInvitationViewSet, basename='employee-invitation')
 # router.register(r'auth/refresh-tokens', RefreshTokenViewSet, basename='refresh-token')  # Removed - using Token auth
 
 # Organization endpoints

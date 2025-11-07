@@ -12,6 +12,7 @@ import { Box, Heading, Text } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { EmployeesPageContent, EmployeesPageLoading } from '../components/employees';
 import { InviteEmployeeDialog } from '../components/employees/InviteEmployeeDialog';
+import { ConfirmDialog } from '../components/common';
 import { toaster } from '../components/ui/toaster';
 import { useEmployees } from '@/hooks/useEmployees';
 import { employeeService } from '@/services';
@@ -22,6 +23,14 @@ const EmployeesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
+  
+  // Bulk delete dialog state
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [employeesToBulkDelete, setEmployeesToBulkDelete] = useState<string[]>([]);
 
   // Data fetching
   const { employees, isLoading, error, refetch } = useEmployees();
@@ -55,20 +64,25 @@ const EmployeesPage = () => {
     navigate(`/employees/${employee.id}/edit`);
   };
 
-  const handleDelete = async (employee: Employee) => {
-    if (!confirm(`Are you sure you want to delete ${employee.first_name} ${employee.last_name}?`)) {
-      return;
-    }
+  const handleDelete = (employee: Employee) => {
+    setEmployeeToDelete(employee);
+    setDeleteDialogOpen(true);
+  };
+  
+  const confirmDelete = async () => {
+    if (!employeeToDelete) return;
 
     try {
-      await employeeService.deleteEmployee(employee.id);
+      await employeeService.deleteEmployee(employeeToDelete.id);
       
       toaster.create({
         title: 'Employee deleted',
-        description: `${employee.first_name} ${employee.last_name} has been removed.`,
+        description: `${employeeToDelete.first_name} ${employeeToDelete.last_name} has been removed.`,
         type: 'success',
       });
       
+      setDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
       refetch();
     } catch (error: any) {
       console.error('Error deleting employee:', error);
@@ -79,37 +93,51 @@ const EmployeesPage = () => {
       });
     }
   };
+  
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setEmployeeToDelete(null);
+  };
 
   const handleView = (employee: Employee) => {
     navigate(`/employees/${employee.id}`);
   };
 
-  const handleBulkDelete = async (employeeIds: string[]) => {
-    if (!confirm(`Are you sure you want to delete ${employeeIds.length} employee(s)?`)) {
-      return;
-    }
-
+  const handleBulkDelete = (employeeIds: string[]) => {
+    if (employeeIds.length === 0) return;
+    setEmployeesToBulkDelete(employeeIds);
+    setBulkDeleteDialogOpen(true);
+  };
+  
+  const confirmBulkDelete = async () => {
     try {
-      // Delete employees one by one
+      // Delete employees in parallel
       await Promise.all(
-        employeeIds.map(id => employeeService.deleteEmployee(parseInt(id)))
+        employeesToBulkDelete.map(id => employeeService.deleteEmployee(parseInt(id)))
       );
       
       toaster.create({
         title: 'Employees deleted',
-        description: `${employeeIds.length} employee(s) have been removed.`,
+        description: `${employeesToBulkDelete.length} employee(s) have been removed.`,
         type: 'success',
       });
       
+      setBulkDeleteDialogOpen(false);
+      setEmployeesToBulkDelete([]);
       refetch();
     } catch (error: any) {
-      console.error('Error deleting employees:', error);
+      console.error('Error bulk deleting employees:', error);
       toaster.create({
         title: 'Failed to delete employees',
         description: error.message || 'Please try again.',
         type: 'error',
       });
     }
+  };
+  
+  const closeBulkDeleteDialog = () => {
+    setBulkDeleteDialogOpen(false);
+    setEmployeesToBulkDelete([]);
   };
 
   const handleBulkExport = (employeeIds: string[]) => {
@@ -172,6 +200,36 @@ const EmployeesPage = () => {
           setIsInviteDialogOpen(false);
           refetch();
         }}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialogOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={confirmDelete}
+        title="Delete Employee"
+        message={
+          employeeToDelete
+            ? `Are you sure you want to delete ${employeeToDelete.first_name} ${employeeToDelete.last_name}? This action cannot be undone.`
+            : 'Are you sure you want to delete this employee?'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={false}
+      />
+      
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={bulkDeleteDialogOpen}
+        onClose={closeBulkDeleteDialog}
+        onConfirm={confirmBulkDelete}
+        title="Delete Multiple Employees"
+        message={`Are you sure you want to delete ${employeesToBulkDelete.length} employee(s)? This action cannot be undone.`}
+        confirmText="Delete All"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={false}
       />
     </DashboardLayout>
   );

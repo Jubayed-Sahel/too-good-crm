@@ -58,10 +58,8 @@ const EmployeeTable = ({
 
   const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
-    if (confirm(`Are you sure you want to delete ${selectedIds.length} employee(s)?`)) {
-      onBulkDelete?.(selectedIds);
-      setSelectedIds([]);
-    }
+    onBulkDelete?.(selectedIds);
+    setSelectedIds([]);
   };
 
   const handleBulkExport = () => {

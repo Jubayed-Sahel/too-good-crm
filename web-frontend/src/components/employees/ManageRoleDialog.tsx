@@ -24,6 +24,7 @@ import { Field } from '@/components/ui/field';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { Toaster, toaster } from '@/components/ui/toaster';
 import { roleService, employeeService, type Employee, type Role } from '@/services';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ManageRoleDialogProps {
   isOpen: boolean;
@@ -38,7 +39,9 @@ export const ManageRoleDialog = ({
   employee,
   onSuccess 
 }: ManageRoleDialogProps) => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingRoles, setIsFetchingRoles] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState<string>('');
 
@@ -55,17 +58,31 @@ export const ManageRoleDialog = ({
   }, [isOpen, employee]);
 
   const fetchRoles = async () => {
+    setIsFetchingRoles(true);
     try {
-      const fetchedRoles = await roleService.getRoles({ is_active: true });
-      setRoles(fetchedRoles);
+      const organizationId = user?.primaryOrganizationId;
+      console.log('Fetching roles for organization:', organizationId);
+      
+      const filters: any = { is_active: true };
+      if (organizationId) {
+        filters.organization = organizationId;
+      }
+      
+      const fetchedRoles = await roleService.getRoles(filters);
+      console.log('Fetched roles:', fetchedRoles); // Debug log
+      console.log('Role options will be:', fetchedRoles?.map(r => ({ value: r.id, label: r.name })));
+      setRoles(fetchedRoles || []);
     } catch (error: any) {
       console.error('Error fetching roles:', error);
       toaster.create({
-        title: 'Error',
-        description: 'Failed to load roles',
+        title: 'Error Loading Roles',
+        description: error.message || 'Failed to load roles. Please try again.',
         type: 'error',
         duration: 3000,
       });
+      setRoles([]); // Set empty array on error
+    } finally {
+      setIsFetchingRoles(false);
     }
   };
 
@@ -117,6 +134,10 @@ export const ManageRoleDialog = ({
     value: role.id.toString(),
     label: role.name,
   }));
+  
+  console.log('Current roles state:', roles);
+  console.log('Generated roleOptions:', roleOptions);
+  console.log('Selected role ID:', selectedRoleId);
 
   if (!employee) return null;
 
@@ -174,16 +195,40 @@ export const ManageRoleDialog = ({
 
               {/* Role Selection */}
               <Field label="Select Role" required>
-                <CustomSelect
-                  value={selectedRoleId}
-                  onChange={setSelectedRoleId}
-                  options={roleOptions}
-                  placeholder="Select a role"
-                  accentColor="purple"
-                />
+                <Box>
+                  {roleOptions.length > 0 && (
+                    <Text fontSize="xs" color="gray.500" mb={1}>
+                      {roleOptions.length} role(s) available
+                    </Text>
+                  )}
+                  <CustomSelect
+                    value={selectedRoleId}
+                    onChange={(val) => {
+                      console.log('Role selected:', val);
+                      setSelectedRoleId(val);
+                    }}
+                    options={roleOptions}
+                    placeholder={isFetchingRoles ? "Loading roles..." : "Select a role"}
+                    accentColor="purple"
+                  />
+                </Box>
               </Field>
 
-              {roles.length === 0 && (
+              {isFetchingRoles && (
+                <Box
+                  p={3}
+                  bg="blue.50"
+                  borderRadius="md"
+                  borderLeftWidth="4px"
+                  borderLeftColor="blue.400"
+                >
+                  <Text fontSize="sm" color="blue.800">
+                    Loading available roles...
+                  </Text>
+                </Box>
+              )}
+
+              {!isFetchingRoles && roles.length === 0 && (
                 <Box
                   p={3}
                   bg="orange.50"

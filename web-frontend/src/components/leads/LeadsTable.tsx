@@ -22,10 +22,10 @@ interface LeadsTableProps {
   isLoading?: boolean;
   onView?: (lead: Lead) => void;
   onEdit?: (lead: Lead) => void;
-  onDelete?: (leadId: number) => void;
+  onDelete?: (lead: Lead) => void;
   onConvert?: (lead: Lead) => void;
-  onBulkDelete?: (leadIds: number[]) => void;
-  onBulkExport?: (leadIds: number[]) => void;
+  onBulkDelete?: (leadIds: string[]) => void;
+  onBulkExport?: (leadIds: string[]) => void;
 }
 
 export const LeadsTable = ({ 
@@ -38,30 +38,29 @@ export const LeadsTable = ({
   onBulkDelete,
   onBulkExport,
 }: LeadsTableProps) => {
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(leads.map(l => l.id));
+      setSelectedIds(leads.map(l => l.id.toString()));
     } else {
       setSelectedIds([]);
     }
   };
 
   const handleSelectOne = (id: number, checked: boolean) => {
+    const idStr = id.toString();
     if (checked) {
-      setSelectedIds([...selectedIds, id]);
+      setSelectedIds([...selectedIds, idStr]);
     } else {
-      setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
+      setSelectedIds(selectedIds.filter(selectedId => selectedId !== idStr));
     }
   };
 
   const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
-    if (confirm(`Are you sure you want to delete ${selectedIds.length} lead(s)?`)) {
-      onBulkDelete?.(selectedIds);
-      setSelectedIds([]);
-    }
+    onBulkDelete?.(selectedIds);
+    setSelectedIds([]);
   };
 
   const handleBulkExport = () => {
@@ -190,7 +189,7 @@ export const LeadsTable = ({
                   size="sm"
                   variant="outline"
                   colorPalette="red"
-                  onClick={() => onDelete(lead.id)}
+                  onClick={() => onDelete(lead)}
                 >
                   <FiTrash2 size={16} />
                 </IconButton>
@@ -272,7 +271,7 @@ export const LeadsTable = ({
               <Table.Row key={lead.id} _hover={{ bg: 'gray.50' }}>
                 <Table.Cell px={4} py={3}>
                   <Checkbox
-                    checked={selectedIds.includes(lead.id)}
+                    checked={selectedIds.includes(lead.id.toString())}
                     onCheckedChange={(details) => handleSelectOne(lead.id, details.checked as boolean)}
                   />
                 </Table.Cell>
@@ -345,7 +344,7 @@ export const LeadsTable = ({
                         size="sm"
                         variant="ghost"
                         colorPalette="red"
-                        onClick={() => onDelete(lead.id)}
+                        onClick={() => onDelete(lead)}
                       >
                         <FiTrash2 size={16} />
                       </IconButton>

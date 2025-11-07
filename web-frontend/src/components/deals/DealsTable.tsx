@@ -87,10 +87,8 @@ const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExpor
 
   const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
-    if (confirm(`Are you sure you want to delete ${selectedIds.length} deal(s)?`)) {
-      onBulkDelete?.(selectedIds);
-      setSelectedIds([]);
-    }
+    onBulkDelete?.(selectedIds);
+    setSelectedIds([]);
   };
 
   const handleBulkExport = () => {

@@ -1,7 +1,6 @@
 import { Box, Container, Flex, Heading, Button, HStack, Text, VStack } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { FiLogOut, FiCalendar } from 'react-icons/fi';
-import { OrganizationSwitcher } from '@/components/organization';
 
 const DashboardHeader = () => {
   const navigate = useNavigate();
@@ -64,8 +63,6 @@ const DashboardHeader = () => {
           </HStack>
 
           <HStack gap={3}>
-            <OrganizationSwitcher />
-            
             <Button
               onClick={handleSignOut}
               variant="ghost"

@@ -7,6 +7,7 @@
 export { authService } from './auth.service';
 export { rbacService } from './rbac.service';
 export { roleService } from './role.service';
+export { roleSelectionService } from './role-selection.service';
 export type { Role, Permission, UserRole } from './role.service';
 
 // User Management
@@ -41,6 +42,7 @@ export { activityService } from './activity.service';
 export { getActivities, getActivity, createActivity, deleteActivity, getActivityStats } from './activity.service';
 
 // Operations
+export { vendorService } from './vendor.service';
 export { issueService } from './issue.service';
 export { orderService } from './order.service';
 export { paymentService } from './payment.service';

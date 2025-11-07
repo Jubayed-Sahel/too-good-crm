@@ -32,9 +32,26 @@ interface UseDealActionsReturn {
   // Actions
   handleEditDeal: (deal: any) => void;
   handleUpdateDeal: (data: EditDealData) => Promise<void>;
-  handleDeleteDeal: (deal: any) => Promise<void>;
+  handleDeleteDeal: (deal: any) => void;
+  handleBulkDelete: (dealIds: string[]) => void;
   handleViewDeal: (deal: any) => void;
   handleCreateDeal: (data: any) => Promise<void>;
+  
+  // Delete dialog state
+  deleteDialogState: {
+    isOpen: boolean;
+    deal: any;
+    onConfirm: () => Promise<void>;
+    onClose: () => void;
+  };
+  
+  // Bulk delete dialog state
+  bulkDeleteDialogState: {
+    isOpen: boolean;
+    dealCount: number;
+    onConfirm: () => Promise<void>;
+    onClose: () => void;
+  };
   
   // State setters
   setSelectedDeal: (deal: EditDealData | null) => void;
@@ -45,6 +62,14 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [selectedDeal, setSelectedDeal] = useState<EditDealData | null>(null);
+  
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dealToDelete, setDealToDelete] = useState<any>(null);
+  
+  // Bulk delete dialog state
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [dealsToBulkDelete, setDealsToBulkDelete] = useState<string[]>([]);
 
   // React Query mutation for creating deal
   const createMutation = useMutation({
@@ -172,17 +197,55 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
     });
   };
 
-  const handleDeleteDeal = async (deal: any) => {
-    if (!window.confirm(`Are you sure you want to delete "${deal.title}"?`)) {
-      return;
-    }
-
-    const dealId = typeof deal.id === 'string' ? parseInt(deal.id) : deal.id;
+  const handleDeleteDeal = (deal: any) => {
+    setDealToDelete(deal);
+    setDeleteDialogOpen(true);
+  };
+  
+  const confirmDelete = async () => {
+    if (!dealToDelete) return;
+    
+    const dealId = typeof dealToDelete.id === 'string' ? parseInt(dealToDelete.id) : dealToDelete.id;
     await deleteMutation.mutateAsync(dealId);
+    
+    setDeleteDialogOpen(false);
+    setDealToDelete(null);
+  };
+  
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setDealToDelete(null);
   };
 
   const handleViewDeal = (deal: any) => {
     navigate(`/deals/${deal.id}`);
+  };
+  
+  const handleBulkDelete = (dealIds: string[]) => {
+    if (dealIds.length === 0) return;
+    setDealsToBulkDelete(dealIds);
+    setBulkDeleteDialogOpen(true);
+  };
+  
+  const confirmBulkDelete = async () => {
+    // Delete deals in parallel
+    await Promise.all(
+      dealsToBulkDelete.map(id => deleteMutation.mutateAsync(parseInt(id)))
+    );
+    
+    toaster.create({
+      title: 'Deals deleted',
+      description: `${dealsToBulkDelete.length} deal(s) have been removed.`,
+      type: 'success',
+    });
+    
+    setBulkDeleteDialogOpen(false);
+    setDealsToBulkDelete([]);
+  };
+  
+  const closeBulkDeleteDialog = () => {
+    setBulkDeleteDialogOpen(false);
+    setDealsToBulkDelete([]);
   };
 
   const handleCreateDeal = async (data: any) => {
@@ -221,8 +284,25 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
     handleEditDeal,
     handleUpdateDeal,
     handleDeleteDeal,
+    handleBulkDelete,
     handleViewDeal,
     handleCreateDeal,
+    
+    // Delete dialog state
+    deleteDialogState: {
+      isOpen: deleteDialogOpen,
+      deal: dealToDelete,
+      onConfirm: confirmDelete,
+      onClose: closeDeleteDialog,
+    },
+    
+    // Bulk delete dialog state
+    bulkDeleteDialogState: {
+      isOpen: bulkDeleteDialogOpen,
+      dealCount: dealsToBulkDelete.length,
+      onConfirm: confirmBulkDelete,
+      onClose: closeBulkDeleteDialog,
+    },
     
     // State setters
     setSelectedDeal,

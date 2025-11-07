@@ -13,7 +13,6 @@ import { Toaster, toaster } from "../ui/toaster";
 import { Field } from "../ui/field";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { useAuth } from "@/hooks";
-import { ROUTES } from "@/config/constants";
 import type { RegisterData } from "@/types";
 import { isValidEmail, getPasswordStrengthMessage } from "@/utils";
 
@@ -92,6 +91,7 @@ const SignupForm = () => {
 
     try {
       await register(formData);
+      
       toaster.create({
         title: "Success",
         description: "Account created successfully!",
@@ -381,7 +381,7 @@ const SignupForm = () => {
             <Text textAlign="center" fontSize="sm">
               Already have an account?{" "}
               <Link asChild color="purple.600" fontWeight="semibold">
-                <RouterLink to={ROUTES.LOGIN}>Sign in</RouterLink>
+                <RouterLink to="/login">Sign in</RouterLink>
               </Link>
             </Text>
           </VStack>

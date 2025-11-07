@@ -22,11 +22,20 @@ export interface UseCustomerActionsReturn {
   handleDelete: (customer: MappedCustomer) => void;
   handleView: (customer: MappedCustomer) => void;
   handleCreateCustomer: (data: any) => Promise<void>;
+  handleBulkDelete: (customerIds: string[]) => void;
   
   // Delete confirmation state
   deleteDialogState: {
     isOpen: boolean;
     customer: MappedCustomer | null;
+    onConfirm: () => Promise<void>;
+    onClose: () => void;
+  };
+  
+  // Bulk delete confirmation state
+  bulkDeleteDialogState: {
+    isOpen: boolean;
+    customerCount: number;
     onConfirm: () => Promise<void>;
     onClose: () => void;
   };
@@ -57,6 +66,10 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<MappedCustomer | null>(null);
+  
+  // Bulk delete state
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [customersToBulkDelete, setCustomersToBulkDelete] = useState<string[]>([]);
 
   // React Query mutation for creating customer
   const createMutation = useMutation({
@@ -156,6 +169,52 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
     setDeleteDialogOpen(false);
     setCustomerToDelete(null);
   };
+  
+  /**
+   * Open bulk delete confirmation dialog
+   */
+  const handleBulkDelete = (customerIds: string[]) => {
+    if (customerIds.length === 0) return;
+    setCustomersToBulkDelete(customerIds);
+    setBulkDeleteDialogOpen(true);
+  };
+  
+  /**
+   * Confirm and execute bulk delete operation
+   */
+  const confirmBulkDelete = async () => {
+    if (customersToBulkDelete.length === 0) return;
+
+    try {
+      // Delete all customers in parallel
+      await Promise.all(
+        customersToBulkDelete.map(id => deleteMutation.mutateAsync(parseInt(id)))
+      );
+      
+      toaster.create({
+        title: 'Customers deleted',
+        description: `${customersToBulkDelete.length} customer(s) deleted successfully.`,
+        type: 'success',
+      });
+    } catch (error) {
+      toaster.create({
+        title: 'Error deleting customers',
+        description: 'Some customers could not be deleted.',
+        type: 'error',
+      });
+    } finally {
+      setBulkDeleteDialogOpen(false);
+      setCustomersToBulkDelete([]);
+    }
+  };
+  
+  /**
+   * Close bulk delete confirmation dialog
+   */
+  const closeBulkDeleteDialog = () => {
+    setBulkDeleteDialogOpen(false);
+    setCustomersToBulkDelete([]);
+  };
 
   /**
    * Navigate to customer detail page
@@ -211,11 +270,18 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
     handleDelete,
     handleView,
     handleCreateCustomer,
+    handleBulkDelete,
     deleteDialogState: {
       isOpen: deleteDialogOpen,
       customer: customerToDelete,
       onConfirm: confirmDelete,
       onClose: closeDeleteDialog,
+    },
+    bulkDeleteDialogState: {
+      isOpen: bulkDeleteDialogOpen,
+      customerCount: customersToBulkDelete.length,
+      onConfirm: confirmBulkDelete,
+      onClose: closeBulkDeleteDialog,
     },
     isSubmitting: createMutation.isPending || deleteMutation.isPending,
   };

@@ -56,7 +56,12 @@ class RoleService {
    * Get all roles
    */
   async getRoles(filters?: RoleFilters): Promise<Role[]> {
-    return api.get<Role[]>(this.baseUrl, { params: filters });
+    const response = await api.get<any>(this.baseUrl, { params: filters });
+    // Handle both paginated and non-paginated responses
+    if (response.results) {
+      return response.results;
+    }
+    return Array.isArray(response) ? response : [];
   }
 
   /**

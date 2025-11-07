@@ -45,7 +45,9 @@ const CustomersPage = () => {
     handleDelete,
     handleView,
     handleCreateCustomer,
+    handleBulkDelete,
     deleteDialogState,
+    bulkDeleteDialogState,
   } = useCustomerActions({ onSuccess: refetch });
 
   // Error state
@@ -86,6 +88,7 @@ const CustomersPage = () => {
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}
+        onBulkDelete={handleBulkDelete}
         onAddCustomer={() => setIsCreateDialogOpen(true)}
         onCreateCustomer={handleCreateCustomer}
         isCreateDialogOpen={isCreateDialogOpen}
@@ -104,6 +107,19 @@ const CustomersPage = () => {
             : 'Are you sure you want to delete this customer?'
         }
         confirmText="Delete"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={false}
+      />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={bulkDeleteDialogState.isOpen}
+        onClose={bulkDeleteDialogState.onClose}
+        onConfirm={bulkDeleteDialogState.onConfirm}
+        title="Delete Multiple Customers"
+        message={`Are you sure you want to delete ${bulkDeleteDialogState.customerCount} customer(s)? This action cannot be undone.`}
+        confirmText="Delete All"
         cancelText="Cancel"
         colorScheme="red"
         isLoading={false}

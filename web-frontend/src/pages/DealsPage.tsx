@@ -11,6 +11,7 @@
  */
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { DealsPageContent, DealsPageLoading } from '../components/deals';
+import { ConfirmDialog } from '../components/common';
 import { useDeals, useDealsPage, useDealActions } from '@/hooks';
 
 const DealsPage = () => {
@@ -38,8 +39,11 @@ const DealsPage = () => {
     handleEditDeal,
     handleUpdateDeal,
     handleDeleteDeal,
+    handleBulkDelete,
     handleViewDeal,
     handleCreateDeal,
+    deleteDialogState,
+    bulkDeleteDialogState,
     setSelectedDeal,
   } = useDealActions({ onSuccess: refetch });
 
@@ -85,7 +89,38 @@ const DealsPage = () => {
           setIsEditDialogOpen(true);
         }}
         onDeleteDeal={handleDeleteDeal}
+        onBulkDelete={handleBulkDelete}
         onViewDeal={handleViewDeal}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialogState.isOpen}
+        onClose={deleteDialogState.onClose}
+        onConfirm={deleteDialogState.onConfirm}
+        title="Delete Deal"
+        message={
+          deleteDialogState.deal
+            ? `Are you sure you want to delete "${deleteDialogState.deal.title}"? This action cannot be undone.`
+            : 'Are you sure you want to delete this deal?'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={false}
+      />
+      
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={bulkDeleteDialogState.isOpen}
+        onClose={bulkDeleteDialogState.onClose}
+        onConfirm={bulkDeleteDialogState.onConfirm}
+        title="Delete Multiple Deals"
+        message={`Are you sure you want to delete ${bulkDeleteDialogState.dealCount} deal(s)? This action cannot be undone.`}
+        confirmText="Delete All"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={false}
       />
     </DashboardLayout>
   );

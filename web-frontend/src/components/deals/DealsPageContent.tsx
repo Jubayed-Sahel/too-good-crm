@@ -40,7 +40,8 @@ interface DealsPageContentProps {
   onCreateDeal: (data: any) => Promise<void>;
   onUpdateDeal: (data: EditDealData) => Promise<void>;
   onEditDeal: (deal: any) => void;
-  onDeleteDeal: (deal: any) => Promise<void>;
+  onDeleteDeal: (deal: any) => void;
+  onBulkDelete?: (dealIds: string[]) => void;
   onViewDeal: (deal: any) => void;
 }
 
@@ -61,6 +62,7 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
   onUpdateDeal,
   onEditDeal,
   onDeleteDeal,
+  onBulkDelete,
   onViewDeal,
 }) => {
   return (
@@ -99,6 +101,7 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
           onEdit={onEditDeal}
           onDelete={onDeleteDeal}
           onView={onViewDeal}
+          onBulkDelete={onBulkDelete}
         />
       ) : (
         <Box

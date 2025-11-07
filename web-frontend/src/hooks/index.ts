@@ -12,6 +12,12 @@ export * from './useLeads';
 export * from './useAnalytics';
 export * from './useSalesPage';
 
+// Client/Vendor hooks
+export * from './useVendors';
+export * from './useOrders';
+export * from './usePayments';
+export * from './useIssues';
+
 // Page-specific hooks
 export { useDealsPage } from './useDealsPage';
 export { useDealActions } from './useDealActions';

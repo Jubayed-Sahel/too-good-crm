@@ -1,5 +1,5 @@
-import { Box, Flex, Heading, Text, VStack, Button } from '@chakra-ui/react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Box, Flex, Heading, Text, VStack, Button, HStack, Badge } from '@chakra-ui/react';
+import { NavLink } from 'react-router-dom';
 import { 
   FiHome, 
   FiUsers, 
@@ -14,9 +14,14 @@ import {
   FiPackage,
   FiCreditCard,
   FiAlertCircle,
+  FiRefreshCw,
 } from 'react-icons/fi';
 import { HiUserGroup } from 'react-icons/hi';
 import { useAccountMode } from '@/contexts/AccountModeContext';
+import { usePermissions } from '@/contexts/PermissionContext';
+import { useAuth } from '@/hooks';
+import { useState } from 'react';
+import { RoleSelectionDialog } from '../auth';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -24,39 +29,68 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
-  const navigate = useNavigate();
   const { isClientMode } = useAccountMode();
+  const { canAccess, isVendor } = usePermissions();
+  const { user, logout, switchRole } = useAuth();
+  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
 
-  const handleSignOut = () => {
-    console.log('Signing out...');
-    navigate('/login');
+  const currentProfile = user?.primaryProfile || user?.profiles?.[0];
+
+  const handleSignOut = async () => {
+    await logout();
   };
 
-  // Vendor menu items
+  const handleSwitchRole = async (profileId: number) => {
+    setIsSwitching(true);
+    try {
+      await switchRole(profileId);
+      // Note: Page will reload, so no need to reset state or close dialog
+    } catch (error) {
+      console.error('Failed to switch role:', error);
+      setIsSwitching(false);
+      // Only reset on error since page won't reload
+    }
+  };
+
+  // Vendor menu items (full access)
   const vendorMenuItems = [
-    { icon: FiHome, label: 'Dashboard', path: '/dashboard' },
-    { icon: FiUsers, label: 'Customers', path: '/customers' },
-    { icon: FiTrendingUp, label: 'Sales', path: '/sales' },
-    { icon: FiFileText, label: 'Deals', path: '/deals' },
-    { icon: FiUserPlus, label: 'Leads', path: '/leads' },
-    { icon: FiActivity, label: 'Activities', path: '/activities' },
-    { icon: FiBarChart2, label: 'Analytics', path: '/analytics' },
-    { icon: HiUserGroup, label: 'Team', path: '/employees' },
-    { icon: FiSettings, label: 'Settings', path: '/settings' },
+    { icon: FiHome, label: 'Dashboard', path: '/dashboard', resource: 'dashboard' },
+    { icon: FiUsers, label: 'Customers', path: '/customers', resource: 'customers' },
+    { icon: FiTrendingUp, label: 'Sales', path: '/sales', resource: 'deals' },
+    { icon: FiFileText, label: 'Deals', path: '/deals', resource: 'deals' },
+    { icon: FiUserPlus, label: 'Leads', path: '/leads', resource: 'leads' },
+    { icon: FiActivity, label: 'Activities', path: '/activities', resource: 'activities' },
+    { icon: FiBarChart2, label: 'Analytics', path: '/analytics', resource: 'analytics' },
+    { icon: HiUserGroup, label: 'Team', path: '/employees', resource: 'employees' },
+    { icon: FiSettings, label: 'Settings', path: '/settings', resource: 'settings' },
   ];
 
   // Client menu items
   const clientMenuItems = [
-    { icon: FiHome, label: 'Dashboard', path: '/client/dashboard' },
-    { icon: FiShoppingBag, label: 'My Vendors', path: '/client/vendors' },
-    { icon: FiPackage, label: 'My Orders', path: '/client/orders' },
-    { icon: FiCreditCard, label: 'Payments', path: '/client/payments' },
-    { icon: FiActivity, label: 'Activities', path: '/client/activities' },
-    { icon: FiAlertCircle, label: 'Issues', path: '/client/issues' },
-    { icon: FiSettings, label: 'Settings', path: '/client/settings' },
+    { icon: FiHome, label: 'Dashboard', path: '/client/dashboard', resource: 'vendors' },
+    { icon: FiShoppingBag, label: 'My Vendors', path: '/client/vendors', resource: 'vendors' },
+    { icon: FiPackage, label: 'My Orders', path: '/client/orders', resource: 'orders' },
+    { icon: FiCreditCard, label: 'Payments', path: '/client/payments', resource: 'payments' },
+    { icon: FiActivity, label: 'Activities', path: '/client/activities', resource: 'activities' },
+    { icon: FiAlertCircle, label: 'Issues', path: '/client/issues', resource: 'issues' },
+    { icon: FiSettings, label: 'Settings', path: '/client/settings', resource: 'settings' },
   ];
 
-  const menuItems = isClientMode ? clientMenuItems : vendorMenuItems;
+  // Filter menu items based on permissions
+  const getFilteredMenuItems = () => {
+    const items = isClientMode ? clientMenuItems : vendorMenuItems;
+    
+    // If vendor, show all items
+    if (isVendor) {
+      return items;
+    }
+    
+    // Filter based on permissions
+    return items.filter(item => canAccess(item.resource));
+  };
+
+  const menuItems = getFilteredMenuItems();
 
   return (
     <>
@@ -96,7 +130,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
         <VStack align="stretch" h="full" gap={0}>
           {/* Logo Section */}
           <Box p={6} borderBottom="1px" borderColor="gray.200">
-            <Flex align="center" gap={3}>
+            <Flex align="center" gap={3} mb={4}>
               <Box
                 w="10"
                 h="10"
@@ -125,6 +159,41 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                 </Text>
               </Box>
             </Flex>
+
+            {/* Current Profile & Organization */}
+            {currentProfile && (
+              <Box
+                p={3}
+                bg="gray.50"
+                borderRadius="lg"
+                borderWidth="1px"
+                borderColor="gray.200"
+              >
+                <VStack align="stretch" gap={2}>
+                  <HStack justify="space-between">
+                    <Text fontSize="xs" color="gray.600" fontWeight="semibold">
+                      Current Context
+                    </Text>
+                    <Badge colorPalette={isVendor ? 'purple' : 'blue'} size="sm">
+                      {currentProfile.profile_type_display}
+                    </Badge>
+                  </HStack>
+                  <Text fontSize="sm" fontWeight="semibold" color="gray.900">
+                    {currentProfile.organization_name}
+                  </Text>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    colorPalette="purple"
+                    onClick={() => setShowRoleSwitcher(true)}
+                    w="full"
+                  >
+                    <FiRefreshCw size={12} />
+                    <Text ml={1}>Switch Role</Text>
+                  </Button>
+                </VStack>
+              </Box>
+            )}
           </Box>
 
           {/* Navigation Menu */}
@@ -179,6 +248,16 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
           </Box>
         </VStack>
       </Box>
+
+      {/* Role Switcher Dialog */}
+      {user?.profiles && (
+        <RoleSelectionDialog
+          open={showRoleSwitcher}
+          profiles={user.profiles}
+          onSelectRole={handleSwitchRole}
+          isLoading={isSwitching}
+        />
+      )}
     </>
   );
 };

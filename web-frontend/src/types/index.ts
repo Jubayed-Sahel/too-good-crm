@@ -181,6 +181,7 @@ export * from './user.types';
 export * from './lead.types';
 
 // Export Phase 3 types - New models
+export * from './vendor.types';
 export * from './issue.types';
 export * from './order.types';
 export * from './payment.types';
