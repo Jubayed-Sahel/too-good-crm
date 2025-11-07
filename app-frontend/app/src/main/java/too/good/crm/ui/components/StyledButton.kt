@@ -1,16 +1,12 @@
-
 package too.good.crm.ui.components
 
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import too.good.crm.ui.theme.DesignTokens
 
 @Composable
@@ -22,19 +18,20 @@ fun PrimaryButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier.height(DesignTokens.Heights.InputMd),
+        modifier = modifier.height(DesignTokens.Heights.ButtonStandard),
         enabled = enabled,
-        shape = RoundedCornerShape(DesignTokens.Radius.Lg),
         colors = ButtonDefaults.buttonColors(
-            containerColor = DesignTokens.Colors.Purple500,
-            contentColor = Color.White
+            containerColor = DesignTokens.Colors.Primary,
+            contentColor = DesignTokens.Colors.OnPrimary,
+            disabledContainerColor = DesignTokens.Colors.Outline,
+            disabledContentColor = DesignTokens.Colors.OnSurfaceVariant
         ),
-        contentPadding = PaddingValues(horizontal = DesignTokens.Spacing.Space4)
+        shape = MaterialTheme.shapes.medium
     ) {
         Text(
             text = text,
-            fontSize = DesignTokens.Typography.FontSizeSm,
-            fontWeight = DesignTokens.Typography.FontWeightMedium
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = DesignTokens.Typography.FontWeightSemiBold
         )
     }
 }
@@ -48,18 +45,21 @@ fun SecondaryButton(
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.height(DesignTokens.Heights.InputMd),
+        modifier = modifier.height(DesignTokens.Heights.ButtonStandard),
         enabled = enabled,
-        shape = RoundedCornerShape(DesignTokens.Radius.Lg),
         colors = ButtonDefaults.outlinedButtonColors(
-            contentColor = DesignTokens.Colors.Purple500
+            contentColor = DesignTokens.Colors.Primary,
+            disabledContentColor = DesignTokens.Colors.OnSurfaceVariant
         ),
-        contentPadding = PaddingValues(horizontal = DesignTokens.Spacing.Space4)
+        border = ButtonDefaults.outlinedButtonBorder.copy(
+            brush = androidx.compose.ui.graphics.SolidColor(DesignTokens.Colors.Primary)
+        ),
+        shape = MaterialTheme.shapes.medium
     ) {
         Text(
             text = text,
-            fontSize = DesignTokens.Typography.FontSizeSm,
-            fontWeight = DesignTokens.Typography.FontWeightMedium
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = DesignTokens.Typography.FontWeightSemiBold
         )
     }
 }
