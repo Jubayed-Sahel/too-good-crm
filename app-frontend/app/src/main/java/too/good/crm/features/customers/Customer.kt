@@ -16,7 +16,8 @@ data class Customer(
 
 enum class CustomerStatus {
     ACTIVE,
-    INACTIVE
+    INACTIVE,
+    PENDING
 }
 
 object CustomerSampleData {
