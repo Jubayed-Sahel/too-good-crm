@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +62,7 @@ fun ActivitiesScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
+                .background(DesignTokens.Colors.Background)
                 .padding(16.dp)
         ) {
             // Header
@@ -74,7 +75,7 @@ fun ActivitiesScreen(
             Text(
                 text = "Track your tasks, meetings, calls, and follow-ups",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -94,19 +95,19 @@ fun ActivitiesScreen(
                     modifier = Modifier.weight(1f),
                     title = "Completed",
                     value = activities.count { it.status == ActivityStatus.COMPLETED }.toString(),
-                    color = Color(0xFF22C55E)
+                    color = DesignTokens.Colors.Success
                 )
                 ActivityStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Pending",
                     value = activities.count { it.status == ActivityStatus.PENDING }.toString(),
-                    color = Color(0xFFF59E0B)
+                    color = DesignTokens.Colors.Warning
                 )
                 ActivityStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Scheduled",
                     value = activities.count { it.status == ActivityStatus.SCHEDULED }.toString(),
-                    color = Color(0xFF3B82F6)
+                    color = DesignTokens.Colors.Info
                 )
             }
 
@@ -206,13 +207,13 @@ fun ActivityCard(activity: Activity) {
                         Icons.Default.Business,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF6B7280)
+                        tint = DesignTokens.Colors.OnSurfaceVariant
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = activity.customerName,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = Color(0xFF6B7280)
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
 
@@ -227,13 +228,13 @@ fun ActivityCard(activity: Activity) {
                             Icons.Default.CalendarToday,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = Color(0xFF6B7280)
+                            tint = DesignTokens.Colors.OnSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Due: ${activity.dueDate}",
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF6B7280)
+                            color = DesignTokens.Colors.OnSurfaceVariant
                         )
                     }
 
@@ -242,13 +243,13 @@ fun ActivityCard(activity: Activity) {
                             Icons.Default.Person,
                             contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = Color(0xFF6B7280)
+                            tint = DesignTokens.Colors.OnSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = activity.createdBy,
                             style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFF6B7280)
+                            color = DesignTokens.Colors.OnSurfaceVariant
                         )
                     }
                 }
@@ -261,23 +262,23 @@ fun ActivityCard(activity: Activity) {
 fun ActivityStatusBadge(status: ActivityStatus) {
     val (backgroundColor, textColor, text) = when (status) {
         ActivityStatus.COMPLETED -> Triple(
-            Color(0xFF22C55E).copy(alpha = 0.1f),
-            Color(0xFF22C55E),
+            DesignTokens.Colors.Success.copy(alpha = 0.1f),
+            DesignTokens.Colors.Success,
             "Completed"
         )
         ActivityStatus.PENDING -> Triple(
-            Color(0xFFF59E0B).copy(alpha = 0.1f),
-            Color(0xFFF59E0B),
+            DesignTokens.Colors.Warning.copy(alpha = 0.1f),
+            DesignTokens.Colors.Warning,
             "Pending"
         )
         ActivityStatus.SCHEDULED -> Triple(
-            Color(0xFF3B82F6).copy(alpha = 0.1f),
-            Color(0xFF3B82F6),
+            DesignTokens.Colors.Info.copy(alpha = 0.1f),
+            DesignTokens.Colors.Info,
             "Scheduled"
         )
         ActivityStatus.OVERDUE -> Triple(
-            Color(0xFFEF4444).copy(alpha = 0.1f),
-            Color(0xFFEF4444),
+            DesignTokens.Colors.Error.copy(alpha = 0.1f),
+            DesignTokens.Colors.Error,
             "Overdue"
         )
     }
@@ -319,7 +320,7 @@ fun ActivityStatCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 11.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
@@ -346,11 +347,11 @@ fun getActivityTypeIcon(type: ActivityType): ImageVector {
 
 fun getActivityTypeColor(type: ActivityType): Color {
     return when (type) {
-        ActivityType.CALL -> Color(0xFF3B82F6)
-        ActivityType.EMAIL -> Color(0xFF8B5CF6)
-        ActivityType.MEETING -> Color(0xFF22C55E)
-        ActivityType.TASK -> Color(0xFFF59E0B)
-        ActivityType.FOLLOW_UP -> Color(0xFFEC4899)
+        ActivityType.CALL -> DesignTokens.Colors.Info
+        ActivityType.EMAIL -> DesignTokens.Colors.StatusScheduled
+        ActivityType.MEETING -> DesignTokens.Colors.Success
+        ActivityType.TASK -> DesignTokens.Colors.Warning
+        ActivityType.FOLLOW_UP -> DesignTokens.Colors.PinkAccent
     }
 }
 

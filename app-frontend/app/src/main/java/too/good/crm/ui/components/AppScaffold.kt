@@ -7,12 +7,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,10 +57,11 @@ fun AppScaffoldWithDrawer(
             // Scaffold with top bar and content
             Scaffold(
                 topBar = {
+                    // Match web-frontend colors: purple for vendor, blue for client
                     val topBarColor = if (activeMode == ActiveMode.VENDOR) {
-                        Color(0xFF8B5CF6) // Purple for Vendor
+                        DesignTokens.Colors.Primary // Purple 600
                     } else {
-                        Color(0xFF3B82F6) // Blue for Client
+                        DesignTokens.Colors.Info // Blue 500
                     }
 
                     TopAppBar(
@@ -77,15 +78,16 @@ fun AppScaffoldWithDrawer(
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = topBarColor,
-                            titleContentColor = Color.White,
-                            navigationIconContentColor = Color.White,
-                            actionIconContentColor = Color.White
+                            titleContentColor = DesignTokens.Colors.White,
+                            navigationIconContentColor = DesignTokens.Colors.White,
+                            actionIconContentColor = DesignTokens.Colors.White
                         )
                     )
                 },
+                containerColor = DesignTokens.Colors.Background, // Match web gray.50
                 modifier = Modifier.weight(1f)
             ) { paddingValues ->
-                // Page content
+                // Page content with proper background
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
