@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,7 +48,7 @@ fun AnalyticsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF9FAFB))
+                .background(DesignTokens.Colors.Background)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
@@ -61,7 +62,7 @@ fun AnalyticsScreen(
             Text(
                 text = "Business intelligence and performance insights",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color(0xFF6B7280)
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -71,7 +72,7 @@ fun AnalyticsScreen(
                 text = "Key Performance Indicators",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -85,7 +86,7 @@ fun AnalyticsScreen(
                     value = "$485K",
                     subtitle = "This month",
                     icon = Icons.Default.AttachMoney,
-                    color = Color(0xFF22C55E)
+                    color = DesignTokens.Colors.Success
                 )
                 AnalyticsMetricCard(
                     modifier = Modifier.weight(1f),
@@ -93,7 +94,7 @@ fun AnalyticsScreen(
                     value = "24",
                     subtitle = "In pipeline",
                     icon = Icons.Default.TrendingUp,
-                    color = Color(0xFF8B5CF6)
+                    color = DesignTokens.Colors.StatusScheduled
                 )
             }
 
@@ -109,7 +110,7 @@ fun AnalyticsScreen(
                     value = "5",
                     subtitle = "Active accounts",
                     icon = Icons.Default.People,
-                    color = Color(0xFF3B82F6)
+                    color = DesignTokens.Colors.Info
                 )
                 AnalyticsMetricCard(
                     modifier = Modifier.weight(1f),
@@ -117,7 +118,7 @@ fun AnalyticsScreen(
                     value = "68%",
                     subtitle = "Success rate",
                     icon = Icons.Default.ShowChart,
-                    color = Color(0xFFF59E0B)
+                    color = DesignTokens.Colors.Warning
                 )
             }
 
@@ -128,7 +129,7 @@ fun AnalyticsScreen(
                 text = "Pipeline Analysis",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -136,7 +137,7 @@ fun AnalyticsScreen(
                 stage = "Prospecting",
                 count = 3,
                 value = 75000.0,
-                color = Color(0xFF3B82F6)
+                color = DesignTokens.Colors.Info
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -145,7 +146,7 @@ fun AnalyticsScreen(
                 stage = "Qualification",
                 count = 4,
                 value = 120000.0,
-                color = Color(0xFF8B5CF6)
+                color = DesignTokens.Colors.StatusScheduled
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -154,7 +155,7 @@ fun AnalyticsScreen(
                 stage = "Proposal",
                 count = 5,
                 value = 185000.0,
-                color = Color(0xFFF59E0B)
+                color = DesignTokens.Colors.Warning
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -163,7 +164,7 @@ fun AnalyticsScreen(
                 stage = "Negotiation",
                 count = 8,
                 value = 325000.0,
-                color = Color(0xFFEC4899)
+                color = DesignTokens.Colors.PinkAccent
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -173,7 +174,7 @@ fun AnalyticsScreen(
                 text = "Performance Trends",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -253,7 +254,7 @@ fun AnalyticsMetricCard(
                 text = value,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF111827)
+                color = DesignTokens.Colors.OnSurface
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -262,7 +263,7 @@ fun AnalyticsMetricCard(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFF374151)
+                color = DesignTokens.Colors.OnSurface
             )
 
             Spacer(modifier = Modifier.height(2.dp))
@@ -270,7 +271,7 @@ fun AnalyticsMetricCard(
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color(0xFF6B7280),
+                color = DesignTokens.Colors.OnSurfaceVariant,
                 fontSize = 12.sp
             )
         }
@@ -323,7 +324,7 @@ fun PipelineStageCard(
                 Text(
                     text = "$count deals",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF6B7280)
+                    color = DesignTokens.Colors.OnSurfaceVariant
                 )
             }
 
@@ -331,7 +332,7 @@ fun PipelineStageCard(
                 text = "$${(value / 1000).toInt()}K",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF22C55E)
+                color = DesignTokens.Colors.Success
             )
         }
     }
@@ -359,7 +360,7 @@ fun TrendCard(
             Icon(
                 imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
                 contentDescription = null,
-                tint = if (isPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
+                tint = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
                 modifier = Modifier.size(32.dp)
             )
 
@@ -375,19 +376,19 @@ fun TrendCard(
                 Text(
                     text = description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color(0xFF6B7280)
+                    color = DesignTokens.Colors.OnSurfaceVariant
                 )
             }
 
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = if (isPositive) Color(0xFF22C55E).copy(alpha = 0.1f) else Color(0xFFEF4444).copy(alpha = 0.1f)
+                color = if (isPositive) DesignTokens.Colors.Success.copy(alpha = 0.1f) else DesignTokens.Colors.Error.copy(alpha = 0.1f)
             ) {
                 Text(
                     text = value,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (isPositive) Color(0xFF22C55E) else Color(0xFFEF4444),
+                    color = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
                     fontWeight = FontWeight.Bold
                 )
             }
