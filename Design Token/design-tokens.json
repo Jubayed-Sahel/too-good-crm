@@ -1,0 +1,197 @@
+{
+  "metadata": {
+    "name": "Too Good CRM - Universal Design System",
+    "version": "1.0.0",
+    "platforms": ["Web (React)", "Android (Kotlin/Compose)", "iOS (Swift/SwiftUI - Future)"],
+    "audience": "Vendor teams, business operations",
+    "updated": "2024"
+  },
+  "designPhilosophy": {
+    "primary": "Vendor/admin-focused interface for business operations",
+    "approach": "Professional, data-dense, action-oriented",
+    "differentiation": "Vendor Mode (B2B) vs Client Mode (B2C)",
+    "vendorUseCase": "Order management, inventory control, issue tracking, analytics",
+    "clientUseCase": "Product browsing, shopping, customer support"
+  },
+  "platformImplementations": {
+    "web": {
+      "framework": "React + Chakra UI",
+      "location": "web-frontend/src/theme/",
+      "primaryColor": "#667eea (Purple gradient)",
+      "notes": "Already implemented with vendor mode support"
+    },
+    "android": {
+      "framework": "Jetpack Compose / Material Design 3",
+      "location": "app-frontend/Design Token/",
+      "resources": "app-frontend/app/src/main/res/values/",
+      "primaryColor": "#667EEA (Purple)",
+      "files": [
+        "colors.xml (114 colors)",
+        "dimens.xml (95+ dimensions)",
+        "themes.xml (Material Design 3 theme)",
+        "design-tokens.md (Full specification)",
+        "design-tokens.json (Structured tokens)"
+      ],
+      "notes": "Fully implemented vendor design system"
+    },
+    "ios": {
+      "framework": "SwiftUI (Planned)",
+      "location": "TBD",
+      "primaryColor": "#667eea (Purple)",
+      "notes": "Future implementation"
+    }
+  },
+  "sharedDesignTokens": {
+    "brand": {
+      "vendor": {
+        "primary": "#667eea",
+        "primaryVariant": "#764ba2",
+        "gradient": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        "description": "Purple gradient for vendor/admin interfaces"
+      },
+      "client": {
+        "primary": "#3b82f6",
+        "primaryVariant": "#1e40af",
+        "gradient": "linear-gradient(135deg, #3b82f6 0%, #1e40af 100%)",
+        "description": "Blue gradient for client/customer interfaces (future)"
+      }
+    },
+    "semanticColors": {
+      "success": {
+        "main": "#10b981",
+        "light": "#d1fae5",
+        "dark": "#047857",
+        "usage": "Completed orders, successful operations, resolved issues"
+      },
+      "warning": {
+        "main": "#f59e0b",
+        "light": "#fef3c7",
+        "dark": "#d97706",
+        "usage": "Pending orders, in-progress tasks, needs attention"
+      },
+      "error": {
+        "main": "#ef4444",
+        "light": "#fee2e2",
+        "dark": "#dc2626",
+        "usage": "Failed operations, critical issues, urgent priority"
+      },
+      "info": {
+        "main": "#3b82f6",
+        "light": "#dbeafe",
+        "dark": "#1e40af",
+        "usage": "New items, open issues, information messages"
+      }
+    },
+    "statusColors": {
+      "open": "#3b82f6",
+      "inProgress": "#f59e0b",
+      "completed": "#10b981",
+      "closed": "#64748b",
+      "failed": "#ef4444",
+      "pending": "#f59e0b",
+      "scheduled": "#8b5cf6"
+    },
+    "priorityColors": {
+      "urgent": "#dc2626",
+      "high": "#f59e0b",
+      "medium": "#3b82f6",
+      "low": "#94a3b8"
+    },
+    "activityTypes": {
+      "call": "#3b82f6",
+      "email": "#8b5cf6",
+      "telegram": "#06b6d4",
+      "meeting": "#f59e0b",
+      "note": "#eab308",
+      "task": "#10b981"
+    },
+    "typography": {
+      "web": {
+        "fontFamily": "System font stack (Chakra UI default)",
+        "sizes": ["xs: 12px", "sm: 14px", "md: 16px", "lg: 18px", "xl: 20px", "2xl: 24px"]
+      },
+      "android": {
+        "fontFamily": "Roboto (Material Design default)",
+        "typeScale": "Material Design 3 (57sp Display to 11sp Label)"
+      }
+    },
+    "spacing": {
+      "web": {
+        "unit": "rem (4px increments)",
+        "scale": ["0.25rem (4px)", "0.5rem (8px)", "0.75rem (12px)", "1rem (16px)", "1.5rem (24px)", "2rem (32px)", "3rem (48px)"]
+      },
+      "android": {
+        "unit": "dp (density-independent pixels)",
+        "scale": ["4dp", "8dp", "12dp", "16dp", "20dp", "24dp", "32dp", "48dp", "64dp"]
+      }
+    },
+    "borderRadius": {
+      "web": ["2px", "6px", "8px", "12px", "16px", "9999px"],
+      "android": ["4dp", "8dp", "12dp", "16dp", "28dp", "9999dp"]
+    }
+  },
+  "vendorComponents": {
+    "common": [
+      "Order Card",
+      "Stats Card",
+      "Activity Timeline",
+      "Data Table (Desktop)",
+      "Card-Based List (Mobile)",
+      "Status Chips",
+      "Priority Badges",
+      "Action Buttons",
+      "Search & Filter Bar",
+      "Empty States",
+      "Loading States",
+      "Error States"
+    ],
+    "businessOperations": [
+      "Order Management Dashboard",
+      "Inventory Control Panel",
+      "Issue Tracking Interface",
+      "Payment Processing Views",
+      "Analytics & Reporting",
+      "Customer Communication Hub",
+      "Vendor Profile Management"
+    ]
+  },
+  "implementationStatus": {
+    "webFrontend": {
+      "status": "Complete",
+      "framework": "React + Chakra UI",
+      "vendorMode": "Implemented",
+      "clientMode": "Planned"
+    },
+    "androidApp": {
+      "status": "Design System Complete",
+      "framework": "Material Design 3",
+      "vendorMode": "Design tokens ready, UI implementation needed",
+      "clientMode": "Future"
+    },
+    "backend": {
+      "status": "Complete",
+      "api": "60+ endpoints fully functional",
+      "dataModels": "14 models for vendors, customers, orders, issues, etc."
+    }
+  },
+  "accessibilityGuidelines": {
+    "colorContrast": {
+      "normalText": "4.5:1 minimum (WCAG AA)",
+      "largeText": "3:1 minimum (WCAG AA)",
+      "uiComponents": "3:1 minimum"
+    },
+    "touchTargets": {
+      "minimum": "48px/48dp (iOS: 44pt)",
+      "recommendation": "Use for all interactive elements"
+    },
+    "keyboardNavigation": "Full support for tab/arrow key navigation",
+    "screenReaders": "Proper ARIA labels (web), content descriptions (Android)"
+  },
+  "references": {
+    "webDesignTokens": "web-frontend/src/theme/",
+    "androidDesignTokens": "app-frontend/Design Token/",
+    "androidResources": "app-frontend/app/src/main/res/values/",
+    "backendModels": "shared-backend/crmApp/models/",
+    "apiEndpoints": "shared-backend/API_ENDPOINTS_REFERENCE.md"
+  }
+}
