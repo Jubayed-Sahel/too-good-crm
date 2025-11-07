@@ -61,7 +61,6 @@ export const ManageRoleDialog = ({
     setIsFetchingRoles(true);
     try {
       const organizationId = user?.primaryOrganizationId;
-      console.log('Fetching roles for organization:', organizationId);
       
       const filters: any = { is_active: true };
       if (organizationId) {
@@ -69,8 +68,6 @@ export const ManageRoleDialog = ({
       }
       
       const fetchedRoles = await roleService.getRoles(filters);
-      console.log('Fetched roles:', fetchedRoles); // Debug log
-      console.log('Role options will be:', fetchedRoles?.map(r => ({ value: r.id, label: r.name })));
       setRoles(fetchedRoles || []);
     } catch (error: any) {
       console.error('Error fetching roles:', error);

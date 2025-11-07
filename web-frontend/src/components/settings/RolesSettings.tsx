@@ -181,6 +181,11 @@ const RolesSettings = () => {
           description: formData.description,
         });
         roleId = newRole.id;
+        
+        if (!roleId) {
+          throw new Error('Failed to get role ID from created role');
+        }
+        
         toaster.create({
           title: 'Role Created',
           description: `"${formData.name}" has been created successfully`,
@@ -190,7 +195,7 @@ const RolesSettings = () => {
       }
       
       // Update permissions for the role
-      if (selectedPermissions.length > 0) {
+      if (selectedPermissions.length > 0 && roleId) {
         await roleService.updateRolePermissions(roleId, selectedPermissions);
       }
       

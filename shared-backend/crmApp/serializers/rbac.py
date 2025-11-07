@@ -47,11 +47,13 @@ class RoleCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Role
         fields = [
-            'organization', 'name', 'description', 'permission_ids'
+            'name', 'description', 'permission_ids'
         ]
     
     def create(self, validated_data):
         permission_ids = validated_data.pop('permission_ids', [])
+        
+        # organization and slug are passed from perform_create via serializer.save()
         role = Role.objects.create(**validated_data)
         
         # Assign permissions

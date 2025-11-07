@@ -19,10 +19,12 @@ import {
   Text,
 } from '@chakra-ui/react';
 import CustomSelect from '../ui/CustomSelect';
+import { CustomerAutocomplete } from '../common';
 import { FiPlus } from 'react-icons/fi';
 
 interface CreateDealData {
   title: string;
+  customer?: number;
   customerName: string;
   value: number;
   stage: 'lead' | 'qualified' | 'proposal' | 'negotiation' | 'closed-won' | 'closed-lost';
@@ -93,6 +95,14 @@ export const CreateDealDialog = ({
     onClose();
   };
 
+  const handleCustomerSelect = (customerId: number, customerName: string) => {
+    setFormData({
+      ...formData,
+      customer: customerId,
+      customerName,
+    });
+  };
+
   const isFormValid = formData.title && formData.customerName && formData.value > 0;
 
   return (
@@ -127,13 +137,13 @@ export const CreateDealDialog = ({
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  Customer Name *
+                  Customer *
                 </Text>
-                <Input
-                  placeholder="Acme Corporation"
-                  value={formData.customerName}
-                  onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-                  size="sm"
+                <CustomerAutocomplete
+                  value={formData.customer}
+                  onChange={handleCustomerSelect}
+                  placeholder="Search and select customer..."
+                  required
                 />
               </VStack>
               <VStack gap={1} align="stretch">

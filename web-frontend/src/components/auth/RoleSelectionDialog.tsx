@@ -6,10 +6,9 @@ import {
   Text,
   VStack,
   HStack,
-  Spinner,
 } from '@chakra-ui/react';
 import { DialogRoot, DialogContent, DialogBackdrop } from '../ui/dialog';
-import { FiBriefcase, FiUsers, FiShoppingBag, FiCheck, FiRefreshCw } from 'react-icons/fi';
+import { FiBriefcase, FiUsers, FiShoppingBag, FiRefreshCw } from 'react-icons/fi';
 import type { UserProfile } from '@/types';
 import type { IconType } from 'react-icons';
 

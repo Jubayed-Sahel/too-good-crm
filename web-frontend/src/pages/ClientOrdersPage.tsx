@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Box, Heading, Text, VStack } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { OrderStats, OrderFilters, OrdersTable } from '../components/client-orders';
 import type { Order } from '../components/client-orders';
+import { useOrders, useOrderStats } from '@/hooks';
+import type { OrderFilters as OrderFiltersType } from '@/types';
 
 const ClientOrdersPage = () => {
   const navigate = useNavigate();
@@ -19,122 +21,90 @@ const ClientOrdersPage = () => {
     }
   }, [location.state]);
 
-  // Mock data for orders
-  const orders: Order[] = [
-    {
-      id: '1',
-      orderNumber: 'ORD-2024-001',
-      vendor: 'Tech Solutions Inc',
-      service: 'Website Development',
-      amount: 4500,
-      status: 'completed',
-      orderDate: '2024-01-15',
-      deliveryDate: '2024-02-15',
-      description: 'Complete website redesign with modern UI/UX',
-    },
-    {
-      id: '2',
-      orderNumber: 'ORD-2024-002',
-      vendor: 'Marketing Pro',
-      service: 'SEO Optimization',
-      amount: 1200,
-      status: 'in_progress',
-      orderDate: '2024-02-01',
-      deliveryDate: '2024-03-01',
-      description: 'Monthly SEO optimization and content strategy',
-    },
-    {
-      id: '3',
-      orderNumber: 'ORD-2024-003',
-      vendor: 'Design Studio',
-      service: 'Brand Identity',
-      amount: 3200,
-      status: 'completed',
-      orderDate: '2024-01-20',
-      deliveryDate: '2024-02-20',
-      description: 'Complete brand identity package with logo and guidelines',
-    },
-    {
-      id: '4',
-      orderNumber: 'ORD-2024-004',
-      vendor: 'Cloud Services',
-      service: 'Cloud Infrastructure',
-      amount: 2800,
-      status: 'in_progress',
-      orderDate: '2024-02-10',
-      deliveryDate: '2024-03-10',
-      description: 'AWS cloud infrastructure setup and migration',
-    },
-    {
-      id: '5',
-      orderNumber: 'ORD-2024-005',
-      vendor: 'Tech Solutions Inc',
-      service: 'Mobile App Development',
-      amount: 8500,
-      status: 'pending',
-      orderDate: '2024-02-20',
-      deliveryDate: '2024-05-20',
-      description: 'iOS and Android mobile application development',
-    },
-    {
-      id: '6',
-      orderNumber: 'ORD-2024-006',
-      vendor: 'Marketing Pro',
-      service: 'Social Media Management',
-      amount: 950,
-      status: 'completed',
-      orderDate: '2024-01-05',
-      deliveryDate: '2024-02-05',
-      description: 'Monthly social media content and engagement',
-    },
-    {
-      id: '7',
-      orderNumber: 'ORD-2024-007',
-      vendor: 'Content Creators',
-      service: 'Video Production',
-      amount: 2200,
-      status: 'in_progress',
-      orderDate: '2024-02-15',
-      deliveryDate: '2024-03-15',
-      description: 'Corporate video production and editing',
-    },
-    {
-      id: '8',
-      orderNumber: 'ORD-2024-008',
-      vendor: 'Design Studio',
-      service: 'UI/UX Design',
-      amount: 1800,
-      status: 'cancelled',
-      orderDate: '2024-01-10',
-      description: 'Mobile app UI/UX design (cancelled due to budget constraints)',
-    },
-  ];
+  // Build API filters
+  const apiFilters: OrderFiltersType = useMemo(() => {
+    const filters: OrderFiltersType = {};
+    if (searchQuery) filters.search = searchQuery;
+    if (statusFilter !== 'all') filters.status = statusFilter as any;
+    if (vendorFilter !== 'all') filters.vendor = parseInt(vendorFilter);
+    return filters;
+  }, [searchQuery, statusFilter, vendorFilter]);
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
-      const matchesSearch = order.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           order.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           order.vendor.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-      const matchesVendor = vendorFilter === 'all' || order.vendor === vendorFilter;
-      return matchesSearch && matchesStatus && matchesVendor;
-    });
-  }, [orders, searchQuery, statusFilter, vendorFilter]);
+  // Fetch data from backend
+  const { data: ordersData, isLoading, error } = useOrders(apiFilters);
+  const { data: statsData } = useOrderStats();
+  
+  const orders = ordersData?.results || [];
 
-  const vendors = useMemo(() => {
-    return Array.from(new Set(orders.map(order => order.vendor)));
+  // Map backend orders to component format
+  const mappedOrders: Order[] = useMemo(() => {
+    return orders.map(order => ({
+      id: order.id.toString(),
+      orderNumber: order.order_number,
+      vendor: order.vendor_name || 'N/A',
+      service: order.title,
+      amount: parseFloat(order.total_amount.toString()),
+      status: order.status as any,
+      orderDate: order.order_date,
+      deliveryDate: order.delivery_date || '',
+      description: order.description || '',
+    }));
   }, [orders]);
 
-  const stats = useMemo(() => ({
-    total: orders.length,
-    completed: orders.filter(o => o.status === 'completed').length,
-    inProgress: orders.filter(o => o.status === 'in_progress').length,
-    pending: orders.filter(o => o.status === 'pending').length,
-  }), [orders]);
+  // Get unique vendors for filter
+  const vendors = useMemo(() => {
+    const vendorNames = orders.map(o => o.vendor_name).filter(Boolean) as string[];
+    return Array.from(new Set(vendorNames));
+  }, [orders]);
+
+  // Map stats from backend
+  const stats = useMemo(() => {
+    if (!statsData) {
+      return {
+        total: mappedOrders.length,
+        completed: mappedOrders.filter(o => o.status === 'completed').length,
+        inProgress: mappedOrders.filter(o => o.status === 'in_progress').length,
+        pending: mappedOrders.filter(o => o.status === 'pending').length,
+      };
+    }
+    return {
+      total: statsData.total || 0,
+      completed: statsData.by_status?.completed || 0,
+      inProgress: statsData.by_status?.processing || 0,
+      pending: statsData.by_status?.pending || 0,
+    };
+  }, [statsData, mappedOrders]);
 
   const handleViewDetails = (order: Order) => {
     navigate(`/client/orders/${order.id}`);
   };
+
+  // Error state
+  if (error) {
+    return (
+      <DashboardLayout title="My Orders">
+        <Box textAlign="center" py={12}>
+          <Heading size="md" color="red.600" mb={2}>
+            Failed to load orders
+          </Heading>
+          <Text color="gray.500">
+            {error.message || 'Please try again later'}
+          </Text>
+        </Box>
+      </DashboardLayout>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <DashboardLayout title="My Orders">
+        <Box display="flex" justifyContent="center" py={12}>
+          <Spinner size="xl" color="blue.500" />
+        </Box>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout title="My Orders">
@@ -170,9 +140,29 @@ const ClientOrdersPage = () => {
 
         {/* Orders Table */}
         <OrdersTable
-          orders={filteredOrders}
+          orders={mappedOrders}
           onView={handleViewDetails}
         />
+
+        {/* Empty State */}
+        {mappedOrders.length === 0 && (
+          <Box
+            textAlign="center"
+            py={12}
+            px={6}
+            bg="gray.50"
+            borderRadius="lg"
+          >
+            <Heading size="md" color="gray.600" mb={2}>
+              No orders found
+            </Heading>
+            <Text color="gray.500">
+              {searchQuery || statusFilter !== 'all' || vendorFilter !== 'all'
+                ? 'Try adjusting your filters'
+                : 'Get started by placing your first order'}
+            </Text>
+          </Box>
+        )}
       </VStack>
     </DashboardLayout>
   );

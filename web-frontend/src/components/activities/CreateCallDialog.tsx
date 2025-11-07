@@ -17,6 +17,7 @@ import {
 } from '@chakra-ui/react';
 import { Field } from '../ui/field';
 import { FiPhone } from 'react-icons/fi';
+import { CustomerAutocomplete } from '../common';
 
 interface CreateCallDialogProps {
   open: boolean;
@@ -25,6 +26,7 @@ interface CreateCallDialogProps {
 }
 
 export interface CallData {
+  customer?: number;
   customerName: string;
   phoneNumber: string;
   title: string;
@@ -61,6 +63,14 @@ export const CreateCallDialog = ({
     onClose();
   };
 
+  const handleCustomerSelect = (customerId: number, customerName: string) => {
+    setFormData({
+      ...formData,
+      customer: customerId,
+      customerName,
+    });
+  };
+
   const isValid =
     formData.customerName.trim() !== '' &&
     formData.phoneNumber.trim() !== '' &&
@@ -79,13 +89,12 @@ export const CreateCallDialog = ({
 
         <DialogBody>
           <VStack gap={4} align="stretch">
-            <Field label="Customer Name" required>
-              <Input
-                placeholder="Enter customer name"
-                value={formData.customerName}
-                onChange={(e) =>
-                  setFormData({ ...formData, customerName: e.target.value })
-                }
+            <Field label="Customer" required>
+              <CustomerAutocomplete
+                value={formData.customer}
+                onChange={handleCustomerSelect}
+                placeholder="Search and select customer..."
+                required
               />
             </Field>
 

@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { dealService } from '@/services/deal.service';
+import { customerService } from '@/services/customer.service';
 import { useAuth } from '@/hooks/useAuth';
 import { toaster } from '@/components/ui/toaster';
 import { exportData } from '@/utils';
@@ -304,20 +305,69 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
       });
       return;
     }
-    
-    // Prepare backend data
-    const backendData = {
-      title: data.title,
-      value: data.value,
-      customer: data.customer || 1, // TODO: Need to get actual customer ID from form
-      stage: data.stage || 1, // TODO: Need to get actual stage ID from form
-      probability: data.probability,
-      expected_close_date: data.expectedCloseDate,
-      description: data.description,
-      organization: organizationId, // ✅ From auth context!
-    };
-    
-    await createMutation.mutateAsync(backendData);
+    try {
+      // Resolve or create customer by name if necessary
+      let customerId: number | null = null;
+      const customerName = data.customerName || data.customer || '';
+
+      if (customerName) {
+        try {
+          const resp = await customerService.getCustomers({ search: customerName, page_size: 1, organization: organizationId });
+          const found = resp.results?.[0];
+          if (found && found.id) {
+            customerId = found.id;
+          } else {
+            // Create a minimal customer record
+            const created = await customerService.createCustomer({ full_name: customerName, organization: organizationId } as any);
+            customerId = created.id;
+          }
+        } catch (err) {
+          // Non-fatal: warn user and continue without customer
+          console.warn('Customer resolution failed, proceeding without customer:', err);
+          toaster.create({ title: 'Customer lookup failed', description: 'Could not resolve or create customer automatically. You can edit the deal later to attach a customer.', type: 'warning' });
+          customerId = null;
+        }
+      }
+
+      // Resolve stage: can be either a numeric id or a string slug/name
+      let stageId: number | null = null;
+      const stageValue = data.stage;
+      if (stageValue) {
+        if (typeof stageValue === 'number') {
+          stageId = stageValue;
+        } else {
+          // Try to map stage name to pipeline stage id
+          try {
+            const stages = await dealService.getPipelineStages();
+            // Attempt case-insensitive match on name
+            const match = stages.find((s: any) => s.name?.toLowerCase() === String(stageValue).toLowerCase() || String(s.id) === String(stageValue));
+            if (match) {
+              stageId = match.id;
+            }
+          } catch (err) {
+            console.warn('Failed to fetch pipeline stages:', err);
+          }
+        }
+      }
+
+      // Prepare backend data with resolved ids where available
+      const backendData: any = {
+        title: data.title,
+        value: data.value,
+        probability: data.probability,
+        expected_close_date: data.expectedCloseDate,
+        description: data.description,
+        organization: organizationId,
+      };
+
+      if (customerId) backendData.customer = customerId;
+      if (stageId) backendData.stage = stageId;
+
+      await createMutation.mutateAsync(backendData);
+    } catch (err: any) {
+      console.error('Error preparing deal creation:', err);
+      toaster.create({ title: 'Failed to create deal', description: err?.message || 'Please try again.', type: 'error' });
+    }
   };
 
   return {

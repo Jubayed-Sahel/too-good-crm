@@ -17,6 +17,7 @@ import {
 } from '@chakra-ui/react';
 import { Field } from '../ui/field';
 import { FiMail } from 'react-icons/fi';
+import { CustomerAutocomplete } from '../common';
 
 interface SendEmailDialogProps {
   open: boolean;
@@ -25,6 +26,7 @@ interface SendEmailDialogProps {
 }
 
 export interface EmailData {
+  customer?: number;
   customerName: string;
   emailAddress: string;
   subject: string;
@@ -66,6 +68,14 @@ export const SendEmailDialog = ({
     onClose();
   };
 
+  const handleCustomerSelect = (customerId: number, customerName: string) => {
+    setFormData({
+      ...formData,
+      customer: customerId,
+      customerName,
+    });
+  };
+
   const isValid =
     formData.customerName.trim() !== '' &&
     formData.emailAddress.trim() !== '' &&
@@ -85,13 +95,12 @@ export const SendEmailDialog = ({
 
         <DialogBody>
           <VStack gap={4} align="stretch">
-            <Field label="Customer Name" required>
-              <Input
-                placeholder="Enter customer name"
-                value={formData.customerName}
-                onChange={(e) =>
-                  setFormData({ ...formData, customerName: e.target.value })
-                }
+            <Field label="Customer" required>
+              <CustomerAutocomplete
+                value={formData.customer}
+                onChange={handleCustomerSelect}
+                placeholder="Search and select customer..."
+                required
               />
             </Field>
 

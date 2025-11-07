@@ -17,6 +17,7 @@ import {
 } from '@chakra-ui/react';
 import { Field } from '../ui/field';
 import { FiMessageSquare } from 'react-icons/fi';
+import { CustomerAutocomplete } from '../common';
 
 interface SendTelegramDialogProps {
   open: boolean;
@@ -25,6 +26,7 @@ interface SendTelegramDialogProps {
 }
 
 export interface TelegramData {
+  customer?: number;
   customerName: string;
   telegramUsername: string;
   message: string;
@@ -62,6 +64,14 @@ export const SendTelegramDialog = ({
     onClose();
   };
 
+  const handleCustomerSelect = (customerId: number, customerName: string) => {
+    setFormData({
+      ...formData,
+      customer: customerId,
+      customerName,
+    });
+  };
+
   const isValid =
     formData.customerName.trim() !== '' &&
     formData.telegramUsername.trim() !== '' &&
@@ -80,13 +90,12 @@ export const SendTelegramDialog = ({
 
         <DialogBody>
           <VStack gap={4} align="stretch">
-            <Field label="Customer Name" required>
-              <Input
-                placeholder="Enter customer name"
-                value={formData.customerName}
-                onChange={(e) =>
-                  setFormData({ ...formData, customerName: e.target.value })
-                }
+            <Field label="Customer" required>
+              <CustomerAutocomplete
+                value={formData.customer}
+                onChange={handleCustomerSelect}
+                placeholder="Search and select customer..."
+                required
               />
             </Field>
 
