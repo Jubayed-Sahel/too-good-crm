@@ -1,5 +1,111 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
+<?xml version="1.0" encoding="utf-8"?><?xml version="1.0" encoding="utf-8"?>
+
+<resources><resources>
+
+    <!-- Too Good CRM - Vendor Mode Color Palette -->    <color name="purple_200">#FFBB86FC</color>
+
+        <color name="purple_500">#FF6200EE</color>
+
+    <!-- Primary Colors (Purple for Vendor) -->    <color name="purple_700">#FF3700B3</color>
+
+    <color name="primary">#667EEA</color>    <color name="teal_200">#FF03DAC5</color>
+
+    <color name="primary_variant">#764BA2</color>    <color name="teal_700">#FF018786</color>
+
+    <color name="primary_light">#8A9DF0</color>    <color name="black">#FF000000</color>
+
+    <color name="primary_container">#E8EBFA</color>    <color name="white">#FFFFFFFF</color>
+
+    <color name="on_primary">#FFFFFF</color></resources>
+    <color name="on_primary_container">#764BA2</color>
+    
+    <!-- Secondary Colors (Indigo) -->
+    <color name="secondary">#5E72E4</color>
+    <color name="secondary_variant">#4F5FD8</color>
+    <color name="secondary_container">#E5E8FB</color>
+    <color name="on_secondary">#FFFFFF</color>
+    <color name="on_secondary_container">#4F5FD8</color>
+    
+    <!-- Tertiary Colors (Violet) -->
+    <color name="tertiary">#8B5CF6</color>
+    <color name="on_tertiary">#FFFFFF</color>
+    
+    <!-- Semantic Colors - Success (Green) -->
+    <color name="success">#10B981</color>
+    <color name="success_light">#D1FAE5</color>
+    <color name="success_dark">#047857</color>
+    
+    <!-- Semantic Colors - Warning (Orange) -->
+    <color name="warning">#F59E0B</color>
+    <color name="warning_light">#FEF3C7</color>
+    <color name="warning_dark">#D97706</color>
+    
+    <!-- Semantic Colors - Error (Red) -->
+    <color name="error">#EF4444</color>
+    <color name="error_light">#FEE2E2</color>
+    <color name="error_dark">#DC2626</color>
+    <color name="on_error">#FFFFFF</color>
+    <color name="error_container">#FEE2E2</color>
+    <color name="on_error_container">#DC2626</color>
+    
+    <!-- Semantic Colors - Info (Blue) -->
+    <color name="info">#3B82F6</color>
+    <color name="info_light">#DBEAFE</color>
+    <color name="info_dark">#1E40AF</color>
+    
+    <!-- Surface Colors -->
+    <color name="surface">#FFFFFF</color>
+    <color name="surface_variant">#F8FAFC</color>
+    <color name="surface_tint">#667EEA</color>
+    <color name="on_surface">#1E293B</color>
+    <color name="on_surface_variant">#64748B</color>
+    <color name="on_surface_tertiary">#94A3B8</color>
+    
+    <!-- Background Colors -->
+    <color name="background">#F1F5F9</color>
+    <color name="background_dark">#E2E8F0</color>
+    <color name="on_background">#1E293B</color>
+    
+    <!-- Outline Colors -->
+    <color name="outline">#CBD5E1</color>
+    <color name="outline_variant">#E2E8F0</color>
+    
+    <!-- Status Colors (Business Operations) -->
+    <color name="status_open">#3B82F6</color>
+    <color name="status_in_progress">#F59E0B</color>
+    <color name="status_completed">#10B981</color>
+    <color name="status_closed">#64748B</color>
+    <color name="status_failed">#EF4444</color>
+    <color name="status_pending">#F59E0B</color>
+    <color name="status_scheduled">#8B5CF6</color>
+    
+    <!-- Priority Colors -->
+    <color name="priority_urgent">#DC2626</color>
+    <color name="priority_high">#F59E0B</color>
+    <color name="priority_medium">#3B82F6</color>
+    <color name="priority_low">#94A3B8</color>
+    
+    <!-- Activity Type Colors (Communication) -->
+    <color name="activity_call">#3B82F6</color>
+    <color name="activity_email">#8B5CF6</color>
+    <color name="activity_telegram">#06B6D4</color>
+    <color name="activity_meeting">#F59E0B</color>
+    <color name="activity_note">#EAB308</color>
+    <color name="activity_task">#10B981</color>
+    
+    <!-- Gray Scale (Tailwind-inspired) -->
+    <color name="gray_50">#F8FAFC</color>
+    <color name="gray_100">#F1F5F9</color>
+    <color name="gray_200">#E2E8F0</color>
+    <color name="gray_300">#CBD5E1</color>
+    <color name="gray_400">#94A3B8</color>
+    <color name="gray_500">#64748B</color>
+    <color name="gray_600">#475569</color>
+    <color name="gray_700">#334155</color>
+    <color name="gray_800">#1E293B</color>
+    <color name="gray_900">#0F172A</color>
+    
+    <!-- Legacy/Backward Compatibility (can be removed if not used) -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
