@@ -10,33 +10,18 @@ export * from './payment.types';
 
 // Export activity types first (used by Customer interface below)
 export * from './activity.types';
-export * from './auth.types';
+export * from './auth.types';  // This exports the correct User type with profiles
 
-// Import Activity for use in this file
+// Import types for use in this file
 import type { Activity } from './activity.types';
+import type { User } from './auth.types';
 
-// User types (Legacy - to be replaced)
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-  profile?: LegacyUserProfile;
-  date_joined?: string;
-}
-
+// Legacy User Profile (deprecated - use UserProfile from auth.types instead)
 export interface LegacyUserProfile {
   phone: string;
   avatar: string | null;
   job_title: string;
   department: string;
-}
-
-export interface AuthResponse {
-  user: User;
-  token: string;
-  message: string;
 }
 
 export interface LoginCredentials {

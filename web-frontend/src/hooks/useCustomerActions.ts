@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { MappedCustomer } from './useCustomersPage';
 import { customerService } from '@/services/customer.service';
 import { toaster } from '@/components/ui/toaster';
+import { useAuth } from './useAuth';
 
 /**
  * Props for useCustomerActions hook
@@ -21,6 +23,14 @@ export interface UseCustomerActionsReturn {
   handleView: (customer: MappedCustomer) => void;
   handleCreateCustomer: (data: any) => Promise<void>;
   
+  // Delete confirmation state
+  deleteDialogState: {
+    isOpen: boolean;
+    customer: MappedCustomer | null;
+    onConfirm: () => Promise<void>;
+    onClose: () => void;
+  };
+  
   // Loading state
   isSubmitting: boolean;
 }
@@ -35,13 +45,79 @@ export interface UseCustomerActionsReturn {
  * - Handles customer creation
  * - Manages loading/submitting state
  * - Provides user feedback for operations
+ * - Uses React Query for optimistic updates and cache management
  * 
  * @param props - Configuration object with onSuccess callback
  * @returns Customer action handlers and state
  */
 export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}): UseCustomerActionsReturn => {
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<MappedCustomer | null>(null);
+
+  // React Query mutation for creating customer
+  const createMutation = useMutation({
+    mutationFn: (data: any) => customerService.createCustomer(data),
+    onSuccess: (_data, variables) => {
+      // Show success message
+      toaster.create({
+        title: 'Customer created successfully',
+        description: `Customer "${variables.name}" has been created.`,
+        type: 'success',
+      });
+      
+      // Invalidate and refetch customer queries
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      
+      // Call success callback
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      console.error('Error creating customer:', error);
+      
+      // Handle validation errors from backend
+      const errorMessage = error.response?.data?.email?.[0] 
+        || error.response?.data?.phone?.[0]
+        || error.response?.data?.company_name?.[0]
+        || error.response?.data?.non_field_errors?.[0]
+        || 'Failed to create customer. Please try again.';
+      
+      toaster.create({
+        title: 'Failed to create customer',
+        description: errorMessage,
+        type: 'error',
+      });
+    },
+  });
+
+  // React Query mutation for deleting customer
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => customerService.deleteCustomer(id),
+    onSuccess: () => {
+      toaster.create({
+        title: 'Customer deleted successfully',
+        description: `Customer has been deleted.`,
+        type: 'success',
+      });
+      
+      // Invalidate and refetch customer queries
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      
+      // Call success callback
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      console.error('Error deleting customer:', error);
+      toaster.create({
+        title: 'Failed to delete customer',
+        description: 'Please try again.',
+        type: 'error',
+      });
+    },
+  });
 
   /**
    * Navigate to edit customer page
@@ -52,43 +128,33 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
   };
 
   /**
-   * Delete customer with confirmation
+   * Open delete confirmation dialog
    */
-  const handleDelete = async (customer: MappedCustomer) => {
-    console.log('Delete customer:', customer);
-    
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      `Are you sure you want to delete ${customer.name}?`
-    );
-    
-    if (!confirmed) return;
+  const handleDelete = (customer: MappedCustomer) => {
+    setCustomerToDelete(customer);
+    setDeleteDialogOpen(true);
+  };
+
+  /**
+   * Confirm and execute delete operation
+   */
+  const confirmDelete = async () => {
+    if (!customerToDelete) return;
 
     try {
-      setIsSubmitting(true);
-      
-      // Call API to delete customer
-      await customerService.deleteCustomer(parseInt(customer.id));
-      
-      // Show success message
-      toaster.create({
-        title: 'Customer deleted successfully',
-        description: `Customer ${customer.name} has been deleted.`,
-        type: 'success',
-      });
-      
-      // Call success callback to refresh data
-      onSuccess?.();
-    } catch (error) {
-      console.error('Error deleting customer:', error);
-      toaster.create({
-        title: 'Failed to delete customer',
-        description: 'Please try again.',
-        type: 'error',
-      });
+      await deleteMutation.mutateAsync(parseInt(customerToDelete.id));
     } finally {
-      setIsSubmitting(false);
+      setDeleteDialogOpen(false);
+      setCustomerToDelete(null);
     }
+  };
+
+  /**
+   * Close delete confirmation dialog
+   */
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setCustomerToDelete(null);
   };
 
   /**
@@ -103,34 +169,41 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
    * Create new customer
    */
   const handleCreateCustomer = async (data: any) => {
-    console.log('Create customer:', data);
+    console.log('Create customer (frontend data):', data);
     
-    try {
-      setIsSubmitting(true);
-      
-      // Call API to create customer
-      await customerService.createCustomer(data);
-      
-      // Show success message
+    // Get organization ID from authenticated user
+    const organizationId = user?.primaryOrganizationId;
+    
+    if (!organizationId) {
       toaster.create({
-        title: 'Customer created successfully',
-        description: `Customer "${data.fullName}" has been created.`,
-        type: 'success',
-      });
-      
-      // Call success callback to refresh data
-      onSuccess?.();
-    } catch (error) {
-      console.error('Error creating customer:', error);
-      toaster.create({
-        title: 'Failed to create customer',
-        description: 'Please try again.',
+        title: 'Unable to create customer',
+        description: 'Organization information not found. Please log in again.',
         type: 'error',
       });
-      throw error; // Re-throw to let caller handle if needed
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+    
+    // Transform frontend data to backend format
+    const backendData = {
+      name: data.fullName,              // fullName → name
+      email: data.email,
+      phone: data.phone || '',
+      company_name: data.company,       // company → company_name
+      status: data.status || 'active',
+      customer_type: 'individual',      // Default to individual
+      address: data.address || '',
+      city: data.city || '',
+      state: data.state || '',
+      postal_code: data.zipCode || '',  // zipCode → postal_code
+      country: data.country || '',
+      notes: data.notes || '',
+      organization: organizationId,     // From auth context
+    };
+    
+    console.log('Create customer (backend data):', backendData);
+    
+    // Use React Query mutation
+    await createMutation.mutateAsync(backendData);
   };
 
   return {
@@ -138,6 +211,12 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
     handleDelete,
     handleView,
     handleCreateCustomer,
-    isSubmitting,
+    deleteDialogState: {
+      isOpen: deleteDialogOpen,
+      customer: customerToDelete,
+      onConfirm: confirmDelete,
+      onClose: closeDeleteDialog,
+    },
+    isSubmitting: createMutation.isPending || deleteMutation.isPending,
   };
 };

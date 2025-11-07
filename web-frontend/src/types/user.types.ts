@@ -1,8 +1,10 @@
 /**
  * User Profile and Settings Types
+ * Note: This is for the settings/profile page UI, not the backend UserProfile model
+ * Backend UserProfile is in auth.types.ts
  */
 
-export interface UserProfile {
+export interface UserProfileUI {
   id: string;
   username: string;
   email: string;

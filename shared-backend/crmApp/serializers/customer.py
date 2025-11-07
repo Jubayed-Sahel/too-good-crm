@@ -89,6 +89,7 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating customers"""
     user_id = serializers.IntegerField(required=False, allow_null=True)
     assigned_to_id = serializers.IntegerField(required=False, allow_null=True)
+    zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)  # Alias for frontend compatibility
     
     class Meta:
         model = Customer
@@ -97,9 +98,88 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             'company_name', 'contact_person', 'email', 'phone', 'website',
             'customer_type', 'status', 'industry', 'rating',
             'assigned_to_id', 'payment_terms', 'credit_limit', 'tax_id',
-            'address', 'city', 'state', 'postal_code', 'country',
+            'address', 'city', 'state', 'postal_code', 'zip_code', 'country',
             'source', 'tags', 'notes'
         ]
+    
+    def validate_email(self, value):
+        """Validate email is unique within organization"""
+        if not value:
+            return value
+        
+        organization = self.initial_data.get('organization')
+        if organization:
+            # Check if email exists for this organization
+            if Customer.objects.filter(
+                organization_id=organization,
+                email__iexact=value
+            ).exists():
+                raise serializers.ValidationError(
+                    "A customer with this email already exists in your organization."
+                )
+        return value.lower()
+    
+    def validate_phone(self, value):
+        """Validate phone number format"""
+        if not value:
+            return value
+        
+        # Remove common separators
+        cleaned = value.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+        
+        # Check if it's mostly digits
+        if not cleaned.replace('+', '').isdigit():
+            raise serializers.ValidationError(
+                "Phone number should only contain digits, spaces, hyphens, and parentheses."
+            )
+        
+        # Check minimum length
+        if len(cleaned) < 10:
+            raise serializers.ValidationError(
+                "Phone number must be at least 10 digits."
+            )
+        
+        return value
+    
+    def validate_company_name(self, value):
+        """Validate company name"""
+        if value and len(value) < 2:
+            raise serializers.ValidationError(
+                "Company name must be at least 2 characters long."
+            )
+        return value
+    
+    def validate_credit_limit(self, value):
+        """Validate credit limit is positive"""
+        if value is not None and value < 0:
+            raise serializers.ValidationError(
+                "Credit limit cannot be negative."
+            )
+        return value
+    
+    def validate_rating(self, value):
+        """Validate rating is between 1 and 5"""
+        if value is not None and (value < 1 or value > 5):
+            raise serializers.ValidationError(
+                "Rating must be between 1 and 5."
+            )
+        return value
+    
+    def validate(self, attrs):
+        """Object-level validation"""
+        # Ensure at least one of name or company_name is provided
+        if not attrs.get('name') and not attrs.get('company_name'):
+            raise serializers.ValidationError(
+                "Either 'name' or 'company_name' must be provided."
+            )
+        
+        # If customer_type is business, company_name should be provided
+        if attrs.get('customer_type') == 'business' and not attrs.get('company_name'):
+            raise serializers.ValidationError({
+                'company_name': "Company name is required for business customers."
+            })
+        
+        return attrs
     
     def create(self, validated_data):
         """Create customer and auto-create user profile if user is linked"""
