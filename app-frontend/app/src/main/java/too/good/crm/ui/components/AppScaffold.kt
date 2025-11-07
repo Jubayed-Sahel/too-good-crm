@@ -186,6 +186,12 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("analytics") }
                 )
                 NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.Group, contentDescription = null) },
+                    label = { Text("Team") },
+                    selected = false,
+                    onClick = { onNavigate("team") }
+                )
+                NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     label = { Text("Settings") },
                     selected = false,
