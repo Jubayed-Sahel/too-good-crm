@@ -114,8 +114,9 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
-        from crmApp.models import Organization, UserOrganization
+        from crmApp.models import Organization, UserOrganization, UserProfile
         from django.utils.text import slugify
+        from django.utils import timezone
         
         validated_data.pop('password_confirm')
         organization_name = validated_data.pop('organization_name', None)
@@ -146,6 +147,37 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 organization=organization,
                 is_owner=True,
                 is_active=True
+            )
+            
+            # Create all three profiles for the user
+            # 1. Vendor profile (primary by default since they created the org)
+            UserProfile.objects.create(
+                user=user,
+                organization=organization,
+                profile_type='vendor',
+                is_primary=True,
+                status='active',
+                activated_at=timezone.now()
+            )
+            
+            # 2. Employee profile (for managing org)
+            UserProfile.objects.create(
+                user=user,
+                organization=organization,
+                profile_type='employee',
+                is_primary=False,
+                status='active',
+                activated_at=timezone.now()
+            )
+            
+            # 3. Customer profile (for accessing client UI)
+            UserProfile.objects.create(
+                user=user,
+                organization=organization,
+                profile_type='customer',
+                is_primary=False,
+                status='active',
+                activated_at=timezone.now()
             )
         
         return user

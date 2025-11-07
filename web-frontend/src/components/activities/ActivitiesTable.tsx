@@ -30,7 +30,7 @@ interface ActivitiesTableProps {
   activities: Activity[];
   isLoading?: boolean;
   onView?: (activity: Activity) => void;
-  onDelete?: (activityId: number) => void;
+  onDelete?: (activity: Activity) => void;
   onMarkComplete?: (activityId: number) => void;
   onBulkDelete?: (activityIds: number[]) => void;
   onBulkExport?: (activityIds: number[]) => void;
@@ -111,10 +111,8 @@ export const ActivitiesTable = ({
 
   const handleBulkDeleteClick = () => {
     if (selectedIds.length === 0) return;
-    if (confirm(`Are you sure you want to delete ${selectedIds.length} activity(ies)?`)) {
-      onBulkDelete?.(selectedIds);
-      setSelectedIds([]);
-    }
+    onBulkDelete?.(selectedIds);
+    setSelectedIds([]);
   };
 
   const handleBulkExportClick = () => {
@@ -266,7 +264,7 @@ export const ActivitiesTable = ({
                     size="sm"
                     variant="outline"
                     colorPalette="red"
-                    onClick={() => onDelete(activity.id)}
+                    onClick={() => onDelete(activity)}
                   >
                     <FiTrash2 size={16} />
                   </IconButton>
@@ -445,7 +443,7 @@ export const ActivitiesTable = ({
                           size="sm"
                           variant="ghost"
                           colorPalette="red"
-                          onClick={() => onDelete(activity.id)}
+                          onClick={() => onDelete(activity)}
                         >
                           <FiTrash2 size={16} />
                         </IconButton>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { toaster } from '../components/ui/toaster';
+import { ConfirmDialog } from '../components/common';
 import { useAccountMode } from '@/contexts/AccountModeContext';
 import { ActivityStatsCards } from '../components/activities/ActivityStatsCards';
 import { ActivityFiltersBar } from '../components/activities/ActivityFiltersBar';
@@ -53,6 +54,14 @@ export const ActivitiesPage = () => {
   const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isTelegramDialogOpen, setIsTelegramDialogOpen] = useState(false);
+  
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState<Activity | null>(null);
+  
+  // Bulk delete dialog state
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [activitiesToBulkDelete, setActivitiesToBulkDelete] = useState<number[]>([]);
 
   // Load activities
   const loadActivities = async () => {
@@ -225,11 +234,16 @@ export const ActivitiesPage = () => {
     }
   };
 
-  const handleDeleteActivity = async (activityId: number) => {
-    if (!confirm('Are you sure you want to delete this activity?')) return;
+  const handleDeleteActivity = (activity: Activity) => {
+    setActivityToDelete(activity);
+    setDeleteDialogOpen(true);
+  };
+  
+  const confirmDelete = async () => {
+    if (!activityToDelete) return;
 
     try {
-      await activityService.delete(activityId);
+      await activityService.delete(activityToDelete.id);
       
       toaster.create({
         title: 'Activity deleted',
@@ -238,6 +252,8 @@ export const ActivitiesPage = () => {
         duration: 2000,
       });
 
+      setDeleteDialogOpen(false);
+      setActivityToDelete(null);
       loadActivities();
       loadStats();
     } catch (error) {
@@ -249,9 +265,53 @@ export const ActivitiesPage = () => {
       });
     }
   };
+  
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setActivityToDelete(null);
+  };
 
   const handleViewActivity = (activity: Activity) => {
     navigate(`/activities/${activity.id}`);
+  };
+  
+  const handleBulkDelete = (activityIds: number[]) => {
+    if (activityIds.length === 0) return;
+    setActivitiesToBulkDelete(activityIds);
+    setBulkDeleteDialogOpen(true);
+  };
+  
+  const confirmBulkDelete = async () => {
+    try {
+      // Delete activities in parallel
+      await Promise.all(
+        activitiesToBulkDelete.map(id => activityService.delete(id))
+      );
+      
+      toaster.create({
+        title: 'Activities deleted',
+        description: `${activitiesToBulkDelete.length} activity(ies) have been removed.`,
+        type: 'success',
+        duration: 2000,
+      });
+      
+      setBulkDeleteDialogOpen(false);
+      setActivitiesToBulkDelete([]);
+      loadActivities();
+      loadStats();
+    } catch (error) {
+      toaster.create({
+        title: 'Error deleting activities',
+        description: 'Failed to delete activities. Please try again.',
+        type: 'error',
+        duration: 3000,
+      });
+    }
+  };
+  
+  const closeBulkDeleteDialog = () => {
+    setBulkDeleteDialogOpen(false);
+    setActivitiesToBulkDelete([]);
   };
 
   return (
@@ -296,6 +356,7 @@ export const ActivitiesPage = () => {
               onView={handleViewActivity}
               onMarkComplete={handleMarkComplete}
               onDelete={handleDeleteActivity}
+              onBulkDelete={handleBulkDelete}
             />
           </>
         )}
@@ -328,6 +389,36 @@ export const ActivitiesPage = () => {
         open={isTelegramDialogOpen}
         onClose={() => setIsTelegramDialogOpen(false)}
         onSubmit={handleSendTelegram}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialogOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={confirmDelete}
+        title="Delete Activity"
+        message={
+          activityToDelete
+            ? `Are you sure you want to delete "${activityToDelete.title}"? This action cannot be undone.`
+            : 'Are you sure you want to delete this activity?'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={false}
+      />
+      
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={bulkDeleteDialogOpen}
+        onClose={closeBulkDeleteDialog}
+        onConfirm={confirmBulkDelete}
+        title="Delete Multiple Activities"
+        message={`Are you sure you want to delete ${activitiesToBulkDelete.length} activity(ies)? This action cannot be undone.`}
+        confirmText="Delete All"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={false}
       />
     </DashboardLayout>
   );

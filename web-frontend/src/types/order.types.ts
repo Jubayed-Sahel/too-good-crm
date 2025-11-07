@@ -73,6 +73,7 @@ export interface OrderFilters {
   order_type?: OrderType;
   status?: OrderStatus;
   assigned_to?: number;
+  organization?: number;
   search?: string;
   ordering?: string;
   page?: number;

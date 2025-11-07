@@ -11,6 +11,8 @@ from .auth import (
     LogoutViewSet,
     ChangePasswordViewSet,
 )
+from .role_selection import RoleSelectionViewSet
+from .employee_invitation import EmployeeInvitationViewSet
 
 # RBAC (Role-Based Access Control)
 from .rbac import (
@@ -58,6 +60,8 @@ __all__ = [
     'LoginViewSet',
     'LogoutViewSet',
     'ChangePasswordViewSet',
+    'RoleSelectionViewSet',
+    'EmployeeInvitationViewSet',
     
     # RBAC
     'PermissionViewSet',

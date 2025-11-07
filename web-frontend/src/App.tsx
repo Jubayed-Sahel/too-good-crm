@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AccountModeProvider } from './contexts/AccountModeContext'
+import { PermissionProvider } from './contexts/PermissionContext'
+import { ProtectedRoute } from './components/auth'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardPage from './pages/DashboardPage'
@@ -32,47 +34,241 @@ import './App.css'
 
 function App() {
   return (
-    <AccountModeProvider>
-      <Router>
-        <Routes>
+    <Router>
+      <AccountModeProvider>
+        <PermissionProvider>
+          <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/customers" element={<CustomersPage />} />
-          <Route path="/customers/:id" element={<CustomerDetailPage />} />
-          <Route path="/customers/:id/edit" element={<EditCustomerPage />} />
-          <Route path="/sales" element={<SalesPage />} />
-          <Route path="/deals" element={<DealsPage />} />
-          <Route path="/deals/:id" element={<DealDetailPage />} />
-          <Route path="/deals/:id/edit" element={<EditDealPage />} />
-          <Route path="/leads" element={<LeadsPage />} />
-          <Route path="/leads/:id" element={<LeadDetailPage />} />
-          <Route path="/leads/:id/edit" element={<EditLeadPage />} />
-          <Route path="/activities" element={<ActivitiesPage />} />
-          <Route path="/activities/:id" element={<ActivityDetailPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/employees" element={<EmployeesPage />} />
-          <Route path="/employees/:id" element={<EmployeeDetailPage />} />
-          <Route path="/employees/:id/edit" element={<EditEmployeePage />} />
-          <Route path="/settings" element={<SettingsPage />} />
+          
+          {/* CRM Routes - Accessible by Vendor and Employee profiles */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customers"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <CustomersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customers/:id"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <CustomerDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/customers/:id/edit"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <EditCustomerPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/sales"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <SalesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/deals"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <DealsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/deals/:id"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <DealDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/deals/:id/edit"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <EditDealPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leads"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <LeadsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leads/:id"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <LeadDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/leads/:id/edit"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <EditLeadPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/activities"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <ActivitiesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/activities/:id"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <ActivityDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <AnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employees"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <EmployeesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employees/:id"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <EmployeeDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employees/:id/edit"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <EditEmployeePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* Client Routes */}
-          <Route path="/client/dashboard" element={<ClientDashboardPage />} />
-          <Route path="/client/vendors" element={<ClientVendorsPage />} />
-          <Route path="/client/orders" element={<ClientOrdersPage />} />
-          <Route path="/client/orders/:id" element={<ClientOrderDetailPage />} />
-          <Route path="/client/payments" element={<ClientPaymentsPage />} />
-          <Route path="/client/activities" element={<ActivitiesPage />} />
-          <Route path="/client/issues" element={<ClientIssuesPage />} />
-          <Route path="/client/issues/:id" element={<ClientIssueDetailPage />} />
-          <Route path="/client/settings" element={<ClientSettingsPage />} />
+          {/* Client/Customer Routes - Only for Customer profile */}
+          <Route
+            path="/client/dashboard"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ClientDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/vendors"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ClientVendorsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/orders"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ClientOrdersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/orders/:id"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ClientOrderDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/payments"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ClientPaymentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/activities"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ActivitiesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/issues"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ClientIssuesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/issues/:id"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ClientIssueDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/settings"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ClientSettingsPage />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
-      </Router>
-    </AccountModeProvider>
+        </PermissionProvider>
+      </AccountModeProvider>
+    </Router>
   )
 }
 
 export default App
+
 
 

@@ -13,7 +13,6 @@ import { Toaster, toaster } from "../ui/toaster";
 import { Field } from "../ui/field";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { useAuth } from "@/hooks";
-import { ROUTES } from "@/config/constants";
 import type { LoginCredentials } from "@/types";
 
 const LoginForm = () => {
@@ -42,6 +41,7 @@ const LoginForm = () => {
 
     try {
       await login(formData);
+      
       toaster.create({
         title: "Success",
         description: "Login successful!",
@@ -201,7 +201,7 @@ const LoginForm = () => {
             <Text textAlign="center" fontSize="sm">
               Don't have an account?{" "}
               <Link asChild color="purple.600" fontWeight="semibold">
-                <RouterLink to={ROUTES.SIGNUP}>Sign up</RouterLink>
+                <RouterLink to="/signup">Sign up</RouterLink>
               </Link>
             </Text>
           </VStack>

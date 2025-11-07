@@ -70,6 +70,7 @@ export interface PaymentFilters {
   payment_type?: PaymentType;
   payment_method?: PaymentMethod;
   status?: PaymentStatus;
+  organization?: number;
   search?: string;
   ordering?: string;
   page?: number;

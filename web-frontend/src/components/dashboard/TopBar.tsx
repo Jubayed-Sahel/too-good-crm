@@ -1,6 +1,5 @@
 import { Box, Flex, IconButton, Text, HStack } from '@chakra-ui/react';
 import { FiMenu } from 'react-icons/fi';
-import { ModeSwitcher } from '../common';
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -52,9 +51,6 @@ const TopBar = ({ onMenuClick, title = 'Dashboard' }: TopBarProps) => {
             {title}
           </Text>
         </HStack>
-
-        {/* Right: Mode Switcher */}
-        <ModeSwitcher />
       </Flex>
     </Box>
   );

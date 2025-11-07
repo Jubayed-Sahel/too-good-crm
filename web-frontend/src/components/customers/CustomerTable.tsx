@@ -58,10 +58,8 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBu
 
   const handleBulkDelete = () => {
     if (selectedIds.length === 0) return;
-    if (confirm(`Are you sure you want to delete ${selectedIds.length} customer(s)?`)) {
-      onBulkDelete?.(selectedIds);
-      setSelectedIds([]);
-    }
+    onBulkDelete?.(selectedIds);
+    setSelectedIds([]);
   };
 
   const handleBulkExport = () => {

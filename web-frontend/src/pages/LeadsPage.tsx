@@ -8,6 +8,7 @@ import {
   LeadsTable, 
   CreateLeadDialog 
 } from '../components/leads';
+import { ConfirmDialog } from '../components/common';
 import { 
   useLeads, 
   useLeadStats, 
@@ -21,6 +22,14 @@ export const LeadsPage = () => {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<LeadFiltersType>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  
+  // Delete dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  
+  // Bulk delete dialog state
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [leadsToBulkDelete, setLeadsToBulkDelete] = useState<string[]>([]);
 
   // Queries
   const { data, isLoading: leadsLoading, error } = useLeads(filters);
@@ -50,15 +59,22 @@ export const LeadsPage = () => {
     });
   };
 
-  const handleDeleteLead = (leadId: number) => {
-    if (!confirm('Are you sure you want to delete this lead?')) return;
+  const handleDeleteLead = (lead: Lead) => {
+    setLeadToDelete(lead);
+    setDeleteDialogOpen(true);
+  };
+  
+  const confirmDeleteLead = () => {
+    if (!leadToDelete) return;
 
-    deleteLead.mutate(leadId, {
+    deleteLead.mutate(leadToDelete.id, {
       onSuccess: () => {
         toaster.create({
           title: 'Lead deleted successfully',
           type: 'success',
         });
+        setDeleteDialogOpen(false);
+        setLeadToDelete(null);
       },
       onError: () => {
         toaster.create({
@@ -68,6 +84,11 @@ export const LeadsPage = () => {
         });
       },
     });
+  };
+  
+  const closeDeleteDialog = () => {
+    setDeleteDialogOpen(false);
+    setLeadToDelete(null);
   };
 
   const handleConvertLead = (_lead: Lead) => {
@@ -93,6 +114,48 @@ export const LeadsPage = () => {
 
   const handleAddLead = () => {
     setIsCreateDialogOpen(true);
+  };
+  
+  const handleBulkDelete = (leadIds: string[]) => {
+    if (leadIds.length === 0) return;
+    setLeadsToBulkDelete(leadIds);
+    setBulkDeleteDialogOpen(true);
+  };
+  
+  const confirmBulkDelete = async () => {
+    try {
+      // Delete leads in parallel
+      await Promise.all(
+        leadsToBulkDelete.map(id => 
+          new Promise((resolve, reject) => {
+            deleteLead.mutate(parseInt(id), {
+              onSuccess: resolve,
+              onError: reject,
+            });
+          })
+        )
+      );
+      
+      toaster.create({
+        title: 'Leads deleted successfully',
+        description: `${leadsToBulkDelete.length} lead(s) have been removed.`,
+        type: 'success',
+      });
+      
+      setBulkDeleteDialogOpen(false);
+      setLeadsToBulkDelete([]);
+    } catch (error) {
+      toaster.create({
+        title: 'Failed to delete leads',
+        description: 'Please try again.',
+        type: 'error',
+      });
+    }
+  };
+  
+  const closeBulkDeleteDialog = () => {
+    setBulkDeleteDialogOpen(false);
+    setLeadsToBulkDelete([]);
   };
 
   if (error) {
@@ -152,6 +215,7 @@ export const LeadsPage = () => {
                 onEdit={handleEditLead}
                 onDelete={handleDeleteLead}
                 onConvert={handleConvertLead}
+                onBulkDelete={handleBulkDelete}
               />
             ) : (
               <Box
@@ -181,6 +245,36 @@ export const LeadsPage = () => {
         onClose={() => setIsCreateDialogOpen(false)}
         onSubmit={handleCreateLead}
         isLoading={createLead.isPending}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialogOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={confirmDeleteLead}
+        title="Delete Lead"
+        message={
+          leadToDelete
+            ? `Are you sure you want to delete lead "${leadToDelete.name || leadToDelete.email}"? This action cannot be undone.`
+            : 'Are you sure you want to delete this lead?'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={deleteLead.isPending}
+      />
+      
+      {/* Bulk Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={bulkDeleteDialogOpen}
+        onClose={closeBulkDeleteDialog}
+        onConfirm={confirmBulkDelete}
+        title="Delete Multiple Leads"
+        message={`Are you sure you want to delete ${leadsToBulkDelete.length} lead(s)? This action cannot be undone.`}
+        confirmText="Delete All"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={deleteLead.isPending}
       />
     </DashboardLayout>
   );

@@ -108,7 +108,7 @@ const CustomSelect = ({
             left={buttonRef.current?.getBoundingClientRect().left}
             top={(buttonRef.current?.getBoundingClientRect().bottom ?? 0) + 4}
             width={buttonRef.current?.getBoundingClientRect().width}
-            zIndex={1500}
+            zIndex={2000}
             bg="white"
             borderRadius="md"
             borderWidth="1px"
@@ -117,6 +117,7 @@ const CustomSelect = ({
             maxH="300px"
             overflowY="auto"
             py={1}
+            pointerEvents="auto"
           >
             <VStack gap={0} align="stretch">
               {options.map((option) => {
@@ -137,7 +138,16 @@ const CustomSelect = ({
                     _hover={{
                       bg: isSelected ? `${accentColor}.100` : 'gray.50',
                     }}
-                    onClick={() => handleSelect(option.value)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Option clicked:', option.value, option.label);
+                      handleSelect(option.value);
+                    }}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
                     transition="all 0.15s"
                   >
                     <Text>{option.label}</Text>
