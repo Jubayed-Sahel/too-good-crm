@@ -63,5 +63,6 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.google.android.material:material:1.11.0")
 
 }
