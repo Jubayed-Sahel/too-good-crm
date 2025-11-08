@@ -1,16 +1,20 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { IssueStats, IssueFilters, IssuesTable, CreateIssueDialog } from '../components/client-issues';
+import { IssueStats, IssueFilters, IssuesTable, ClientRaiseIssueModal } from '../components/client-issues';
 import { ErrorState } from '../components/common';
-import type { Issue as ComponentIssue, CreateIssueData as ComponentCreateIssueData } from '../components/client-issues';
-import { useIssues, useIssueStats, useIssueMutations } from '../hooks/useIssues';
-import type { Issue as BackendIssue, IssuePriority } from '../types';
+import type { Issue as ComponentIssue } from '../components/client-issues';
+import { useIssues, useIssueStats } from '../hooks/useIssues';
+import { issueService } from '../services/issue.service';
+import type { Issue as BackendIssue, IssuePriority, ClientRaiseIssueData } from '../types';
+import { toaster } from '../components/ui/toaster';
 
 const ClientIssuesPage = () => {
   const navigate = useNavigate();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const [isRaiseModalOpen, setIsRaiseModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -46,8 +50,52 @@ const ClientIssuesPage = () => {
   // Fetch stats from backend
   const { data: statsData } = useIssueStats();
 
-  // Mutations
-  const { createIssue, deleteIssue, resolveIssue } = useIssueMutations();
+  // Raise issue mutation
+  const raiseIssueMutation = useMutation({
+    mutationFn: (data: ClientRaiseIssueData) => issueService.clientRaise(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['issueStats'] });
+      toaster.create({
+        title: 'Issue Raised',
+        description: 'Your issue has been successfully submitted to the organization.',
+        type: 'success',
+        duration: 5000,
+      });
+      setIsRaiseModalOpen(false);
+    },
+    onError: (error: any) => {
+      toaster.create({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to raise issue. Please try again.',
+        type: 'error',
+        duration: 5000,
+      });
+    },
+  });
+
+  // Delete mutation
+  const deleteIssueMutation = useMutation({
+    mutationFn: (id: number) => issueService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      queryClient.invalidateQueries({ queryKey: ['issueStats'] });
+      toaster.create({
+        title: 'Issue Deleted',
+        description: 'Issue has been successfully deleted.',
+        type: 'success',
+        duration: 3000,
+      });
+    },
+    onError: (error: any) => {
+      toaster.create({
+        title: 'Error',
+        description: error.response?.data?.error || 'Failed to delete issue.',
+        type: 'error',
+        duration: 3000,
+      });
+    },
+  });
 
   // Calculate stats from backend data or use default
   const stats = useMemo(() => {
@@ -72,30 +120,12 @@ const ClientIssuesPage = () => {
     navigate(`/client/issues/${issue.id}`);
   };
 
-  const handleResolve = (issueId: string) => {
-    resolveIssue.mutate(Number(issueId));
-  };
-
   const handleDelete = (issueId: string) => {
-    deleteIssue.mutate(Number(issueId));
+    deleteIssueMutation.mutate(Number(issueId));
   };
 
-  const handleSubmit = (data: ComponentCreateIssueData) => {
-    // Map component data to backend format
-    const backendData = {
-      title: data.title,
-      description: data.description,
-      priority: data.priority === 'urgent' ? 'critical' : data.priority as IssuePriority,
-      category: data.category as any,
-      status: 'open' as any, // New issues start as open
-      order: data.orderNumber ? Number(data.orderNumber) : undefined,
-    };
-
-    createIssue.mutate(backendData, {
-      onSuccess: () => {
-        setIsCreateDialogOpen(false);
-      },
-    });
+  const handleRaiseIssue = (data: ClientRaiseIssueData) => {
+    raiseIssueMutation.mutate(data);
   };
 
   // Error state
@@ -140,7 +170,7 @@ const ClientIssuesPage = () => {
           onStatusChange={setStatusFilter}
           priorityFilter={priorityFilter}
           onPriorityChange={setPriorityFilter}
-          onCreateIssue={() => setIsCreateDialogOpen(true)}
+          onCreateIssue={() => setIsRaiseModalOpen(true)}
         />
 
         {/* Loading State */}
@@ -154,7 +184,6 @@ const ClientIssuesPage = () => {
             <IssuesTable
               issues={issues}
               onView={handleView}
-              onComplete={handleResolve}
               onDelete={handleDelete}
             />
 
@@ -164,15 +193,18 @@ const ClientIssuesPage = () => {
                 <Text color="gray.500" fontSize="lg">
                   No issues found matching your filters
                 </Text>
+                <Text color="gray.400" fontSize="sm" mt={2}>
+                  Click "Raise Issue" to report a problem to an organization
+                </Text>
               </Box>
             )}
 
-            {/* Create Issue Dialog */}
-            <CreateIssueDialog
-              isOpen={isCreateDialogOpen}
-              onClose={() => setIsCreateDialogOpen(false)}
-              onSubmit={handleSubmit}
-              isLoading={createIssue.isPending}
+            {/* Raise Issue Modal */}
+            <ClientRaiseIssueModal
+              isOpen={isRaiseModalOpen}
+              onClose={() => setIsRaiseModalOpen(false)}
+              onSubmit={handleRaiseIssue}
+              isLoading={raiseIssueMutation.isPending}
             />
           </>
         )}
