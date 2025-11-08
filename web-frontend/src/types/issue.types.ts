@@ -21,12 +21,19 @@ export interface Issue {
   order?: number | null;
   order_number?: string;
   organization: number;
+  organization_name?: string;
   assigned_to?: number | null;
   assigned_to_name?: string;
   created_by: number;
   resolved_by?: number | null;
+  is_client_issue: boolean;
+  raised_by_customer?: number | null;
+  raised_by_customer_name?: string;
   created_at: string;
   updated_at: string;
+  linear_issue_id?: string;
+  linear_issue_url?: string;
+  synced_to_linear?: boolean;
 }
 
 export interface CreateIssueData {
@@ -38,6 +45,19 @@ export interface CreateIssueData {
   vendor?: number | null;
   order?: number | null;
   assigned_to?: number | null;
+  organization?: number;
+  is_client_issue?: boolean;
+  raised_by_customer?: number | null;
+}
+
+export interface ClientRaiseIssueData {
+  organization: number;
+  title: string;
+  description: string;
+  priority: IssuePriority;
+  category: IssueCategory;
+  vendor?: number | null;
+  order?: number | null;
 }
 
 export interface UpdateIssueData extends Partial<CreateIssueData> {}

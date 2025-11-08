@@ -95,6 +95,20 @@ class Issue(TimestampedModel, CodeMixin):
         related_name='created_issues'
     )
     
+    # Client-raised issues
+    raised_by_customer = models.ForeignKey(
+        'Customer',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='raised_issues',
+        help_text='Customer who raised this issue (for client-raised issues)'
+    )
+    is_client_issue = models.BooleanField(
+        default=False,
+        help_text='True if this issue was raised by a client/customer'
+    )
+    
     # Resolution tracking
     resolved_at = models.DateTimeField(null=True, blank=True)
     resolved_by = models.ForeignKey(

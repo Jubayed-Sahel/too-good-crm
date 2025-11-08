@@ -13,6 +13,8 @@ class IssueListSerializer(serializers.ModelSerializer):
     vendor_name = serializers.SerializerMethodField()
     order_number = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
+    raised_by_customer_name = serializers.SerializerMethodField()
+    organization_name = serializers.CharField(source='organization.name', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
@@ -24,6 +26,8 @@ class IssueListSerializer(serializers.ModelSerializer):
             'vendor', 'vendor_name', 'order', 'order_number',
             'priority', 'priority_display', 'category', 'category_display',
             'status', 'status_display', 'assigned_to', 'assigned_to_name',
+            'is_client_issue', 'raised_by_customer', 'raised_by_customer_name',
+            'organization', 'organization_name',
             'created_at', 'updated_at', 'resolved_at'
         ]
     
@@ -35,6 +39,11 @@ class IssueListSerializer(serializers.ModelSerializer):
     
     def get_assigned_to_name(self, obj):
         return obj.assigned_to.full_name if obj.assigned_to else None
+    
+    def get_raised_by_customer_name(self, obj):
+        if obj.raised_by_customer:
+            return f"{obj.raised_by_customer.first_name} {obj.raised_by_customer.last_name}".strip()
+        return None
 
 
 class IssueSerializer(serializers.ModelSerializer):
@@ -65,6 +74,8 @@ class IssueSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     resolved_by = EmployeeListSerializer(read_only=True)
+    raised_by_customer_name = serializers.SerializerMethodField()
+    organization_name = serializers.CharField(source='organization.name', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
@@ -72,7 +83,7 @@ class IssueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Issue
         fields = [
-            'id', 'organization', 'code', 'issue_number',
+            'id', 'organization', 'organization_name', 'code', 'issue_number',
             'title', 'description',
             'vendor', 'vendor_id', 'order', 'order_id',
             'priority', 'priority_display',
@@ -80,9 +91,16 @@ class IssueSerializer(serializers.ModelSerializer):
             'status', 'status_display',
             'assigned_to', 'assigned_to_id',
             'resolved_at', 'resolved_by', 'resolution_notes',
-            'created_by', 'created_at', 'updated_at'
+            'is_client_issue', 'raised_by_customer', 'raised_by_customer_name',
+            'created_by', 'created_at', 'updated_at',
+            'linear_issue_id', 'linear_issue_url', 'synced_to_linear'
         ]
         read_only_fields = ['id', 'code', 'issue_number', 'organization', 'created_by', 'created_at', 'updated_at', 'resolved_by']
+    
+    def get_raised_by_customer_name(self, obj):
+        if obj.raised_by_customer:
+            return f"{obj.raised_by_customer.first_name} {obj.raised_by_customer.last_name}".strip()
+        return None
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -102,14 +120,22 @@ class IssueCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Issue
         fields = [
-            'title', 'description', 'vendor', 'order',
-            'priority', 'category', 'status', 'assigned_to'
+            'title', 'description', 'vendor', 'order', 'organization',
+            'priority', 'category', 'status', 'assigned_to',
+            'raised_by_customer', 'is_client_issue'
         ]
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Organization field is already defined in the model
+        # No need to override queryset here
     
     def create(self, validated_data):
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
-            validated_data['organization'] = getattr(request.user, 'current_organization')
+            # If organization not provided, use user's current organization
+            if 'organization' not in validated_data:
+                validated_data['organization'] = getattr(request.user, 'current_organization')
             validated_data['created_by'] = request.user
         return super().create(validated_data)
 
