@@ -32,7 +32,7 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const { isClientMode } = useAccountMode();
-  const { canAccess, isVendor } = usePermissions();
+  const { canAccess, isVendor, isLoading: permissionsLoading } = usePermissions();
   const { logout, switchRole } = useAuth();
   const { profiles, activeProfile } = useProfile();
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
@@ -108,6 +108,11 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const menuItems = useMemo(() => {
     const items = isClientMode ? clientMenuItems : vendorMenuItems;
     
+    // If permissions are still loading, return empty array to avoid flicker
+    if (permissionsLoading) {
+      return [];
+    }
+    
     // If vendor, show all items
     if (isVendor) {
       return items;
@@ -115,7 +120,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     
     // Filter based on permissions
     return items.filter(item => canAccess(item.resource));
-  }, [isClientMode, isVendor, canAccess]);
+  }, [isClientMode, isVendor, canAccess, permissionsLoading]);
 
   // Check if user has multiple profiles (memoized)
   const hasMultipleProfiles = useMemo(() => 

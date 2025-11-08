@@ -187,9 +187,17 @@ class RBACService {
    * Get all user role assignments
    */
   async getUserRoles(filters?: { user_id?: number; role_id?: number }): Promise<UserRole[]> {
-    return api.get<UserRole[]>('/user-roles/', {
+    const response = await api.get<{ results: UserRole[] } | UserRole[]>('/user-roles/', {
       params: filters,
     });
+    
+    // Handle paginated response from Django REST Framework
+    if (response && typeof response === 'object' && 'results' in response) {
+      return response.results;
+    }
+    
+    // Handle direct array response
+    return response as UserRole[];
   }
 
   /**
@@ -327,14 +335,20 @@ class RBACService {
   /**
    * Get user permissions (for useRBAC hook)
    */
-  async getUserPermissions(userId: number, _organizationId?: number): Promise<UserPermissions> {
-    // Get user's roles
+  async getUserPermissions(userId: number, organizationId?: number): Promise<UserPermissions> {
+    // Get user's roles - filter by organization if provided
     const userRoles = await this.getUserRoles({ user_id: userId });
-    const roles = userRoles.map(ur => typeof ur.role === 'object' ? ur.role : { id: ur.role } as Role);
+    
+    // Filter by organization if provided
+    const filteredRoles = organizationId 
+      ? userRoles.filter(ur => ur.organization === organizationId)
+      : userRoles;
+    
+    const roles = filteredRoles.map(ur => typeof ur.role === 'object' ? ur.role : { id: ur.role } as Role);
     
     // Get all permissions from those roles
     const permissions: Permission[] = [];
-    for (const ur of userRoles) {
+    for (const ur of filteredRoles) {
       const roleId = typeof ur.role === 'object' ? ur.role.id : ur.role;
       const rolePerms = await this.getRolePermissions(roleId);
       permissions.push(...rolePerms);
@@ -344,6 +358,8 @@ class RBACService {
     const uniquePermissions = permissions.filter((perm, index, self) =>
       index === self.findIndex((p) => p.id === perm.id)
     );
+    
+    console.log('[rbacService] Final unique permissions:', uniquePermissions);
     
     return {
       permissions: uniquePermissions,
