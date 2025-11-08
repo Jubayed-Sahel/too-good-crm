@@ -42,6 +42,10 @@ from crmApp.viewsets import (
     AnalyticsViewSet,
 )
 
+# Import issue action views
+from crmApp.views.issue_actions import RaiseIssueView, ResolveIssueView
+from crmApp.views.linear_webhook import LinearWebhookView
+
 # Create router
 router = DefaultRouter()
 
@@ -88,5 +92,11 @@ router.register(r'analytics', AnalyticsViewSet, basename='analytics')
 
 # URL patterns
 urlpatterns = [
+    # Dedicated issue action endpoints (MUST come BEFORE router.urls)
+    path('api/issues/raise/', RaiseIssueView.as_view(), name='issue-raise'),
+    path('api/issues/resolve/<int:issue_id>/', ResolveIssueView.as_view(), name='issue-resolve'),
+    # Linear webhook endpoint
+    path('api/webhooks/linear/', LinearWebhookView.as_view(), name='linear-webhook'),
+    # Router URLs (catch-all, must be last)
     path('api/', include(router.urls)),
 ]
