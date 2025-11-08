@@ -48,7 +48,8 @@ export interface InviteEmployeeRequest {
 export interface InviteEmployeeResponse {
   message: string;
   employee: Employee;
-  temporary_password: string;
+  temporary_password?: string;  // Only present for new users
+  user_created: boolean;  // True if new user was created, false if existing user
   note: string;
 }
 

@@ -73,8 +73,8 @@ export const activityService = {
   /**
    * Get activity statistics
    */
-  getStats: async (): Promise<ActivityStats> => {
-    return api.get<ActivityStats>('/activities/stats/');
+  getStats: async (filters?: { organization?: number }): Promise<ActivityStats> => {
+    return api.get<ActivityStats>('/activities/stats/', { params: filters });
   },
 
   /**

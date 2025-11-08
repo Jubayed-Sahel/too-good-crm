@@ -6,18 +6,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueService } from '../services';
 import { toaster } from '../components/ui/toaster';
-import { useAuth } from './useAuth';
+import { useProfile } from '@/contexts/ProfileContext';
 import type { CreateIssueData, UpdateIssueData, IssueFilters } from '../types';
 
 const ISSUES_QUERY_KEY = 'issues';
 
 export const useIssues = (filters?: IssueFilters) => {
-  const { user } = useAuth();
-  const organizationId = user?.primaryOrganizationId;
+  const { activeOrganizationId } = useProfile();
+  const organizationId = activeOrganizationId;
 
   const queryFilters: IssueFilters = {
     ...filters,
-    organization: organizationId,
+    organization: organizationId || undefined,
   };
 
   return useQuery({
@@ -36,12 +36,12 @@ export const useIssue = (id: number) => {
 };
 
 export const useIssueStats = (filters?: IssueFilters) => {
-  const { user } = useAuth();
-  const organizationId = user?.primaryOrganizationId;
+  const { activeOrganizationId } = useProfile();
+  const organizationId = activeOrganizationId;
 
   const queryFilters: IssueFilters = {
     ...filters,
-    organization: organizationId,
+    organization: organizationId || undefined,
   };
 
   return useQuery({

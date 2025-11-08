@@ -22,6 +22,8 @@ from crmApp.viewsets import (
     PermissionViewSet,
     RoleViewSet,
     UserRoleViewSet,
+    # User Context
+    UserContextViewSet,
     # CRM
     EmployeeViewSet,
     VendorViewSet,
@@ -61,6 +63,9 @@ router.register(r'user-organizations', UserOrganizationViewSet, basename='user-o
 router.register(r'permissions', PermissionViewSet, basename='permission')
 router.register(r'roles', RoleViewSet, basename='role')
 router.register(r'user-roles', UserRoleViewSet, basename='user-role')
+
+# User Context endpoints
+router.register(r'user-context', UserContextViewSet, basename='user-context')
 
 # CRM endpoints
 router.register(r'employees', EmployeeViewSet, basename='employee')

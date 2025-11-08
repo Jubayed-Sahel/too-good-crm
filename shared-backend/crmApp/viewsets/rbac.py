@@ -34,7 +34,14 @@ class PermissionViewSet(viewsets.ModelViewSet):
             is_active=True
         ).values_list('organization_id', flat=True)
         
-        return Permission.objects.filter(organization_id__in=user_orgs)
+        # Debug logging
+        print(f"[DEBUG] User: {self.request.user.email}")
+        print(f"[DEBUG] User organizations: {list(user_orgs)}")
+        
+        permissions = Permission.objects.filter(organization_id__in=user_orgs)
+        print(f"[DEBUG] Found {permissions.count()} permissions")
+        
+        return permissions
     
     def perform_create(self, serializer):
         """Ensure permission is created for user's organization"""
@@ -87,6 +94,111 @@ class PermissionViewSet(viewsets.ModelViewSet):
         resource = request.query_params.get('resource')
         actions = RBACService.get_available_actions(user_org.organization, resource)
         return Response({'actions': actions})
+    
+    @action(detail=False, methods=['get'])
+    def debug_context(self, request):
+        """Debug endpoint to check user's organization context and permissions"""
+        from crmApp.models import UserOrganization
+        
+        user = request.user
+        user_orgs = UserOrganization.objects.filter(user=user).select_related('organization')
+        
+        debug_info = {
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'full_name': user.full_name,
+            },
+            'organizations': [],
+            'permissions_count': 0,
+            'sample_permissions': []
+        }
+        
+        for uo in user_orgs:
+            org_perms = Permission.objects.filter(organization=uo.organization)
+            debug_info['organizations'].append({
+                'id': uo.organization.id,
+                'name': uo.organization.name,
+                'slug': uo.organization.slug,
+                'is_active': uo.is_active,
+                'is_owner': uo.is_owner,
+                'permissions_count': org_perms.count(),
+            })
+        
+        # Get active organizations
+        active_orgs = user_orgs.filter(is_active=True)
+        if active_orgs.exists():
+            active_org_ids = [uo.organization_id for uo in active_orgs]
+            all_perms = Permission.objects.filter(organization_id__in=active_org_ids)
+            debug_info['permissions_count'] = all_perms.count()
+            
+            # Get sample permissions
+            sample = all_perms[:10]
+            debug_info['sample_permissions'] = [
+                {
+                    'id': p.id,
+                    'resource': p.resource,
+                    'action': p.action,
+                    'description': p.description,
+                    'organization_id': p.organization_id,
+                }
+                for p in sample
+            ]
+        
+        return Response(debug_info)
+    
+    @action(detail=False, methods=['post'])
+    def fix_missing_permissions(self, request):
+        """Create missing default permissions for user's organizations"""
+        from crmApp.models import UserOrganization, Organization
+        from crmApp.serializers.organization import OrganizationCreateSerializer
+        
+        user = request.user
+        user_orgs = UserOrganization.objects.filter(
+            user=user,
+            is_active=True
+        ).select_related('organization')
+        
+        if not user_orgs.exists():
+            return Response(
+                {'error': 'No active organization found'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        results = []
+        total_created = 0
+        
+        for uo in user_orgs:
+            org = uo.organization
+            existing_count = Permission.objects.filter(organization=org).count()
+            
+            if existing_count == 0:
+                # Create default permissions
+                serializer = OrganizationCreateSerializer()
+                serializer._create_default_permissions(org)
+                
+                new_count = Permission.objects.filter(organization=org).count()
+                total_created += new_count
+                
+                results.append({
+                    'organization_id': org.id,
+                    'organization_name': org.name,
+                    'permissions_created': new_count,
+                    'status': 'created'
+                })
+            else:
+                results.append({
+                    'organization_id': org.id,
+                    'organization_name': org.name,
+                    'existing_permissions': existing_count,
+                    'status': 'skipped'
+                })
+        
+        return Response({
+            'message': f'Successfully created {total_created} permissions',
+            'total_created': total_created,
+            'organizations': results
+        })
 
 
 class RoleViewSet(viewsets.ModelViewSet):

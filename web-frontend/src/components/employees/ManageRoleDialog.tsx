@@ -24,7 +24,7 @@ import { Field } from '@/components/ui/field';
 import CustomSelect from '@/components/ui/CustomSelect';
 import { Toaster, toaster } from '@/components/ui/toaster';
 import { roleService, employeeService, type Employee, type Role } from '@/services';
-import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/contexts/ProfileContext';
 
 interface ManageRoleDialogProps {
   isOpen: boolean;
@@ -39,7 +39,7 @@ export const ManageRoleDialog = ({
   employee,
   onSuccess 
 }: ManageRoleDialogProps) => {
-  const { user } = useAuth();
+  const { activeOrganizationId } = useProfile();
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingRoles, setIsFetchingRoles] = useState(false);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -60,7 +60,7 @@ export const ManageRoleDialog = ({
   const fetchRoles = async () => {
     setIsFetchingRoles(true);
     try {
-      const organizationId = user?.primaryOrganizationId;
+      const organizationId = activeOrganizationId;
       
       const filters: any = { is_active: true };
       if (organizationId) {
@@ -102,9 +102,16 @@ export const ManageRoleDialog = ({
     setIsLoading(true);
 
     try {
-      await employeeService.updateEmployee(employee.id, {
+      console.log('🔄 Updating employee role:', {
+        employeeId: employee.id,
+        roleId: parseInt(selectedRoleId)
+      });
+      
+      const updatedEmployee = await employeeService.updateEmployee(employee.id, {
         role: parseInt(selectedRoleId),
       });
+      
+      console.log('✅ Employee updated:', updatedEmployee);
 
       toaster.create({
         title: 'Role Updated',
@@ -116,6 +123,7 @@ export const ManageRoleDialog = ({
       onSuccess?.();
       handleClose();
     } catch (error: any) {
+      console.error('❌ Error updating role:', error);
       toaster.create({
         title: 'Update Failed',
         description: error.message || 'Failed to update employee role',

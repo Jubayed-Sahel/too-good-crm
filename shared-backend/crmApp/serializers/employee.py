@@ -11,12 +11,13 @@ class EmployeeListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for employee lists"""
     full_name = serializers.SerializerMethodField()
     manager_name = serializers.SerializerMethodField()
+    role_name = serializers.CharField(source='role.name', read_only=True)
     
     class Meta:
         model = Employee
         fields = [
             'id', 'code', 'full_name', 'email', 'phone',
-            'department', 'job_title', 'status', 'manager_name'
+            'department', 'job_title', 'role', 'role_name', 'status', 'manager_name'
         ]
     
     def get_full_name(self, obj):
@@ -55,6 +56,40 @@ class EmployeeSerializer(serializers.ModelSerializer):
     
     def get_full_name(self, obj):
         return obj.full_name
+    
+    def update(self, instance, validated_data):
+        """Override update to handle role assignment properly"""
+        print(f"📝 EmployeeSerializer.update called with validated_data: {validated_data}")
+        
+        # Handle role field - it comes as integer ID but needs to be set as FK
+        role_id = validated_data.pop('role', None)
+        
+        print(f"🎯 Role ID from validated_data: {role_id} (type: {type(role_id)})")
+        
+        # Update other fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        # Set role if provided
+        if role_id is not None:
+            from crmApp.models import Role
+            if isinstance(role_id, int):
+                # If it's an integer, fetch the Role object
+                try:
+                    role = Role.objects.get(id=role_id)
+                    instance.role = role
+                    print(f"✅ Role set to: {role.name} (ID: {role.id})")
+                except Role.DoesNotExist:
+                    instance.role = None
+                    print(f"❌ Role with ID {role_id} not found")
+            else:
+                # If it's already a Role object
+                instance.role = role_id
+                print(f"✅ Role object set directly: {role_id}")
+        
+        instance.save()
+        print(f"💾 Employee saved. Current role: {instance.role}")
+        return instance
 
 
 class EmployeeCreateSerializer(serializers.ModelSerializer):

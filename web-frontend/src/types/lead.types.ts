@@ -108,6 +108,7 @@ export interface LeadFilters {
   assigned_to?: number;
   is_converted?: boolean;
   search?: string;
+  organization?: number;
 }
 
 export interface LeadStats {

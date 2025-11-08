@@ -17,11 +17,11 @@ import CustomSelect from '../ui/CustomSelect';
 import { FiUserPlus, FiMail, FiTrash2, FiMoreVertical } from 'react-icons/fi';
 import { employeeService, type Employee } from '@/services/employee.service';
 import { roleService, type Role } from '@/services/role.service';
-import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/contexts/ProfileContext';
 import { toaster } from '../ui/toaster';
 
 const TeamSettings = () => {
-  const { user } = useAuth();
+  const { activeOrganizationId } = useProfile();
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteFirstName, setInviteFirstName] = useState('');
@@ -43,7 +43,7 @@ const TeamSettings = () => {
   const fetchEmployees = async () => {
     setIsFetchingEmployees(true);
     try {
-      const organizationId = user?.primaryOrganizationId;
+      const organizationId = activeOrganizationId;
       const filters: any = { status: 'active' };
       if (organizationId) {
         filters.organization = organizationId;
@@ -65,7 +65,7 @@ const TeamSettings = () => {
 
   const fetchRoles = async () => {
     try {
-      const organizationId = user?.primaryOrganizationId;
+      const organizationId = activeOrganizationId;
       const filters: any = { is_active: true };
       if (organizationId) {
         filters.organization = organizationId;

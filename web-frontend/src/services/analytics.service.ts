@@ -18,8 +18,9 @@ class AnalyticsService {
   /**
    * Get dashboard statistics
    */
-  async getDashboardStats(): Promise<DashboardStats> {
-    return api.get<DashboardStats>(API_CONFIG.ENDPOINTS.ANALYTICS.DASHBOARD);
+  async getDashboardStats(params?: { organization?: number }): Promise<DashboardStats> {
+    const queryParams = params?.organization ? `?organization=${params.organization}` : '';
+    return api.get<DashboardStats>(`${API_CONFIG.ENDPOINTS.ANALYTICS.DASHBOARD}${queryParams}`);
   }
 
   /**

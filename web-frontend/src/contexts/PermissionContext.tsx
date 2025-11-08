@@ -2,9 +2,12 @@
  * Permission Context
  * Provides permission checking functionality throughout the app
  */
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext, useMemo, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks';
+import { useProfile } from './ProfileContext';
+import { rbacService } from '@/services';
 import type { ReactNode } from 'react';
+import type { Permission } from '@/types';
 
 interface PermissionContextType {
   canAccess: (resource: string, action?: string) => boolean;
@@ -13,6 +16,8 @@ interface PermissionContextType {
   isCustomer: boolean;
   isOwner: boolean;
   userRole: string | null;
+  permissions: string[];
+  isLoading: boolean;
 }
 
 const PermissionContext = createContext<PermissionContextType | undefined>(undefined);
@@ -26,11 +31,51 @@ interface PermissionProviderProps {
  * Wraps app to provide permission checking
  */
 export const PermissionProvider = ({ children }: PermissionProviderProps) => {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
+  const { activeProfile, activeOrganizationId } = useProfile();
+  const [permissions, setPermissions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const permissions = useMemo(() => {
+  // Fetch user permissions from backend
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      if (!user || !activeOrganizationId || !activeProfile) {
+        setPermissions([]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        
+        // For employees, fetch actual permissions from backend
+        if (activeProfile.profile_type === 'employee') {
+          const userPermissions = await rbacService.getUserPermissions(user.id, activeOrganizationId);
+          
+          // Convert permissions to simple strings like "customers:read", "customers:create"
+          const permissionStrings = userPermissions.permissions.map((p: Permission) => 
+            `${p.resource}:${p.action}`
+          );
+          
+          setPermissions(permissionStrings);
+        } else {
+          // Vendors and owners have all permissions
+          setPermissions(['*:*']); // Wildcard for full access
+        }
+      } catch (error) {
+        console.error('Failed to fetch permissions:', error);
+        setPermissions([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPermissions();
+  }, [user, activeOrganizationId, activeProfile]);
+
+  const permissionContext = useMemo(() => {
     // If auth is loading or no user, return default permissions
-    if (isLoading || !user) {
+    if (authLoading || !user || !activeProfile) {
       return {
         canAccess: () => false,
         isVendor: false,
@@ -38,36 +83,26 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
         isCustomer: false,
         isOwner: false,
         userRole: null,
+        permissions: [],
+        isLoading: true,
       };
     }
 
-    const primaryProfile = user?.primaryProfile || user?.profiles?.[0];
-    
-    if (!primaryProfile) {
-      return {
-        canAccess: () => false,
-        isVendor: false,
-        isEmployee: false,
-        isCustomer: false,
-        isOwner: false,
-        userRole: null,
-      };
-    }
-
-    const profileType = primaryProfile.profile_type;
+    const profileType = activeProfile.profile_type;
     const isVendor = profileType === 'vendor';
     const isEmployee = profileType === 'employee';
     const isCustomer = profileType === 'customer';
-
-    // Check if user is organization owner (vendors are usually owners)
-    const isOwner = isVendor; // Simplified - could check UserOrganization.is_owner
+    const isOwner = activeProfile.is_owner || false;
 
     /**
      * Check if user can access a resource/action
-     * For now, simplified logic:
-     * - Vendors/Owners: Full access to everything
-     * - Employees: Limited access based on role
-     * - Customers: Only client UI access
+     * Uses real permissions from backend
+     * 
+     * Handles multiple permission naming conventions:
+     * - customers:read or customer:view (both mean "view customers")
+     * - customers:create or customer:create
+     * - customers:update or customer:edit
+     * - customers:delete or customer:delete
      */
     const canAccess = (resource: string, action: string = 'read'): boolean => {
       // Vendors/Owners have full access
@@ -75,33 +110,42 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
         return true;
       }
 
-      // Customers can only access client resources
-      if (isCustomer) {
-        const clientResources = ['vendors', 'orders', 'payments', 'issues'];
-        return clientResources.includes(resource);
+      // Check wildcard permission
+      if (permissions.includes('*:*')) {
+        return true;
       }
 
-      // Employees - check based on typical sales role permissions
-      if (isEmployee) {
-        const employeePermissions: Record<string, string[]> = {
-          // Resources employees can access
-          'customers': ['read', 'create', 'update'],
-          'leads': ['read', 'create', 'update'],
-          'deals': ['read', 'create', 'update'],
-          'activities': ['read', 'create', 'update'],
-          'analytics': ['read'],
-          'dashboard': ['read'],
-          
-          // Resources employees CANNOT access
-          'employees': [],
-          'vendors': [],
-          'settings': [],
-          'roles': [],
-          'permissions': [],
-        };
-
-        const allowedActions = employeePermissions[resource] || [];
-        return allowedActions.includes(action);
+      // Normalize resource name (remove trailing 's' for singular form)
+      const singularResource = resource.endsWith('s') ? resource.slice(0, -1) : resource;
+      
+      // Map action aliases (read <-> view, update <-> edit)
+      const actionAliases: Record<string, string[]> = {
+        'read': ['read', 'view'],
+        'view': ['read', 'view'],
+        'create': ['create'],
+        'update': ['update', 'edit'],
+        'edit': ['update', 'edit'],
+        'delete': ['delete'],
+      };
+      
+      const possibleActions = actionAliases[action] || [action];
+      
+      // Check all possible permission combinations
+      for (const possibleAction of possibleActions) {
+        // Check plural resource with action (e.g., "customers:read")
+        if (permissions.includes(`${resource}:${possibleAction}`)) {
+          return true;
+        }
+        
+        // Check singular resource with action (e.g., "customer:view")
+        if (permissions.includes(`${singularResource}:${possibleAction}`)) {
+          return true;
+        }
+        
+        // Check resource-level wildcard (e.g., "customers:*" or "customer:*")
+        if (permissions.includes(`${resource}:*`) || permissions.includes(`${singularResource}:*`)) {
+          return true;
+        }
       }
 
       return false;
@@ -114,11 +158,13 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
       isCustomer,
       isOwner,
       userRole: profileType,
+      permissions,
+      isLoading,
     };
-  }, [user, isLoading]);
+  }, [user, authLoading, activeProfile, permissions, isLoading, activeOrganizationId]);
 
   return (
-    <PermissionContext.Provider value={permissions}>
+    <PermissionContext.Provider value={permissionContext}>
       {children}
     </PermissionContext.Provider>
   );

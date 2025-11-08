@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, Input, VStack, HStack, Text, Grid, Badge, Spinner } from '@chakra-ui/react';
+import { Box, Button, Input, VStack, HStack, Text, Grid, Badge, Spinner, Heading } from '@chakra-ui/react';
 import { Card } from '../common';
 import { Field } from '../ui/field';
 import CustomSelect from '../ui/CustomSelect';
-import { FiGlobe, FiMail, FiPhone } from 'react-icons/fi';
+import { FiGlobe, FiMail, FiPhone, FiPlus, FiBriefcase } from 'react-icons/fi';
 import { organizationService, type Organization } from '@/services/organization.service';
 import { toaster } from '../ui/toaster';
+import {
+  DialogRoot,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+  DialogActionTrigger,
+  DialogCloseTrigger,
+} from '../ui/dialog';
 
 const OrganizationSettings = () => {
   const [organization, setOrganization] = useState<Organization | null>(null);
@@ -27,6 +37,15 @@ const OrganizationSettings = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    industry: '',
+    website: '',
+    email: '',
+    phone: '',
+  });
 
   useEffect(() => {
     loadOrganization();
@@ -56,11 +75,8 @@ const OrganizationSettings = () => {
       });
     } catch (error) {
       console.error('Failed to load organization:', error);
-      toaster.create({
-        title: 'Error',
-        description: 'Failed to load organization details',
-        type: 'error',
-      });
+      // Don't show error toast if no organization exists, we'll show create UI instead
+      setOrganization(null);
     } finally {
       setIsLoading(false);
     }
@@ -126,6 +142,105 @@ const OrganizationSettings = () => {
     }
   };
 
+  const handleCreateOrganization = async () => {
+    if (!createFormData.name.trim()) {
+      toaster.create({
+        title: 'Error',
+        description: 'Organization name is required',
+        type: 'error',
+      });
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      
+      // Only send non-empty fields to avoid validation errors
+      const data: any = {
+        name: createFormData.name.trim(),
+      };
+      
+      if (createFormData.industry?.trim()) {
+        data.industry = createFormData.industry.trim();
+      }
+      
+      // Format website URL if provided
+      if (createFormData.website?.trim()) {
+        let website = createFormData.website.trim();
+        // Add https:// if no protocol is specified
+        if (!/^https?:\/\//i.test(website)) {
+          website = `https://${website}`;
+        }
+        data.website = website;
+      }
+      
+      if (createFormData.email?.trim()) {
+        data.email = createFormData.email.trim();
+      }
+      
+      if (createFormData.phone?.trim()) {
+        data.phone = createFormData.phone.trim();
+      }
+      
+      await organizationService.createOrganization(data);
+
+      toaster.create({
+        title: 'Success',
+        description: 'Organization created successfully',
+        type: 'success',
+      });
+
+      // Reset form and close dialog
+      setCreateFormData({
+        name: '',
+        industry: '',
+        website: '',
+        email: '',
+        phone: '',
+      });
+      setIsCreateDialogOpen(false);
+      
+      // Show info about roles and permissions
+      setTimeout(() => {
+        toaster.create({
+          title: 'Organization Ready',
+          description: 'Default permissions have been created. You can now create roles in the Roles tab.',
+          type: 'info',
+          duration: 5000,
+        });
+      }, 1000);
+      
+      // Reload organization data
+      await loadOrganization();
+    } catch (error: any) {
+      console.error('Failed to create organization:', error);
+      
+      // Handle validation errors
+      const errorData = error.response?.data || error.errors || {};
+      let errorMessage = 'Failed to create organization';
+      
+      if (errorData.name) {
+        errorMessage = `Name: ${errorData.name[0]}`;
+      } else if (errorData.email) {
+        errorMessage = `Email: ${errorData.email[0]}`;
+      } else if (errorData.website) {
+        errorMessage = `Website: ${errorData.website[0]}`;
+      } else if (errorData.detail) {
+        errorMessage = errorData.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      toaster.create({
+        title: 'Error',
+        description: errorMessage,
+        type: 'error',
+      });
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Box textAlign="center" py={8}>
@@ -137,9 +252,176 @@ const OrganizationSettings = () => {
 
   if (!organization) {
     return (
-      <Card variant="elevated">
-        <Text color="gray.500" textAlign="center">No organization found</Text>
-      </Card>
+      <>
+        <Card variant="elevated">
+          <VStack gap={6} py={8} align="center">
+            <Box
+              p={4}
+              bg="purple.50"
+              borderRadius="full"
+              color="purple.500"
+            >
+              <FiBriefcase size={40} />
+            </Box>
+            <VStack gap={2}>
+              <Heading size="lg" color="gray.700">
+                No Organization Found
+              </Heading>
+              <Text color="gray.500" textAlign="center" maxW="md">
+                You don't have an organization yet. Create one to get started with managing your business.
+              </Text>
+            </VStack>
+            <Button
+              colorPalette="purple"
+              size="lg"
+              onClick={() => setIsCreateDialogOpen(true)}
+            >
+              <FiPlus size={20} />
+              Create Your Organization
+            </Button>
+          </VStack>
+        </Card>
+
+        {/* Create Organization Dialog */}
+        <DialogRoot
+          open={isCreateDialogOpen}
+          onOpenChange={(details: any) => !details.open && setIsCreateDialogOpen(false)}
+          size={{ base: 'full', md: 'lg' }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                <HStack gap={2}>
+                  <FiPlus size={20} />
+                  <Text>Create New Organization</Text>
+                </HStack>
+              </DialogTitle>
+              <DialogCloseTrigger />
+            </DialogHeader>
+
+            <DialogBody>
+              <VStack gap={4} align="stretch">
+                <Field label="Organization Name" required>
+                  <Input
+                    placeholder="Enter organization name"
+                    value={createFormData.name}
+                    onChange={(e) => setCreateFormData({ ...createFormData, name: e.target.value })}
+                    size="md"
+                  />
+                </Field>
+
+                <Field label="Industry">
+                  <CustomSelect
+                    value={createFormData.industry}
+                    onChange={(val) => setCreateFormData({ ...createFormData, industry: val })}
+                    options={[
+                      { value: 'Software & Technology', label: 'Software & Technology' },
+                      { value: 'Healthcare', label: 'Healthcare' },
+                      { value: 'Finance', label: 'Finance' },
+                      { value: 'Retail', label: 'Retail' },
+                      { value: 'Manufacturing', label: 'Manufacturing' },
+                      { value: 'Education', label: 'Education' },
+                      { value: 'Other', label: 'Other' },
+                    ]}
+                    placeholder="Select industry"
+                    accentColor="purple"
+                  />
+                </Field>
+
+                <VStack align="stretch" gap={1}>
+                  <Field label="Website">
+                    <Box position="relative">
+                      <Box
+                        position="absolute"
+                        left="12px"
+                        top="50%"
+                        transform="translateY(-50%)"
+                        pointerEvents="none"
+                        color="gray.400"
+                      >
+                        <FiGlobe size={16} />
+                      </Box>
+                      <Input
+                        placeholder="example.com or https://example.com"
+                        value={createFormData.website}
+                        onChange={(e) => setCreateFormData({ ...createFormData, website: e.target.value })}
+                        size="md"
+                        pl="40px"
+                        type="url"
+                      />
+                    </Box>
+                  </Field>
+                  <Text fontSize="xs" color="gray.500">
+                    Protocol (https://) will be added automatically
+                  </Text>
+                </VStack>
+
+                <Field label="Email">
+                  <Box position="relative">
+                    <Box
+                      position="absolute"
+                      left="12px"
+                      top="50%"
+                      transform="translateY(-50%)"
+                      pointerEvents="none"
+                      color="gray.400"
+                    >
+                      <FiMail size={16} />
+                    </Box>
+                    <Input
+                      type="email"
+                      placeholder="contact@example.com"
+                      value={createFormData.email}
+                      onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                      size="md"
+                      pl="40px"
+                    />
+                  </Box>
+                </Field>
+
+                <Field label="Phone">
+                  <Box position="relative">
+                    <Box
+                      position="absolute"
+                      left="12px"
+                      top="50%"
+                      transform="translateY(-50%)"
+                      pointerEvents="none"
+                      color="gray.400"
+                    >
+                      <FiPhone size={16} />
+                    </Box>
+                    <Input
+                      placeholder="+1 (555) 123-4567"
+                      value={createFormData.phone}
+                      onChange={(e) => setCreateFormData({ ...createFormData, phone: e.target.value })}
+                      size="md"
+                      pl="40px"
+                      type="tel"
+                    />
+                  </Box>
+                </Field>
+              </VStack>
+            </DialogBody>
+
+            <DialogFooter>
+              <DialogActionTrigger asChild>
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+              </DialogActionTrigger>
+              <Button
+                colorPalette="purple"
+                onClick={handleCreateOrganization}
+                disabled={!createFormData.name.trim() || isCreating}
+                loading={isCreating}
+              >
+                Create Organization
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </DialogRoot>
+      </>
     );
   }
 

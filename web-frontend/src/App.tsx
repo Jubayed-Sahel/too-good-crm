@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AccountModeProvider } from './contexts/AccountModeContext'
 import { PermissionProvider } from './contexts/PermissionContext'
+import { ProfileProvider } from './contexts/ProfileContext'
 import { ProtectedRoute } from './components/auth'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
@@ -30,14 +31,16 @@ import ClientPaymentsPage from './pages/ClientPaymentsPage'
 import ClientSettingsPage from './pages/ClientSettingsPage'
 import ClientIssuesPage from './pages/ClientIssuesPage'
 import ClientIssueDetailPage from './pages/ClientIssueDetailPage'
+import PermissionDebugPage from './pages/PermissionDebugPage'
 import './App.css'
 
 function App() {
   return (
     <Router>
       <AccountModeProvider>
-        <PermissionProvider>
-          <Routes>
+        <ProfileProvider>
+          <PermissionProvider>
+            <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
@@ -187,6 +190,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/debug/permissions"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <PermissionDebugPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Client/Customer Routes - Only for Customer profile */}
           <Route
@@ -261,8 +272,9 @@ function App() {
               </ProtectedRoute>
             }
           />
-        </Routes>
-        </PermissionProvider>
+          </Routes>
+          </PermissionProvider>
+        </ProfileProvider>
       </AccountModeProvider>
     </Router>
   )

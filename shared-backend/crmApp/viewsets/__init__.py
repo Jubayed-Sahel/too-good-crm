@@ -20,6 +20,7 @@ from .rbac import (
     RoleViewSet,
     UserRoleViewSet,
 )
+from .user_context import UserContextViewSet
 
 # Organization Management
 from .organization import (
@@ -67,6 +68,7 @@ __all__ = [
     'PermissionViewSet',
     'RoleViewSet',
     'UserRoleViewSet',
+    'UserContextViewSet',
     
     # Organization Management
     'OrganizationViewSet',

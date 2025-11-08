@@ -6,18 +6,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orderService } from '../services';
 import { toaster } from '../components/ui/toaster';
-import { useAuth } from './useAuth';
+import { useProfile } from '@/contexts/ProfileContext';
 import type { CreateOrderData, UpdateOrderData, OrderFilters } from '../types';
 
 const ORDERS_QUERY_KEY = 'orders';
 
 export const useOrders = (filters?: OrderFilters) => {
-  const { user } = useAuth();
-  const organizationId = user?.primaryOrganizationId;
+  const { activeOrganizationId } = useProfile();
+  const organizationId = activeOrganizationId;
 
   const queryFilters: OrderFilters = {
     ...filters,
-    organization: organizationId,
+    organization: organizationId || undefined,
   };
 
   return useQuery({
@@ -36,12 +36,12 @@ export const useOrder = (id: number) => {
 };
 
 export const useOrderStats = (filters?: OrderFilters) => {
-  const { user } = useAuth();
-  const organizationId = user?.primaryOrganizationId;
+  const { activeOrganizationId } = useProfile();
+  const organizationId = activeOrganizationId;
 
   const queryFilters: OrderFilters = {
     ...filters,
-    organization: organizationId,
+    organization: organizationId || undefined,
   };
 
   return useQuery({

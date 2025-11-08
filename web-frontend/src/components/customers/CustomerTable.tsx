@@ -15,6 +15,7 @@ import { Card } from '../common';
 import { ResponsiveTable } from '../common';
 import { useState } from 'react';
 import { formatCurrency, formatDate } from '@/utils';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 export interface Customer {
   id: string;
@@ -39,6 +40,7 @@ interface CustomerTableProps {
 
 const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBulkExport }: CustomerTableProps) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const { canAccess } = usePermissions();
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -174,6 +176,7 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBu
                 colorPalette="blue"
                 flex={1}
                 onClick={() => onEdit(customer)}
+                disabled={!canAccess('customers', 'update')}
               >
                 <FiEdit size={16} />
                 <Box ml={2}>Edit</Box>
@@ -184,6 +187,7 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBu
                 variant="outline"
                 colorPalette="red"
                 onClick={() => onDelete(customer)}
+                disabled={!canAccess('customers', 'delete')}
               >
                 <FiTrash2 size={16} />
               </IconButton>
@@ -218,6 +222,7 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBu
                 variant="solid"
                 colorPalette="red"
                 onClick={handleBulkDelete}
+                disabled={!canAccess('customers', 'delete')}
               >
                 Delete Selected
               </Button>
@@ -321,6 +326,7 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBu
                       variant="ghost"
                       colorPalette="blue"
                       onClick={() => onEdit(customer)}
+                      disabled={!canAccess('customers', 'update')}
                     >
                       <FiEdit size={16} />
                     </IconButton>
@@ -330,6 +336,7 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBu
                       variant="ghost"
                       colorPalette="red"
                       onClick={() => onDelete(customer)}
+                      disabled={!canAccess('customers', 'delete')}
                     >
                       <FiTrash2 size={16} />
                     </IconButton>

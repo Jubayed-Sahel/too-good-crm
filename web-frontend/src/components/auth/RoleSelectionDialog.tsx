@@ -28,6 +28,16 @@ const RoleSelectionDialog = ({
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Debug: Log profiles when dialog opens
+  if (open && profiles.length > 0) {
+    console.log('🔍 RoleSelectionDialog profiles:', profiles.map(p => ({
+      id: p.id,
+      type: p.profile_type,
+      org: p.organization_name,
+      isPrimary: p.is_primary
+    })));
+  }
+
   const handleConfirm = async () => {
     if (selectedProfileId) {
       try {

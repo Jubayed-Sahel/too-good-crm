@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { leadService } from '@/services';
+import { useProfile } from '@/contexts/ProfileContext';
 import type {
   CreateLeadData,
   UpdateLeadData,
@@ -29,9 +30,18 @@ export const leadKeys = {
  * Get all leads with optional filters
  */
 export function useLeads(filters?: LeadFilters) {
+  const { activeOrganizationId } = useProfile();
+  
+  // Build filters with organization, converting null to undefined
+  const filtersWithOrg = {
+    ...filters,
+    ...(activeOrganizationId ? { organization: activeOrganizationId } : {}),
+  };
+  
   return useQuery({
-    queryKey: leadKeys.list(filters),
-    queryFn: () => leadService.getLeads(filters),
+    queryKey: leadKeys.list(filtersWithOrg),
+    queryFn: () => leadService.getLeads(filtersWithOrg),
+    enabled: !!activeOrganizationId,
   });
 }
 
