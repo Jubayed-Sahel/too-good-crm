@@ -48,6 +48,11 @@ from .customer import (
     CustomerListSerializer,
 )
 
+from .call import (
+    CallSerializer,
+    InitiateCallSerializer,
+)
+
 from .lead import (
     LeadSerializer,
     LeadCreateSerializer,
@@ -138,6 +143,10 @@ __all__ = [
     'CustomerSerializer',
     'CustomerCreateSerializer',
     'CustomerListSerializer',
+    
+    # Call
+    'CallSerializer',
+    'InitiateCallSerializer',
     
     # Lead
     'LeadSerializer',

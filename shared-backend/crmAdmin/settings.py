@@ -260,6 +260,11 @@ MEDIA_ROOT = BASE_DIR / 'media'
 LINEAR_API_KEY = os.getenv('LINEAR_API_KEY', '')
 LINEAR_WEBHOOK_SECRET = os.getenv('LINEAR_WEBHOOK_SECRET', '')
 
+# Twilio Settings
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
+TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER', '')
+
 # Security Settings (for production)
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
