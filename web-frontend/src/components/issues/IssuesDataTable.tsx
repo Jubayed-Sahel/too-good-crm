@@ -1,0 +1,190 @@
+import { Table, Badge, Button, HStack, Text, Box } from '@chakra-ui/react';
+import { FiEye, FiEdit, FiCheckCircle, FiTrash2, FiExternalLink } from 'react-icons/fi';
+import type { Issue, IssueStatus } from '@/types';
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
+interface IssuesDataTableProps {
+  issues: Issue[];
+  onView: (issue: Issue) => void;
+  onEdit: (issue: Issue) => void;
+  onResolve: (issue: Issue) => void;
+  onDelete: (issueId: number) => void;
+  onUpdateStatus: (issueId: number, status: IssueStatus) => void;
+}
+
+const getPriorityColor = (priority: string) => {
+  switch (priority) {
+    case 'critical':
+      return 'red';
+    case 'high':
+      return 'orange';
+    case 'medium':
+      return 'yellow';
+    case 'low':
+      return 'green';
+    default:
+      return 'gray';
+  }
+};
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'open':
+      return 'orange';
+    case 'in_progress':
+      return 'blue';
+    case 'resolved':
+      return 'green';
+    case 'closed':
+      return 'gray';
+    default:
+      return 'gray';
+  }
+};
+
+const IssuesDataTable = ({
+  issues,
+  onView,
+  onEdit,
+  onResolve,
+  onDelete,
+}: IssuesDataTableProps) => {
+  return (
+    <Box
+      bg="white"
+      borderRadius="lg"
+      borderWidth="1px"
+      borderColor="gray.200"
+      overflow="hidden"
+    >
+      <Box overflowX="auto">
+        <Table.Root size="sm">
+          <Table.Header>
+            <Table.Row bg="gray.50">
+              <Table.ColumnHeader>Issue #</Table.ColumnHeader>
+              <Table.ColumnHeader>Title</Table.ColumnHeader>
+              <Table.ColumnHeader>Status</Table.ColumnHeader>
+              <Table.ColumnHeader>Priority</Table.ColumnHeader>
+              <Table.ColumnHeader>Category</Table.ColumnHeader>
+              <Table.ColumnHeader>Vendor</Table.ColumnHeader>
+              <Table.ColumnHeader>Created</Table.ColumnHeader>
+              <Table.ColumnHeader>Linear</Table.ColumnHeader>
+              <Table.ColumnHeader textAlign="right">Actions</Table.ColumnHeader>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            {issues.map((issue) => (
+              <Table.Row key={issue.id} _hover={{ bg: 'gray.50' }}>
+                <Table.Cell>
+                  <Text fontWeight="semibold" color="purple.600">
+                    {issue.issue_number}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell maxW="300px">
+                  <Text fontSize="sm" overflow="hidden" textOverflow="ellipsis">
+                    {issue.title}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  <Badge colorPalette={getStatusColor(issue.status)} size="sm">
+                    {issue.status.replace('_', ' ').toUpperCase()}
+                  </Badge>
+                </Table.Cell>
+                <Table.Cell>
+                  <Badge colorPalette={getPriorityColor(issue.priority)} size="sm">
+                    {issue.priority.toUpperCase()}
+                  </Badge>
+                </Table.Cell>
+                <Table.Cell>
+                  <Text fontSize="sm" textTransform="capitalize">
+                    {issue.category}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  <Text fontSize="sm">{issue.vendor_name || `Vendor #${issue.vendor}`}</Text>
+                </Table.Cell>
+                <Table.Cell>
+                  <Text fontSize="sm" color="gray.600">
+                    {formatDate(issue.created_at)}
+                  </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  {(issue as any).linear_issue_url ? (
+                    <a
+                      href={(issue as any).linear_issue_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        colorPalette="blue"
+                      >
+                        <FiExternalLink />
+                        <Text ml={1}>View</Text>
+                      </Button>
+                    </a>
+                  ) : (
+                    <Text fontSize="xs" color="gray.400">
+                      Not synced
+                    </Text>
+                  )}
+                </Table.Cell>
+                <Table.Cell>
+                  <HStack justify="flex-end" gap={1}>
+                    <Button
+                      onClick={() => onView(issue)}
+                      size="xs"
+                      variant="ghost"
+                      colorPalette="gray"
+                    >
+                      <FiEye />
+                    </Button>
+                    <Button
+                      onClick={() => onEdit(issue)}
+                      size="xs"
+                      variant="ghost"
+                      colorPalette="blue"
+                    >
+                      <FiEdit />
+                    </Button>
+                    {issue.status !== 'resolved' && issue.status !== 'closed' && (
+                      <Button
+                        onClick={() => onResolve(issue)}
+                        size="xs"
+                        variant="ghost"
+                        colorPalette="green"
+                      >
+                        <FiCheckCircle />
+                      </Button>
+                    )}
+                    <Button
+                      onClick={() => onDelete(issue.id)}
+                      size="xs"
+                      variant="ghost"
+                      colorPalette="red"
+                    >
+                      <FiTrash2 />
+                    </Button>
+                  </HStack>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      </Box>
+
+      {issues.length === 0 && (
+        <Box p={8} textAlign="center">
+          <Text color="gray.500">No issues to display</Text>
+        </Box>
+      )}
+    </Box>
+  );
+};
+
+export default IssuesDataTable;
