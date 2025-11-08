@@ -67,6 +67,7 @@ const IssuesDataTable = ({
             <Table.Row bg="gray.50">
               <Table.ColumnHeader>Issue #</Table.ColumnHeader>
               <Table.ColumnHeader>Title</Table.ColumnHeader>
+              <Table.ColumnHeader>Source</Table.ColumnHeader>
               <Table.ColumnHeader>Status</Table.ColumnHeader>
               <Table.ColumnHeader>Priority</Table.ColumnHeader>
               <Table.ColumnHeader>Category</Table.ColumnHeader>
@@ -88,6 +89,22 @@ const IssuesDataTable = ({
                   <Text fontSize="sm" overflow="hidden" textOverflow="ellipsis">
                     {issue.title}
                   </Text>
+                </Table.Cell>
+                <Table.Cell>
+                  {(issue as any).is_client_issue ? (
+                    <Badge colorPalette="purple" size="sm">
+                      Client
+                    </Badge>
+                  ) : (
+                    <Badge colorPalette="gray" size="sm" variant="subtle">
+                      Internal
+                    </Badge>
+                  )}
+                  {(issue as any).is_client_issue && (issue as any).raised_by_customer_name && (
+                    <Text fontSize="xs" color="gray.600" mt={1}>
+                      {(issue as any).raised_by_customer_name}
+                    </Text>
+                  )}
                 </Table.Cell>
                 <Table.Cell>
                   <Badge colorPalette={getStatusColor(issue.status)} size="sm">

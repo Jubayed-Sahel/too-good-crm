@@ -30,11 +30,40 @@ class IssueViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
     
     def get_queryset(self):
-        """Filter issues by organization"""
-        if hasattr(self.request.user, 'current_organization'):
-            return Issue.objects.filter(
-                organization=self.request.user.current_organization
-            ).select_related('vendor', 'order', 'assigned_to', 'created_by', 'resolved_by')
+        """Filter issues based on user type and organization"""
+        user = self.request.user
+        
+        # Check if user has any profiles
+        if not hasattr(user, 'profiles') or not user.profiles.exists():
+            return Issue.objects.none()
+        
+        # Get active profile
+        from crmApp.models import UserProfile
+        active_profile = user.profiles.filter(is_active=True).first()
+        
+        if not active_profile:
+            return Issue.objects.none()
+        
+        queryset = Issue.objects.select_related(
+            'vendor', 'order', 'assigned_to', 'created_by', 'resolved_by',
+            'raised_by_customer', 'organization'
+        )
+        
+        # Client/Customer: Can only see issues they raised
+        if active_profile.profile_type == 'customer':
+            from crmApp.models import Customer
+            try:
+                customer = Customer.objects.get(user=user)
+                return queryset.filter(raised_by_customer=customer)
+            except Customer.DoesNotExist:
+                return Issue.objects.none()
+        
+        # Vendor/Employee: Can see all issues for their organization
+        elif active_profile.profile_type in ['vendor', 'employee']:
+            if hasattr(user, 'current_organization') and user.current_organization:
+                return queryset.filter(organization=user.current_organization)
+            return Issue.objects.none()
+        
         return Issue.objects.none()
     
     def get_serializer_class(self):
@@ -117,6 +146,10 @@ class IssueViewSet(viewsets.ModelViewSet):
                     'payment': queryset.filter(category='payment').count(),
                     'communication': queryset.filter(category='communication').count(),
                     'other': queryset.filter(category='other').count(),
+                },
+                'by_source': {
+                    'client_raised': queryset.filter(is_client_issue=True).count(),
+                    'internal': queryset.filter(is_client_issue=False).count(),
                 },
                 'linear_sync': {
                     'synced': queryset.filter(synced_to_linear=True).count(),
