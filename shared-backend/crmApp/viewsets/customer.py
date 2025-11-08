@@ -12,7 +12,10 @@ from crmApp.serializers import (
     CustomerSerializer,
     CustomerCreateSerializer,
     CustomerListSerializer,
+    InitiateCallSerializer,
+    CallSerializer,
 )
+from crmApp.services.twilio_service import twilio_service
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -29,6 +32,26 @@ class CustomerViewSet(viewsets.ModelViewSet):
         elif self.action == 'create':
             return CustomerCreateSerializer
         return CustomerSerializer
+    
+    def perform_create(self, serializer):
+        """Auto-set organization from user's current organization"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Get organization from request or use user's current organization
+        organization_id = self.request.data.get('organization') or self.request.user.current_organization_id
+        
+        if not organization_id:
+            # Fallback to user's first active organization
+            user_org = self.request.user.user_organizations.filter(is_active=True).first()
+            if user_org:
+                organization_id = user_org.organization_id
+        
+        logger.info(f"Creating customer for organization: {organization_id}, user: {self.request.user.username}")
+        logger.info(f"User current_organization_id: {self.request.user.current_organization_id}")
+        logger.info(f"Request data organization: {self.request.data.get('organization')}")
+        
+        serializer.save(organization_id=organization_id)
     
     def get_queryset(self):
         """Filter customers by user's organizations"""
@@ -199,3 +222,125 @@ class CustomerViewSet(viewsets.ModelViewSet):
         } for activity in activities]
         
         return Response(activities_data)
+    
+    @action(detail=True, methods=['post'])
+    def initiate_call(self, request, pk=None):
+        """Initiate a VOIP call to customer via Twilio"""
+        from crmApp.models import Call, Activity
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        customer = self.get_object()
+        
+        # Validate customer has phone number
+        if not customer.phone:
+            return Response(
+                {'error': 'Customer does not have a phone number'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if Twilio is configured
+        if not twilio_service.is_configured():
+            return Response(
+                {
+                    'error': 'Twilio is not configured. Please add your Twilio credentials to the .env file.',
+                    'details': 'Required: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER'
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        
+        try:
+            # Initiate the call via Twilio
+            call_response = twilio_service.initiate_call(
+                to_number=customer.phone,
+                from_number=None  # Will use default from settings
+            )
+            
+            logger.info(f"Call initiated: {call_response}")
+            
+            # Create call record in database
+            call = Call.objects.create(
+                call_sid=call_response['call_sid'],
+                from_number=call_response['from'],
+                to_number=call_response['to'],
+                direction='outbound',
+                status=call_response['status'],
+                organization=customer.organization,
+                customer=customer,
+                initiated_by=request.user
+            )
+            
+            # Create activity record for the call
+            Activity.objects.create(
+                organization=customer.organization,
+                customer=customer,
+                activity_type='call',
+                title=f'Outbound call to {customer.name}',
+                description=f'Initiated VOIP call to {customer.phone}',
+                phone_number=customer.phone,
+                created_by=request.user,
+                status='completed',
+                scheduled_at=call_response.get('date_created'),
+                completed_at=call_response.get('date_created')
+            )
+            
+            # Return call details
+            return Response({
+                'message': 'Call initiated successfully',
+                'call': CallSerializer(call).data,
+                'twilio_response': call_response
+            }, status=status.HTTP_201_CREATED)
+            
+        except ValueError as e:
+            logger.error(f"Configuration error: {str(e)}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE
+            )
+        except Exception as e:
+            from twilio.base.exceptions import TwilioRestException
+            
+            logger.error(f"Error initiating call: {str(e)}")
+            
+            # Handle Twilio-specific errors
+            if isinstance(e, TwilioRestException):
+                error_code = getattr(e, 'code', None)
+                error_msg = str(e)
+                
+                # Error 21219: Unverified number (trial account)
+                if error_code == 21219 or 'unverified' in error_msg.lower():
+                    return Response({
+                        'error': f'The number {customer.phone} needs to be verified in your Twilio account. Trial accounts can only call verified numbers. Verify at: https://console.twilio.com/us1/develop/phone-numbers/manage/verified',
+                        'twilio_error_code': error_code,
+                        'action': 'verify_number'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Error 20003: Geographic permissions (international calling)
+                if error_code == 20003 or 'not authorized to call' in error_msg.lower() or 'geo-permissions' in error_msg.lower():
+                    return Response({
+                        'error': f'Your Twilio account is not authorized to call {customer.phone}. You need to enable international calling permissions for this country. Enable at: https://console.twilio.com/us1/develop/voice/settings/geo-permissions',
+                        'twilio_error_code': error_code,
+                        'action': 'enable_geo_permissions'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                
+                # Other Twilio errors
+                return Response({
+                    'error': f'Twilio error: {error_msg}',
+                    'twilio_error_code': error_code
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Generic error
+            return Response(
+                {'error': f'Failed to initiate call: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def call_history(self, request, pk=None):
+        """Get call history for customer"""
+        from crmApp.models import Call
+        
+        customer = self.get_object()
+        calls = Call.objects.filter(customer=customer).order_by('-created_at')
+        
+        return Response(CallSerializer(calls, many=True).data)

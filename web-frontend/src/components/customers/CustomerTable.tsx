@@ -34,11 +34,12 @@ interface CustomerTableProps {
   onEdit: (customer: Customer) => void;
   onDelete: (customer: Customer) => void;
   onView: (customer: Customer) => void;
+  onCall?: (customer: Customer) => void;
   onBulkDelete?: (customerIds: string[]) => void;
   onBulkExport?: (customerIds: string[]) => void;
 }
 
-const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBulkExport }: CustomerTableProps) => {
+const CustomerTable = ({ customers, onEdit, onDelete, onView, onCall, onBulkDelete, onBulkExport }: CustomerTableProps) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { canAccess } = usePermissions();
 
@@ -160,6 +161,19 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBu
 
             {/* Actions */}
             <HStack gap={2} pt={2} borderTopWidth="1px" borderColor="gray.100">
+              {customer.phone && onCall && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="green"
+                  flex={1}
+                  onClick={() => onCall(customer)}
+                  title="Call customer via Twilio"
+                >
+                  <FiPhone size={16} />
+                  <Box ml={2}>Call</Box>
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -311,6 +325,18 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onBulkDelete, onBu
                 </Table.Cell>
                 <Table.Cell>
                   <HStack gap={1} justify="center">
+                    {customer.phone && onCall && (
+                      <IconButton
+                        aria-label="Call customer"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="green"
+                        onClick={() => onCall(customer)}
+                        title="Call customer via Twilio"
+                      >
+                        <FiPhone size={16} />
+                      </IconButton>
+                    )}
                     <IconButton
                       aria-label="View customer"
                       size="sm"

@@ -38,6 +38,9 @@ from .vendor import Vendor
 # Customer model
 from .customer import Customer
 
+# Call model
+from .call import Call
+
 # Lead model
 from .lead import Lead
 
@@ -90,6 +93,7 @@ __all__ = [
     'Employee',
     'Vendor',
     'Customer',
+    'Call',
     'Lead',
     'Deal',
     'Pipeline',

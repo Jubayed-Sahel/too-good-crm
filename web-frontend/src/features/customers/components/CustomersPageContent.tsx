@@ -26,6 +26,7 @@ export interface CustomersPageContentProps {
   onEdit: (customer: MappedCustomer) => void;
   onDelete: (customer: MappedCustomer) => void;
   onView: (customer: MappedCustomer) => void;
+  onCall?: (customer: MappedCustomer) => void;
   onBulkDelete?: (customerIds: string[]) => void;
   onBulkExport?: (customerIds: string[], allCustomers: MappedCustomer[]) => void;
   onAddCustomer: () => void;
@@ -62,6 +63,7 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
   onEdit,
   onDelete,
   onView,
+  onCall,
   onBulkDelete,
   onBulkExport,
   onAddCustomer,
@@ -99,6 +101,7 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
         onEdit={onEdit}
         onDelete={onDelete}
         onView={onView}
+        onCall={onCall}
         onBulkDelete={onBulkDelete}
         onBulkExport={onBulkExport ? (ids) => onBulkExport(ids, mappedCustomers) : undefined}
       />
