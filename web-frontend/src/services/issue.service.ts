@@ -5,7 +5,7 @@
 
 import api from '@/lib/apiClient';
 import { API_CONFIG } from '@/config/api.config';
-import type { Issue, CreateIssueData, UpdateIssueData, IssueStats, IssueFilters, PaginatedResponse } from '@/types';
+import type { Issue, CreateIssueData, UpdateIssueData, IssueStats, IssueFilters, PaginatedResponse, ClientRaiseIssueData } from '@/types';
 
 export const issueService = {
   /**
@@ -83,5 +83,30 @@ export const issueService = {
    */
   getStats: async (): Promise<IssueStats> => {
     return api.get<IssueStats>(API_CONFIG.ENDPOINTS.ISSUES.STATS);
+  },
+
+  /**
+   * Client endpoints
+   */
+  
+  /**
+   * Raise issue as a client about an organization
+   */
+  clientRaise: async (data: ClientRaiseIssueData): Promise<any> => {
+    return api.post('/api/client/issues/raise/', data);
+  },
+
+  /**
+   * Get client issue details
+   */
+  clientGetIssue: async (id: number): Promise<Issue> => {
+    return api.get<Issue>(`/api/client/issues/${id}/`);
+  },
+
+  /**
+   * Add comment to client issue
+   */
+  clientAddComment: async (id: number, comment: string): Promise<Issue> => {
+    return api.post<Issue>(`/api/client/issues/${id}/comment/`, { comment });
   },
 };
