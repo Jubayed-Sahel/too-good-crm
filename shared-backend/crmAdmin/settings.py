@@ -25,7 +25,12 @@ SECRET_KEY = 'django-insecure-2kis-l)_d58wfz-d9ehcfypf-6%9x*g@^yne+hi)&k9jfg%hf)
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# Import os and load_dotenv at the top for ALLOWED_HOSTS
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -249,6 +254,11 @@ LOGGING = {
 # Media Files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Linear Integration Settings
+# Note: os and dotenv already imported at the top
+LINEAR_API_KEY = os.getenv('LINEAR_API_KEY', '')
+LINEAR_WEBHOOK_SECRET = os.getenv('LINEAR_WEBHOOK_SECRET', '')
 
 # Security Settings (for production)
 if not DEBUG:
