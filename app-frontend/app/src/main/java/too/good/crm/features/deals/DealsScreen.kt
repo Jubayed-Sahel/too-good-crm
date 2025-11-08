@@ -114,6 +114,8 @@ fun DealsScreen(
                         },
                         change = "+12%",
                         isPositive = true,
+                        iconBackgroundColor = DesignTokens.Colors.PrimaryLight.copy(alpha = 0.2f),
+                        iconTintColor = DesignTokens.Colors.Primary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -130,6 +132,8 @@ fun DealsScreen(
                         },
                         change = "+8%",
                         isPositive = true,
+                        iconBackgroundColor = DesignTokens.Colors.WarningLight,
+                        iconTintColor = DesignTokens.Colors.Warning,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -146,6 +150,8 @@ fun DealsScreen(
                         },
                         change = "+15%",
                         isPositive = true,
+                        iconBackgroundColor = DesignTokens.Colors.SuccessLight,
+                        iconTintColor = DesignTokens.Colors.Success,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -162,6 +168,8 @@ fun DealsScreen(
                         },
                         change = "+23%",
                         isPositive = true,
+                        iconBackgroundColor = DesignTokens.Colors.SecondaryContainer,
+                        iconTintColor = DesignTokens.Colors.Secondary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

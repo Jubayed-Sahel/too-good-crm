@@ -113,7 +113,9 @@ fun CustomersScreen(
                             )
                         },
                         change = "+12%",
-                        isPositive = true
+                        isPositive = true,
+                        iconBackgroundColor = DesignTokens.Colors.PrimaryLight.copy(alpha = 0.2f),
+                        iconTintColor = DesignTokens.Colors.Primary
                     ),
                     StatData(
                         title = "ACTIVE",
@@ -126,7 +128,9 @@ fun CustomersScreen(
                             )
                         },
                         change = "+8%",
-                        isPositive = true
+                        isPositive = true,
+                        iconBackgroundColor = DesignTokens.Colors.SuccessLight,
+                        iconTintColor = DesignTokens.Colors.Success
                     ),
                     StatData(
                         title = "TOTAL VALUE",
@@ -139,7 +143,9 @@ fun CustomersScreen(
                             )
                         },
                         change = "+23%",
-                        isPositive = true
+                        isPositive = true,
+                        iconBackgroundColor = DesignTokens.Colors.SecondaryContainer,
+                        iconTintColor = DesignTokens.Colors.Secondary
                     )
                 )
             )
