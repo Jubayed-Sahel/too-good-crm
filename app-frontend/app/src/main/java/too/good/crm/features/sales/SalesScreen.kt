@@ -378,9 +378,9 @@ fun TopPerformerCard(
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = when (rank) {
-                    1 -> Color(0xFFFFD700).copy(alpha = 0.2f)
-                    2 -> Color(0xFFC0C0C0).copy(alpha = 0.2f)
-                    3 -> Color(0xFFCD7F32).copy(alpha = 0.2f)
+                    1 -> DesignTokens.Colors.ChartYellow.copy(alpha = 0.2f)
+                    2 -> DesignTokens.Colors.ChartGray.copy(alpha = 0.2f)
+                    3 -> DesignTokens.Colors.ChartOrange.copy(alpha = 0.2f)
                     else -> DesignTokens.Colors.OnSurfaceVariant.copy(alpha = 0.1f)
                 },
                 modifier = Modifier.size(48.dp)
@@ -391,9 +391,9 @@ fun TopPerformerCard(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = when (rank) {
-                            1 -> Color(0xFFFFD700)
-                            2 -> Color(0xFF808080)
-                            3 -> Color(0xFFCD7F32)
+                            1 -> DesignTokens.Colors.ChartYellow
+                            2 -> DesignTokens.Colors.ChartGray
+                            3 -> DesignTokens.Colors.ChartOrange
                             else -> DesignTokens.Colors.OnSurfaceVariant
                         }
                     )
