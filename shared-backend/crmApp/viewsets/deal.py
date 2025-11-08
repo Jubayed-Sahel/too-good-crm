@@ -2,6 +2,7 @@
 Deal, Pipeline, and PipelineStage ViewSets
 """
 
+import logging
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -18,6 +19,8 @@ from crmApp.serializers import (
     DealUpdateSerializer,
     DealListSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class PipelineViewSet(viewsets.ModelViewSet):
@@ -67,6 +70,53 @@ class PipelineViewSet(viewsets.ModelViewSet):
             'message': 'Pipeline set as default.',
             'pipeline': PipelineSerializer(pipeline).data
         })
+    
+    @action(detail=True, methods=['post'])
+    def reorder_stages(self, request, pk=None):
+        """Bulk reorder pipeline stages"""
+        pipeline = self.get_object()
+        stages_data = request.data.get('stages', [])
+        
+        if not stages_data:
+            return Response(
+                {'error': 'stages array is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Update each stage's order
+            updated_stages = []
+            for stage_data in stages_data:
+                stage_id = stage_data.get('id')
+                new_order = stage_data.get('order')
+                
+                if stage_id is None or new_order is None:
+                    return Response(
+                        {'error': 'Each stage must have id and order'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                try:
+                    stage = PipelineStage.objects.get(id=stage_id, pipeline=pipeline)
+                    stage.order = new_order
+                    stage.save()
+                    updated_stages.append(stage)
+                except PipelineStage.DoesNotExist:
+                    return Response(
+                        {'error': f'Stage with id {stage_id} not found in this pipeline'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            return Response({
+                'message': 'Stages reordered successfully.',
+                'stages': PipelineStageSerializer(updated_stages, many=True).data
+            })
+        except Exception as e:
+            logger.error(f"Error reordering stages: {str(e)}")
+            return Response(
+                {'error': 'An error occurred while reordering stages'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class PipelineStageViewSet(viewsets.ModelViewSet):

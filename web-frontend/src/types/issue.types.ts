@@ -35,7 +35,7 @@ export interface CreateIssueData {
   priority: IssuePriority;
   category: IssueCategory;
   status: IssueStatus;
-  vendor: number;
+  vendor?: number | null;
   order?: number | null;
   assigned_to?: number | null;
 }

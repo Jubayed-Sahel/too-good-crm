@@ -88,7 +88,6 @@ const ClientIssuesPage = () => {
       priority: data.priority === 'urgent' ? 'critical' : data.priority as IssuePriority,
       category: data.category as any,
       status: 'open' as any, // New issues start as open
-      vendor: 1, // TODO: Get from vendor selection
       order: data.orderNumber ? Number(data.orderNumber) : undefined,
     };
 

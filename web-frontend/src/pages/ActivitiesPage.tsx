@@ -126,7 +126,7 @@ export const ActivitiesPage = () => {
         activity_type: 'call',
         title: data.title,
         description: data.notes || '',
-        customer: 1, // TODO: Get from customer selection
+        customer_name: data.customerName,
         status: 'completed',
         phone_number: data.phoneNumber,
       });
@@ -156,7 +156,7 @@ export const ActivitiesPage = () => {
         activity_type: 'email',
         title: data.subject,
         description: data.body,
-        customer: 1, // TODO: Get from customer selection
+        customer_name: data.customerName,
         status: 'completed',
         email_subject: data.subject,
         email_body: data.body,
@@ -187,7 +187,7 @@ export const ActivitiesPage = () => {
         activity_type: 'telegram',
         title: `Telegram message to ${data.customerName}`,
         description: data.message,
-        customer: 1, // TODO: Get from customer selection
+        customer_name: data.customerName,
         status: 'completed',
         telegram_username: data.telegramUsername,
       });

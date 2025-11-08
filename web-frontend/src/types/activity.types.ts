@@ -64,6 +64,7 @@ export interface CreateActivityData {
   title: string;
   description?: string;
   customer?: number | null;
+  customer_name?: string;
   lead?: number | null;
   deal?: number | null;
   assigned_to?: number | null;
