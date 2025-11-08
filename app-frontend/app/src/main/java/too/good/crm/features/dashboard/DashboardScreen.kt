@@ -9,10 +9,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
@@ -54,7 +56,9 @@ fun DashboardScreen(
                 change = "+12%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.People,
-                isPositive = true
+                isPositive = true,
+                iconBackgroundColor = DesignTokens.Colors.PrimaryLight.copy(alpha = 0.2f),
+                iconTintColor = DesignTokens.Colors.Primary
             )
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
             MetricCard(
@@ -63,7 +67,9 @@ fun DashboardScreen(
                 change = "+8%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.Description,
-                isPositive = true
+                isPositive = true,
+                iconBackgroundColor = DesignTokens.Colors.InfoLight,
+                iconTintColor = DesignTokens.Colors.Info
             )
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
             MetricCard(
@@ -72,7 +78,9 @@ fun DashboardScreen(
                 change = "+23%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.AttachMoney,
-                isPositive = true
+                isPositive = true,
+                iconBackgroundColor = DesignTokens.Colors.SuccessLight,
+                iconTintColor = DesignTokens.Colors.Success
             )
         }
     }
@@ -83,8 +91,11 @@ fun WelcomeCard() {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = DesignTokens.Colors.PrimaryContainer
-        )
+            containerColor = DesignTokens.Colors.White
+        ),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Column(
             modifier = Modifier
@@ -94,7 +105,8 @@ fun WelcomeCard() {
             Text(
                 text = "Good Evening! 👋",
                 style = MaterialTheme.typography.titleMedium,
-                color = DesignTokens.Colors.OnSurface
+                color = DesignTokens.Colors.OnSurfaceVariant,
+                fontWeight = DesignTokens.Typography.FontWeightMedium
             )
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
             Text(
@@ -119,7 +131,8 @@ fun WelcomeCard() {
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = DesignTokens.Colors.Primary
-                    )
+                    ),
+                    shape = MaterialTheme.shapes.medium
                 ) {
                     Icon(Icons.Default.TrendingUp, contentDescription = null)
                     Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space2))
@@ -130,7 +143,9 @@ fun WelcomeCard() {
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = DesignTokens.Colors.Primary
-                    )
+                    ),
+                    shape = MaterialTheme.shapes.medium,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.Primary)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space2))
@@ -148,14 +163,18 @@ fun MetricCard(
     change: String,
     changeLabel: String,
     icon: ImageVector,
-    isPositive: Boolean
+    isPositive: Boolean,
+    iconBackgroundColor: Color,
+    iconTintColor: Color
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level2),
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
         colors = CardDefaults.cardColors(
-            containerColor = DesignTokens.Colors.Surface
-        )
+            containerColor = DesignTokens.Colors.White
+        ),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Row(
             modifier = Modifier
@@ -168,7 +187,9 @@ fun MetricCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelMedium,
-                    color = DesignTokens.Colors.OnSurfaceVariant
+                    color = DesignTokens.Colors.OnSurfaceVariant,
+                    fontWeight = DesignTokens.Typography.FontWeightSemiBold,
+                    letterSpacing = 0.5.sp
                 )
                 Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
                 Text(
@@ -183,7 +204,7 @@ fun MetricCard(
                         imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
                         contentDescription = null,
                         tint = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
-                        modifier = Modifier.size(DesignTokens.Heights.IconXs)
+                        modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space1))
                     Text(
@@ -202,14 +223,15 @@ fun MetricCard(
             }
             Surface(
                 shape = MaterialTheme.shapes.medium,
-                color = DesignTokens.Colors.SecondaryContainer,
+                color = iconBackgroundColor,
                 modifier = Modifier.size(56.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = DesignTokens.Colors.Secondary
+                        tint = iconTintColor,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }

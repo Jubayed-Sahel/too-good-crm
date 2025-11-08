@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.responsivePadding
 import too.good.crm.ui.utils.responsiveSpacing
@@ -124,16 +126,34 @@ fun StatCard(
     icon: @Composable () -> Unit,
     change: String,
     isPositive: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    iconBackgroundColor: Color = DesignTokens.Colors.SecondaryContainer,
+    iconTintColor: Color = DesignTokens.Colors.Secondary
 ) {
-    ResponsiveCard(
+    Card(
         modifier = modifier,
-        elevation = DesignTokens.Elevation.Level2
+        colors = CardDefaults.cardColors(
+            containerColor = DesignTokens.Colors.White,
+            contentColor = DesignTokens.Colors.OnSurface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = DesignTokens.Elevation.Level1
+        ),
+        shape = RoundedCornerShape(DesignTokens.Radius.Large),
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    responsivePadding(
+                        compact = DesignTokens.Spacing.Space4,
+                        medium = DesignTokens.Spacing.Space5,
+                        expanded = DesignTokens.Spacing.Space6
+                    )
+                ),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // Left side: Stats
             Column(
@@ -143,7 +163,9 @@ fun StatCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelMedium,
-                    color = DesignTokens.Colors.OnSurfaceVariant
+                    color = DesignTokens.Colors.OnSurfaceVariant,
+                    fontWeight = DesignTokens.Typography.FontWeightSemiBold,
+                    letterSpacing = 0.5.sp
                 )
                 Text(
                     text = value,
@@ -158,7 +180,7 @@ fun StatCard(
                     Icon(
                         imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
                         contentDescription = null,
-                        modifier = Modifier.size(DesignTokens.Heights.IconXs),
+                        modifier = Modifier.size(16.dp),
                         tint = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error
                     )
                     Text(
@@ -178,8 +200,8 @@ fun StatCard(
             // Right side: Icon
             Surface(
                 shape = RoundedCornerShape(DesignTokens.Radius.Medium),
-                color = DesignTokens.Colors.SecondaryContainer,
-                modifier = Modifier.size(DesignTokens.Heights.IconMd)
+                color = iconBackgroundColor,
+                modifier = Modifier.size(56.dp)
             ) {
                 Box(
                     contentAlignment = Alignment.Center,
