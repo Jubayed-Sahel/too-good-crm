@@ -21,7 +21,7 @@ import {
 import CustomSelect from '../ui/CustomSelect';
 import type { CreateLeadData, LeadSource } from '../../types';
 import { FiPlus } from 'react-icons/fi';
-import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/contexts/ProfileContext';
 
 interface CreateLeadDialogProps {
   isOpen: boolean;
@@ -47,9 +47,9 @@ export const CreateLeadDialog = ({
   onSubmit,
   isLoading = false,
 }: CreateLeadDialogProps) => {
-  const { user } = useAuth();
+  const { activeOrganizationId } = useProfile();
   const [formData, setFormData] = useState<CreateLeadData>({
-    organization: user?.primaryOrganizationId || 1,
+    organization: activeOrganizationId || 1,
     name: '',
     email: '',
     phone: '',
@@ -60,12 +60,12 @@ export const CreateLeadDialog = ({
     notes: '',
   });
 
-  // Update organization when user changes
+  // Update organization when active profile changes
   useEffect(() => {
-    if (user?.primaryOrganizationId) {
-      setFormData(prev => ({ ...prev, organization: user.primaryOrganizationId as number }));
+    if (activeOrganizationId) {
+      setFormData(prev => ({ ...prev, organization: activeOrganizationId }));
     }
-  }, [user?.primaryOrganizationId]);
+  }, [activeOrganizationId]);
 
   const handleSubmit = () => {
     onSubmit(formData);
@@ -74,7 +74,7 @@ export const CreateLeadDialog = ({
 
   const handleClose = () => {
     setFormData({
-      organization: user?.primaryOrganizationId || 1,
+      organization: activeOrganizationId || 1,
       name: '',
       email: '',
       phone: '',

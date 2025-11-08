@@ -6,18 +6,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentService } from '../services';
 import { toaster } from '../components/ui/toaster';
-import { useAuth } from './useAuth';
+import { useProfile } from '@/contexts/ProfileContext';
 import type { CreatePaymentData, UpdatePaymentData, PaymentFilters } from '../types';
 
 const PAYMENTS_QUERY_KEY = 'payments';
 
 export const usePayments = (filters?: PaymentFilters) => {
-  const { user } = useAuth();
-  const organizationId = user?.primaryOrganizationId;
+  const { activeOrganizationId } = useProfile();
+  const organizationId = activeOrganizationId;
 
   const queryFilters: PaymentFilters = {
     ...filters,
-    organization: organizationId,
+    organization: organizationId || undefined,
   };
 
   return useQuery({
@@ -36,12 +36,12 @@ export const usePayment = (id: number) => {
 };
 
 export const usePaymentStats = (filters?: PaymentFilters) => {
-  const { user } = useAuth();
-  const organizationId = user?.primaryOrganizationId;
+  const { activeOrganizationId } = useProfile();
+  const organizationId = activeOrganizationId;
 
   const queryFilters: PaymentFilters = {
     ...filters,
-    organization: organizationId,
+    organization: organizationId || undefined,
   };
 
   return useQuery({

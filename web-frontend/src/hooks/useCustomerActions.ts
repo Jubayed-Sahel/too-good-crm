@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { MappedCustomer } from './useCustomersPage';
 import { customerService } from '@/services/customer.service';
 import { toaster } from '@/components/ui/toaster';
-import { useAuth } from './useAuth';
+import { useProfile } from '@/contexts/ProfileContext';
 import { exportData } from '@/utils';
 
 /**
@@ -63,7 +63,7 @@ export interface UseCustomerActionsReturn {
  */
 export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}): UseCustomerActionsReturn => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { activeOrganizationId } = useProfile();
   const queryClient = useQueryClient();
   
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -263,13 +263,13 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
   const handleCreateCustomer = async (data: any) => {
     console.log('Create customer (frontend data):', data);
     
-    // Get organization ID from authenticated user
-    const organizationId = user?.primaryOrganizationId;
+    // Get organization ID from active profile
+    const organizationId = activeOrganizationId;
     
     if (!organizationId) {
       toaster.create({
         title: 'Unable to create customer',
-        description: 'Organization information not found. Please log in again.',
+        description: 'Organization information not found. Please select a profile.',
         type: 'error',
       });
       return;

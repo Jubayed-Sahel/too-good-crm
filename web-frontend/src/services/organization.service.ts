@@ -51,6 +51,20 @@ export interface UpdateOrganizationData {
   is_active?: boolean;
 }
 
+export interface CreateOrganizationData {
+  name: string;
+  description?: string;
+  industry?: string;
+  website?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  country?: string;
+}
+
 class OrganizationService {
   private readonly baseUrl = '/organizations';
 
@@ -120,8 +134,8 @@ class OrganizationService {
   /**
    * Create new organization
    */
-  async createOrganization(data: Partial<Organization>): Promise<Organization> {
-    return api.post<Organization>(this.baseUrl, data);
+  async createOrganization(data: CreateOrganizationData): Promise<Organization> {
+    return api.post<Organization>(`${this.baseUrl}/`, data);
   }
 
   /**

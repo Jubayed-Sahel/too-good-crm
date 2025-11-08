@@ -6,19 +6,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vendorService } from '../services';
 import { toaster } from '../components/ui/toaster';
-import { useAuth } from './useAuth';
+import { useProfile } from '@/contexts/ProfileContext';
 import type { CreateVendorData, UpdateVendorData, VendorFilters } from '../types';
 
 const VENDORS_QUERY_KEY = 'vendors';
 
 export const useVendors = (filters?: VendorFilters) => {
-  const { user } = useAuth();
-  const organizationId = user?.primaryOrganizationId;
+  const { activeOrganizationId } = useProfile();
+  const organizationId = activeOrganizationId;
 
   // Include organization ID in filters
   const queryFilters: VendorFilters = {
     ...filters,
-    organization: organizationId,
+    organization: organizationId || undefined,
   };
 
   return useQuery({
@@ -37,12 +37,12 @@ export const useVendor = (id: number) => {
 };
 
 export const useVendorStats = (filters?: VendorFilters) => {
-  const { user } = useAuth();
-  const organizationId = user?.primaryOrganizationId;
+  const { activeOrganizationId } = useProfile();
+  const organizationId = activeOrganizationId;
 
   const queryFilters: VendorFilters = {
     ...filters,
-    organization: organizationId,
+    organization: organizationId || undefined,
   };
 
   return useQuery({
@@ -54,8 +54,8 @@ export const useVendorStats = (filters?: VendorFilters) => {
 
 export const useVendorMutations = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const organizationId = user?.primaryOrganizationId;
+  const { activeOrganizationId } = useProfile();
+  const organizationId = activeOrganizationId;
 
   const createVendor = useMutation({
     mutationFn: (data: CreateVendorData) => {

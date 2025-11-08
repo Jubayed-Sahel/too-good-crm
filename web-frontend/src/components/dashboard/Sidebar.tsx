@@ -19,6 +19,7 @@ import {
 import { HiUserGroup } from 'react-icons/hi';
 import { useAccountMode } from '@/contexts/AccountModeContext';
 import { usePermissions } from '@/contexts/PermissionContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import { useAuth } from '@/hooks';
 import { useState, useMemo, useCallback, memo } from 'react';
 import { RoleSelectionDialog } from '../auth';
@@ -32,14 +33,15 @@ interface SidebarProps {
 const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const { isClientMode } = useAccountMode();
   const { canAccess, isVendor } = usePermissions();
-  const { user, logout, switchRole } = useAuth();
+  const { logout, switchRole } = useAuth();
+  const { profiles, activeProfile } = useProfile();
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
 
   // Memoize current profile to prevent unnecessary recalculations
   const currentProfile = useMemo(() => 
-    user?.primaryProfile || user?.profiles?.[0],
-    [user?.primaryProfile, user?.profiles]
+    activeProfile || profiles?.[0],
+    [activeProfile, profiles]
   );
 
   const handleSignOut = useCallback(async () => {
@@ -53,7 +55,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const handleSwitchRole = useCallback(async (profileId: number) => {
     setIsSwitching(true);
     try {
-      const selectedProfile = user?.profiles?.find(p => p.id === profileId);
+      const selectedProfile = profiles?.find(p => p.id === profileId);
       
       toaster.create({
         title: "Switching Profile",
@@ -76,7 +78,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       });
       // Only reset on error since page won't reload
     }
-  }, [switchRole, user?.profiles]);
+  }, [switchRole, profiles]);
 
   // Vendor menu items (full access)
   const vendorMenuItems = [
@@ -117,8 +119,8 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
 
   // Check if user has multiple profiles (memoized)
   const hasMultipleProfiles = useMemo(() => 
-    user?.profiles && user.profiles.length > 1,
-    [user?.profiles]
+    profiles && profiles.length > 1,
+    [profiles]
   );
 
   return (
@@ -224,7 +226,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                       w="full"
                     >
                       <FiRefreshCw size={12} />
-                      <Text ml={1}>Switch Profile ({user?.profiles?.length})</Text>
+                      <Text ml={1}>Switch Profile ({profiles?.length})</Text>
                     </Button>
                   )}
                 </VStack>
@@ -286,10 +288,10 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       </Box>
 
       {/* Role Switcher Dialog - Only render when needed */}
-      {showRoleSwitcher && user?.profiles && user.profiles.length > 0 && (
+      {showRoleSwitcher && profiles && profiles.length > 0 && (
         <RoleSelectionDialog
           open={showRoleSwitcher}
-          profiles={user.profiles}
+          profiles={profiles}
           onSelectRole={handleSwitchRole}
           isLoading={isSwitching}
         />

@@ -35,6 +35,7 @@ const RolesSettings = () => {
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [rolePermissionCounts, setRolePermissionCounts] = useState<Record<number, number>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
@@ -64,25 +65,32 @@ const RolesSettings = () => {
       
       // Fetch permission counts for each role
       const counts: Record<number, number> = {};
-      await Promise.all(
-        fetchedRoles.map(async (role: Role) => {
-          try {
-            const rolePerms = await roleService.getRolePermissions(role.id);
-            counts[role.id] = rolePerms.length;
-          } catch (error) {
-            counts[role.id] = 0;
-          }
-        })
-      );
+      if (fetchedRoles.length > 0) {
+        await Promise.all(
+          fetchedRoles.map(async (role: Role) => {
+            try {
+              const rolePerms = await roleService.getRolePermissions(role.id);
+              counts[role.id] = rolePerms.length;
+            } catch (error) {
+              console.error(`Error fetching permissions for role ${role.id}:`, error);
+              counts[role.id] = 0;
+            }
+          })
+        );
+      }
       setRolePermissionCounts(counts);
     } catch (error: any) {
       console.error('Error fetching roles:', error);
-      toaster.create({
-        title: 'Error',
-        description: 'Failed to load roles',
-        type: 'error',
-        duration: 3000,
-      });
+      
+      // Don't show error toast if it's just an empty response
+      if (error.status !== 404) {
+        toaster.create({
+          title: 'Error',
+          description: error.message || 'Failed to load roles',
+          type: 'error',
+          duration: 3000,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -90,26 +98,76 @@ const RolesSettings = () => {
 
   const fetchPermissions = async () => {
     try {
+      setIsLoadingPermissions(true);
       const response: any = await roleService.getPermissions();
       console.log('Raw permissions response:', response);
       
       // Handle paginated response or direct array
       const fetchedPermissions: Permission[] = Array.isArray(response) ? response : (response.results || response.data || []);
       console.log('Parsed permissions:', fetchedPermissions);
+      console.log('Total permissions count:', fetchedPermissions.length);
       
       setPermissions(fetchedPermissions);
+      
+      if (fetchedPermissions.length === 0) {
+        console.warn('No permissions found! Check backend organization context.');
+        
+        // Call debug endpoint to see what's wrong
+        try {
+          const debugResponse = await roleService.debugPermissionContext();
+          console.log('🔍 Debug Context:', debugResponse);
+          
+          // Show helpful error message
+          if (debugResponse.organizations?.length === 0) {
+            toaster.create({
+              title: 'No Organization Found',
+              description: 'You need to create an organization first before creating roles.',
+              type: 'warning',
+              duration: 5000,
+            });
+          } else if (debugResponse.permissions_count === 0) {
+            toaster.create({
+              title: 'No Permissions Found',
+              description: `Organization "${debugResponse.organizations[0]?.name}" has no permissions. This should not happen - permissions are created automatically.`,
+              type: 'error',
+              duration: 5000,
+            });
+          } else if (!debugResponse.organizations?.some((o: any) => o.is_active)) {
+            toaster.create({
+              title: 'No Active Organization',
+              description: 'Your organization membership is not active. Please contact support.',
+              type: 'error',
+              duration: 5000,
+            });
+          }
+        } catch (debugError) {
+          console.error('Failed to fetch debug context:', debugError);
+        }
+      }
     } catch (error: any) {
       console.error('Error fetching permissions:', error);
-      toaster.create({
-        title: 'Error',
-        description: 'Failed to load permissions',
-        type: 'error',
-        duration: 3000,
-      });
+      
+      // Don't show error toast if it's just an empty response  
+      if (error.status !== 404) {
+        toaster.create({
+          title: 'Error',
+          description: error.message || 'Failed to load permissions',
+          type: 'error',
+          duration: 3000,
+        });
+      }
+    } finally {
+      setIsLoadingPermissions(false);
     }
   };
 
   const handleOpenDialog = async (role?: Role) => {
+    // Ensure we have the latest permissions before opening dialog
+    if (permissions.length === 0) {
+      console.log('Permissions not loaded, fetching now...');
+      await fetchPermissions();
+    }
+    
     if (role) {
       setEditingRole(role);
       setFormData({
@@ -371,10 +429,11 @@ const RolesSettings = () => {
             <Box as={FiShield} color="blue.600" />
             <Box>
               <Text fontSize="sm" fontWeight="medium" color="blue.800">
-                About Roles
+                About Roles & Permissions
               </Text>
               <Text fontSize="xs" color="blue.700" mt={1}>
                 Roles define access levels and permissions for team members. 
+                When you create a role, you can select from {permissions.length} available permissions across different resources.
                 Assign roles to employees to control what they can see and do in the system.
               </Text>
             </Box>
@@ -417,9 +476,14 @@ const RolesSettings = () => {
 
               {/* Permissions Section */}
               <Box>
-                <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={2}>
-                  Permissions
-                </Text>
+                <HStack justify="space-between" mb={2}>
+                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                    Permissions ({permissions.length})
+                  </Text>
+                  {isLoadingPermissions && (
+                    <Text fontSize="xs" color="gray.500">Loading...</Text>
+                  )}
+                </HStack>
                 <Box
                   borderWidth="1px"
                   borderColor="gray.200"
@@ -428,10 +492,53 @@ const RolesSettings = () => {
                   maxH="300px"
                   overflowY="auto"
                 >
-                  {permissions.length === 0 ? (
+                  {isLoadingPermissions ? (
                     <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>
-                      No permissions available
+                      Loading permissions...
                     </Text>
+                  ) : permissions.length === 0 ? (
+                    <VStack gap={2} py={4}>
+                      <Text fontSize="sm" color="gray.500" textAlign="center">
+                        No permissions available
+                      </Text>
+                      <Text fontSize="xs" color="gray.400" textAlign="center">
+                        Permissions should be automatically created with your organization.
+                      </Text>
+                      <HStack gap={2} mt={2}>
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onClick={() => fetchPermissions()}
+                        >
+                          Reload Permissions
+                        </Button>
+                        <Button
+                          size="xs"
+                          colorPalette="blue"
+                          onClick={async () => {
+                            try {
+                              await roleService.fixMissingPermissions();
+                              toaster.create({
+                                title: 'Success',
+                                description: 'Default permissions created successfully',
+                                type: 'success',
+                                duration: 3000,
+                              });
+                              await fetchPermissions();
+                            } catch (err: any) {
+                              toaster.create({
+                                title: 'Error',
+                                description: err.message || 'Failed to create permissions',
+                                type: 'error',
+                                duration: 3000,
+                              });
+                            }
+                          }}
+                        >
+                          Fix Missing Permissions
+                        </Button>
+                      </HStack>
+                    </VStack>
                   ) : (
                     <VStack gap={3} align="stretch">
                       {/* Group permissions by resource */}

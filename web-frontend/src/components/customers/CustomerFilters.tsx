@@ -7,6 +7,7 @@ import {
 } from '@chakra-ui/react';
 import { FiSearch, FiFilter, FiPlus } from 'react-icons/fi';
 import CustomSelect from '../ui/CustomSelect';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 interface CustomerFiltersProps {
   searchQuery: string;
@@ -23,6 +24,8 @@ const CustomerFilters = ({
   onStatusChange,
   onAddCustomer,
 }: CustomerFiltersProps) => {
+  const { canAccess } = usePermissions();
+
   return (
     <Stack
       direction={{ base: 'column', md: 'row' }}
@@ -82,6 +85,7 @@ const CustomerFilters = ({
           colorPalette="purple"
           h="40px"
           onClick={onAddCustomer}
+          disabled={!canAccess('customers', 'create')}
         >
           <FiPlus />
           <Box ml={2}>Add Customer</Box>

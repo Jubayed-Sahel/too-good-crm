@@ -17,10 +17,17 @@ export interface UserProfile {
   profile_type: ProfileType;
   profile_type_display: string;
   is_primary: boolean;
+  is_owner?: boolean;
   status: ProfileStatus;
   status_display: string;
   activated_at: string | null;
   deactivated_at: string | null;
+  roles?: Array<{
+    id: number;
+    name: string;
+    slug: string;
+    is_primary: boolean;
+  }>;
   created_at: string;
   updated_at: string;
 }

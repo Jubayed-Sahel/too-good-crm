@@ -132,14 +132,41 @@ class RoleService {
   }
 
   /**
-   * Get all permissions
+   * Get all permissions (handles pagination automatically)
    */
   async getPermissions(): Promise<Permission[]> {
-    const response = await api.get<any>(API_CONFIG.ENDPOINTS.PERMISSIONS.LIST);
+    console.log('[RoleService] Fetching permissions from:', API_CONFIG.ENDPOINTS.PERMISSIONS.LIST);
+    
+    // Fetch with large page size to get all permissions at once
+    // Or we can disable pagination by adding ?page_size=1000
+    const response = await api.get<any>(`${API_CONFIG.ENDPOINTS.PERMISSIONS.LIST}?page_size=1000`);
+    console.log('[RoleService] Raw API response:', response);
+    console.log('[RoleService] Response type:', typeof response);
+    console.log('[RoleService] Is array?', Array.isArray(response));
+    console.log('[RoleService] Has results?', 'results' in response);
+    
     if (response.results) {
+      console.log('[RoleService] Returning results array, count:', response.results.length);
+      console.log('[RoleService] Total count from API:', response.count);
       return response.results;
     }
-    return Array.isArray(response) ? response : [];
+    const fallback = Array.isArray(response) ? response : [];
+    console.log('[RoleService] Returning fallback array, count:', fallback.length);
+    return fallback;
+  }
+
+  /**
+   * Debug permission context - check why permissions might be empty
+   */
+  async debugPermissionContext(): Promise<any> {
+    return api.get('/permissions/debug_context/');
+  }
+
+  /**
+   * Fix missing permissions - create default permissions for organizations that have none
+   */
+  async fixMissingPermissions(): Promise<any> {
+    return api.post('/permissions/fix_missing_permissions/');
   }
 
   /**

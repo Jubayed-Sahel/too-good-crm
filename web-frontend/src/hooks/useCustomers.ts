@@ -5,10 +5,12 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { customerService } from '@/services';
 import api from '@/lib/apiClient';
+import { useProfile } from '@/contexts/ProfileContext';
 import type { Customer, PaginatedResponse, Statistics } from '@/types';
 
 // New service-based hook for simple usage
 export const useCustomers = (params?: Record<string, any>) => {
+  const { activeOrganizationId } = useProfile();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -18,7 +20,14 @@ export const useCustomers = (params?: Record<string, any>) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await customerService.getCustomers(params);
+      
+      // Always include organization filter if available
+      const filters = {
+        ...params,
+        ...(activeOrganizationId && { organization: activeOrganizationId }),
+      };
+      
+      const response = await customerService.getCustomers(filters);
       setCustomers(response.results);
       setPagination({
         count: response.count,
@@ -33,8 +42,10 @@ export const useCustomers = (params?: Record<string, any>) => {
   };
 
   useEffect(() => {
-    fetchCustomers();
-  }, [JSON.stringify(params)]);
+    if (activeOrganizationId) {
+      fetchCustomers();
+    }
+  }, [JSON.stringify(params), activeOrganizationId]);
 
   const createCustomer = async (data: Partial<Customer>) => {
     try {

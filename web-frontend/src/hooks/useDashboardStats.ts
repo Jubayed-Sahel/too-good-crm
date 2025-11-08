@@ -3,9 +3,11 @@
  */
 import { useState, useEffect } from 'react';
 import { analyticsService } from '@/services';
+import { useProfile } from '@/contexts/ProfileContext';
 import type { DashboardStats } from '@/types';
 
 export const useDashboardStats = () => {
+  const { activeOrganizationId } = useProfile();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -14,7 +16,9 @@ export const useDashboardStats = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await analyticsService.getDashboardStats();
+      const data = await analyticsService.getDashboardStats(
+        activeOrganizationId ? { organization: activeOrganizationId } : undefined
+      );
       setStats(data);
     } catch (err) {
       setError(err as Error);
@@ -24,8 +28,10 @@ export const useDashboardStats = () => {
   };
 
   useEffect(() => {
-    fetchStats();
-  }, []);
+    if (activeOrganizationId) {
+      fetchStats();
+    }
+  }, [activeOrganizationId]);
 
   return {
     stats,

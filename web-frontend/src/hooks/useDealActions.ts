@@ -1,14 +1,14 @@
 /**
  * Custom hook for Deal actions and mutations
  * Handles create, update, delete operations with proper error handling
- * Uses React Query for state management and organization from auth context
+ * Uses React Query for state management and organization from active profile
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { dealService } from '@/services/deal.service';
 import { customerService } from '@/services/customer.service';
-import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/contexts/ProfileContext';
 import { toaster } from '@/components/ui/toaster';
 import { exportData } from '@/utils';
 import type { MappedDeal } from './useDealsPage';
@@ -63,7 +63,7 @@ interface UseDealActionsReturn {
 
 export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDealActionsReturn => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { activeOrganizationId } = useProfile();
   const queryClient = useQueryClient();
   const [selectedDeal, setSelectedDeal] = useState<EditDealData | null>(null);
   
@@ -294,13 +294,13 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
   };
 
   const handleCreateDeal = async (data: any) => {
-    // Get organization ID from authenticated user
-    const organizationId = user?.primaryOrganizationId;
+    // Get organization ID from active profile
+    const organizationId = activeOrganizationId;
     
     if (!organizationId) {
       toaster.create({
         title: 'Unable to create deal',
-        description: 'Organization information not found. Please log in again.',
+        description: 'Organization information not found. Please select a profile.',
         type: 'error',
       });
       return;

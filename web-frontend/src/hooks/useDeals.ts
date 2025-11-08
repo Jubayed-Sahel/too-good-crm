@@ -3,9 +3,11 @@
  */
 import { useState, useEffect } from 'react';
 import { dealService, type DealCreateData } from '@/services';
+import { useProfile } from '@/contexts/ProfileContext';
 import type { Deal, PaginatedResponse } from '@/types';
 
 export const useDeals = (params?: Record<string, any>) => {
+  const { activeOrganizationId } = useProfile();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -15,7 +17,14 @@ export const useDeals = (params?: Record<string, any>) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await dealService.getDeals(params);
+      
+      // Always include organization filter if available
+      const filters = {
+        ...params,
+        ...(activeOrganizationId && { organization: activeOrganizationId }),
+      };
+      
+      const response = await dealService.getDeals(filters);
       setDeals(response.results);
       setPagination({
         count: response.count,
@@ -30,8 +39,10 @@ export const useDeals = (params?: Record<string, any>) => {
   };
 
   useEffect(() => {
-    fetchDeals();
-  }, [JSON.stringify(params)]);
+    if (activeOrganizationId) {
+      fetchDeals();
+    }
+  }, [JSON.stringify(params), activeOrganizationId]);
 
   const createDeal = async (data: DealCreateData) => {
     try {

@@ -23,9 +23,13 @@ export const useEmployees = (params?: Record<string, any>) => {
       setError(null);
       const response = await employeeService.getEmployees(params);
       
+      console.log('📥 Fetched employees response:', response);
+      
       // Handle paginated response
       if (response && typeof response === 'object' && 'results' in response) {
         const paginatedResponse = response as unknown as PaginatedResponse<Employee>;
+        console.log('📊 Employees from paginated response:', paginatedResponse.results);
+        console.log('🎯 First employee role_name:', paginatedResponse.results[0]?.role_name);
         setEmployees(paginatedResponse.results);
         setPagination({
           count: paginatedResponse.count,
@@ -33,6 +37,7 @@ export const useEmployees = (params?: Record<string, any>) => {
           previous: paginatedResponse.previous,
         });
       } else if (Array.isArray(response)) {
+        console.log('📊 Employees from array response:', response);
         setEmployees(response);
         setPagination(null);
       } else {

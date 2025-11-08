@@ -2,6 +2,7 @@
 Organization and multi-tenancy models.
 """
 from django.db import models
+from django.utils.text import slugify
 from .base import TimestampedModel, AddressMixin
 
 
@@ -36,6 +37,22 @@ class Organization(TimestampedModel, AddressMixin):
     
     def __str__(self):
         return self.name
+    
+    def save(self, *args, **kwargs):
+        """Auto-generate slug from name if not provided"""
+        if not self.slug:
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+            
+            # Ensure unique slug
+            while Organization.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            
+            self.slug = slug
+        
+        super().save(*args, **kwargs)
 
 
 class UserOrganization(TimestampedModel):

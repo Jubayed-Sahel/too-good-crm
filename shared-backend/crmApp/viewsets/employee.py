@@ -31,12 +31,20 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return EmployeeSerializer
     
     def get_queryset(self):
-        """Filter employees by user's organizations"""
+        """
+        Filter employees by user's organizations.
+        Returns employees in organizations where user is a member,
+        PLUS the user's own employee records in any organization.
+        """
         user_orgs = self.request.user.user_organizations.filter(
             is_active=True
         ).values_list('organization_id', flat=True)
         
-        queryset = Employee.objects.filter(organization_id__in=user_orgs)
+        # Get employees in user's organizations OR where the user is the employee
+        from django.db.models import Q
+        queryset = Employee.objects.filter(
+            Q(organization_id__in=user_orgs) | Q(user=self.request.user)
+        )
         
         # Filter by organization if provided
         org_id = self.request.query_params.get('organization')
@@ -64,18 +72,24 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 email__icontains=search
             )
         
-        return queryset.select_related('user', 'manager', 'organization', 'role')
+        return queryset.select_related('user', 'manager', 'organization', 'role').order_by('-created_at', 'first_name', 'last_name').distinct()
     
     def update(self, request, *args, **kwargs):
         """Override update to ensure role is properly loaded"""
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
+        
+        print(f"🔄 Updating employee {instance.id}: {request.data}")
+        
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         
-        # Refresh from DB to get related role data
-        instance.refresh_from_db()
+        # Refresh from DB to get related role data with select_related
+        instance = Employee.objects.select_related('role', 'user', 'manager', 'organization').get(pk=instance.pk)
+        
+        print(f"✅ Employee updated. Role: {instance.role}, Role name: {instance.role.name if instance.role else None}")
+        
         response_serializer = EmployeeSerializer(instance)
         return Response(response_serializer.data)
     
@@ -114,8 +128,9 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def invite(self, request):
         """
-        Invite a new employee to join the organization.
-        Creates User, UserOrganization, and Employee in one step.
+        Invite a new or existing employee to join the organization.
+        - If user doesn't exist: Creates User, UserOrganization, and Employee
+        - If user exists: Links existing user to organization and creates Employee record
         """
         from crmApp.models import User, UserOrganization
         from django.utils.crypto import get_random_string
@@ -137,10 +152,10 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         email = request.data.get('email')
         first_name = request.data.get('first_name')
         last_name = request.data.get('last_name')
-        phone = request.data.get('phone')
-        department = request.data.get('department')
-        job_title = request.data.get('job_title')
-        role_id = request.data.get('role_id')
+        phone = request.data.get('phone') or None  # Convert empty string to None
+        department = request.data.get('department') or None
+        job_title = request.data.get('job_title') or None
+        role_id = request.data.get('role_id') or None
         
         # Validate required fields
         if not email or not first_name or not last_name:
@@ -149,39 +164,80 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Check if user already exists
-        if User.objects.filter(email=email).exists():
-            return Response(
-                {'error': 'A user with this email already exists'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
         try:
-            # Generate username from email
-            username = email.split('@')[0]
-            if User.objects.filter(username=username).exists():
-                username = f"{username}_{get_random_string(4)}"
+            # Check if user already exists
+            existing_user = User.objects.filter(email=email).first()
+            temp_password = None
+            user_created = False
             
-            # Generate temporary password
-            temp_password = get_random_string(12)
-            
-            # Create user account
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=temp_password,
-                first_name=first_name,
-                last_name=last_name,
-                phone=phone
-            )
-            
-            # Link user to organization
-            UserOrganization.objects.create(
-                user=user,
-                organization=organization,
-                is_owner=False,  # Employee, not owner
-                is_active=True
-            )
+            if existing_user:
+                # User exists - check if already an employee in this organization
+                existing_employee = Employee.objects.filter(
+                    organization=organization,
+                    user=existing_user
+                ).first()
+                
+                if existing_employee:
+                    return Response(
+                        {'error': f'{existing_user.full_name} is already an employee in this organization'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Use existing user
+                user = existing_user
+                
+                # Check if user is already linked to this organization
+                user_org_link = UserOrganization.objects.filter(
+                    user=user,
+                    organization=organization
+                ).first()
+                
+                if not user_org_link:
+                    # Link user to organization
+                    UserOrganization.objects.create(
+                        user=user,
+                        organization=organization,
+                        is_owner=False,
+                        is_active=True
+                    )
+                elif not user_org_link.is_active:
+                    # Reactivate existing link
+                    user_org_link.is_active = True
+                    user_org_link.save()
+                
+                message = f'Existing user {user.full_name} added as employee'
+                
+            else:
+                # User doesn't exist - create new user
+                # Generate username from email
+                username = email.split('@')[0]
+                if User.objects.filter(username=username).exists():
+                    username = f"{username}_{get_random_string(4)}"
+                
+                # Generate temporary password
+                temp_password = get_random_string(12)
+                
+                # Create user account
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=temp_password,
+                    first_name=first_name,
+                    last_name=last_name,
+                    phone=phone
+                )
+                
+                user_created = True
+                
+                # Link user to organization
+                UserOrganization.objects.create(
+                    user=user,
+                    organization=organization,
+                    is_owner=False,
+                    is_active=True
+                )
+                
+                message = f'New user created and invited as employee'
             
             # Create employee record
             employee = Employee.objects.create(
@@ -190,24 +246,32 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                 first_name=first_name,
                 last_name=last_name,
                 email=email,
-                phone=phone,
+                phone=phone or user.phone,
                 department=department,
                 job_title=job_title,
                 status='active',
                 role_id=role_id
             )
             
-            # TODO: Send invitation email with temp password
-            # For now, return the temp password (in production, send via email)
-            
-            return Response({
-                'message': 'Employee invited successfully',
+            # Build response
+            response_data = {
+                'message': message,
                 'employee': EmployeeSerializer(employee).data,
-                'temporary_password': temp_password,  # Remove in production
-                'note': 'Send this password to the employee securely'
-            }, status=status.HTTP_201_CREATED)
+                'user_created': user_created
+            }
+            
+            if temp_password:
+                response_data['temporary_password'] = temp_password
+                response_data['note'] = 'Send this password to the employee securely'
+            else:
+                response_data['note'] = 'User already had an account. They can login with their existing credentials.'
+            
+            return Response(response_data, status=status.HTTP_201_CREATED)
             
         except Exception as e:
+            import traceback
+            print(f"❌ Error inviting employee: {str(e)}")
+            print(traceback.format_exc())
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST

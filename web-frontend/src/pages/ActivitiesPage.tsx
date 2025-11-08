@@ -5,6 +5,7 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { toaster } from '../components/ui/toaster';
 import { ConfirmDialog } from '../components/common';
 import { useAccountMode } from '@/contexts/AccountModeContext';
+import { useProfile } from '@/contexts/ProfileContext';
 import { ActivityStatsCards } from '../components/activities/ActivityStatsCards';
 import { ActivityFiltersBar } from '../components/activities/ActivityFiltersBar';
 import { ActivitiesTable } from '../components/activities/ActivitiesTable';
@@ -18,6 +19,7 @@ import type { Activity, ActivityType, ActivityStatus, ActivityFilters, ActivityS
 export const ActivitiesPage = () => {
   const navigate = useNavigate();
   const { isClientMode } = useAccountMode();
+  const { activeOrganizationId } = useProfile();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [stats, setStats] = useState<ActivityStats>({
     total: 0,
@@ -67,7 +69,14 @@ export const ActivitiesPage = () => {
   const loadActivities = async () => {
     try {
       setIsLoading(true);
-      const response = await activityService.getAll(filters);
+      
+      // Include organization filter
+      const filtersWithOrg = {
+        ...filters,
+        ...(activeOrganizationId && { organization: activeOrganizationId }),
+      };
+      
+      const response = await activityService.getAll(filtersWithOrg);
       setActivities(response.results);
     } catch (error) {
       toaster.create({
@@ -84,7 +93,12 @@ export const ActivitiesPage = () => {
   // Load stats
   const loadStats = async () => {
     try {
-      const statsData = await activityService.getStats();
+      // Include organization filter
+      const statsFilter = activeOrganizationId 
+        ? { organization: activeOrganizationId }
+        : undefined;
+        
+      const statsData = await activityService.getStats(statsFilter);
       setStats(statsData);
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -92,9 +106,11 @@ export const ActivitiesPage = () => {
   };
 
   useEffect(() => {
-    loadActivities();
-    loadStats();
-  }, [filters]);
+    if (activeOrganizationId) {
+      loadActivities();
+      loadStats();
+    }
+  }, [filters, activeOrganizationId]);
 
   // Filter handlers
   const handleSearch = (searchQuery: string) => {

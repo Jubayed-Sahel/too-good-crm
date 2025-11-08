@@ -108,12 +108,14 @@ export const InviteEmployeeDialog = ({ isOpen, onClose, onSuccess }: InviteEmplo
     try {
       const response = await employeeService.inviteEmployee(formData);
       
-      // Show temporary password
-      setTempPassword(response.temporary_password);
+      // Show temporary password (only for new users)
+      if (response.temporary_password) {
+        setTempPassword(response.temporary_password);
+      }
 
       toaster.create({
         title: 'Employee Invited',
-        description: `${formData.first_name} ${formData.last_name} has been invited successfully`,
+        description: response.message || `${formData.first_name} ${formData.last_name} has been invited successfully`,
         type: 'success',
         duration: 3000,
       });
@@ -252,62 +254,81 @@ export const InviteEmployeeDialog = ({ isOpen, onClose, onSuccess }: InviteEmplo
                   </Text>
                 </Box>
 
-                <Box
-                  p={4}
-                  bg="purple.50"
-                  borderRadius="lg"
-                  borderWidth="1px"
-                  borderColor="purple.200"
-                >
-                  <Text fontWeight="semibold" color="purple.800" mb={2}>
-                    Temporary Password
-                  </Text>
-                  <Text fontSize="sm" color="purple.700" mb={3}>
-                    Share this password with the employee securely. They should change it after first login.
-                  </Text>
-                  
-                  <HStack gap={2}>
-                    <Code
-                      flex={1}
-                      p={3}
-                      fontSize="md"
-                      fontWeight="bold"
-                      bg="white"
+                {tempPassword ? (
+                  <>
+                    <Box
+                      p={4}
+                      bg="purple.50"
+                      borderRadius="lg"
                       borderWidth="1px"
-                      borderColor="purple.300"
+                      borderColor="purple.200"
                     >
-                      {tempPassword}
-                    </Code>
-                    <Button
-                      size="md"
-                      colorPalette={copied ? 'green' : 'purple'}
-                      onClick={handleCopyPassword}
-                      minW="100px"
-                    >
-                      {copied ? (
-                        <>
-                          <FiCheck /> Copied
-                        </>
-                      ) : (
-                        <>
-                          <FiCopy /> Copy
-                        </>
-                      )}
-                    </Button>
-                  </HStack>
-                </Box>
+                      <Text fontWeight="semibold" color="purple.800" mb={2}>
+                        Temporary Password
+                      </Text>
+                      <Text fontSize="sm" color="purple.700" mb={3}>
+                        Share this password with the employee securely. They should change it after first login.
+                      </Text>
+                      
+                      <HStack gap={2}>
+                        <Code
+                          flex={1}
+                          p={3}
+                          fontSize="md"
+                          fontWeight="bold"
+                          bg="white"
+                          borderWidth="1px"
+                          borderColor="purple.300"
+                        >
+                          {tempPassword}
+                        </Code>
+                        <Button
+                          size="md"
+                          colorPalette={copied ? 'green' : 'purple'}
+                          onClick={handleCopyPassword}
+                          minW="100px"
+                        >
+                          {copied ? (
+                            <>
+                              <FiCheck /> Copied
+                            </>
+                          ) : (
+                            <>
+                              <FiCopy /> Copy
+                            </>
+                          )}
+                        </Button>
+                      </HStack>
+                    </Box>
 
-                <Box
-                  p={3}
-                  bg="orange.50"
-                  borderRadius="md"
-                  borderLeftWidth="4px"
-                  borderLeftColor="orange.400"
-                >
-                  <Text fontSize="sm" color="orange.800">
-                    <strong>Important:</strong> This password will not be shown again. Make sure to copy and share it with the employee.
-                  </Text>
-                </Box>
+                    <Box
+                      p={3}
+                      bg="orange.50"
+                      borderRadius="md"
+                      borderLeftWidth="4px"
+                      borderLeftColor="orange.400"
+                    >
+                      <Text fontSize="sm" color="orange.800">
+                        <strong>Important:</strong> This password will not be shown again. Make sure to copy and share it with the employee.
+                      </Text>
+                    </Box>
+                  </>
+                ) : (
+                  <Box
+                    p={4}
+                    bg="blue.50"
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="blue.200"
+                  >
+                    <Text fontWeight="semibold" color="blue.800" mb={2}>
+                      Existing User Added
+                    </Text>
+                    <Text fontSize="sm" color="blue.700">
+                      This user already had an account. They can log in with their existing credentials and will now see your organization in their account.
+                    </Text>
+                  </Box>
+                )}
               </VStack>
             )}
           </DialogBody>
