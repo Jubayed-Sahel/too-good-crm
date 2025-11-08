@@ -99,7 +99,7 @@ fun LeadsScreen(
                 change = "+8%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.TrendingUp,
-                iconBackgroundColor = Color(0xFFFCE7F3), // Pink 100
+                iconBackgroundColor = DesignTokens.Colors.PinkLight,
                 iconTintColor = DesignTokens.Colors.PinkAccent
             )
 

@@ -39,21 +39,21 @@ object DesignTokens {
 
         // Surface Colors
         val Surface = Color(0xFFFFFFFF) // White
-        val SurfaceVariant = Color(0xFFF8FAFC) // Gray 50
+        val SurfaceVariant = Color(0xFFF9FAFB) // Gray 50 (Chakra UI)
         val SurfaceTint = Color(0xFF667EEA) // Primary
 
         // Background Colors
-        val Background = Color(0xFFF1F5F9) // Gray 100
-        val BackgroundDark = Color(0xFFE2E8F0) // Gray 200
+        val Background = Color(0xFFF9FAFB) // Gray 50 (Chakra UI)
+        val BackgroundDark = Color(0xFFF3F4F6) // Gray 100 (Chakra UI)
 
         // Outline & Border Colors
-        val Outline = Color(0xFFCBD5E1) // Gray 300
-        val OutlineVariant = Color(0xFFE2E8F0) // Gray 200
+        val Outline = Color(0xFFD1D5DB) // Gray 300 (Chakra UI)
+        val OutlineVariant = Color(0xFFE5E7EB) // Gray 200 (Chakra UI)
 
         // Text Colors
-        val OnSurface = Color(0xFF1E293B) // Gray 900
-        val OnSurfaceVariant = Color(0xFF64748B) // Gray 500
-        val OnSurfaceTertiary = Color(0xFF94A3B8) // Gray 400
+        val OnSurface = Color(0xFF111827) // Gray 900 (Chakra UI)
+        val OnSurfaceVariant = Color(0xFF6B7280) // Gray 500 (Chakra UI)
+        val OnSurfaceTertiary = Color(0xFF9CA3AF) // Gray 400 (Chakra UI)
         val OnPrimary = Color(0xFFFFFFFF) // White
         val OnSecondary = Color(0xFFFFFFFF) // White
 
@@ -82,6 +82,16 @@ object DesignTokens {
 
         // Special Accent Colors
         val PinkAccent = Color(0xFFEC4899) // Pink 500 - for special accents
+        val PinkLight = Color(0xFFFCE7F3) // Pink 100 - for pink backgrounds
+        
+        // Chart & Visualization Colors (matching Chakra UI)
+        val ChartPurple = Color(0xFF805AD5) // Purple 500 for charts
+        val ChartBlue = Color(0xFF3182CE) // Blue 600 for charts
+        val ChartOrange = Color(0xFFDD6B20) // Orange 600 for charts  
+        val ChartGreen = Color(0xFF38A169) // Green 600 for charts
+        val ChartGray = Color(0xFF718096) // Gray 500 for charts
+        val ChartYellow = Color(0xFFECC94B) // Yellow 500 for badges/gold
+        val ChartSilver = Color(0xFF718096) // Gray 500 for silver badge
 
         val White = Color(0xFFFFFFFF)
         val Black = Color(0xFF000000)
