@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.AppScaffoldWithDrawer
@@ -74,18 +75,8 @@ fun LeadsScreen(
                 change = "+12%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.People,
-                iconBackgroundColor = DesignTokens.Colors.PrimaryContainer
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LeadMetricCard(
-                title = "NEW LEADS",
-                value = "2",
-                change = "+8%",
-                changeLabel = "vs last month",
-                icon = Icons.Default.TrendingUp,
-                iconBackgroundColor = DesignTokens.Colors.ErrorLight
+                iconBackgroundColor = DesignTokens.Colors.PrimaryLight.copy(alpha = 0.2f),
+                iconTintColor = DesignTokens.Colors.Primary
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -96,18 +87,32 @@ fun LeadsScreen(
                 change = "+15%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.EmojiEvents,
-                iconBackgroundColor = DesignTokens.Colors.InfoLight
+                iconBackgroundColor = DesignTokens.Colors.InfoLight,
+                iconTintColor = DesignTokens.Colors.Info
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             LeadMetricCard(
-                title = "CONVERTED",
-                value = "0",
+                title = "CONVERSION RATE",
+                value = "8.5%",
+                change = "+8%",
+                changeLabel = "vs last month",
+                icon = Icons.Default.TrendingUp,
+                iconBackgroundColor = Color(0xFFFCE7F3), // Pink 100
+                iconTintColor = DesignTokens.Colors.PinkAccent
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LeadMetricCard(
+                title = "NEW THIS MONTH",
+                value = "2",
                 change = "+23%",
                 changeLabel = "vs last month",
                 icon = Icons.Default.CheckCircle,
-                iconBackgroundColor = DesignTokens.Colors.SuccessLight
+                iconBackgroundColor = DesignTokens.Colors.SuccessLight,
+                iconTintColor = DesignTokens.Colors.Success
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -289,11 +294,17 @@ fun LeadMetricCard(
     change: String,
     changeLabel: String,
     icon: ImageVector,
-    iconBackgroundColor: Color
+    iconBackgroundColor: Color,
+    iconTintColor: Color
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(
+            containerColor = DesignTokens.Colors.White
+        ),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Row(
             modifier = Modifier
@@ -306,13 +317,16 @@ fun LeadMetricCard(
                 Text(
                     text = title,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = DesignTokens.Colors.OnSurfaceVariant,
+                    fontWeight = DesignTokens.Typography.FontWeightSemiBold,
+                    letterSpacing = 0.5.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = value,
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = DesignTokens.Typography.FontWeightBold,
+                    color = DesignTokens.Colors.OnSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -327,13 +341,13 @@ fun LeadMetricCard(
                         text = change,
                         style = MaterialTheme.typography.bodySmall,
                         color = DesignTokens.Colors.Success,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = DesignTokens.Typography.FontWeightSemiBold
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = changeLabel,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
             }
@@ -346,7 +360,8 @@ fun LeadMetricCard(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = iconTintColor,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -370,7 +385,12 @@ fun LeadCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(
+            containerColor = DesignTokens.Colors.White
+        ),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Column(
             modifier = Modifier
@@ -385,16 +405,18 @@ fun LeadCard(
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = DesignTokens.Typography.FontWeightBold,
+                    color = DesignTokens.Colors.OnSurface
                 )
                 Surface(
                     shape = MaterialTheme.shapes.small,
-                    color = statusColor.copy(alpha = 0.2f)
+                    color = statusColor.copy(alpha = 0.15f)
                 ) {
                     Text(
                         text = status,
                         style = MaterialTheme.typography.labelSmall,
                         color = statusColor,
+                        fontWeight = DesignTokens.Typography.FontWeightSemiBold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -407,13 +429,13 @@ fun LeadCard(
                     Icons.Default.Business,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = DesignTokens.Colors.OnSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = company,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = DesignTokens.Colors.OnSurfaceVariant
                 )
             }
 
@@ -422,7 +444,7 @@ fun LeadCard(
             Text(
                 text = position,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = DesignTokens.Colors.OnSurfaceVariant
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -432,19 +454,19 @@ fun LeadCard(
                     Icons.Default.Email,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = DesignTokens.Colors.OnSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = email,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = DesignTokens.Colors.Primary
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            HorizontalDivider()
+            HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -456,19 +478,22 @@ fun LeadCard(
                     Text(
                         text = "Score",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = DesignTokens.Colors.OnSurfaceVariant,
+                        fontWeight = DesignTokens.Typography.FontWeightMedium
                     )
                     Text(
                         text = score,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = DesignTokens.Typography.FontWeightSemiBold,
+                        color = DesignTokens.Colors.OnSurface
                     )
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = "Priority",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = DesignTokens.Colors.OnSurfaceVariant,
+                        fontWeight = DesignTokens.Typography.FontWeightMedium
                     )
                     Surface(
                         shape = MaterialTheme.shapes.small,
@@ -478,6 +503,7 @@ fun LeadCard(
                             text = priority,
                             style = MaterialTheme.typography.bodySmall,
                             color = DesignTokens.Colors.ErrorDark,
+                            fontWeight = DesignTokens.Typography.FontWeightSemiBold,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                         )
                     }
@@ -486,12 +512,14 @@ fun LeadCard(
                     Text(
                         text = "Est. Value",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = DesignTokens.Colors.OnSurfaceVariant,
+                        fontWeight = DesignTokens.Typography.FontWeightMedium
                     )
                     Text(
                         text = estimatedValue,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = DesignTokens.Typography.FontWeightBold,
+                        color = DesignTokens.Colors.OnSurface
                     )
                 }
             }
@@ -506,22 +534,26 @@ fun LeadCard(
                     Text(
                         text = "Source",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = DesignTokens.Colors.OnSurfaceVariant,
+                        fontWeight = DesignTokens.Typography.FontWeightMedium
                     )
                     Text(
                         text = source,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DesignTokens.Colors.OnSurface
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "Created",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = DesignTokens.Colors.OnSurfaceVariant,
+                        fontWeight = DesignTokens.Typography.FontWeightMedium
                     )
                     Text(
                         text = created,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DesignTokens.Colors.OnSurface
                     )
                 }
             }
@@ -534,7 +566,9 @@ fun LeadCard(
             ) {
                 OutlinedButton(
                     onClick = { /* TODO: View lead */ },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.Outline)
                 ) {
                     Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -542,7 +576,9 @@ fun LeadCard(
                 }
                 OutlinedButton(
                     onClick = { /* TODO: Edit lead */ },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.Outline)
                 ) {
                     Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -551,7 +587,7 @@ fun LeadCard(
                 IconButton(
                     onClick = { /* TODO: Delete lead */ }
                 ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = DesignTokens.Colors.Error)
                 }
             }
 
@@ -562,7 +598,8 @@ fun LeadCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = DesignTokens.Colors.Success
-                )
+                ),
+                shape = MaterialTheme.shapes.medium
             ) {
                 Text("Convert to Customer")
             }

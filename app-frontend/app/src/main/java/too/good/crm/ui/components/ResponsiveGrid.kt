@@ -3,6 +3,7 @@ package too.good.crm.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.responsiveColumns
 import too.good.crm.ui.utils.responsiveSpacing
@@ -90,6 +91,8 @@ fun StatsGrid(
                     icon = stat.icon,
                     change = stat.change,
                     isPositive = stat.isPositive,
+                    iconBackgroundColor = stat.iconBackgroundColor,
+                    iconTintColor = stat.iconTintColor,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -105,7 +108,9 @@ data class StatData(
     val value: String,
     val icon: @Composable () -> Unit,
     val change: String,
-    val isPositive: Boolean = true
+    val isPositive: Boolean = true,
+    val iconBackgroundColor: Color = DesignTokens.Colors.SecondaryContainer,
+    val iconTintColor: Color = DesignTokens.Colors.Secondary
 )
 
 /**
