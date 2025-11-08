@@ -63,7 +63,7 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
           setPermissions(['*:*']); // Wildcard for full access
         }
       } catch (error) {
-        console.error('Failed to fetch permissions:', error);
+        console.error('[PermissionContext] Failed to fetch permissions:', error);
         setPermissions([]);
       } finally {
         setIsLoading(false);
@@ -133,17 +133,21 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
       // Check all possible permission combinations
       for (const possibleAction of possibleActions) {
         // Check plural resource with action (e.g., "customers:read")
-        if (permissions.includes(`${resource}:${possibleAction}`)) {
+        const pluralPerm = `${resource}:${possibleAction}`;
+        if (permissions.includes(pluralPerm)) {
           return true;
         }
         
         // Check singular resource with action (e.g., "customer:view")
-        if (permissions.includes(`${singularResource}:${possibleAction}`)) {
+        const singularPerm = `${singularResource}:${possibleAction}`;
+        if (permissions.includes(singularPerm)) {
           return true;
         }
         
         // Check resource-level wildcard (e.g., "customers:*" or "customer:*")
-        if (permissions.includes(`${resource}:*`) || permissions.includes(`${singularResource}:*`)) {
+        const pluralWildcard = `${resource}:*`;
+        const singularWildcard = `${singularResource}:*`;
+        if (permissions.includes(pluralWildcard) || permissions.includes(singularWildcard)) {
           return true;
         }
       }
