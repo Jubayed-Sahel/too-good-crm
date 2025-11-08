@@ -88,6 +88,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiFileText, label: 'Deals', path: '/deals', resource: 'deals' },
     { icon: FiUserPlus, label: 'Leads', path: '/leads', resource: 'leads' },
     { icon: FiActivity, label: 'Activities', path: '/activities', resource: 'activities' },
+    { icon: FiAlertCircle, label: 'Issues', path: '/issues', resource: 'issues' },
     { icon: FiBarChart2, label: 'Analytics', path: '/analytics', resource: 'analytics' },
     { icon: HiUserGroup, label: 'Team', path: '/employees', resource: 'employees' },
     { icon: FiSettings, label: 'Settings', path: '/settings', resource: 'settings' },

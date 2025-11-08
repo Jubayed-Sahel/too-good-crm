@@ -51,10 +51,17 @@ export const issueService = {
   },
 
   /**
-   * Resolve issue
+   * Raise issue (with auto-sync to Linear)
    */
-  resolve: async (id: number): Promise<Issue> => {
-    return api.post<Issue>(API_CONFIG.ENDPOINTS.ISSUES.RESOLVE(id));
+  raise: async (data: any): Promise<any> => {
+    return api.post('/api/issues/raise/', data);
+  },
+
+  /**
+   * Resolve issue (with optional resolution notes)
+   */
+  resolve: async (id: number, resolutionNotes?: string): Promise<Issue> => {
+    return api.post<Issue>(`/api/issues/resolve/${id}/`, { resolution_notes: resolutionNotes });
   },
 
   /**

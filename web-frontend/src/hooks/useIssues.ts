@@ -114,8 +114,28 @@ export const useIssueMutations = () => {
     },
   });
 
+  const raiseIssue = useMutation({
+    mutationFn: (data: any) => issueService.raise(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [ISSUES_QUERY_KEY] });
+      toaster.create({
+        title: 'Issue Raised',
+        description: 'Issue has been raised successfully',
+        type: 'success',
+      });
+    },
+    onError: (error: any) => {
+      toaster.create({
+        title: 'Error',
+        description: error.message || 'Failed to raise issue',
+        type: 'error',
+      });
+    },
+  });
+
   const resolveIssue = useMutation({
-    mutationFn: (id: number) => issueService.resolve(id),
+    mutationFn: ({ issueId, resolutionNotes }: { issueId: number; resolutionNotes: string }) => 
+      issueService.resolve(issueId, resolutionNotes),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [ISSUES_QUERY_KEY] });
       toaster.create({
@@ -156,6 +176,7 @@ export const useIssueMutations = () => {
     createIssue,
     updateIssue,
     deleteIssue,
+    raiseIssue,
     resolveIssue,
     reopenIssue,
   };
