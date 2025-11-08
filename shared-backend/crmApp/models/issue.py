@@ -2,10 +2,10 @@
 Issue management models for tracking vendor and order issues.
 """
 from django.db import models
-from .base import TimestampedModel, CodeMixin, StatusMixin
+from .base import TimestampedModel, CodeMixin
 
 
-class Issue(TimestampedModel, CodeMixin, StatusMixin):
+class Issue(TimestampedModel, CodeMixin):
     """
     Issue model for tracking problems with vendors, orders, and services.
     Allows organization to log and manage issues throughout their lifecycle.
@@ -73,6 +73,11 @@ class Issue(TimestampedModel, CodeMixin, StatusMixin):
         choices=CATEGORY_CHOICES,
         default='general'
     )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='open'
+    )
     
     # Assignment
     assigned_to = models.ForeignKey(
@@ -100,6 +105,35 @@ class Issue(TimestampedModel, CodeMixin, StatusMixin):
         related_name='resolved_issues'
     )
     resolution_notes = models.TextField(null=True, blank=True)
+    
+    # Linear Integration
+    linear_issue_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text='Linear issue ID for synced issues'
+    )
+    linear_issue_url = models.URLField(
+        max_length=500,
+        null=True,
+        blank=True,
+        help_text='Linear issue URL'
+    )
+    linear_team_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text='Linear team ID'
+    )
+    synced_to_linear = models.BooleanField(
+        default=False,
+        help_text='Whether this issue has been synced to Linear'
+    )
+    last_synced_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text='Last time this issue was synced with Linear'
+    )
     
     class Meta:
         db_table = 'issues'

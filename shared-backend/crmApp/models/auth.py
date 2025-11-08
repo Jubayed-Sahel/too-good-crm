@@ -60,6 +60,16 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
     two_factor_enabled = models.BooleanField(default=False)
     two_factor_secret = models.CharField(max_length=255, null=True, blank=True)
     
+    # Current organization context for multi-tenancy
+    current_organization = models.ForeignKey(
+        'Organization',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='current_users',
+        help_text='Currently active organization for this user'
+    )
+    
     objects = UserManager()
     
     USERNAME_FIELD = 'email'
