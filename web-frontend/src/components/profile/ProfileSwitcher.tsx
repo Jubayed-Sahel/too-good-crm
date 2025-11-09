@@ -17,6 +17,7 @@ import {
 } from '@chakra-ui/react';
 import { FiChevronDown, FiCheck, FiBriefcase, FiUsers, FiUser } from 'react-icons/fi';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useAuth } from '@/hooks/useAuth';
 
 const profileIcons = {
   vendor: FiBriefcase,
@@ -37,7 +38,8 @@ const profileLabels = {
 };
 
 export const ProfileSwitcher = () => {
-  const { profiles, activeProfile, switchProfile, isLoading } = useProfile();
+  const { profiles, activeProfile, isLoading } = useProfile();
+  const { switchRole } = useAuth();
 
   if (isLoading || !activeProfile) {
     return (
@@ -97,7 +99,7 @@ export const ProfileSwitcher = () => {
                 <MenuItem
                   key={profile.id}
                   value={profile.id.toString()}
-                  onClick={() => switchProfile(profile.id)}
+                  onClick={() => switchRole(profile.id)}
                   cursor="pointer"
                   bg={activeProfile.id === profile.id ? 'purple.50' : 'transparent'}
                 >
@@ -143,7 +145,7 @@ export const ProfileSwitcher = () => {
                 <MenuItem
                   key={profile.id}
                   value={profile.id.toString()}
-                  onClick={() => switchProfile(profile.id)}
+                  onClick={() => switchRole(profile.id)}
                   cursor="pointer"
                   bg={activeProfile.id === profile.id ? 'blue.50' : 'transparent'}
                 >
@@ -189,7 +191,7 @@ export const ProfileSwitcher = () => {
                 <MenuItem
                   key={profile.id}
                   value={profile.id.toString()}
-                  onClick={() => switchProfile(profile.id)}
+                  onClick={() => switchRole(profile.id)}
                   cursor="pointer"
                   bg={activeProfile.id === profile.id ? 'green.50' : 'transparent'}
                 >

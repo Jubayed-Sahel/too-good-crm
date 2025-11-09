@@ -82,16 +82,14 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [user]);
 
   const switchProfile = async (profileId: number) => {
+    // Note: This function is kept for compatibility but shouldn't be used directly
+    // ProfileSwitcher should use auth.switchRole() instead
     const profile = profiles.find(p => p.id === profileId);
     if (profile) {
-      // Update local state first for immediate UI feedback
+      console.warn('[ProfileContext] switchProfile is deprecated - use auth.switchRole() instead');
+      // Update local state for immediate UI feedback
       setActiveProfile(profile);
       localStorage.setItem('activeProfileId', profileId.toString());
-      
-      // Call backend to switch profile (this will trigger a page reload)
-      // Note: We need to import and use the auth context's switchRole
-      // For now, just reload - the auth switchRole should be called from Sidebar
-      window.location.reload();
     }
   };
 
