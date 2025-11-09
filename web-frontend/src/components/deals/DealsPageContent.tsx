@@ -2,7 +2,9 @@
  * DealsPageContent - Presentation Component
  * Pure UI component that receives all data and handlers as props
  */
-import { Box, Heading, Text, VStack } from '@chakra-ui/react';
+import React from 'react';
+import { VStack, Box, Heading, Text } from '@chakra-ui/react';
+import { FiPlus } from 'react-icons/fi';
 import { 
   DealsTable, 
   DealsFilters, 
@@ -11,6 +13,7 @@ import {
   EditDealDialog,
   type EditDealData 
 } from '../deals';
+import { PageHeader, StandardButton } from '@/components/common';
 import type { MappedDeal } from '@/hooks/useDealsPage';
 
 interface DealsPageContentProps {
@@ -71,14 +74,19 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
   return (
     <VStack gap={5} align="stretch">
       {/* Page Header */}
-      <Box>
-        <Heading size="xl" mb={2}>
-          Deals
-        </Heading>
-        <Text color="gray.600" fontSize="sm">
-          Track your sales pipeline and manage deal progress
-        </Text>
-      </Box>
+      <PageHeader
+        title="Deals"
+        description="Track your sales pipeline, manage deal progress, and close more deals"
+        actions={
+          <StandardButton
+            variant="primary"
+            leftIcon={<FiPlus />}
+            onClick={onOpenCreateDialog}
+          >
+            New Deal
+          </StandardButton>
+        }
+      />
 
       {/* Statistics Cards */}
       <DealsStats

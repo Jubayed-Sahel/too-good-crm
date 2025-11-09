@@ -1,14 +1,25 @@
 import { Box, Button, VStack, HStack, Text, Badge, Grid } from '@chakra-ui/react';
 import { Card } from '../common';
 import { FiCreditCard, FiDownload, FiCheckCircle } from 'react-icons/fi';
+import { toaster } from '../ui/toaster';
 
 const BillingSettings = () => {
   const handleUpgrade = () => {
-    alert('Upgrade plan');
+    toaster.create({
+      title: 'Upgrade Plan',
+      description: 'Plan upgrade functionality will be available soon.',
+      type: 'info',
+      duration: 3000,
+    });
   };
 
   const handleDownloadInvoice = (invoiceId: string) => {
-    alert(`Download invoice ${invoiceId}`);
+    toaster.create({
+      title: 'Download Invoice',
+      description: `Invoice ${invoiceId} download functionality will be available soon.`,
+      type: 'info',
+      duration: 3000,
+    });
   };
 
   return (

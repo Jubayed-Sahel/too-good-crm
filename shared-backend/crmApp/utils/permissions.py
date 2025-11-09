@@ -18,8 +18,11 @@ class PermissionChecker:
             # Allow action
     """
     
-    def __init__(self, user, organization):
+    def __init__(self, user, organization=None):
         self.user = user
+        # If organization not provided, try to get from active profile
+        if organization is None and hasattr(user, 'current_organization'):
+            organization = user.current_organization
         self.organization = organization
         self._permissions_cache = None
     
@@ -28,35 +31,65 @@ class PermissionChecker:
         if self._permissions_cache is not None:
             return self._permissions_cache
         
-        # Check if user is vendor/owner - they have all permissions
-        user_org = self.user.user_organizations.filter(
+        if not self.organization:
+            self._permissions_cache = set()
+            return self._permissions_cache
+        
+        # Check if user is vendor - vendors have all permissions in their organization
+        vendor_profile = UserProfile.objects.filter(
+            user=self.user,
             organization=self.organization,
-            is_active=True
+            profile_type='vendor',
+            status='active'
         ).first()
         
-        if user_org and user_org.is_owner:
-            # Owners have all permissions
+        if vendor_profile:
+            # Vendors have all permissions in their organization
             all_perms = Permission.objects.filter(organization=self.organization)
             self._permissions_cache = set(f"{p.resource}.{p.action}" for p in all_perms)
             return self._permissions_cache
         
-        # Get employee profile
-        from crmApp.models import Employee
+        # Check if user is employee - employees have permissions based on their role
+        from crmApp.models import Employee, UserRole, RolePermission
+        
+        # Get employee record
         employee = Employee.objects.filter(
             user=self.user,
             organization=self.organization,
             status='active'
         ).first()
         
-        if not employee or not employee.role:
-            # No employee record or no role assigned - no permissions
+        if not employee:
+            # Not an employee in this organization - no permissions
             self._permissions_cache = set()
             return self._permissions_cache
         
-        # Get permissions from role
+        # Get role IDs from Employee.role and UserRole assignments
+        role_ids = set()
+        
+        # 1. Primary role from Employee.role
+        if employee.role:
+            role_ids.add(employee.role.id)
+        
+        # 2. Additional roles from UserRole
+        user_role_ids = UserRole.objects.filter(
+            user=self.user,
+            organization=self.organization,
+            is_active=True
+        ).values_list('role_id', flat=True)
+        
+        role_ids.update(user_role_ids)
+        
+        if not role_ids:
+            # Employee has no roles assigned - no permissions (except read might be allowed)
+            self._permissions_cache = set()
+            return self._permissions_cache
+        
+        # Get permissions from all roles
         role_permissions = RolePermission.objects.filter(
-            role=employee.role,
-            role__is_active=True
+            role_id__in=role_ids,
+            role__is_active=True,
+            role__organization=self.organization
         ).select_related('permission')
         
         self._permissions_cache = set(
@@ -111,12 +144,33 @@ class PermissionChecker:
         return list(self._get_user_permissions())
     
     def is_owner(self):
-        """Check if user is owner of the organization"""
-        return self.user.user_organizations.filter(
+        """Check if user is vendor (owner) of the organization"""
+        if not self.organization:
+            return False
+        
+        # Check if user has vendor profile for this organization
+        return UserProfile.objects.filter(
+            user=self.user,
             organization=self.organization,
-            is_owner=True,
-            is_active=True
+            profile_type='vendor',
+            status='active'
         ).exists()
+    
+    def is_employee(self):
+        """Check if user is employee of the organization"""
+        if not self.organization:
+            return False
+        
+        return UserProfile.objects.filter(
+            user=self.user,
+            organization=self.organization,
+            profile_type='employee',
+            status='active'
+        ).exists()
+    
+    def is_vendor(self):
+        """Check if user is vendor of the organization"""
+        return self.is_owner()
 
 
 def check_permission(user, organization, resource, action):

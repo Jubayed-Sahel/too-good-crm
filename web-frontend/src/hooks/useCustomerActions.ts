@@ -6,6 +6,7 @@ import { customerService } from '@/services/customer.service';
 import { toaster } from '@/components/ui/toaster';
 import { useProfile } from '@/contexts/ProfileContext';
 import { exportData } from '@/utils';
+import { transformCustomerFormData, cleanFormData } from '@/utils/formTransformers';
 
 /**
  * Props for useCustomerActions hook
@@ -263,7 +264,7 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
   const handleCreateCustomer = async (data: any) => {
     console.log('Create customer (frontend data):', data);
     
-    // Get organization ID from active profile
+    // Get organization ID from active profile (for validation only)
     const organizationId = activeOrganizationId;
     
     if (!organizationId) {
@@ -275,22 +276,29 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
       return;
     }
     
-    // Transform frontend data to backend format
-    const backendData = {
-      name: data.fullName,              // fullName → name
-      email: data.email,
-      phone: data.phone || '',
-      company_name: data.company,       // company → company_name
-      status: data.status || 'active',
-      customer_type: 'individual',      // Default to individual
-      address: data.address || '',
-      city: data.city || '',
-      state: data.state || '',
-      postal_code: data.zipCode || '',  // zipCode → postal_code
-      country: data.country || '',
-      notes: data.notes || '',
-      organization: organizationId,     // From auth context
-    };
+    // Transform frontend data to backend format using utility
+    // Note: organization is NOT sent - it's set server-side from user's active profile
+    const transformedData = transformCustomerFormData(data, organizationId);
+    const backendData = cleanFormData(transformedData);
+    
+    // Ensure required fields are present
+    if (!backendData.name) {
+      toaster.create({
+        title: 'Validation Error',
+        description: 'Customer name is required.',
+        type: 'error',
+      });
+      return;
+    }
+    
+    if (!backendData.email) {
+      toaster.create({
+        title: 'Validation Error',
+        description: 'Customer email is required.',
+        type: 'error',
+      });
+      return;
+    }
     
     console.log('Create customer (backend data):', backendData);
     

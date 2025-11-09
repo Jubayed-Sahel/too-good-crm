@@ -17,7 +17,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
             'id', 'name', 'slug', 'description', 'industry',
             'website', 'phone', 'email', 'address', 'city',
             'state', 'zip_code', 'country', 'settings',
-            'subscription_plan', 'subscription_status',
+            'linear_team_id', 'subscription_plan', 'subscription_status',
             'is_active', 'created_at', 'updated_at', 'member_count'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
@@ -153,7 +153,7 @@ class OrganizationUpdateSerializer(serializers.ModelSerializer):
         fields = [
             'name', 'description', 'industry', 'website',
             'phone', 'email', 'address', 'city', 'state',
-            'zip_code', 'country', 'settings', 'is_active'
+            'zip_code', 'country', 'settings', 'linear_team_id', 'is_active'
         ]
 
 

@@ -1,14 +1,26 @@
 import { SimpleGrid } from '@chakra-ui/react';
 import StatCard from './StatCard';
+import { SkeletonCard } from '../common';
 import { FiUsers, FiFileText, FiDollarSign } from 'react-icons/fi';
 import type { DashboardStats } from '@/types';
 import { formatCurrency } from '@/utils';
 
 interface StatsGridProps {
   stats?: DashboardStats;
+  isLoading?: boolean;
 }
 
-const StatsGrid = ({ stats }: StatsGridProps) => {
+const StatsGrid = ({ stats, isLoading = false }: StatsGridProps) => {
+  // Show skeleton loading state
+  if (isLoading) {
+    return (
+      <SimpleGrid columns={{ base: 1, md: 3 }} gap={5}>
+        {[...Array(3)].map((_, i) => (
+          <SkeletonCard key={i} variant="stat" />
+        ))}
+      </SimpleGrid>
+    );
+  }
   const statsData = [
     {
       title: 'Total Customers',

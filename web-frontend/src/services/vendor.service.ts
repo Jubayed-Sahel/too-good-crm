@@ -3,7 +3,7 @@
  * API service for Vendor-related operations
  */
 
-import api from '../lib/apiClient';
+import api from '@/lib/apiClient';
 import type { Vendor, CreateVendorData, UpdateVendorData, VendorStats, VendorFilters, PaginatedResponse } from '../types';
 
 export const vendorService = {

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, VStack, Spinner, Button, HStack, Badge } from '@chakra-ui/react';
+import { VStack, Box, Spinner, Text } from '@chakra-ui/react';
 import { FiPlus, FiRefreshCw } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { IssueStatsGrid, IssueFiltersPanel, IssuesDataTable, CreateIssueModal, RaiseIssueModal, ResolveIssueModal } from '../components/issues';
-import { ErrorState } from '../components/common';
+import { IssueStatsGrid, IssueFiltersPanel, IssuesDataTable, CreateIssueModal, ResolveIssueModal } from '../components/issues';
+import { ErrorState, PageHeader, StandardButton, ConfirmDialog } from '../components/common';
 import { useIssues, useIssueStats, useIssueMutations } from '../hooks/useIssues';
 import type { Issue, IssuePriority, IssueStatus, IssueCategory } from '../types';
 import { toaster } from '../components/ui/toaster';
@@ -12,8 +12,9 @@ import { toaster } from '../components/ui/toaster';
 const IssuesPage = () => {
   const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isRaiseDialogOpen, setIsRaiseDialogOpen] = useState(false);
   const [selectedIssueForResolve, setSelectedIssueForResolve] = useState<Issue | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [issueToDelete, setIssueToDelete] = useState<Issue | null>(null);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,7 +36,7 @@ const IssuesPage = () => {
   const { data: statsData, refetch: refetchStats } = useIssueStats();
 
   // Mutations
-  const { createIssue, updateIssue, deleteIssue, raiseIssue, resolveIssue } = useIssueMutations();
+  const { createIssue, updateIssue, deleteIssue, resolveIssue } = useIssueMutations();
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -108,13 +109,21 @@ const IssuesPage = () => {
     );
   };
 
-  const handleDelete = async (issueId: number) => {
-    if (!window.confirm('Are you sure you want to delete this issue?')) {
-      return;
+  const handleDelete = (issueId: number) => {
+    const issue = issues.find(i => i.id === issueId);
+    if (issue) {
+      setIssueToDelete(issue);
+      setIsDeleteDialogOpen(true);
     }
+  };
+
+  const confirmDelete = async () => {
+    if (!issueToDelete) return;
 
     try {
-      await deleteIssue.mutateAsync(issueId);
+      await deleteIssue.mutateAsync(issueToDelete.id);
+      setIsDeleteDialogOpen(false);
+      setIssueToDelete(null);
       
       toaster.create({
         title: 'Issue Deleted',
@@ -122,10 +131,10 @@ const IssuesPage = () => {
         type: 'success',
         duration: 3000,
       });
-    } catch (error) {
+    } catch (error: any) {
       toaster.create({
         title: 'Delete Failed',
-        description: 'Failed to delete issue',
+        description: error.message || 'Failed to delete issue',
         type: 'error',
         duration: 3000,
       });
@@ -153,28 +162,6 @@ const IssuesPage = () => {
     }
   };
 
-  const handleRaiseSubmit = async (data: any) => {
-    try {
-      await raiseIssue.mutateAsync(data);
-      setIsRaiseDialogOpen(false);
-      
-      toaster.create({
-        title: 'Issue Raised',
-        description: data.auto_sync_linear 
-          ? 'Issue raised and synced to Linear successfully' 
-          : 'Issue raised successfully',
-        type: 'success',
-        duration: 3000,
-      });
-    } catch (error) {
-      toaster.create({
-        title: 'Raise Failed',
-        description: 'Failed to raise issue',
-        type: 'error',
-        duration: 3000,
-      });
-    }
-  };
 
   const handleRefresh = () => {
     refetch();
@@ -196,55 +183,31 @@ const IssuesPage = () => {
 
   return (
     <DashboardLayout title="Issues">
-      <VStack align="stretch" gap={6}>
+      <VStack align="stretch" gap={5}>
         {/* Page Header */}
-        <Box>
-          <HStack justify="space-between" align="start" mb={2}>
-            <Box>
-              <Heading size="xl" color="gray.900" mb={2}>
-                Issue Management
-              </Heading>
-              <Text fontSize="sm" color="gray.600">
-                Track and manage issues across vendors, orders, and projects
-              </Text>
-            </Box>
-            
-            <HStack gap={3}>
-              <Button
+        <PageHeader
+          title="Issue Management"
+          description="Track and manage issues across vendors, orders, and projects"
+          actions={
+            <>
+              <StandardButton
+                variant="secondary"
                 onClick={handleRefresh}
-                variant="outline"
-                size="sm"
                 disabled={isLoading}
+                leftIcon={<FiRefreshCw />}
               >
-                <FiRefreshCw />
-                <Text ml={2}>Refresh</Text>
-              </Button>
-              
-              <Button
+                Refresh
+              </StandardButton>
+              <StandardButton
+                variant="primary"
                 onClick={() => setIsCreateDialogOpen(true)}
-                colorPalette="purple"
-                size="sm"
+                leftIcon={<FiPlus />}
               >
-                <FiPlus />
-                <Text ml={2}>Create Issue</Text>
-              </Button>
-              
-              <Button
-                onClick={() => setIsRaiseDialogOpen(true)}
-                colorPalette="red"
-                size="sm"
-              >
-                <FiPlus />
-                <Text ml={2}>Raise Issue</Text>
-              </Button>
-            </HStack>
-          </HStack>
-
-          {/* Linear Integration Badge */}
-          <Badge colorPalette="blue" size="sm" mt={2}>
-            Linear Integration Enabled
-          </Badge>
-        </Box>
+                Create Issue
+              </StandardButton>
+            </>
+          }
+        />
 
         {/* Stats */}
         <IssueStatsGrid
@@ -292,14 +255,13 @@ const IssuesPage = () => {
                 <Text color="gray.500" fontSize="lg" mb={4}>
                   No issues found matching your filters
                 </Text>
-                <Button
-                  onClick={() => setIsRaiseDialogOpen(true)}
-                  colorPalette="purple"
-                  size="sm"
+                <StandardButton
+                  onClick={() => setIsCreateDialogOpen(true)}
+                  variant="primary"
+                  leftIcon={<FiPlus />}
                 >
-                  <FiPlus />
-                  <Text ml={2}>Raise Your First Issue</Text>
-                </Button>
+                  Create Your First Issue
+                </StandardButton>
               </Box>
             )}
           </>
@@ -313,13 +275,6 @@ const IssuesPage = () => {
           isLoading={createIssue.isPending}
         />
 
-        <RaiseIssueModal
-          isOpen={isRaiseDialogOpen}
-          onClose={() => setIsRaiseDialogOpen(false)}
-          onSubmit={handleRaiseSubmit}
-          isLoading={raiseIssue.isPending}
-        />
-
         {selectedIssueForResolve && (
           <ResolveIssueModal
             isOpen={!!selectedIssueForResolve}
@@ -329,6 +284,26 @@ const IssuesPage = () => {
             isLoading={resolveIssue.isPending}
           />
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={() => {
+            setIsDeleteDialogOpen(false);
+            setIssueToDelete(null);
+          }}
+          onConfirm={confirmDelete}
+          title="Delete Issue"
+          message={
+            issueToDelete
+              ? `Are you sure you want to delete issue "${issueToDelete.title}"? This action cannot be undone.`
+              : 'Are you sure you want to delete this issue?'
+          }
+          confirmText="Delete"
+          cancelText="Cancel"
+          colorScheme="red"
+          isLoading={deleteIssue.isPending}
+        />
       </VStack>
     </DashboardLayout>
   );

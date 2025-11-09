@@ -1,23 +1,37 @@
-import { Box, Container } from '@chakra-ui/react';
-import type { ContainerProps } from '@chakra-ui/react';
+import { Box, VStack } from '@chakra-ui/react';
 import type { ReactNode } from 'react';
+import { DESIGN_CONSTANTS } from '@/config/design.constants';
 
-interface PageContainerProps extends ContainerProps {
+interface PageContainerProps {
   children: ReactNode;
-  withPadding?: boolean;
+  gap?: number;
+  maxWidth?: string;
+  padding?: {
+    x?: number | object;
+    y?: number | object;
+  };
 }
 
-const PageContainer = ({ children, withPadding = true, ...props }: PageContainerProps) => {
+export const PageContainer = ({
+  children,
+  gap = DESIGN_CONSTANTS.PAGE.GAP,
+  maxWidth = DESIGN_CONSTANTS.PAGE.MAX_WIDTH,
+  padding,
+}: PageContainerProps) => {
   return (
-    <Box minH="100vh" bg="gray.50">
-      <Container
-        maxW="7xl"
-        py={withPadding ? { base: 4, md: 8 } : 0}
-        px={{ base: 4, md: 6, lg: 8 }}
-        {...props}
+    <Box
+      w="100%"
+      maxW={maxWidth}
+      mx="auto"
+    >
+      <VStack
+        align="stretch"
+        gap={gap}
+        px={padding?.x || DESIGN_CONSTANTS.PAGE.PADDING_X}
+        py={padding?.y || DESIGN_CONSTANTS.PAGE.PADDING_Y}
       >
         {children}
-      </Container>
+      </VStack>
     </Box>
   );
 };

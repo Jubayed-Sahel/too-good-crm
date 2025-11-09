@@ -7,12 +7,10 @@ import {
   HStack,
   Grid,
   Badge,
-  Button,
   Spinner,
-  IconButton,
 } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { Card, GradientBox } from '../components/common';
+import { Card, GradientBox, StandardButton, ConfirmDialog } from '../components/common';
 import {
   FiMail,
   FiPhone,
@@ -29,7 +27,7 @@ import {
 } from 'react-icons/fi';
 import { toaster } from '../components/ui/toaster';
 import { useState, useEffect } from 'react';
-import { getActivity, deleteActivity } from '../services/activity.service';
+import { activityService } from '../services/activity.service';
 import type { Activity, ActivityType, ActivityStatus } from '../types/activity.types';
 
 const ActivityDetailPage = () => {
@@ -37,6 +35,8 @@ const ActivityDetailPage = () => {
   const navigate = useNavigate();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const loadActivity = async () => {
@@ -44,7 +44,7 @@ const ActivityDetailPage = () => {
       
       try {
         setIsLoading(true);
-        const data = await getActivity(Number(id));
+        const data = await activityService.getById(Number(id));
         if (data) {
           setActivity(data);
         } else {
@@ -120,25 +120,33 @@ const ActivityDetailPage = () => {
     navigate(`/activities/${id}/edit`);
   };
 
-  const handleDelete = async () => {
-    if (!id || !confirm('Are you sure you want to delete this activity?')) return;
+  const handleDelete = () => {
+    setIsDeleteDialogOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!id) return;
+
+    setIsDeleting(true);
     try {
-      await deleteActivity(Number(id));
+      await activityService.delete(Number(id));
       toaster.create({
         title: 'Activity deleted',
         description: 'Activity has been successfully deleted.',
         type: 'success',
         duration: 3000,
       });
+      setIsDeleteDialogOpen(false);
       navigate('/activities');
-    } catch (error) {
+    } catch (error: any) {
       toaster.create({
         title: 'Error deleting activity',
-        description: 'Failed to delete activity. Please try again.',
+        description: error.message || 'Failed to delete activity. Please try again.',
         type: 'error',
         duration: 3000,
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -166,9 +174,9 @@ const ActivityDetailPage = () => {
           <Text color="gray.500" mb={6}>
             The activity you're looking for doesn't exist.
           </Text>
-          <Button colorPalette="purple" onClick={handleBack}>
+          <StandardButton variant="primary" onClick={handleBack} leftIcon={<FiArrowLeft />}>
             Back to Activities
-          </Button>
+          </StandardButton>
         </Box>
       </DashboardLayout>
     );
@@ -181,20 +189,16 @@ const ActivityDetailPage = () => {
     <DashboardLayout title={`Activity: ${activity.title}`}>
       <VStack align="stretch" gap={6}>
         {/* Back Button */}
-        <Button
+        <StandardButton
           variant="ghost"
-          colorPalette="gray"
           onClick={handleBack}
           alignSelf="flex-start"
-          fontWeight="bold"
+          leftIcon={<FiArrowLeft />}
           ml={-2}
           mb={3}
         >
-          <HStack gap={2}>
-            <FiArrowLeft />
-            <Text>Back to Activities</Text>
-          </HStack>
-        </Button>
+          Back to Activities
+        </StandardButton>
 
         {/* Header Section with Gradient */}
         <GradientBox>
@@ -235,24 +239,24 @@ const ActivityDetailPage = () => {
 
               {/* Action Buttons */}
               <HStack gap={2}>
-                <IconButton
-                  aria-label="Edit activity"
-                  colorPalette="whiteAlpha"
-                  variant="ghost"
+                <StandardButton
+                  variant="outline"
                   onClick={handleEdit}
-                  _hover={{ bg: 'whiteAlpha.300' }}
+                  leftIcon={<FiEdit2 />}
+                  bg="whiteAlpha.900"
+                  _hover={{ bg: 'whiteAlpha.800' }}
                 >
-                  <FiEdit2 size={20} />
-                </IconButton>
-                <IconButton
-                  aria-label="Delete activity"
-                  colorPalette="whiteAlpha"
-                  variant="ghost"
+                  Edit
+                </StandardButton>
+                <StandardButton
+                  variant="danger"
                   onClick={handleDelete}
-                  _hover={{ bg: 'whiteAlpha.300' }}
+                  leftIcon={<FiTrash2 />}
+                  bg="whiteAlpha.900"
+                  _hover={{ bg: 'whiteAlpha.800' }}
                 >
-                  <FiTrash2 size={20} />
-                </IconButton>
+                  Delete
+                </StandardButton>
               </HStack>
             </HStack>
 
@@ -485,33 +489,43 @@ const ActivityDetailPage = () => {
                 Quick Actions
               </Heading>
 
-              <Button
-                colorPalette="purple"
+              <StandardButton
+                variant="primary"
                 onClick={handleEdit}
                 size="lg"
-                height="50px"
+                leftIcon={<FiEdit2 />}
               >
-                <HStack gap={2}>
-                  <FiEdit2 size={20} />
-                  <Text>Edit Activity</Text>
-                </HStack>
-              </Button>
+                Edit Activity
+              </StandardButton>
 
-              <Button
-                colorPalette="red"
-                variant="outline"
+              <StandardButton
+                variant="danger"
                 onClick={handleDelete}
                 size="lg"
-                height="50px"
+                leftIcon={<FiTrash2 />}
               >
-                <HStack gap={2}>
-                  <FiTrash2 size={20} />
-                  <Text>Delete Activity</Text>
-                </HStack>
-              </Button>
+                Delete Activity
+              </StandardButton>
             </VStack>
           </Card>
         </Grid>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={confirmDelete}
+          title="Delete Activity"
+          message={
+            activity
+              ? `Are you sure you want to delete activity "${activity.title}"? This action cannot be undone.`
+              : 'Are you sure you want to delete this activity?'
+          }
+          confirmText="Delete"
+          cancelText="Cancel"
+          colorScheme="red"
+          isLoading={isDeleting}
+        />
       </VStack>
     </DashboardLayout>
   );

@@ -99,7 +99,31 @@ const SignupForm = () => {
         duration: 2000,
       });
     } catch (error: any) {
+      console.error('Registration error details:', error);
+      console.error('Error errors field:', error.errors);
+      console.error('Error details field:', error.details);
+      console.error('Error data field:', error.data);
+      
       // Handle server-side validation errors
+      if (error.errors) {
+        // Handle field-specific errors
+        Object.entries(error.errors).forEach(([field, messages]) => {
+          setErrors((prev) => ({ 
+            ...prev, 
+            [field]: Array.isArray(messages) ? messages[0] : messages 
+          }));
+        });
+      } else if (error.details) {
+        // Handle details format
+        Object.entries(error.details).forEach(([field, messages]) => {
+          setErrors((prev) => ({ 
+            ...prev, 
+            [field]: Array.isArray(messages) ? messages[0] : messages 
+          }));
+        });
+      }
+      
+      // Legacy error format
       if (error.username) {
         setErrors((prev) => ({ ...prev, username: error.username[0] }));
       }
@@ -107,11 +131,23 @@ const SignupForm = () => {
         setErrors((prev) => ({ ...prev, email: error.email[0] }));
       }
       
+      // Build error message
+      let errorMessage = "Unable to create account";
+      if (error.message && error.message !== 'Request failed with status code 400') {
+        errorMessage = error.message;
+      } else if (error.errors) {
+        const firstError = Object.values(error.errors)[0];
+        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      } else if (error.details) {
+        const firstError = Object.values(error.details)[0];
+        errorMessage = Array.isArray(firstError) ? firstError[0] : firstError;
+      }
+      
       toaster.create({
         title: "Registration Failed",
-        description: error.detail || error.message || "Unable to create account",
+        description: errorMessage,
         type: "error",
-        duration: 3000,
+        duration: 5000,
       });
     } finally {
       setIsLoading(false);

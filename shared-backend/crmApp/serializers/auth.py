@@ -192,19 +192,31 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
-        from crmApp.models import Organization, UserOrganization, UserProfile
+        """
+        Create a new user with auto-created profiles.
+        Automatically creates all 3 profiles (vendor, employee, customer) for the user.
+        """
+        from crmApp.models import Organization, UserOrganization, UserProfile, Vendor
         from django.utils.text import slugify
         from django.utils import timezone
+        from django.db import transaction
         
         validated_data.pop('password_confirm')
         organization_name = validated_data.pop('organization_name', None)
         
-        # Create user
-        user = User.objects.create_user(**validated_data)
+        # Use organization_name if provided, otherwise create default from user's name
+        if not organization_name:
+            user_full_name = f"{validated_data.get('first_name', '')} {validated_data.get('last_name', '')}".strip()
+            if user_full_name:
+                organization_name = f"{user_full_name}'s Organization"
+            else:
+                organization_name = f"{validated_data.get('username', 'User')}'s Organization"
         
-        # Create organization for vendor signup
-        if organization_name:
-            # Generate unique slug
+        with transaction.atomic():
+            # Create user
+            user = User.objects.create_user(**validated_data)
+            
+            # Create organization for the user
             base_slug = slugify(organization_name)
             slug = base_slug
             counter = 1
@@ -212,11 +224,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 slug = f"{base_slug}-{counter}"
                 counter += 1
             
-            # Create organization
             organization = Organization.objects.create(
                 name=organization_name,
                 slug=slug,
-                email=user.email
+                email=user.email,
+                is_active=True
             )
             
             # Link user to organization as owner
@@ -227,36 +239,49 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 is_active=True
             )
             
-            # Create all three profiles for the user
-            # 1. Vendor profile (primary by default since they created the org)
-            UserProfile.objects.create(
-                user=user,
-                organization=organization,
-                profile_type='vendor',
-                is_primary=True,
-                status='active',
-                activated_at=timezone.now()
-            )
+            # Create all 3 profiles (vendor, employee, customer)
+            # Vendor profile is primary by default
+            profiles_to_create = [
+                ('vendor', True),    # Primary profile
+                ('employee', False),
+                ('customer', False),
+            ]
             
-            # 2. Employee profile (for managing org)
-            UserProfile.objects.create(
-                user=user,
-                organization=organization,
-                profile_type='employee',
-                is_primary=False,
-                status='active',
-                activated_at=timezone.now()
-            )
+            vendor_profile = None
+            for profile_type, is_primary in profiles_to_create:
+                profile = UserProfile.objects.create(
+                    user=user,
+                    organization=organization,
+                    profile_type=profile_type,
+                    is_primary=is_primary,
+                    status='active',
+                    activated_at=timezone.now()
+                )
+                if profile_type == 'vendor':
+                    vendor_profile = profile
             
-            # 3. Customer profile (for accessing client UI)
-            UserProfile.objects.create(
-                user=user,
-                organization=organization,
-                profile_type='customer',
-                is_primary=False,
-                status='active',
-                activated_at=timezone.now()
-            )
+            # Create vendor record linked to the vendor profile
+            if vendor_profile:
+                try:
+                    vendor, created = Vendor.objects.get_or_create(
+                        user=user,
+                        organization=organization,
+                        defaults={
+                            'user_profile': vendor_profile,
+                            'name': organization_name,
+                            'email': user.email,
+                            'status': 'active'
+                        }
+                    )
+                    # Update user_profile if it wasn't set
+                    if not vendor.user_profile:
+                        vendor.user_profile = vendor_profile
+                        vendor.save(update_fields=['user_profile'])
+                except Exception as e:
+                    # Log error but don't fail registration
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to create vendor record during registration: {e}")
         
         return user
 
@@ -307,21 +332,18 @@ class LoginSerializer(serializers.Serializer):
                     pass
             
             if not user:
-                raise serializers.ValidationError(
-                    'Unable to log in with provided credentials.',
-                    code='authorization'
-                )
+                raise serializers.ValidationError({
+                    'non_field_errors': ['Unable to log in with provided credentials.']
+                })
             
             if not user.is_active:
-                raise serializers.ValidationError(
-                    'User account is disabled.',
-                    code='authorization'
-                )
+                raise serializers.ValidationError({
+                    'non_field_errors': ['User account is disabled.']
+                })
         else:
-            raise serializers.ValidationError(
-                'Must include "username" and "password".',
-                code='authorization'
-            )
+            raise serializers.ValidationError({
+                'non_field_errors': ['Must include "username" and "password".']
+            })
         
         attrs['user'] = user
         return attrs

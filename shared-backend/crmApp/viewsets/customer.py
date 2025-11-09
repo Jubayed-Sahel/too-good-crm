@@ -6,19 +6,31 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 
-from crmApp.models import Customer
+from crmApp.models import Customer, Call
 from crmApp.serializers import (
     CustomerSerializer,
     CustomerCreateSerializer,
     CustomerListSerializer,
-    InitiateCallSerializer,
     CallSerializer,
 )
-from crmApp.services.twilio_service import twilio_service
+from crmApp.services import RBACService
+from crmApp.viewsets.mixins import (
+    PermissionCheckMixin,
+    OrganizationFilterMixin,
+    CustomerActionsMixin,
+    QueryFilterMixin,
+)
 
 
-class CustomerViewSet(viewsets.ModelViewSet):
+class CustomerViewSet(
+    viewsets.ModelViewSet,
+    PermissionCheckMixin,
+    OrganizationFilterMixin,
+    CustomerActionsMixin,
+    QueryFilterMixin,
+):
     """
     ViewSet for Customer management.
     """
@@ -34,74 +46,80 @@ class CustomerViewSet(viewsets.ModelViewSet):
         return CustomerSerializer
     
     def perform_create(self, serializer):
-        """Auto-set organization from user's current organization"""
+        """Auto-set organization from user's current organization based on profile"""
         import logging
         logger = logging.getLogger(__name__)
         
-        # Get organization from request or use user's current organization
-        organization_id = self.request.data.get('organization') or self.request.user.current_organization_id
-        
-        if not organization_id:
-            # Fallback to user's first active organization
-            user_org = self.request.user.user_organizations.filter(is_active=True).first()
-            if user_org:
-                organization_id = user_org.organization_id
-        
-        logger.info(f"Creating customer for organization: {organization_id}, user: {self.request.user.username}")
-        logger.info(f"User current_organization_id: {self.request.user.current_organization_id}")
-        logger.info(f"Request data organization: {self.request.data.get('organization')}")
-        
-        serializer.save(organization_id=organization_id)
+        try:
+            organization = self.get_organization_from_request(self.request)
+            
+            if not organization:
+                logger.error(f"No organization found for user {self.request.user.username}")
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError({
+                    'organization': 'Organization is required. Please ensure you have an active profile.'
+                })
+            
+            # Check permission for creating customers
+            try:
+                self.check_permission(
+                    self.request,
+                    resource='customer',
+                    action='create',
+                    organization=organization
+                )
+            except Exception as e:
+                logger.error(f"Permission check failed: {str(e)}")
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied(f"You don't have permission to create customers: {str(e)}")
+            
+            logger.info(f"Creating customer for organization: {organization.id}, user: {self.request.user.username}")
+            
+            # Remove organization from validated_data if present (we'll set it ourselves)
+            validated_data = serializer.validated_data
+            validated_data.pop('organization', None)
+            
+            serializer.save(organization_id=organization.id)
+        except Exception as e:
+            logger.error(f"Error in perform_create: {str(e)}", exc_info=True)
+            raise
     
     def get_queryset(self):
-        """Filter customers by user's organizations"""
-        user_orgs = self.request.user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
-        
-        queryset = Customer.objects.filter(organization_id__in=user_orgs)
-        
-        # Filter by organization
-        org_id = self.request.query_params.get('organization')
-        if org_id:
-            queryset = queryset.filter(organization_id=org_id)
-        
-        # Filter by status
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
+        """Filter customers based on user's profile type"""
+        queryset = Customer.objects.all()
+        queryset = self.filter_by_organization(queryset, self.request)
+        queryset = self.filter_customer_profile(queryset, self.request)
+        queryset = self.apply_status_filter(queryset, self.request)
+        queryset = self.apply_search_filter(queryset, self.request, ['name', 'email', 'company_name'])
+        queryset = self.apply_assigned_to_filter(queryset, self.request)
         
         # Filter by customer type
         customer_type = self.request.query_params.get('customer_type')
         if customer_type:
             queryset = queryset.filter(customer_type=customer_type)
         
-        # Filter by assigned employee
-        assigned_to = self.request.query_params.get('assigned_to')
-        if assigned_to:
-            queryset = queryset.filter(assigned_to_id=assigned_to)
-        
-        # Search
-        search = self.request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                name__icontains=search
-            ) | queryset.filter(
-                email__icontains=search
-            ) | queryset.filter(
-                company_name__icontains=search
-            )
-        
         return queryset.select_related('organization', 'assigned_to')
+    
+    def update(self, request, *args, **kwargs):
+        """Override update to check permissions"""
+        instance = self.get_object()
+        self.check_permission(request, 'customer', 'update', instance=instance)
+        return super().update(request, *args, **kwargs)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Override partial_update to check permissions"""
+        return self.update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Override destroy to check permissions"""
+        instance = self.get_object()
+        self.check_permission(request, 'customer', 'delete', instance=instance)
+        return super().destroy(request, *args, **kwargs)
     
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get customer statistics"""
-        user_orgs = request.user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
-        
-        queryset = Customer.objects.filter(organization_id__in=user_orgs)
+        queryset = self.get_queryset()
         
         stats = {
             'total': queryset.count(),
@@ -117,8 +135,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def deactivate(self, request, pk=None):
-        """Deactivate a customer"""
+        """Deactivate a customer - requires customer:update permission"""
         customer = self.get_object()
+        self.check_permission(request, 'customer', 'update', instance=customer)
+        
         customer.status = 'inactive'
         customer.save()
         
@@ -129,8 +149,10 @@ class CustomerViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
-        """Activate a customer"""
+        """Activate a customer - requires customer:update permission"""
         customer = self.get_object()
+        self.check_permission(request, 'customer', 'update', instance=customer)
+        
         customer.status = 'active'
         customer.save()
         
@@ -142,30 +164,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def notes(self, request, pk=None):
         """Get customer notes"""
-        from crmApp.models import Activity
         customer = self.get_object()
-        
-        # Get all note-type activities for this customer
-        notes = Activity.objects.filter(
-            customer=customer,
-            activity_type='note'
-        ).select_related('created_by').order_by('-created_at')
-        
-        notes_data = [{
-            'id': note.id,
-            'customer': note.customer_id,
-            'user': note.created_by_id if note.created_by else None,
-            'user_name': note.created_by.full_name if note.created_by else 'Unknown',
-            'note': note.description,
-            'created_at': note.created_at
-        } for note in notes]
-        
+        notes_data = self.get_customer_notes(customer)
         return Response(notes_data)
     
     @action(detail=True, methods=['post'])
     def add_note(self, request, pk=None):
         """Add a note to customer"""
-        from crmApp.models import Activity
         customer = self.get_object()
         note_text = request.data.get('note')
         
@@ -175,14 +180,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        note = Activity.objects.create(
-            customer=customer,
-            activity_type='note',
-            subject=f'Note for {customer.name}',
-            description=note_text,
-            created_by=request.user,
-            is_completed=True
-        )
+        # Check permission
+        self.check_customer_action_permission(request, customer)
+        
+        # Add note
+        note = self.add_customer_note(customer, note_text, request.user)
         
         return Response({
             'id': note.id,
@@ -196,151 +198,38 @@ class CustomerViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def activities(self, request, pk=None):
         """Get customer activities"""
-        from crmApp.models import Activity
         customer = self.get_object()
-        
-        activities = Activity.objects.filter(
-            customer=customer
-        ).select_related('created_by').order_by('-created_at')[:50]
-        
-        activities_data = [{
-            'id': activity.id,
-            'customer': activity.customer_id,
-            'deal': activity.deal_id if hasattr(activity, 'deal') else None,
-            'activity_type': activity.activity_type,
-            'subject': activity.subject,
-            'description': activity.description,
-            'scheduled_at': activity.scheduled_at,
-            'completed_at': activity.completed_at,
-            'is_completed': activity.is_completed,
-            'created_by': {
-                'id': activity.created_by.id,
-                'name': activity.created_by.full_name
-            } if activity.created_by else None,
-            'created_at': activity.created_at,
-            'updated_at': activity.updated_at
-        } for activity in activities]
-        
+        activities_data = self.get_customer_activities(customer)
         return Response(activities_data)
     
     @action(detail=True, methods=['post'])
     def initiate_call(self, request, pk=None):
         """Initiate a VOIP call to customer via Twilio"""
-        from crmApp.models import Call, Activity
-        import logging
-        
-        logger = logging.getLogger(__name__)
         customer = self.get_object()
         
-        # Validate customer has phone number
-        if not customer.phone:
-            return Response(
-                {'error': 'Customer does not have a phone number'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Check permission
+        self.check_customer_action_permission(request, customer)
         
-        # Check if Twilio is configured
-        if not twilio_service.is_configured():
-            return Response(
-                {
-                    'error': 'Twilio is not configured. Please add your Twilio credentials to the .env file.',
-                    'details': 'Required: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER'
-                },
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
+        # Initiate call
+        success, call, error = self.initiate_customer_call(customer, request.user)
         
-        try:
-            # Initiate the call via Twilio
-            call_response = twilio_service.initiate_call(
-                to_number=customer.phone,
-                from_number=None  # Will use default from settings
-            )
-            
-            logger.info(f"Call initiated: {call_response}")
-            
-            # Create call record in database
-            call = Call.objects.create(
-                call_sid=call_response['call_sid'],
-                from_number=call_response['from'],
-                to_number=call_response['to'],
-                direction='outbound',
-                status=call_response['status'],
-                organization=customer.organization,
-                customer=customer,
-                initiated_by=request.user
-            )
-            
-            # Create activity record for the call
-            Activity.objects.create(
-                organization=customer.organization,
-                customer=customer,
-                activity_type='call',
-                title=f'Outbound call to {customer.name}',
-                description=f'Initiated VOIP call to {customer.phone}',
-                phone_number=customer.phone,
-                created_by=request.user,
-                status='completed',
-                scheduled_at=call_response.get('date_created'),
-                completed_at=call_response.get('date_created')
-            )
-            
-            # Return call details
-            return Response({
-                'message': 'Call initiated successfully',
-                'call': CallSerializer(call).data,
-                'twilio_response': call_response
-            }, status=status.HTTP_201_CREATED)
-            
-        except ValueError as e:
-            logger.error(f"Configuration error: {str(e)}")
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        except Exception as e:
-            from twilio.base.exceptions import TwilioRestException
-            
-            logger.error(f"Error initiating call: {str(e)}")
-            
-            # Handle Twilio-specific errors
-            if isinstance(e, TwilioRestException):
-                error_code = getattr(e, 'code', None)
-                error_msg = str(e)
-                
-                # Error 21219: Unverified number (trial account)
-                if error_code == 21219 or 'unverified' in error_msg.lower():
-                    return Response({
-                        'error': f'The number {customer.phone} needs to be verified in your Twilio account. Trial accounts can only call verified numbers. Verify at: https://console.twilio.com/us1/develop/phone-numbers/manage/verified',
-                        'twilio_error_code': error_code,
-                        'action': 'verify_number'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Error 20003: Geographic permissions (international calling)
-                if error_code == 20003 or 'not authorized to call' in error_msg.lower() or 'geo-permissions' in error_msg.lower():
-                    return Response({
-                        'error': f'Your Twilio account is not authorized to call {customer.phone}. You need to enable international calling permissions for this country. Enable at: https://console.twilio.com/us1/develop/voice/settings/geo-permissions',
-                        'twilio_error_code': error_code,
-                        'action': 'enable_geo_permissions'
-                    }, status=status.HTTP_400_BAD_REQUEST)
-                
-                # Other Twilio errors
-                return Response({
-                    'error': f'Twilio error: {error_msg}',
-                    'twilio_error_code': error_code
-                }, status=status.HTTP_400_BAD_REQUEST)
-            
-            # Generic error
-            return Response(
-                {'error': f'Failed to initiate call: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        if not success:
+            if error.get('twilio_error_code'):
+                return Response(error, status=status.HTTP_400_BAD_REQUEST)
+            elif 'not configured' in error.get('error', '').lower():
+                return Response(error, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            else:
+                return Response(error, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Return call details
+        return Response({
+            'message': 'Call initiated successfully',
+            'call': CallSerializer(call).data,
+        }, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=['get'])
     def call_history(self, request, pk=None):
         """Get call history for customer"""
-        from crmApp.models import Call
-        
         customer = self.get_object()
         calls = Call.objects.filter(customer=customer).order_by('-created_at')
-        
         return Response(CallSerializer(calls, many=True).data)
