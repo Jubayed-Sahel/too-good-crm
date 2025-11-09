@@ -5,7 +5,9 @@
 
 export const API_CONFIG = {
   // Base URLs
-  BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api',
+  // Use relative URL to leverage Vite proxy (avoids CORS issues with ngrok)
+  // Vite proxy forwards /api to http://localhost:8000
+  BASE_URL: import.meta.env.VITE_API_BASE_URL || '/api',
   TIMEOUT: 30000, // 30 seconds
 
   // Endpoints

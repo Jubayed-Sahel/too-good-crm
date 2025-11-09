@@ -40,6 +40,20 @@ class RaiseIssueView(APIView):
         }
         """
         try:
+            # Only customers can raise issues through this endpoint
+            # Vendors and employees should use the Issues ViewSet to view and update issues
+            from crmApp.models import Customer
+            try:
+                customer = Customer.objects.get(user=request.user)
+            except Customer.DoesNotExist:
+                return Response(
+                    {
+                        'error': 'Forbidden',
+                        'details': 'Only customers can raise issues. Vendors and employees can view and update existing issues.'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
             # Validate user has current organization
             if not hasattr(request.user, 'current_organization') or not request.user.current_organization:
                 return Response(
@@ -55,6 +69,8 @@ class RaiseIssueView(APIView):
             data['organization'] = request.user.current_organization.id
             data['created_by'] = request.user.id
             data['status'] = 'open'  # New issues always start as 'open'
+            data['is_client_issue'] = True  # Mark as customer-raised issue
+            data['raised_by_customer'] = customer.id  # Set customer who raised it
             
             # Use serializer to validate and create
             serializer = IssueCreateSerializer(data=data, context={'request': request})

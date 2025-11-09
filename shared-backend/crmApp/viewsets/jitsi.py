@@ -189,6 +189,12 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
                 )
                 return Response(serializer.data)
         except UserPresence.DoesNotExist:
+            # User has no presence record - no active call
+            pass
+        except Exception as e:
+            # Handle any other database errors gracefully
+            logger.error(f"Error getting active call: {str(e)}", exc_info=True)
+            # Return 204 (no content) instead of 500 to avoid breaking frontend
             pass
         
         return Response({'message': 'No active call'}, status=status.HTTP_204_NO_CONTENT)
@@ -246,10 +252,10 @@ class UserPresenceViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post', 'put', 'patch'])
     def update_my_status(self, request):
         """Update current user's presence status"""
-        serializer = UpdatePresenceSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
         try:
+            serializer = UpdatePresenceSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            
             presence = jitsi_service.update_user_status(
                 user=request.user,
                 status=serializer.validated_data['status'],
@@ -263,9 +269,13 @@ class UserPresenceViewSet(viewsets.ModelViewSet):
             })
             
         except Exception as e:
-            logger.error(f"Error updating presence: {str(e)}")
+            logger.error(f"Error updating presence: {str(e)}", exc_info=True)
+            # Return a more user-friendly error message
+            error_message = str(e)
+            if 'no such table' in error_message.lower():
+                error_message = 'Presence service is not available. Please contact support.'
             return Response(
-                {'error': f'Failed to update status: {str(e)}'},
+                {'error': f'Failed to update status: {error_message}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
@@ -282,10 +292,8 @@ class UserPresenceViewSet(viewsets.ModelViewSet):
             presence.save()
             
             return Response({'status': 'ok'})
-            
         except Exception as e:
-            logger.error(f"Error updating heartbeat: {str(e)}")
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            # Log but don't fail - heartbeat failures shouldn't break the app
+            logger.error(f"Error in heartbeat: {str(e)}", exc_info=True)
+            # Return success anyway to avoid breaking frontend polling
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
