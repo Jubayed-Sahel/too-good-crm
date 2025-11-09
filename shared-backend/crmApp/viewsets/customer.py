@@ -38,25 +38,34 @@ class CustomerViewSet(viewsets.ModelViewSet):
         import logging
         logger = logging.getLogger(__name__)
         
-        # Get organization from request or use user's current organization
-        organization_id = self.request.data.get('organization') or self.request.user.current_organization_id
+        # Get organization from request or use user's primary profile organization
+        organization_id = self.request.data.get('organization')
         
         if not organization_id:
-            # Fallback to user's first active organization
-            user_org = self.request.user.user_organizations.filter(is_active=True).first()
-            if user_org:
-                organization_id = user_org.organization_id
+            # Fallback to user's primary profile organization
+            primary_profile = self.request.user.user_profiles.filter(
+                is_primary=True,
+                status='active'
+            ).first()
+            
+            if primary_profile:
+                organization_id = primary_profile.organization_id
+            else:
+                # If no primary, get first active profile
+                first_profile = self.request.user.user_profiles.filter(status='active').first()
+                if first_profile:
+                    organization_id = first_profile.organization_id
         
         logger.info(f"Creating customer for organization: {organization_id}, user: {self.request.user.username}")
-        logger.info(f"User current_organization_id: {self.request.user.current_organization_id}")
         logger.info(f"Request data organization: {self.request.data.get('organization')}")
         
         serializer.save(organization_id=organization_id)
     
     def get_queryset(self):
-        """Filter customers by user's organizations"""
-        user_orgs = self.request.user.user_organizations.filter(
-            is_active=True
+        """Filter customers by user's organizations through user_profiles"""
+        # Get organization IDs from user's active profiles
+        user_orgs = self.request.user.user_profiles.filter(
+            status='active'
         ).values_list('organization_id', flat=True)
         
         queryset = Customer.objects.filter(organization_id__in=user_orgs)
@@ -97,8 +106,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get customer statistics"""
-        user_orgs = request.user.user_organizations.filter(
-            is_active=True
+        user_orgs = request.user.user_profiles.filter(
+            status='active'
         ).values_list('organization_id', flat=True)
         
         queryset = Customer.objects.filter(organization_id__in=user_orgs)

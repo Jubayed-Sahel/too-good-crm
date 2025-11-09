@@ -41,6 +41,9 @@ from .customer import Customer
 # Call model
 from .call import Call
 
+# Jitsi call models
+from .jitsi_call import JitsiCallSession, UserPresence
+
 # Lead model
 from .lead import Lead
 
@@ -94,6 +97,8 @@ __all__ = [
     'Vendor',
     'Customer',
     'Call',
+    'JitsiCallSession',
+    'UserPresence',
     'Lead',
     'Deal',
     'Pipeline',

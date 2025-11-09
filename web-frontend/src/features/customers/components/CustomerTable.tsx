@@ -25,6 +25,7 @@ export interface Customer {
   totalValue: number;
   lastContact: string;
   avatar?: string;
+  user_id?: number | null;  // For Jitsi video calls
 }
 
 interface CustomerTableProps {
@@ -158,14 +159,14 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onCall, onBulkDele
 
             {/* Actions */}
             <HStack gap={2} pt={2} borderTopWidth="1px" borderColor="gray.100">
-              {customer.phone && onCall && (
+              {customer.user_id && onCall && (
                 <Button
                   size="sm"
                   variant="outline"
                   colorPalette="green"
                   flex={1}
                   onClick={() => onCall(customer)}
-                  title="Call customer via Twilio"
+                  title="Audio call customer via Jitsi"
                 >
                   <FiPhone size={16} />
                   <Box ml={2}>Call</Box>
@@ -319,14 +320,14 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onCall, onBulkDele
                 </Table.Cell>
                 <Table.Cell>
                   <HStack gap={1} justify="center">
-                    {customer.phone && onCall && (
+                    {customer.user_id && onCall && (
                       <IconButton
-                        aria-label="Call customer"
+                        aria-label="Audio call customer"
                         size="sm"
                         variant="ghost"
                         colorPalette="green"
                         onClick={() => onCall(customer)}
-                        title="Call customer via Twilio"
+                        title="Audio call customer via Jitsi"
                       >
                         <FiPhone size={16} />
                       </IconButton>

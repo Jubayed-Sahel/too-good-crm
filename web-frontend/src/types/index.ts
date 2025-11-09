@@ -52,6 +52,7 @@ export interface Customer {
   status: CustomerStatus;
   assigned_to?: number | null;
   assigned_to_name?: string;
+  user_id?: number | null;  // For Jitsi video calls
   address?: string;
   city?: string;
   state?: string;

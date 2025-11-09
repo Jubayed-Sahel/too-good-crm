@@ -28,7 +28,7 @@ class Call(TimestampedModel):
     # Reference
     organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='calls')
     customer = models.ForeignKey('Customer', on_delete=models.CASCADE, related_name='calls', null=True, blank=True)
-    initiated_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='initiated_calls')
+    initiated_by = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='twilio_calls_initiated')
     
     # Call details
     call_sid = models.CharField(max_length=100, unique=True, help_text='Twilio Call SID')

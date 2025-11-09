@@ -31,9 +31,9 @@ class VendorViewSet(viewsets.ModelViewSet):
         return VendorSerializer
     
     def get_queryset(self):
-        """Filter vendors by user's organizations"""
-        user_orgs = self.request.user.user_organizations.filter(
-            is_active=True
+        """Filter vendors by user's organizations through user_profiles"""
+        user_orgs = self.request.user.user_profiles.filter(
+            status='active'
         ).values_list('organization_id', flat=True)
         
         queryset = Vendor.objects.filter(organization_id__in=user_orgs)

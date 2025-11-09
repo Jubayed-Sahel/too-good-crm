@@ -3,6 +3,8 @@ import { AccountModeProvider } from './contexts/AccountModeContext'
 import { PermissionProvider } from './contexts/PermissionContext'
 import { ProfileProvider } from './contexts/ProfileContext'
 import { ProtectedRoute } from './components/auth'
+import { JitsiCallManager } from './components/jitsi/JitsiCallManager'
+import { useAuth } from './hooks'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardPage from './pages/DashboardPage'
@@ -35,12 +37,28 @@ import ClientIssueDetailPage from './pages/ClientIssueDetailPage'
 import PermissionDebugPage from './pages/PermissionDebugPage'
 import './App.css'
 
+/**
+ * Component to manage Jitsi calls for authenticated users
+ */
+function JitsiCallWrapper() {
+  const { user, isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated || !user) {
+    return null;
+  }
+  
+  return <JitsiCallManager userId={user.id} />;
+}
+
 function App() {
   return (
     <Router>
       <AccountModeProvider>
         <ProfileProvider>
           <PermissionProvider>
+            {/* Global Jitsi Call Manager for all authenticated users */}
+            <JitsiCallWrapper />
+            
             <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />

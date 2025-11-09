@@ -15,6 +15,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
     total_value = serializers.SerializerMethodField()
     company = serializers.CharField(source='company_name', read_only=True)  # Alias for frontend compatibility
     zip_code = serializers.CharField(source='postal_code', read_only=True)  # Alias for frontend compatibility
+    user_id = serializers.IntegerField(source='user.id', read_only=True, allow_null=True)  # For Jitsi calls
     
     class Meta:
         model = Customer
@@ -23,7 +24,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
             'email', 'phone', 'company', 'company_name',
             'customer_type', 'status', 'assigned_to', 'assigned_to_name',
             'total_value', 'address', 'city', 'state', 'country', 'postal_code', 'zip_code',
-            'notes', 'website', 'created_at', 'updated_at'
+            'notes', 'website', 'user_id', 'created_at', 'updated_at'
         ]
     
     def get_assigned_to_name(self, obj):

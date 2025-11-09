@@ -47,6 +47,12 @@ from .order import OrderViewSet
 from .payment import PaymentViewSet
 from .activity import ActivityViewSet
 
+# Jitsi Calls
+from .jitsi import (
+    JitsiCallViewSet,
+    UserPresenceViewSet,
+)
+
 # Settings & Preferences
 from .notification import NotificationPreferencesViewSet
 
@@ -90,6 +96,10 @@ __all__ = [
     'OrderViewSet',
     'PaymentViewSet',
     'ActivityViewSet',
+    
+    # Jitsi Calls
+    'JitsiCallViewSet',
+    'UserPresenceViewSet',
     
     # Settings
     'NotificationPreferencesViewSet',
