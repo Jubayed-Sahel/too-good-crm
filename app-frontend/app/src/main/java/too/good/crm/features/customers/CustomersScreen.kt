@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.ui.components.*
@@ -25,7 +26,6 @@ import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.*
 import java.text.NumberFormat
 import java.util.*
-import kotlin.text.format
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,13 +33,28 @@ fun CustomersScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val viewModel: CustomersViewModel = viewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    
     var searchQuery by remember { mutableStateOf("") }
     var filterStatus by remember { mutableStateOf<CustomerStatus?>(null) }
-    val customers = remember { CustomerSampleData.getCustomers() }
 
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
 
-    val filteredCustomers = customers.filter { customer ->
+    // Show snackbar for success messages
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    LaunchedEffect(uiState.successMessage) {
+        uiState.successMessage?.let { message ->
+            snackbarHostState.showSnackbar(
+                message = message,
+                duration = SnackbarDuration.Short
+            )
+            viewModel.clearSuccessMessage()
+        }
+    }
+
+    val filteredCustomers = uiState.customers.filter { customer ->
         val matchesSearch = searchQuery.isEmpty() ||
                 customer.name.contains(searchQuery, ignoreCase = true) ||
                 customer.company.contains(searchQuery, ignoreCase = true) ||
@@ -48,22 +63,66 @@ fun CustomersScreen(
         matchesSearch && matchesFilter
     }
 
-    AppScaffoldWithDrawer(
-        title = "Customers",
-        activeMode = activeMode,
-        onModeChanged = { newMode ->
-            activeMode = newMode
-            UserSession.activeMode = newMode
-            // Navigate to appropriate dashboard when mode changes
-            if (newMode == ActiveMode.CLIENT) {
-                onNavigate("client-dashboard")
-            } else {
-                onNavigate("dashboard")
+    // Show create customer dialog
+    if (uiState.showAddCustomerDialog) {
+        CreateCustomerDialog(
+            onDismiss = { viewModel.hideAddCustomerDialog() },
+            onCreateCustomer = { name, email, phone, firstName, lastName, companyName, 
+                                customerType, address, city, state, country, postalCode, 
+                                website, notes ->
+                viewModel.createCustomer(
+                    name = name,
+                    email = email,
+                    phone = phone,
+                    firstName = firstName,
+                    lastName = lastName,
+                    companyName = companyName,
+                    customerType = customerType,
+                    address = address,
+                    city = city,
+                    state = state,
+                    country = country,
+                    postalCode = postalCode,
+                    website = website,
+                    notes = notes
+                )
+            },
+            isCreating = uiState.isCreatingCustomer,
+            error = uiState.error
+        )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { viewModel.showAddCustomerDialog() },
+                containerColor = DesignTokens.Colors.Primary,
+                contentColor = DesignTokens.Colors.OnPrimary
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Add Customer"
+                )
             }
-        },
-        onNavigate = onNavigate,
-        onLogout = onBack
+        }
     ) { paddingValues ->
+        AppScaffoldWithDrawer(
+            title = "Customers",
+            activeMode = activeMode,
+            onModeChanged = { newMode ->
+                activeMode = newMode
+                UserSession.activeMode = newMode
+                // Navigate to appropriate dashboard when mode changes
+                if (newMode == ActiveMode.CLIENT) {
+                    onNavigate("client-dashboard")
+                } else {
+                    onNavigate("dashboard")
+                }
+            },
+            onNavigate = onNavigate,
+            onLogout = onBack
+        ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -81,138 +140,201 @@ fun CustomersScreen(
                     medium = DesignTokens.Spacing.Space5
                 )
             )
-        ) {
-            // Header Section
-            Column(
-                verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
             ) {
-                Text(
-                    text = "Customers",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = DesignTokens.Typography.FontWeightBold,
-                    color = DesignTokens.Colors.OnSurface
-                )
-                Text(
-                    text = "Manage your customer relationships and track activity",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = DesignTokens.Colors.OnSurfaceVariant
-                )
-            }
-
-            // Stats Grid - Responsive (1/2/3 columns)
-            StatsGrid(
-                stats = listOf(
-                    StatData(
-                        title = "TOTAL CUSTOMERS",
-                        value = customers.size.toString(),
-                        icon = {
-                            Icon(
-                                Icons.Default.People,
-                                contentDescription = null,
-                                tint = DesignTokens.Colors.Primary
+                // Header Section
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Customers",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = DesignTokens.Typography.FontWeightBold,
+                                color = DesignTokens.Colors.OnSurface
                             )
-                        },
-                        change = "+12%",
-                        isPositive = true,
-                        iconBackgroundColor = DesignTokens.Colors.PrimaryLight.copy(alpha = 0.2f),
-                        iconTintColor = DesignTokens.Colors.Primary
-                    ),
-                    StatData(
-                        title = "ACTIVE",
-                        value = customers.count { it.status == CustomerStatus.ACTIVE }.toString(),
-                        icon = {
-                            Icon(
-                                Icons.Default.CheckCircle,
-                                contentDescription = null,
-                                tint = DesignTokens.Colors.Success
+                            Text(
+                                text = "Manage your customer relationships and track activity",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = DesignTokens.Colors.OnSurfaceVariant
                             )
-                        },
-                        change = "+8%",
-                        isPositive = true,
-                        iconBackgroundColor = DesignTokens.Colors.SuccessLight,
-                        iconTintColor = DesignTokens.Colors.Success
-                    ),
-                    StatData(
-                        title = "TOTAL VALUE",
-                        value = "$${customers.sumOf { it.value }.toInt() / 1000}K",
-                        icon = {
-                            Icon(
-                                Icons.Default.AttachMoney,
-                                contentDescription = null,
-                                tint = DesignTokens.Colors.Secondary
-                            )
-                        },
-                        change = "+23%",
-                        isPositive = true,
-                        iconBackgroundColor = DesignTokens.Colors.SecondaryContainer,
-                        iconTintColor = DesignTokens.Colors.Secondary
-                    )
-                )
-            )
-
-            // Search Bar - Responsive
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = {
-                    Text(
-                        "Search customers...",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                },
-                leadingIcon = {
-                    Icon(
-                        Icons.Default.Search,
-                        contentDescription = null,
-                        tint = DesignTokens.Colors.OnSurfaceVariant
-                    )
-                },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { searchQuery = "" }) {
-                            Icon(
-                                Icons.Default.Clear,
-                                contentDescription = "Clear",
-                                tint = DesignTokens.Colors.OnSurfaceVariant
+                        }
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
                             )
                         }
                     }
-                },
-                shape = RoundedCornerShape(DesignTokens.Radius.Medium),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = DesignTokens.Colors.Surface,
-                    unfocusedContainerColor = DesignTokens.Colors.Surface,
-                    focusedBorderColor = DesignTokens.Colors.Primary,
-                    unfocusedBorderColor = DesignTokens.Colors.Outline
-                )
-            )
+                }
 
-            // Customer List - Responsive
-            if (filteredCustomers.isEmpty()) {
-                EmptyState(
-                    title = "No customers found",
-                    message = "Try adjusting your search or add a new customer.",
-                    icon = {
-                        Icon(
-                            Icons.Default.SearchOff,
-                            contentDescription = null,
-                            modifier = Modifier.size(DesignTokens.Heights.IconXl),
-                            tint = DesignTokens.Colors.OnSurfaceVariant
-                        )
+                // Error message
+                uiState.error?.let { errorMessage ->
+                    Surface(
+                        color = DesignTokens.Colors.ErrorLight,
+                        shape = RoundedCornerShape(DesignTokens.Radius.Medium),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(DesignTokens.Spacing.Space3),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = errorMessage,
+                                color = DesignTokens.Colors.ErrorDark,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(onClick = { viewModel.clearError() }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Dismiss error",
+                                    tint = DesignTokens.Colors.ErrorDark
+                                )
+                            }
+                        }
                     }
-                )
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(
-                        responsiveSpacing(
-                            compact = DesignTokens.Spacing.Space3,
-                            medium = DesignTokens.Spacing.Space4
+                }
+
+                // Stats Grid - Responsive (1/2/3 columns)
+                StatsGrid(
+                    stats = listOf(
+                        StatData(
+                            title = "TOTAL CUSTOMERS",
+                            value = uiState.customers.size.toString(),
+                            icon = {
+                                Icon(
+                                    Icons.Default.People,
+                                    contentDescription = null,
+                                    tint = DesignTokens.Colors.Primary
+                                )
+                            },
+                            change = "+12%",
+                            isPositive = true,
+                            iconBackgroundColor = DesignTokens.Colors.PrimaryLight.copy(alpha = 0.2f),
+                            iconTintColor = DesignTokens.Colors.Primary
+                        ),
+                        StatData(
+                            title = "ACTIVE",
+                            value = uiState.customers.count { it.status == CustomerStatus.ACTIVE }.toString(),
+                            icon = {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = DesignTokens.Colors.Success
+                                )
+                            },
+                            change = "+8%",
+                            isPositive = true,
+                            iconBackgroundColor = DesignTokens.Colors.SuccessLight,
+                            iconTintColor = DesignTokens.Colors.Success
+                        ),
+                        StatData(
+                            title = "TOTAL VALUE",
+                            value = "$${uiState.customers.sumOf { it.value }.toInt() / 1000}K",
+                            icon = {
+                                Icon(
+                                    Icons.Default.AttachMoney,
+                                    contentDescription = null,
+                                    tint = DesignTokens.Colors.Secondary
+                                )
+                            },
+                            change = "+23%",
+                            isPositive = true,
+                            iconBackgroundColor = DesignTokens.Colors.SecondaryContainer,
+                            iconTintColor = DesignTokens.Colors.Secondary
                         )
                     )
-                ) {
-                    items(filteredCustomers) { customer ->
-                        ResponsiveCustomerCard(customer = customer)
+                )
+
+                // Search Bar - Responsive
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = {
+                        Text(
+                            "Search customers...",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = null,
+                            tint = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                    },
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(
+                                    Icons.Default.Clear,
+                                    contentDescription = "Clear",
+                                    tint = DesignTokens.Colors.OnSurfaceVariant
+                                )
+                            }
+                        }
+                    },
+                    shape = RoundedCornerShape(DesignTokens.Radius.Medium),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = DesignTokens.Colors.Surface,
+                        unfocusedContainerColor = DesignTokens.Colors.Surface,
+                        focusedBorderColor = DesignTokens.Colors.Primary,
+                        unfocusedBorderColor = DesignTokens.Colors.Outline
+                    )
+                )
+
+                // Customer List - Responsive
+                if (uiState.isLoading && uiState.customers.isEmpty()) {
+                    // Initial loading state
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(DesignTokens.Spacing.Space6),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
+                        ) {
+                            CircularProgressIndicator()
+                            Text(
+                                text = "Loading customers...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                        }
+                    }
+                } else if (filteredCustomers.isEmpty()) {
+                    EmptyState(
+                        title = "No customers found",
+                        message = "Try adjusting your search or add a new customer.",
+                        icon = {
+                            Icon(
+                                Icons.Default.SearchOff,
+                                contentDescription = null,
+                                modifier = Modifier.size(DesignTokens.Heights.IconXl),
+                                tint = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                        }
+                    )
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(
+                            responsiveSpacing(
+                                compact = DesignTokens.Spacing.Space3,
+                                medium = DesignTokens.Spacing.Space4
+                            )
+                        )
+                    ) {
+                        items(filteredCustomers) { customer ->
+                            ResponsiveCustomerCard(customer = customer)
+                        }
                     }
                 }
             }
