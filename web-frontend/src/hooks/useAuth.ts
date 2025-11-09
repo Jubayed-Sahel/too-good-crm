@@ -151,40 +151,60 @@ export const useAuth = () => {
 
   const switchRole = async (profileId: number) => {
     try {
-      console.log('🔄 Switching to profile ID:', profileId);
+      // Immediately update localStorage optimistically for instant UI feedback
+      const currentUser = user || JSON.parse(localStorage.getItem('user') || '{}');
+      if (currentUser && currentUser.profiles) {
+        const selectedProfile = currentUser.profiles.find((p: any) => p.id === profileId);
+        if (selectedProfile) {
+          // Optimistically update primary profile in local storage
+          const optimisticUser = {
+            ...currentUser,
+            primaryProfile: selectedProfile,
+            profiles: currentUser.profiles.map((p: any) => ({
+              ...p,
+              is_primary: p.id === profileId
+            }))
+          };
+          localStorage.setItem('user', JSON.stringify(optimisticUser));
+          // Update state immediately for instant UI update
+          setUser(optimisticUser);
+        }
+      }
+      
+      // Make API call in background
       const response = await roleSelectionService.selectRole(profileId);
       
-      console.log('📦 Backend response:', response);
+      if (!response || !response.user) {
+        throw new Error('Invalid response from server');
+      }
       
       // Process the updated user data to update primaryProfile
       const processedUser = processUserData(response.user);
       
-      console.log('✅ Processed user:', {
-        primaryProfile: processedUser.primaryProfile,
-        profiles: processedUser.profiles?.map(p => ({
-          id: p.id,
-          type: p.profile_type,
-          isPrimary: p.is_primary
-        }))
-      });
-      
-      // Update localStorage with processed user
+      // Update localStorage with server response
       localStorage.setItem('user', JSON.stringify(processedUser));
       
-      // Update state with completely new object reference
+      // Update state with server response
       setUser(processedUser);
-      
-      console.log('🚀 Navigating to default route...');
       
       // Navigate to appropriate dashboard based on new role
       const targetRoute = getTargetRoute(processedUser);
-      console.log('📍 Target route:', targetRoute);
       
       // Force page reload to ensure all components re-render with new profile
-      window.location.href = targetRoute;
-    } catch (error) {
+      // Small delay to allow optimistic UI update and toast to be visible
+      requestAnimationFrame(() => {
+        window.location.href = targetRoute;
+      });
+    } catch (error: any) {
       console.error('❌ Role switch failed:', error);
-      throw error;
+      // Revert optimistic update on error
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+      }
+      const errorMessage = error?.response?.data?.error || error?.message || 'Failed to switch profile';
+      throw new Error(errorMessage);
     }
   };
 

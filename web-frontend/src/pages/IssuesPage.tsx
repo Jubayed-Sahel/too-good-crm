@@ -1,20 +1,33 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VStack, Box, Spinner, Text } from '@chakra-ui/react';
-import { FiPlus, FiRefreshCw } from 'react-icons/fi';
+import { VStack, Box, Spinner, Text, HStack } from '@chakra-ui/react';
+import { FiPlus, FiRefreshCw, FiDownload } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { IssueStatsGrid, IssueFiltersPanel, IssuesDataTable, CreateIssueModal, ResolveIssueModal } from '../components/issues';
 import { ErrorState, PageHeader, StandardButton, ConfirmDialog } from '../components/common';
 import { useIssues, useIssueStats, useIssueMutations } from '../hooks/useIssues';
+import { useProfile } from '../contexts/ProfileContext';
+import { issueService } from '../services/issue.service';
 import type { Issue, IssuePriority, IssueStatus, IssueCategory } from '../types';
 import { toaster } from '../components/ui/toaster';
 
 const IssuesPage = () => {
   const navigate = useNavigate();
+  const { activeProfileType } = useProfile();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedIssueForResolve, setSelectedIssueForResolve] = useState<Issue | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [issueToDelete, setIssueToDelete] = useState<Issue | null>(null);
+  
+  // Only customers can raise issues - vendors and employees can only view and update
+  const canRaiseIssue = activeProfileType === 'customer';
+  // Vendors and employees can fetch from Linear
+  const canFetchFromLinear = activeProfileType === 'vendor' || activeProfileType === 'employee';
+  
+  // Fetch from Linear state
+  const [isFetchingFromLinear, setIsFetchingFromLinear] = useState(false);
+  const [linearIssues, setLinearIssues] = useState<any[]>([]);
+  const [showLinearIssues, setShowLinearIssues] = useState(false);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,23 +86,31 @@ const IssuesPage = () => {
 
   const handleUpdateStatus = async (issueId: number, newStatus: IssueStatus) => {
     try {
-      await updateIssue.mutateAsync({
+      const response = await updateIssue.mutateAsync({
         id: issueId,
         data: { status: newStatus },
       });
       
+      const message = response.linear_synced 
+        ? `Issue status changed to ${newStatus} and synced to Linear`
+        : `Issue status changed to ${newStatus}`;
+      
       toaster.create({
         title: 'Status Updated',
-        description: `Issue status changed to ${newStatus}`,
+        description: message,
         type: 'success',
         duration: 3000,
       });
-    } catch (error) {
+      
+      // Refresh data to show updated status
+      refetch();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.details || error.message || 'Failed to update issue status';
       toaster.create({
         title: 'Update Failed',
-        description: 'Failed to update issue status',
+        description: errorMessage,
         type: 'error',
-        duration: 3000,
+        duration: 5000,
       });
     }
   };
@@ -168,6 +189,52 @@ const IssuesPage = () => {
     refetchStats();
   };
 
+  const handleFetchFromLinear = async (syncToCrm: boolean = false) => {
+    if (!canFetchFromLinear) {
+      toaster.create({
+        title: 'Permission Denied',
+        description: 'Only vendors and employees can fetch issues from Linear',
+        type: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+
+    setIsFetchingFromLinear(true);
+    try {
+      const response = await issueService.fetchFromLinear(50, syncToCrm);
+      setLinearIssues(response.linear_issues || []);
+      setShowLinearIssues(true);
+      
+      const message = syncToCrm
+        ? `Fetched ${response.linear_issues?.length || 0} issues from Linear and synced ${response.synced_issues?.length || 0} to CRM`
+        : `Fetched ${response.linear_issues?.length || 0} issues from Linear`;
+      
+      toaster.create({
+        title: 'Issues Fetched',
+        description: message,
+        type: 'success',
+        duration: 5000,
+      });
+      
+      // Refresh local issues if synced
+      if (syncToCrm) {
+        refetch();
+        refetchStats();
+      }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.details || error.message || 'Failed to fetch issues from Linear';
+      toaster.create({
+        title: 'Error',
+        description: errorMessage,
+        type: 'error',
+        duration: 5000,
+      });
+    } finally {
+      setIsFetchingFromLinear(false);
+    }
+  };
+
   // Error state
   if (error) {
     return (
@@ -187,7 +254,11 @@ const IssuesPage = () => {
         {/* Page Header */}
         <PageHeader
           title="Issue Management"
-          description="Track and manage issues across vendors, orders, and projects"
+          description={
+            canRaiseIssue 
+              ? "Raise and track issues across vendors, orders, and projects"
+              : "Track and manage issues raised by customers"
+          }
           actions={
             <>
               <StandardButton
@@ -198,13 +269,35 @@ const IssuesPage = () => {
               >
                 Refresh
               </StandardButton>
-              <StandardButton
-                variant="primary"
-                onClick={() => setIsCreateDialogOpen(true)}
-                leftIcon={<FiPlus />}
-              >
-                Create Issue
-              </StandardButton>
+              {canFetchFromLinear && (
+                <>
+                  <StandardButton
+                    variant="outline"
+                    onClick={() => handleFetchFromLinear(false)}
+                    disabled={isFetchingFromLinear}
+                    leftIcon={<FiDownload />}
+                  >
+                    {isFetchingFromLinear ? 'Fetching...' : 'Fetch from Linear'}
+                  </StandardButton>
+                  <StandardButton
+                    variant="primary"
+                    onClick={() => handleFetchFromLinear(true)}
+                    disabled={isFetchingFromLinear}
+                    leftIcon={<FiDownload />}
+                  >
+                    {isFetchingFromLinear ? 'Syncing...' : 'Sync from Linear'}
+                  </StandardButton>
+                </>
+              )}
+              {canRaiseIssue && (
+                <StandardButton
+                  variant="primary"
+                  onClick={() => setIsCreateDialogOpen(true)}
+                  leftIcon={<FiPlus />}
+                >
+                  Raise Issue
+                </StandardButton>
+              )}
             </>
           }
         />
@@ -253,15 +346,19 @@ const IssuesPage = () => {
             {issues.length === 0 && (
               <Box textAlign="center" py={12}>
                 <Text color="gray.500" fontSize="lg" mb={4}>
-                  No issues found matching your filters
+                  {canRaiseIssue 
+                    ? "No issues found matching your filters"
+                    : "No issues have been raised by customers yet"}
                 </Text>
-                <StandardButton
-                  onClick={() => setIsCreateDialogOpen(true)}
-                  variant="primary"
-                  leftIcon={<FiPlus />}
-                >
-                  Create Your First Issue
-                </StandardButton>
+                {canRaiseIssue && (
+                  <StandardButton
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    variant="primary"
+                    leftIcon={<FiPlus />}
+                  >
+                    Raise Your First Issue
+                  </StandardButton>
+                )}
               </Box>
             )}
           </>

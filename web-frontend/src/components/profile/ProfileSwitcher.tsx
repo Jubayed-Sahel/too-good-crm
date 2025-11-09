@@ -19,6 +19,7 @@ import { FiChevronDown, FiCheck, FiBriefcase, FiUsers, FiUser, FiRefreshCw } fro
 import { useProfile } from '@/contexts/ProfileContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
+import { toaster } from '@/components/ui/toaster';
 
 const profileIcons = {
   vendor: FiBriefcase,
@@ -42,6 +43,7 @@ export const ProfileSwitcher = () => {
   const { profiles, activeProfile, isLoading, refreshProfiles } = useProfile();
   const { switchRole, refreshUser } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -74,7 +76,7 @@ export const ProfileSwitcher = () => {
   const activeColor = profileColors[activeProfile.profile_type];
 
   return (
-    <MenuRoot positioning={{ placement: 'bottom-end' }}>
+    <MenuRoot positioning={{ placement: 'bottom-end' }} closeOnSelect={false}>
       <MenuTrigger asChild>
         <Button
           variant="outline"
@@ -83,6 +85,9 @@ export const ProfileSwitcher = () => {
           py={2}
           borderRadius="lg"
           _hover={{ bg: 'gray.50' }}
+          disabled={isSwitching}
+          opacity={isSwitching ? 0.7 : 1}
+          cursor={isSwitching ? 'wait' : 'pointer'}
         >
           <HStack gap={2}>
             <Box color={`${activeColor}.500`}>
@@ -90,7 +95,7 @@ export const ProfileSwitcher = () => {
             </Box>
             <VStack align="start" gap={0}>
               <Text fontSize="xs" color="gray.500" lineHeight="1">
-                {profileLabels[activeProfile.profile_type]}
+                {isSwitching ? 'Switching...' : profileLabels[activeProfile.profile_type]}
               </Text>
               <Text fontSize="sm" fontWeight="semibold" lineHeight="1.2">
                 {activeProfile.organization_name || 'No Organization'}
@@ -116,9 +121,34 @@ export const ProfileSwitcher = () => {
                 <MenuItem
                   key={profile.id}
                   value={profile.id.toString()}
-                  onClick={() => switchRole(profile.id)}
-                  cursor="pointer"
+                  onClick={() => {
+                    if (isSwitching || profile.id === activeProfile.id) return;
+                    setIsSwitching(true);
+                    
+                    // Show toast immediately for instant feedback
+                    toaster.create({
+                      title: 'Switching Profile',
+                      description: `Switching to ${profile.organization_name || profileLabels[profile.profile_type]}...`,
+                      type: 'info',
+                      duration: 1500,
+                    });
+                    
+                    // Start switch - it will update UI immediately and reload page
+                    switchRole(profile.id).catch((error: any) => {
+                      console.error('Failed to switch profile:', error);
+                      setIsSwitching(false);
+                      toaster.create({
+                        title: 'Switch Failed',
+                        description: error?.message || 'Failed to switch profile. Please try again.',
+                        type: 'error',
+                        duration: 3000,
+                      });
+                    });
+                  }}
+                  disabled={isSwitching || profile.id === activeProfile.id}
+                  cursor={isSwitching ? 'wait' : 'pointer'}
                   bg={activeProfile.id === profile.id ? 'purple.50' : 'transparent'}
+                  opacity={isSwitching && profile.id !== activeProfile.id ? 0.6 : 1}
                 >
                   <HStack justify="space-between" width="full">
                     <HStack gap={2}>
@@ -162,9 +192,34 @@ export const ProfileSwitcher = () => {
                 <MenuItem
                   key={profile.id}
                   value={profile.id.toString()}
-                  onClick={() => switchRole(profile.id)}
-                  cursor="pointer"
+                  onClick={() => {
+                    if (isSwitching || profile.id === activeProfile.id) return;
+                    setIsSwitching(true);
+                    
+                    // Show toast immediately for instant feedback
+                    toaster.create({
+                      title: 'Switching Profile',
+                      description: `Switching to ${profile.organization_name || profileLabels[profile.profile_type]}...`,
+                      type: 'info',
+                      duration: 1500,
+                    });
+                    
+                    // Start switch - it will update UI immediately and reload page
+                    switchRole(profile.id).catch((error: any) => {
+                      console.error('Failed to switch profile:', error);
+                      setIsSwitching(false);
+                      toaster.create({
+                        title: 'Switch Failed',
+                        description: error?.message || 'Failed to switch profile. Please try again.',
+                        type: 'error',
+                        duration: 3000,
+                      });
+                    });
+                  }}
+                  disabled={isSwitching || profile.id === activeProfile.id}
+                  cursor={isSwitching ? 'wait' : 'pointer'}
                   bg={activeProfile.id === profile.id ? 'blue.50' : 'transparent'}
+                  opacity={isSwitching && profile.id !== activeProfile.id ? 0.6 : 1}
                 >
                   <HStack justify="space-between" width="full">
                     <HStack gap={2}>
@@ -208,9 +263,34 @@ export const ProfileSwitcher = () => {
                 <MenuItem
                   key={profile.id}
                   value={profile.id.toString()}
-                  onClick={() => switchRole(profile.id)}
-                  cursor="pointer"
+                  onClick={() => {
+                    if (isSwitching || profile.id === activeProfile.id) return;
+                    setIsSwitching(true);
+                    
+                    // Show toast immediately for instant feedback
+                    toaster.create({
+                      title: 'Switching Profile',
+                      description: `Switching to ${profile.organization_name || profileLabels[profile.profile_type]}...`,
+                      type: 'info',
+                      duration: 1500,
+                    });
+                    
+                    // Start switch - it will update UI immediately and reload page
+                    switchRole(profile.id).catch((error: any) => {
+                      console.error('Failed to switch profile:', error);
+                      setIsSwitching(false);
+                      toaster.create({
+                        title: 'Switch Failed',
+                        description: error?.message || 'Failed to switch profile. Please try again.',
+                        type: 'error',
+                        duration: 3000,
+                      });
+                    });
+                  }}
+                  disabled={isSwitching || profile.id === activeProfile.id}
+                  cursor={isSwitching ? 'wait' : 'pointer'}
                   bg={activeProfile.id === profile.id ? 'green.50' : 'transparent'}
+                  opacity={isSwitching && profile.id !== activeProfile.id ? 0.6 : 1}
                 >
                   <HStack justify="space-between" width="full">
                     <HStack gap={2}>

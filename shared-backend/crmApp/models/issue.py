@@ -173,18 +173,47 @@ class Issue(TimestampedModel, CodeMixin):
         if not self.issue_number:
             # Generate issue number: ISS-YYYY-NNNN
             from django.utils import timezone
+            from django.db import IntegrityError
+            from django.db import transaction
+            
             year = timezone.now().year
-            last_issue = Issue.objects.filter(
-                organization=self.organization,
-                issue_number__startswith=f'ISS-{year}'
-            ).order_by('-issue_number').first()
             
-            if last_issue:
-                last_num = int(last_issue.issue_number.split('-')[-1])
-                new_num = last_num + 1
-            else:
-                new_num = 1
-            
-            self.issue_number = f'ISS-{year}-{new_num:04d}'
+            # Simple approach: query for last issue and increment
+            # Don't use select_for_update to avoid transaction conflicts
+            try:
+                last_issue = Issue.objects.filter(
+                    organization=self.organization,
+                    issue_number__startswith=f'ISS-{year}'
+                ).order_by('-issue_number').first()
+                
+                if last_issue:
+                    try:
+                        last_num = int(last_issue.issue_number.split('-')[-1])
+                        new_num = last_num + 1
+                    except (ValueError, IndexError):
+                        new_num = 1
+                else:
+                    new_num = 1
+                
+                # Generate issue number
+                self.issue_number = f'ISS-{year}-{new_num:04d}'
+                
+            except Exception:
+                # If query fails, use timestamp as fallback
+                import time
+                timestamp = int(time.time() * 1000) % 10000
+                self.issue_number = f'ISS-{year}-{timestamp:04d}'
         
-        super().save(*args, **kwargs)
+        # Save the issue
+        try:
+            super().save(*args, **kwargs)
+        except IntegrityError as e:
+            # If unique constraint fails, add timestamp to make it unique
+            if 'issue_number' in str(e) and not self.issue_number.endswith(str(int(__import__('time').time() * 1000) % 10000)):
+                import time
+                timestamp = int(time.time() * 1000) % 10000
+                base_number = self.issue_number.rsplit('-', 1)[0] if '-' in self.issue_number else f'ISS-{year}'
+                self.issue_number = f'{base_number}-{timestamp:04d}'
+                super().save(*args, **kwargs)
+            else:
+                raise

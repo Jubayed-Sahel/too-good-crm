@@ -1,2 +1,65 @@
-*.md
+# Environment variables
 shared-backend/.env
+web-frontend/.env
+web-frontend/.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Django
+*.log
+*.pot
+*.pyc
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+web-frontend/dist/
+web-frontend/build/
+app-frontend/app/build/
+app-frontend/.gradle/
+app-frontend/build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+promp.txt
+
+# MCP config (may contain sensitive data)
+mcp-config.json
+*.config.json
+
+# Documentation (keep README files)
+# *.md
