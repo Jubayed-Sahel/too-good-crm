@@ -57,8 +57,12 @@ export const JitsiCallManager: React.FC<JitsiCallManagerProps> = ({
           }
         }
       }
-    } catch (error) {
-      console.error('Error checking for calls:', error);
+    } catch (error: any) {
+      // Silently handle errors - if it's a 500 error, the service may not be available
+      // Only log non-500 errors (like network issues)
+      if (error?.status !== 500 && error?.status !== 204) {
+        console.error('Error checking for calls:', error);
+      }
     }
   }, [activeCall, userId, onCallStart, onCallEnd]);
 
@@ -207,8 +211,12 @@ export const JitsiCallManager: React.FC<JitsiCallManagerProps> = ({
     const heartbeatInterval = setInterval(async () => {
       try {
         await jitsiService.heartbeat();
-      } catch (error) {
-        console.error('Heartbeat failed:', error);
+      } catch (error: any) {
+        // Silently handle heartbeat errors - service may not be available
+        // Only log if it's not a 500 error
+        if (error?.status !== 500) {
+          console.error('Heartbeat failed:', error);
+        }
       }
     }, 60000); // 60 seconds
 
@@ -222,8 +230,12 @@ export const JitsiCallManager: React.FC<JitsiCallManagerProps> = ({
     const setOnline = async () => {
       try {
         await jitsiService.setOnline('Available for calls');
-      } catch (error) {
-        console.error('Failed to set online status:', error);
+      } catch (error: any) {
+        // Silently handle errors - presence service may not be available
+        // Only log if it's not a 500 error (which indicates missing tables)
+        if (error?.status !== 500) {
+          console.error('Failed to set online status:', error);
+        }
       }
     };
 
@@ -231,7 +243,12 @@ export const JitsiCallManager: React.FC<JitsiCallManagerProps> = ({
 
     // Set offline on unmount
     return () => {
-      jitsiService.setOffline().catch(console.error);
+      jitsiService.setOffline().catch((error: any) => {
+        // Silently handle errors on unmount
+        if (error?.status !== 500) {
+          console.error('Failed to set offline status:', error);
+        }
+      });
     };
   }, []);
 

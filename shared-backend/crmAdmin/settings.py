@@ -30,7 +30,13 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+# ALLOWED_HOSTS - In development (DEBUG=True), allow all hosts for easier testing
+# In production, set this via environment variable with specific hosts
+# Using ['*'] in development allows any host header to pass validation
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -190,19 +196,38 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "https://clifton-shopworn-unprecipitantly.ngrok-free.dev",
 ]
+
+# Allow additional origins from environment variable (comma-separated)
+CORS_EXTRA_ORIGINS = os.getenv('CORS_EXTRA_ORIGINS', '').split(',')
+CORS_ALLOWED_ORIGINS.extend([origin.strip() for origin in CORS_EXTRA_ORIGINS if origin.strip()])
+
 CORS_ALLOW_CREDENTIALS = True
+
+# Allow all common headers including ngrok-specific ones
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
+    'accept-language',
     'authorization',
     'content-type',
     'content_type',
     'dnt',
     'origin',
+    'referer',
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+    'x-forwarded-for',
+    'x-forwarded-proto',
+    'ngrok-skip-browser-warning',  # ngrok-specific header
+]
+
+# Expose headers that frontend might need
+CORS_EXPOSE_HEADERS = [
+    'content-type',
+    'authorization',
 ]
 CORS_ALLOW_METHODS = [
     'DELETE',
