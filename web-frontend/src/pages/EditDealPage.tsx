@@ -8,14 +8,13 @@ import {
   HStack,
   Input,
   Textarea,
-  Button,
   SimpleGrid,
   Spinner,
 } from '@chakra-ui/react';
 import { FiSave, FiX, FiArrowLeft } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import CustomSelect from '../components/ui/CustomSelect';
-import { Card } from '../components/common';
+import { Card, StandardButton } from '../components/common';
 import { toaster } from '../components/ui/toaster';
 import { dealService } from '@/services/deal.service';
 import type { Deal } from '@/types';
@@ -139,10 +138,9 @@ export const EditDealPage = () => {
           <Text color="gray.500" mb={4}>
             The deal you're looking for doesn't exist or has been deleted.
           </Text>
-          <Button onClick={() => navigate('/deals')} colorPalette="purple">
-            <FiArrowLeft />
-            <Box ml={2}>Back to Deals</Box>
-          </Button>
+          <StandardButton variant="primary" onClick={() => navigate('/deals')} leftIcon={<FiArrowLeft />}>
+            Back to Deals
+          </StandardButton>
         </Box>
       </DashboardLayout>
     );
@@ -153,16 +151,16 @@ export const EditDealPage = () => {
       <VStack gap={5} align="stretch" maxW="1200px" mx="auto">
         {/* Page Header */}
         <Box>
-          <Button
+          <StandardButton
             size="sm"
             variant="ghost"
             onClick={() => navigate('/deals')}
             mb={3}
             ml={-2}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2} fontWeight="bold">Back</Text>
-          </Button>
+            Back
+          </StandardButton>
           <Heading size="xl" mb={2}>
             Edit Deal
           </Heading>
@@ -330,24 +328,24 @@ export const EditDealPage = () => {
 
         {/* Bottom Action Buttons */}
         <HStack justify="flex-end" gap={2} pb={8}>
-          <Button
+          <StandardButton
             variant="outline"
             onClick={handleCancel}
             size="lg"
+            leftIcon={<FiX />}
           >
-            <FiX />
-            <Box ml={2}>Cancel</Box>
-          </Button>
-          <Button
-            colorPalette="purple"
+            Cancel
+          </StandardButton>
+          <StandardButton
+            variant="primary"
             onClick={handleSubmit}
             disabled={!isFormValid || isSaving}
-            loading={isSaving}
+            isLoading={isSaving}
             size="lg"
+            leftIcon={<FiSave />}
           >
-            <FiSave />
-            <Box ml={2}>Save Changes</Box>
-          </Button>
+            Save Changes
+          </StandardButton>
         </HStack>
       </VStack>
     </DashboardLayout>

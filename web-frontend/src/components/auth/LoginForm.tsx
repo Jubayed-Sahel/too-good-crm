@@ -11,9 +11,48 @@ import {
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "../ui/toaster";
 import { Field } from "../ui/field";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiZap } from "react-icons/fi";
 import { useAuth } from "@/hooks";
 import type { LoginCredentials } from "@/types";
+
+// CSS keyframes as strings
+const floatKeyframes = `
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+`;
+
+const fadeInUpKeyframes = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+const pulseKeyframes = `
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+  }
+`;
+
+// Inject keyframes into document
+if (typeof document !== 'undefined') {
+  const styleId = 'login-form-keyframes';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = floatKeyframes + fadeInUpKeyframes + pulseKeyframes;
+    document.head.appendChild(style);
+  }
+}
 
 const LoginForm = () => {
   const { login } = useAuth();
@@ -49,11 +88,45 @@ const LoginForm = () => {
         duration: 2000,
       });
     } catch (error: any) {
+      console.error('Login error details:', error);
+      
+      // Extract error message with priority
+      let errorMessage = "Invalid credentials. Please check your username and password.";
+      
+      // Handle non_field_errors (DRF validation errors)
+      if (error.errors?.non_field_errors) {
+        const nonFieldErrors = error.errors.non_field_errors;
+        errorMessage = Array.isArray(nonFieldErrors) 
+          ? nonFieldErrors[0] 
+          : nonFieldErrors;
+      }
+      // Handle field-specific errors
+      else if (error.errors) {
+        const errorMessages = Object.entries(error.errors)
+          .filter(([field]) => field !== 'non_field_errors') // Skip non_field_errors, already handled
+          .map(([field, messages]) => {
+            const msgArray = Array.isArray(messages) ? messages : [messages];
+            return `${field}: ${msgArray.join(', ')}`;
+          })
+          .join('; ');
+        if (errorMessages) {
+          errorMessage = errorMessages;
+        }
+      }
+      // Handle error message directly
+      else if (error.message) {
+        errorMessage = error.message;
+      }
+      // Handle detail field
+      else if (error.detail) {
+        errorMessage = error.detail;
+      }
+      
       toaster.create({
         title: "Login Failed",
-        description: error.detail || error.message || "Invalid credentials",
+        description: errorMessage,
         type: "error",
-        duration: 3000,
+        duration: 5000,
       });
     } finally {
       setIsLoading(false);
@@ -65,7 +138,10 @@ const LoginForm = () => {
       <Toaster />
       <VStack gap={6} w="full">
         {/* Logo */}
-        <Box textAlign="center">
+        <Box 
+          textAlign="center"
+          animation="fadeInUp 0.6s ease-out"
+        >
           <Box
             display="inline-flex"
             alignItems="center"
@@ -74,25 +150,38 @@ const LoginForm = () => {
             h="16"
             bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
             borderRadius="2xl"
-            boxShadow="lg"
+            boxShadow="xl"
             mb={3}
+            animation="float 3s ease-in-out infinite"
+            position="relative"
+            _before={{
+              content: '""',
+              position: "absolute",
+              inset: "-2px",
+              borderRadius: "2xl",
+              padding: "2px",
+              background: "linear-gradient(135deg, #667eea, #764ba2, #667eea)",
+              WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+              WebkitMaskComposite: "xor",
+              maskComposite: "exclude",
+              opacity: 0.3,
+              animation: "pulse 2s ease-in-out infinite",
+            }}
           >
-            <svg
-              className="w-10 h-10"
-              fill="none"
-              stroke="white"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
+            <FiZap 
+              size={40}
+              color="white"
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))" }}
+            />
           </Box>
-          <Heading size="xl" color="gray.800" mb={1}>
-            LeadGrid
+          <Heading 
+            size="xl" 
+            color="gray.800" 
+            mb={1}
+            fontWeight="800"
+            letterSpacing="tight"
+          >
+            TooGood CRM
           </Heading>
         </Box>
 
@@ -100,16 +189,38 @@ const LoginForm = () => {
         <Box
           bg="white"
           p={{ base: 6, md: 8 }}
-          borderRadius="xl"
-          boxShadow="xl"
+          borderRadius="2xl"
+          boxShadow="2xl"
           w="full"
+          border="1px"
+          borderColor="gray.100"
+          animation="fadeInUp 0.7s ease-out 0.1s both"
+          position="relative"
+          overflow="hidden"
+          _before={{
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "4px",
+            background: "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
+          }}
         >
           <VStack gap={6} align="stretch">
             <Box textAlign="center">
-              <Heading size="lg" mb={2}>
+              <Heading 
+                size="lg" 
+                mb={2}
+                background="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                backgroundClip="text"
+                fontWeight="800"
+              >
                 Welcome Back
               </Heading>
-              <Text color="gray.600">Sign in to continue to LeadGrid</Text>
+              <Text color="gray.600" fontWeight="medium">
+                Sign in to continue to TooGood CRM
+              </Text>
             </Box>
 
             <form onSubmit={handleSubmit}>
@@ -125,6 +236,12 @@ const LoginForm = () => {
                     size="md"
                     h="12"
                     borderRadius="lg"
+                    focusRing="none"
+                    _focus={{
+                      borderColor: "purple.500",
+                      boxShadow: "0 0 0 3px rgba(102, 126, 234, 0.1)",
+                    }}
+                    transition="all 0.2s"
                   />
                 </Field>
 
@@ -142,6 +259,12 @@ const LoginForm = () => {
                       pr="12"
                       w="full"
                       borderRadius="lg"
+                      focusRing="none"
+                      _focus={{
+                        borderColor: "purple.500",
+                        boxShadow: "0 0 0 3px rgba(102, 126, 234, 0.1)",
+                      }}
+                      transition="all 0.2s"
                     />
                     <Box
                       position="absolute"
@@ -188,6 +311,18 @@ const LoginForm = () => {
                   h="12"
                   loading={isLoading}
                   loadingText="Signing in..."
+                  bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+                  color="white"
+                  fontWeight="bold"
+                  fontSize="md"
+                  _hover={{
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 10px 20px rgba(102, 126, 234, 0.3)",
+                  }}
+                  _active={{
+                    transform: "translateY(0)",
+                  }}
+                  transition="all 0.2s"
                 >
                   Sign In
                 </Button>

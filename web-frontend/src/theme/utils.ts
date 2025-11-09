@@ -12,8 +12,9 @@ import type { CustomerStatus, DealStage } from '@/types';
 export const getCustomerStatusColors = (status: CustomerStatus) => {
   const statusMap = {
     active: semanticTokens.customerStatus.active,
-    pending: semanticTokens.customerStatus.pending,
+    prospect: semanticTokens.customerStatus.prospect,
     inactive: semanticTokens.customerStatus.inactive,
+    vip: semanticTokens.customerStatus.vip,
   };
   
   return statusMap[status] || semanticTokens.customerStatus.inactive;
@@ -55,8 +56,9 @@ export const getActionColors = (variant: 'primary' | 'secondary' | 'success' | '
 export const formatCustomerStatus = (status: CustomerStatus): string => {
   const statusLabels = {
     active: 'Active',
-    pending: 'Pending',
+    prospect: 'Prospect',
     inactive: 'Inactive',
+    vip: 'VIP',
   };
   
   return statusLabels[status] || status;

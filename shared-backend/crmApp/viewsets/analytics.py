@@ -111,7 +111,7 @@ class AnalyticsViewSet(viewsets.ViewSet):
             revenue_data = AnalyticsService.get_revenue_by_period(
                 org, 
                 period=period, 
-                limit=limit
+                count=limit
             )
             return Response(revenue_data)
         except Exception as e:

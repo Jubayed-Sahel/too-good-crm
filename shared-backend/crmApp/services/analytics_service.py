@@ -196,11 +196,25 @@ class AnalyticsService:
         
         for i in range(count):
             if period == 'month':
-                from dateutil.relativedelta import relativedelta
-                start = today - relativedelta(months=i)
-                start = start.replace(day=1)
-                end = start.replace(day=28) + timedelta(days=4)
-                end = end.replace(day=1) - timedelta(days=1)
+                # Calculate month offset without dateutil
+                year = today.year
+                month = today.month
+                # Subtract i months
+                month -= i
+                while month < 1:
+                    month += 12
+                    year -= 1
+                
+                # First day of the month
+                start = today.replace(year=year, month=month, day=1)
+                
+                # Last day of the month
+                if month == 12:
+                    end = start.replace(day=31)
+                else:
+                    next_month = start.replace(month=month + 1, day=1)
+                    end = next_month - timedelta(days=1)
+                
                 label = start.strftime('%b %Y')
             elif period == 'week':
                 start = today - timedelta(weeks=i)
@@ -211,8 +225,9 @@ class AnalyticsService:
                 start = end = today - timedelta(days=i)
                 label = start.strftime('%b %d')
             else:  # year
-                start = today.replace(month=1, day=1) - timedelta(days=365*i)
-                end = start.replace(month=12, day=31)
+                year = today.year - i
+                start = today.replace(year=year, month=1, day=1)
+                end = today.replace(year=year, month=12, day=31)
                 label = str(start.year)
             
             period_deals = deals.filter(

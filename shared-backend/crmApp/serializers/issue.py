@@ -28,6 +28,7 @@ class IssueListSerializer(serializers.ModelSerializer):
             'status', 'status_display', 'assigned_to', 'assigned_to_name',
             'is_client_issue', 'raised_by_customer', 'raised_by_customer_name',
             'organization', 'organization_name',
+            'linear_issue_id', 'linear_issue_url', 'synced_to_linear',
             'created_at', 'updated_at', 'resolved_at'
         ]
     
@@ -93,9 +94,10 @@ class IssueSerializer(serializers.ModelSerializer):
             'resolved_at', 'resolved_by', 'resolution_notes',
             'is_client_issue', 'raised_by_customer', 'raised_by_customer_name',
             'created_by', 'created_at', 'updated_at',
-            'linear_issue_id', 'linear_issue_url', 'synced_to_linear'
+            'linear_issue_id', 'linear_issue_url', 'linear_team_id',
+            'synced_to_linear', 'last_synced_at'
         ]
-        read_only_fields = ['id', 'code', 'issue_number', 'organization', 'created_by', 'created_at', 'updated_at', 'resolved_by']
+        read_only_fields = ['id', 'code', 'issue_number', 'organization', 'created_by', 'created_at', 'updated_at', 'resolved_by', 'last_synced_at']
     
     def get_raised_by_customer_name(self, obj):
         if obj.raised_by_customer:

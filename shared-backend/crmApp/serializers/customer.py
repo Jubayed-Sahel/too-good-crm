@@ -91,6 +91,7 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(required=False, allow_null=True)
     assigned_to_id = serializers.IntegerField(required=False, allow_null=True)
     zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)  # Alias for frontend compatibility
+    organization = serializers.IntegerField(required=False, write_only=True)  # Accept but don't require organization from frontend
     
     class Meta:
         model = Customer
@@ -108,7 +109,15 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         if not value:
             return value
         
+        # Try to get organization from multiple sources
         organization = self.initial_data.get('organization')
+        
+        # If organization is not in initial_data, try to get from context
+        if not organization:
+            request = self.context.get('request')
+            if request and hasattr(request.user, 'current_organization') and request.user.current_organization:
+                organization = request.user.current_organization.id
+        
         if organization:
             # Check if email exists for this organization
             if Customer.objects.filter(
@@ -118,7 +127,7 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError(
                     "A customer with this email already exists in your organization."
                 )
-        return value.lower()
+        return value.lower() if value else value
     
     def validate_phone(self, value):
         """Validate phone number format"""
@@ -126,18 +135,24 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
             return value
         
         # Remove common separators
-        cleaned = value.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+        cleaned = value.replace('-', '').replace(' ', '').replace('(', '').replace(')', '').replace('.', '')
         
-        # Check if it's mostly digits
-        if not cleaned.replace('+', '').isdigit():
+        # Check if it's mostly digits (allow + at start for country codes)
+        if cleaned.startswith('+'):
+            if not cleaned[1:].isdigit():
+                raise serializers.ValidationError(
+                    "Phone number should only contain digits, spaces, hyphens, parentheses, and a leading plus sign."
+                )
+        elif not cleaned.isdigit():
             raise serializers.ValidationError(
                 "Phone number should only contain digits, spaces, hyphens, and parentheses."
             )
         
-        # Check minimum length
-        if len(cleaned) < 10:
+        # Check minimum length (allow shorter for extensions or special formats)
+        digits_only = cleaned.replace('+', '')
+        if len(digits_only) < 7:
             raise serializers.ValidationError(
-                "Phone number must be at least 10 digits."
+                "Phone number must be at least 7 digits."
             )
         
         return value
@@ -168,17 +183,40 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """Object-level validation"""
-        # Ensure at least one of name or company_name is provided
-        if not attrs.get('name') and not attrs.get('company_name'):
-            raise serializers.ValidationError(
-                "Either 'name' or 'company_name' must be provided."
-            )
+        # Generate name if not provided
+        name = attrs.get('name')
+        first_name = attrs.get('first_name')
+        last_name = attrs.get('last_name')
+        company_name = attrs.get('company_name')
+        customer_type = attrs.get('customer_type', 'individual')
+        email = attrs.get('email')
         
-        # If customer_type is business, company_name should be provided
-        if attrs.get('customer_type') == 'business' and not attrs.get('company_name'):
+        # If no name is provided, try to construct it
+        if not name:
+            if customer_type == 'business' and company_name:
+                attrs['name'] = company_name
+            elif first_name and last_name:
+                attrs['name'] = f"{first_name} {last_name}".strip()
+            elif first_name:
+                attrs['name'] = first_name
+            elif last_name:
+                attrs['name'] = last_name
+            elif email:
+                # Use email as fallback name
+                attrs['name'] = email.split('@')[0]
+            else:
+                attrs['name'] = 'Customer'  # Final fallback
+        
+        # Ensure name is set (should always be set by now)
+        if not attrs.get('name'):
             raise serializers.ValidationError({
-                'company_name': "Company name is required for business customers."
+                'name': "Customer name is required. Please provide a name, first/last name, or company name."
             })
+        
+        # If customer_type is business, ensure company_name is set
+        if customer_type == 'business' and not company_name and not attrs.get('company_name'):
+            # Use name as company_name if not provided
+            attrs['company_name'] = attrs.get('name')
         
         return attrs
     

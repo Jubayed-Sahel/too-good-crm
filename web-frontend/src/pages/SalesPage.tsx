@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Heading, 
@@ -44,6 +45,7 @@ interface Deal {
 }
 
 const SalesPage = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [ownerFilter, setOwnerFilter] = useState('all');
   const [stageFilter, setStageFilter] = useState('all');
@@ -143,9 +145,9 @@ const SalesPage = () => {
     );
   };
 
-  // Handle adding new deal
+  // Handle adding new deal - navigate to deals page
   const handleAddDeal = () => {
-    alert('Add New Deal\n\nThis would open a form to add:\n- Deal name\n- Customer\n- Value\n- Stage\n- Assigned employee\n- Expected close date');
+    navigate('/deals');
   };
 
   return (

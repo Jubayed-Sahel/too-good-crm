@@ -11,7 +11,7 @@ import {
   Grid,
   Spinner,
 } from '@chakra-ui/react';
-import { Card } from '../common';
+import { Card, ConfirmDialog } from '../common';
 import { Field } from '../ui/field';
 import CustomSelect from '../ui/CustomSelect';
 import { FiUserPlus, FiMail, FiTrash2, FiMoreVertical } from 'react-icons/fi';
@@ -33,6 +33,8 @@ const TeamSettings = () => {
   const [isFetchingEmployees, setIsFetchingEmployees] = useState(false);
   const [teamMembers, setTeamMembers] = useState<Employee[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
 
   // Fetch employees on mount
   useEffect(() => {
@@ -120,26 +122,33 @@ const TeamSettings = () => {
     }
   };
 
-  const handleRemoveMember = async (member: Employee) => {
-    if (window.confirm(`Remove ${member.first_name} ${member.last_name} from the team?`)) {
-      try {
-        await employeeService.deleteEmployee(member.id);
-        toaster.create({
-          title: 'Employee Removed',
-          description: `${member.first_name} ${member.last_name} removed from team`,
-          type: 'success',
-          duration: 3000,
-        });
-        await fetchEmployees();
-      } catch (error: any) {
-        console.error('Error removing employee:', error);
-        toaster.create({
-          title: 'Error Removing Employee',
-          description: error.message || 'Failed to remove employee.',
-          type: 'error',
-          duration: 3000,
-        });
-      }
+  const handleRemoveMember = (member: Employee) => {
+    setEmployeeToDelete(member);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmRemoveMember = async () => {
+    if (!employeeToDelete) return;
+    
+    try {
+      await employeeService.deleteEmployee(employeeToDelete.id);
+      toaster.create({
+        title: 'Employee Removed',
+        description: `${employeeToDelete.first_name} ${employeeToDelete.last_name} removed from team`,
+        type: 'success',
+        duration: 3000,
+      });
+      setIsDeleteDialogOpen(false);
+      setEmployeeToDelete(null);
+      await fetchEmployees();
+    } catch (error: any) {
+      console.error('Error removing employee:', error);
+      toaster.create({
+        title: 'Error Removing Employee',
+        description: error.message || 'Failed to remove employee.',
+        type: 'error',
+        duration: 3000,
+      });
     }
   };
 
@@ -488,6 +497,25 @@ const TeamSettings = () => {
           )}
         </VStack>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setEmployeeToDelete(null);
+        }}
+        onConfirm={confirmRemoveMember}
+        title="Remove Team Member"
+        message={
+          employeeToDelete
+            ? `Are you sure you want to remove ${employeeToDelete.first_name} ${employeeToDelete.last_name} from the team? This action cannot be undone.`
+            : 'Are you sure you want to remove this team member?'
+        }
+        confirmText="Remove"
+        cancelText="Cancel"
+        colorScheme="red"
+      />
     </VStack>
   );
 };

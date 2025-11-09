@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -7,9 +8,7 @@ import {
   HStack,
   Grid,
   Badge,
-  Button,
   Spinner,
-  IconButton,
 } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
@@ -27,13 +26,19 @@ import {
   FiTrendingUp,
   FiTarget,
 } from 'react-icons/fi';
-import { useLead } from '@/hooks';
+import { useLead, useDeleteLead, useConvertLead } from '@/hooks';
+import { ConfirmDialog, StandardButton } from '@/components/common';
+import { toaster } from '@/components/ui/toaster';
 import type { LeadQualificationStatus, LeadSource } from '@/types';
 
 const LeadDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: lead, isLoading, error } = useLead(id || '');
+  const deleteLead = useDeleteLead();
+  const convertLead = useConvertLead();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
 
   const getStatusColor = (status: LeadQualificationStatus) => {
     switch (status) {
@@ -95,17 +100,43 @@ const LeadDetailPage = () => {
 
   const handleDelete = () => {
     if (!lead) return;
-    if (confirm(`Are you sure you want to delete lead ${lead.name}?`)) {
-      // TODO: Implement delete functionality
-      alert(`Lead ${lead.name} deleted`);
-      navigate('/leads');
-    }
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!lead || !id) return;
+    deleteLead.mutate(id, {
+      onSuccess: () => {
+        setIsDeleteDialogOpen(false);
+        navigate('/leads');
+      },
+    });
   };
 
   const handleConvert = () => {
     if (!lead) return;
-    // TODO: Implement convert functionality
-    alert(`Convert ${lead.name} to customer`);
+    setIsConvertDialogOpen(true);
+  };
+
+  const confirmConvert = () => {
+    if (!lead || !id) return;
+    convertLead.mutate(
+      {
+        id,
+        data: { customer_type: 'individual' },
+      },
+      {
+        onSuccess: (response) => {
+          setIsConvertDialogOpen(false);
+          // Navigate to customer page - the response contains customer_id
+          if (response?.customer_id) {
+            navigate(`/customers/${response.customer_id}`);
+          } else {
+            navigate('/customers');
+          }
+        },
+      }
+    );
   };
 
   if (isLoading) {
@@ -163,39 +194,35 @@ const LeadDetailPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Back Button and Actions */}
         <HStack justify="space-between" align="center">
-          <Button
+          <StandardButton
             variant="ghost"
-            colorPalette="gray"
             onClick={() => navigate('/leads')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2}>Back to Leads</Text>
-          </Button>
+            Back to Leads
+          </StandardButton>
           <HStack gap={2}>
-            <Button
-              variant="solid"
-              colorPalette="green"
+            <StandardButton
+              variant="primary"
               onClick={handleConvert}
+              leftIcon={<FiTarget />}
             >
-              <FiTarget />
-              <Text ml={2}>Convert to Customer</Text>
-            </Button>
-            <Button
+              Convert to Customer
+            </StandardButton>
+            <StandardButton
               variant="outline"
-              colorPalette="blue"
               onClick={handleEdit}
+              leftIcon={<FiEdit2 />}
             >
-              <FiEdit2 />
-              <Text ml={2}>Edit</Text>
-            </Button>
-            <IconButton
-              aria-label="Delete lead"
-              variant="outline"
-              colorPalette="red"
+              Edit
+            </StandardButton>
+            <StandardButton
+              variant="danger"
               onClick={handleDelete}
+              leftIcon={<FiTrash2 />}
             >
-              <FiTrash2 />
-            </IconButton>
+              Delete
+            </StandardButton>
           </HStack>
         </HStack>
 
@@ -601,39 +628,62 @@ const LeadDetailPage = () => {
                 Quick Actions
               </Heading>
               <VStack align="stretch" gap={2}>
-                <Button
+                <StandardButton
                   variant="outline"
-                  colorPalette="purple"
                   w="full"
                   justifyContent="flex-start"
+                  leftIcon={<FiMail />}
                 >
-                  <FiMail />
-                  <Text ml={2}>Send Email</Text>
-                </Button>
-                <Button
+                  Send Email
+                </StandardButton>
+                <StandardButton
                   variant="outline"
-                  colorPalette="blue"
                   w="full"
                   justifyContent="flex-start"
+                  leftIcon={<FiPhone />}
+                  disabled={!lead?.phone}
                 >
-                  <FiPhone />
-                  <Text ml={2}>Make Call</Text>
-                </Button>
-                <Button
-                  variant="outline"
-                  colorPalette="green"
-                  w="full"
-                  justifyContent="flex-start"
-                  onClick={handleConvert}
-                >
-                  <FiTarget />
-                  <Text ml={2}>Convert to Customer</Text>
-                </Button>
+                  Make Call
+                </StandardButton>
               </VStack>
             </Box>
           </VStack>
         </Grid>
       </VStack>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Lead"
+        message={
+          lead
+            ? `Are you sure you want to delete lead "${lead.name || lead.email}"? This action cannot be undone.`
+            : 'Are you sure you want to delete this lead?'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={deleteLead.isPending}
+      />
+
+      {/* Convert Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isConvertDialogOpen}
+        onClose={() => setIsConvertDialogOpen(false)}
+        onConfirm={confirmConvert}
+        title="Convert Lead to Customer"
+        message={
+          lead
+            ? `Are you sure you want to convert "${lead.name || lead.email}" to a customer?`
+            : 'Are you sure you want to convert this lead to a customer?'
+        }
+        confirmText="Convert"
+        cancelText="Cancel"
+        colorScheme="green"
+        isLoading={convertLead.isPending}
+      />
     </DashboardLayout>
   );
 };

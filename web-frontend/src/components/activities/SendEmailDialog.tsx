@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DialogRoot,
   DialogContent,
@@ -23,6 +23,11 @@ interface SendEmailDialogProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: EmailData) => void;
+  initialCustomer?: {
+    id: number;
+    name: string;
+    email?: string;
+  };
 }
 
 export interface EmailData {
@@ -37,6 +42,7 @@ export const SendEmailDialog = ({
   open,
   onClose,
   onSubmit,
+  initialCustomer,
 }: SendEmailDialogProps) => {
   const [formData, setFormData] = useState<EmailData>({
     customerName: '',
@@ -44,6 +50,27 @@ export const SendEmailDialog = ({
     subject: '',
     body: '',
   });
+
+  // Pre-fill customer data when dialog opens with initial customer
+  useEffect(() => {
+    if (open && initialCustomer) {
+      setFormData({
+        customer: initialCustomer.id,
+        customerName: initialCustomer.name,
+        emailAddress: initialCustomer.email || '',
+        subject: '',
+        body: '',
+      });
+    } else if (open && !initialCustomer) {
+      // Reset form when opening without initial customer
+      setFormData({
+        customerName: '',
+        emailAddress: '',
+        subject: '',
+        body: '',
+      });
+    }
+  }, [open, initialCustomer]);
 
   const handleSubmit = () => {
     if (

@@ -15,8 +15,10 @@ import {
   MenuTrigger,
   MenuSeparator,
 } from '@chakra-ui/react';
-import { FiChevronDown, FiCheck, FiBriefcase, FiUsers, FiUser } from 'react-icons/fi';
+import { FiChevronDown, FiCheck, FiBriefcase, FiUsers, FiUser, FiRefreshCw } from 'react-icons/fi';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useState } from 'react';
 
 const profileIcons = {
   vendor: FiBriefcase,
@@ -37,7 +39,24 @@ const profileLabels = {
 };
 
 export const ProfileSwitcher = () => {
-  const { profiles, activeProfile, switchProfile, isLoading } = useProfile();
+  const { profiles, activeProfile, isLoading, refreshProfiles } = useProfile();
+  const { switchRole, refreshUser } = useAuth();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      if (refreshUser) {
+        await refreshUser();
+      } else if (refreshProfiles) {
+        await refreshProfiles();
+      }
+    } catch (error) {
+      console.error('Failed to refresh profiles:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   if (isLoading || !activeProfile) {
     return (
@@ -97,7 +116,7 @@ export const ProfileSwitcher = () => {
                 <MenuItem
                   key={profile.id}
                   value={profile.id.toString()}
-                  onClick={() => switchProfile(profile.id)}
+                  onClick={() => switchRole(profile.id)}
                   cursor="pointer"
                   bg={activeProfile.id === profile.id ? 'purple.50' : 'transparent'}
                 >
@@ -143,7 +162,7 @@ export const ProfileSwitcher = () => {
                 <MenuItem
                   key={profile.id}
                   value={profile.id.toString()}
-                  onClick={() => switchProfile(profile.id)}
+                  onClick={() => switchRole(profile.id)}
                   cursor="pointer"
                   bg={activeProfile.id === profile.id ? 'blue.50' : 'transparent'}
                 >
@@ -189,7 +208,7 @@ export const ProfileSwitcher = () => {
                 <MenuItem
                   key={profile.id}
                   value={profile.id.toString()}
-                  onClick={() => switchProfile(profile.id)}
+                  onClick={() => switchRole(profile.id)}
                   cursor="pointer"
                   bg={activeProfile.id === profile.id ? 'green.50' : 'transparent'}
                 >
@@ -212,6 +231,23 @@ export const ProfileSwitcher = () => {
               ))}
           </>
         )}
+
+        {/* Refresh Button */}
+        <MenuSeparator />
+        <MenuItem
+          onClick={handleRefresh}
+          cursor="pointer"
+          disabled={isRefreshing}
+        >
+          <HStack gap={2}>
+            <Box color="gray.500">
+              <FiRefreshCw size={16} style={isRefreshing ? { animation: 'spin 1s linear infinite' } : {}} />
+            </Box>
+            <Text fontSize="sm">
+              {isRefreshing ? 'Refreshing...' : 'Refresh Profiles'}
+            </Text>
+          </HStack>
+        </MenuItem>
       </MenuContent>
     </MenuRoot>
   );

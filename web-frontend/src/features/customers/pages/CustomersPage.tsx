@@ -4,7 +4,7 @@ import {
   CustomersPageLoading,
 } from '@/components/customers';
 import { ConfirmDialog } from '@/components/common';
-import { ErrorState } from '@shared/components';
+import { ErrorState } from '@/components/common';
 import { useCustomers, useCustomersPage, useCustomerActions } from '../hooks/index';
 import { initiateCall } from '@/components/jitsi/JitsiCallManager';
 import { toaster } from '@/components/ui/toaster';

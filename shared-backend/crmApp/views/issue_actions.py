@@ -70,8 +70,15 @@ class RaiseIssueView(APIView):
                 
                 # Auto-sync to Linear if enabled and team_id provided
                 linear_data = None
-                auto_sync = request.data.get('auto_sync_linear', False)
-                team_id = request.data.get('linear_team_id') or getattr(request.user.current_organization, 'linear_team_id', None)
+                auto_sync = request.data.get('auto_sync_linear', True)  # Default to True for auto-sync
+                
+                # Get team_id from request, organization model, or organization settings
+                organization = request.user.current_organization
+                team_id = (
+                    request.data.get('linear_team_id') or 
+                    getattr(organization, 'linear_team_id', None) or
+                    organization.settings.get('linear_team_id') if hasattr(organization, 'settings') else None
+                )
                 
                 if auto_sync and team_id:
                     try:
@@ -230,13 +237,22 @@ class ResolveIssueView(APIView):
                 try:
                     linear_service = LinearService()
                     
-                    # Get "Done" or "Completed" state if available
-                    # For now, just update the issue description with resolution notes
+                    # Update the issue description with resolution notes
                     update_description = issue.description
+                    
+                    # Try to find "Done" or "Completed" state and update status
+                    state_id = None
+                    if issue.linear_team_id:
+                        # Try common state names for "resolved" status
+                        for state_name in ['Done', 'Completed', 'Resolved', 'Closed']:
+                            state_id = linear_service.find_state_by_name(issue.linear_team_id, state_name)
+                            if state_id:
+                                break
                     
                     linear_service.update_issue(
                         issue_id=issue.linear_issue_id,
-                        description=update_description
+                        description=update_description,
+                        state_id=state_id  # Update state if found
                     )
                     
                     issue.last_synced_at = timezone.now()

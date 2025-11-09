@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
+import { VStack, Box, Spinner, Heading, Text } from '@chakra-ui/react';
+import { FiPlus } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { 
   LeadStats, 
@@ -8,7 +9,7 @@ import {
   LeadsTable, 
   CreateLeadDialog 
 } from '../components/leads';
-import { ConfirmDialog } from '../components/common';
+import { ConfirmDialog, PageHeader, StandardButton, ErrorState } from '../components/common';
 import { 
   useLeads, 
   useLeadStats, 
@@ -19,9 +20,12 @@ import {
 import type { LeadFilters as LeadFiltersType, CreateLeadData, Lead } from '../types';
 import { toaster } from '../components/ui/toaster';
 import { exportData } from '@/utils';
+import { transformLeadFormData, cleanFormData } from '@/utils/formTransformers';
+import { useProfile } from '@/contexts/ProfileContext';
 
 export const LeadsPage = () => {
   const navigate = useNavigate();
+  const { activeOrganizationId } = useProfile();
   const [filters, setFilters] = useState<LeadFiltersType>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
@@ -44,7 +48,23 @@ export const LeadsPage = () => {
   const convertLead = useConvertLead();
 
   const handleCreateLead = (data: CreateLeadData) => {
-    createLead.mutate(data, {
+    // Get organization ID from active profile
+    const organizationId = activeOrganizationId || data.organization;
+    
+    if (!organizationId) {
+      toaster.create({
+        title: 'Unable to create lead',
+        description: 'Organization information not found. Please select a profile.',
+        type: 'error',
+      });
+      return;
+    }
+    
+    // Transform form data to backend format
+    const transformedData = transformLeadFormData(data, organizationId);
+    const backendData = cleanFormData(transformedData);
+    
+    createLead.mutate(backendData as CreateLeadData, {
       onSuccess: () => {
         toaster.create({
           title: 'Lead created successfully',
@@ -52,10 +72,16 @@ export const LeadsPage = () => {
         });
         setIsCreateDialogOpen(false);
       },
-      onError: () => {
+      onError: (err: any) => {
+        const errorMessage = 
+          err.response?.data?.email?.[0] ||
+          err.response?.data?.name?.[0] ||
+          err.response?.data?.non_field_errors?.[0] ||
+          'Failed to create lead. Please try again.';
+        
         toaster.create({
           title: 'Failed to create lead',
-          description: 'Please try again',
+          description: errorMessage,
           type: 'error',
         });
       },
@@ -205,14 +231,11 @@ export const LeadsPage = () => {
   if (error) {
     return (
       <DashboardLayout title="Leads">
-        <Box textAlign="center" py={12}>
-          <Heading size="md" color="red.600" mb={2}>
-            Failed to load leads
-          </Heading>
-          <Text color="gray.500">
-            {error.message || 'Please try again later'}
-          </Text>
-        </Box>
+        <ErrorState
+          title="Failed to load leads"
+          error={error}
+          onRetry={() => window.location.reload()}
+        />
       </DashboardLayout>
     );
   }
@@ -221,14 +244,19 @@ export const LeadsPage = () => {
     <DashboardLayout title="Leads">
       <VStack gap={5} align="stretch">
         {/* Page Header */}
-        <Box>
-          <Heading size="xl" mb={2}>
-            Leads
-          </Heading>
-          <Text color="gray.600" fontSize="sm">
-            Manage your lead pipeline and track conversions
-          </Text>
-        </Box>
+        <PageHeader
+          title="Leads"
+          description="Manage your lead pipeline and track conversions"
+          actions={
+            <StandardButton
+              variant="primary"
+              leftIcon={<FiPlus />}
+              onClick={() => setIsCreateDialogOpen(true)}
+            >
+              New Lead
+            </StandardButton>
+          }
+        />
 
         {/* Statistics Cards */}
         {stats && (

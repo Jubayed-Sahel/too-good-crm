@@ -11,25 +11,33 @@ from crmApp.utils import build_search_query
 
 class OrganizationFilterMixin:
     """
-    Mixin to filter queryset by user's organizations
+    Mixin to filter queryset by user's accessible organizations based on profile type.
+    
+    Rules:
+    - Vendor: See data from their own organization
+    - Employee: See data from the organization they work for
+    - Customer: See data from vendor organizations where they are customers
     """
     
     def get_queryset(self):
-        """Filter by user's active organizations"""
+        """Filter by user's accessible organizations based on profile type"""
         queryset = super().get_queryset()
         
         user = self.request.user
         if not user.is_authenticated:
             return queryset.none()
         
-        # Get user's organizations
-        user_orgs = user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
+        # Get accessible organization IDs based on profile type
+        from crmApp.utils.profile_context import get_user_accessible_organizations
+        
+        accessible_org_ids = get_user_accessible_organizations(user)
+        
+        if not accessible_org_ids:
+            return queryset.none()
         
         # Filter queryset by organization
         if hasattr(queryset.model, 'organization'):
-            queryset = queryset.filter(organization_id__in=user_orgs)
+            queryset = queryset.filter(organization_id__in=accessible_org_ids)
         
         return queryset
 

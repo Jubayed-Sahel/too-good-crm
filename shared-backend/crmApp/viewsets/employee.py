@@ -74,6 +74,73 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         
         return queryset.select_related('user', 'manager', 'organization', 'role').order_by('-created_at', 'first_name', 'last_name').distinct()
     
+    @action(detail=True, methods=['get'])
+    def issues(self, request, pk=None):
+        """Get all issues assigned to this employee or raised for their organization"""
+        employee = self.get_object()
+        from crmApp.models import Issue
+        from crmApp.serializers import IssueListSerializer
+        
+        # Get issues assigned to this employee OR issues in their organization
+        from django.db.models import Q
+        issues = Issue.objects.filter(
+            Q(assigned_to=employee) | Q(organization=employee.organization)
+        ).select_related(
+            'organization', 'vendor', 'order', 'assigned_to', 'resolved_by', 'raised_by_customer'
+        ).order_by('-created_at')
+        
+        # Apply filters
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            issues = issues.filter(status=status_filter)
+        
+        priority_filter = request.query_params.get('priority')
+        if priority_filter:
+            issues = issues.filter(priority=priority_filter)
+        
+        category_filter = request.query_params.get('category')
+        if category_filter:
+            issues = issues.filter(category=category_filter)
+        
+        # Filter by assigned vs all organization issues
+        assigned_only = request.query_params.get('assigned_only', 'false').lower() == 'true'
+        if assigned_only:
+            issues = issues.filter(assigned_to=employee)
+        
+        # Paginate
+        page = self.paginate_queryset(issues)
+        if page is not None:
+            serializer = IssueListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = IssueListSerializer(issues, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'])
+    def assigned_issues(self, request, pk=None):
+        """Get issues assigned to this employee"""
+        employee = self.get_object()
+        from crmApp.models import Issue
+        from crmApp.serializers import IssueListSerializer
+        
+        issues = Issue.objects.filter(assigned_to=employee).select_related(
+            'organization', 'vendor', 'order', 'assigned_to', 'resolved_by', 'raised_by_customer'
+        ).order_by('-created_at')
+        
+        # Apply filters
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            issues = issues.filter(status=status_filter)
+        
+        # Paginate
+        page = self.paginate_queryset(issues)
+        if page is not None:
+            serializer = IssueListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = IssueListSerializer(issues, many=True)
+        return Response(serializer.data)
+    
     def update(self, request, *args, **kwargs):
         """Override update to ensure role is properly loaded"""
         partial = kwargs.pop('partial', False)

@@ -134,16 +134,17 @@ export function useConvertLead() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string | number; data: { customer_type?: 'individual' | 'business'; assigned_to_id?: number } }) =>
       leadService.convertLead(id, data),
-    onSuccess: (data) => {
+    onSuccess: (response) => {
+      const lead = response.lead;
       toaster.create({
         title: 'Lead converted',
-        description: `Lead "${data.name || data.company}" has been converted to a customer.`,
+        description: `Lead "${lead.name || lead.company}" has been converted to a customer.`,
         type: 'success',
       });
       
       // Invalidate leads and customers
       queryClient.invalidateQueries({ queryKey: ['leads'] });
-      queryClient.invalidateQueries({ queryKey: ['lead', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['leadStats'] });
     },

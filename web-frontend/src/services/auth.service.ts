@@ -49,20 +49,43 @@ class AuthService {
    * Login user
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await api.post<LoginResponse>(
-      API_CONFIG.ENDPOINTS.AUTH.LOGIN,
-      credentials
-    );
+    try {
+      // Log request in development
+      if (import.meta.env.DEV) {
+        console.log('🔐 Login request:', {
+          endpoint: API_CONFIG.ENDPOINTS.AUTH.LOGIN,
+          baseUrl: API_CONFIG.BASE_URL,
+          username: credentials.username,
+          hasPassword: !!credentials.password,
+        });
+      }
 
-    // Process user data and store
-    const processedUser = this.processUserData(response.user);
-    this.setAuthData(response.token, processedUser);
+      const response = await api.post<LoginResponse>(
+        API_CONFIG.ENDPOINTS.AUTH.LOGIN,
+        credentials
+      );
 
-    return {
-      token: response.token,
-      user: processedUser,
-      message: response.message || 'Login successful',
-    };
+      // Process user data and store
+      const processedUser = this.processUserData(response.user);
+      this.setAuthData(response.token, processedUser);
+
+      return {
+        token: response.token,
+        user: processedUser,
+        message: response.message || 'Login successful',
+      };
+    } catch (error: any) {
+      // Log error details in development
+      if (import.meta.env.DEV) {
+        console.error('🔐 Login error:', {
+          error,
+          errors: error.errors,
+          message: error.message,
+          status: error.status,
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -103,6 +126,27 @@ class AuthService {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Refresh user data from API
+   * Fetches the latest user data including updated profiles
+   */
+  async refreshUser(): Promise<User> {
+    const response = await api.get<User>(API_CONFIG.ENDPOINTS.AUTH.ME);
+    
+    // Process user data and update localStorage
+    const processedUser = this.processUserData(response);
+    this.updateUserData(processedUser);
+    
+    return processedUser;
+  }
+
+  /**
+   * Update user data in localStorage without changing token
+   */
+  private updateUserData(user: User): void {
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
   }
 
   /**

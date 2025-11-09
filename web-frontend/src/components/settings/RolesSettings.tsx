@@ -15,7 +15,7 @@ import {
   Textarea,
 } from '@chakra-ui/react';
 import { FiPlus, FiEdit, FiTrash2, FiShield } from 'react-icons/fi';
-import { Card } from '../common';
+import { Card, ConfirmDialog } from '../common';
 import { Checkbox } from '../ui/checkbox';
 import {
   DialogRoot,
@@ -39,6 +39,8 @@ const RolesSettings = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -280,18 +282,23 @@ const RolesSettings = () => {
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete "${role.name}"?`)) {
-      return;
-    }
+    setRoleToDelete(role);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteRole = async () => {
+    if (!roleToDelete) return;
 
     try {
-      await roleService.deleteRole(role.id);
+      await roleService.deleteRole(roleToDelete.id);
       toaster.create({
         title: 'Role Deleted',
-        description: `"${role.name}" has been deleted`,
+        description: `"${roleToDelete.name}" has been deleted`,
         type: 'success',
         duration: 3000,
       });
+      setIsDeleteDialogOpen(false);
+      setRoleToDelete(null);
       fetchRoles();
     } catch (error: any) {
       toaster.create({
@@ -623,6 +630,25 @@ const RolesSettings = () => {
           </DialogFooter>
         </DialogContent>
       </DialogRoot>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setRoleToDelete(null);
+        }}
+        onConfirm={confirmDeleteRole}
+        title="Delete Role"
+        message={
+          roleToDelete
+            ? `Are you sure you want to delete "${roleToDelete.name}"? This action cannot be undone.`
+            : 'Are you sure you want to delete this role?'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        colorScheme="red"
+      />
     </>
   );
 };

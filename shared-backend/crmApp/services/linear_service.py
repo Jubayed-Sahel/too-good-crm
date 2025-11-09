@@ -23,9 +23,10 @@ class LinearService:
         """
         self.api_key = api_key or getattr(settings, 'LINEAR_API_KEY', None)
         self.api_url = 'https://api.linear.app/graphql'
+        # Linear API uses Bearer token authentication
         self.headers = {
             'Content-Type': 'application/json',
-            'Authorization': self.api_key if self.api_key else ''
+            'Authorization': f'Bearer {self.api_key}' if self.api_key else ''
         }
     
     def _execute_query(self, query: str, variables: Optional[Dict] = None) -> Dict[str, Any]:
@@ -353,3 +354,81 @@ class LinearService:
         
         result = self._execute_query(query)
         return result.get('viewer', {})
+    
+    def get_teams(self) -> list:
+        """
+        Get all teams available to the authenticated user
+        
+        Returns:
+            List of team objects with id, name, and key
+        """
+        query = """
+        query {
+            viewer {
+                teams {
+                    nodes {
+                        id
+                        name
+                        key
+                    }
+                }
+            }
+        }
+        """
+        
+        result = self._execute_query(query)
+        teams = result.get('viewer', {}).get('teams', {}).get('nodes', [])
+        return teams
+    
+    def get_team_by_id(self, team_id: str) -> Dict[str, Any]:
+        """
+        Get team details by ID
+        
+        Args:
+            team_id: Linear team ID
+            
+        Returns:
+            Team data with states
+        """
+        query = """
+        query Team($id: String!) {
+            team(id: $id) {
+                id
+                name
+                key
+                states {
+                    nodes {
+                        id
+                        name
+                        type
+                        position
+                    }
+                }
+            }
+        }
+        """
+        
+        variables = {'id': team_id}
+        result = self._execute_query(query, variables)
+        return result.get('team', {})
+    
+    def find_state_by_name(self, team_id: str, state_name: str) -> Optional[str]:
+        """
+        Find a workflow state ID by name for a team
+        
+        Args:
+            team_id: Linear team ID
+            state_name: State name to find (case-insensitive)
+            
+        Returns:
+            State ID or None if not found
+        """
+        team = self.get_team_by_id(team_id)
+        states = team.get('states', {}).get('nodes', [])
+        
+        state_name_lower = state_name.lower().strip()
+        for state in states:
+            if state.get('name', '').lower() == state_name_lower:
+                return state.get('id')
+        
+        return None

@@ -11,6 +11,7 @@ import { customerService } from '@/services/customer.service';
 import { useProfile } from '@/contexts/ProfileContext';
 import { toaster } from '@/components/ui/toaster';
 import { exportData } from '@/utils';
+import { transformDealFormData, findStageIdByName, cleanFormData } from '@/utils/formTransformers';
 import type { MappedDeal } from './useDealsPage';
 
 interface EditDealData {
@@ -305,68 +306,111 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
       });
       return;
     }
+    
     try {
-      // Resolve or create customer by name if necessary
+      // Resolve customer ID
       let customerId: number | null = null;
-      const customerName = data.customerName || data.customer || '';
-
-      if (customerName) {
+      
+      // If customer is already a number, use it
+      if (data.customer && typeof data.customer === 'number') {
+        customerId = data.customer;
+      } else if (data.customerName || data.customer) {
+        // Try to find customer by name or ID
+        const customerName = data.customerName || data.customer || '';
+        
         try {
-          const resp = await customerService.getCustomers({ search: customerName, page_size: 1, organization: organizationId });
-          const found = resp.results?.[0];
-          if (found && found.id) {
-            customerId = found.id;
-          } else {
-            // Create a minimal customer record
-            const created = await customerService.createCustomer({ full_name: customerName, organization: organizationId } as any);
-            customerId = created.id;
+          // First try to find by ID if it's a numeric string
+          const numericId = parseInt(String(customerName));
+          if (!isNaN(numericId)) {
+            try {
+              const customer = await customerService.getCustomer(numericId);
+              customerId = customer.id;
+            } catch {
+              // Not found by ID, continue to search by name
+            }
+          }
+          
+          // If not found by ID, search by name
+          if (!customerId) {
+            const resp = await customerService.getCustomers({ 
+              search: customerName, 
+              page_size: 10, 
+              organization: organizationId 
+            });
+            const found = resp.results?.[0];
+            if (found && found.id) {
+              customerId = found.id;
+            }
           }
         } catch (err) {
-          // Non-fatal: warn user and continue without customer
-          console.warn('Customer resolution failed, proceeding without customer:', err);
-          toaster.create({ title: 'Customer lookup failed', description: 'Could not resolve or create customer automatically. You can edit the deal later to attach a customer.', type: 'warning' });
-          customerId = null;
+          console.warn('Customer lookup failed:', err);
+          toaster.create({ 
+            title: 'Customer lookup failed', 
+            description: 'Could not find customer. Please ensure the customer exists or create it first.', 
+            type: 'warning',
+            duration: 5000,
+          });
         }
       }
 
-      // Resolve stage: can be either a numeric id or a string slug/name
+      // Resolve stage ID from stage name/string
       let stageId: number | null = null;
       const stageValue = data.stage;
+      
       if (stageValue) {
+        // If it's already a number, use it
         if (typeof stageValue === 'number') {
           stageId = stageValue;
         } else {
-          // Try to map stage name to pipeline stage id
+          // Try to fetch pipeline stages and find matching stage
           try {
-            const stages = await dealService.getPipelineStages();
-            // Attempt case-insensitive match on name
-            const match = stages.find((s: any) => s.name?.toLowerCase() === String(stageValue).toLowerCase() || String(s.id) === String(stageValue));
-            if (match) {
-              stageId = match.id;
+            // Get default pipeline or first pipeline
+            const pipelines = await dealService.getPipelines();
+            const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
+            
+            if (defaultPipeline) {
+              // Get stages for the pipeline
+              const stages = await dealService.getPipelineStages(defaultPipeline.id);
+              
+              // Find stage by name using utility function
+              stageId = findStageIdByName(String(stageValue), stages);
+              
+              if (!stageId) {
+                console.warn(`Stage "${stageValue}" not found in pipeline stages`);
+              }
             }
           } catch (err) {
             console.warn('Failed to fetch pipeline stages:', err);
+            // Continue without stage - backend may handle default
           }
         }
       }
 
-      // Prepare backend data with resolved ids where available
-      const backendData: any = {
-        title: data.title,
-        value: data.value,
-        probability: data.probability,
-        expected_close_date: data.expectedCloseDate,
-        description: data.description,
-        organization: organizationId,
-      };
-
-      if (customerId) backendData.customer = customerId;
-      if (stageId) backendData.stage = stageId;
+      // Transform form data to backend format
+      const transformedData = transformDealFormData(
+        { ...data, customer: customerId || data.customer },
+        organizationId,
+        stageId
+      );
+      
+      const backendData = cleanFormData(transformedData);
 
       await createMutation.mutateAsync(backendData);
     } catch (err: any) {
       console.error('Error preparing deal creation:', err);
-      toaster.create({ title: 'Failed to create deal', description: err?.message || 'Please try again.', type: 'error' });
+      
+      const errorMessage = 
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to create deal. Please check your input and try again.';
+      
+      toaster.create({ 
+        title: 'Failed to create deal', 
+        description: errorMessage, 
+        type: 'error',
+        duration: 5000,
+      });
     }
   };
 

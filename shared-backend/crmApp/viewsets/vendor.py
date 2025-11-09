@@ -71,3 +71,32 @@ class VendorViewSet(viewsets.ModelViewSet):
         """Get list of vendor types"""
         types = Vendor.objects.values_list('vendor_type', flat=True).distinct()
         return Response(list(types))
+    
+    @action(detail=True, methods=['get'])
+    def issues(self, request, pk=None):
+        """Get all issues related to this vendor"""
+        vendor = self.get_object()
+        from crmApp.models import Issue
+        from crmApp.serializers import IssueListSerializer
+        
+        issues = Issue.objects.filter(vendor=vendor).select_related(
+            'organization', 'vendor', 'order', 'assigned_to', 'resolved_by'
+        ).order_by('-created_at')
+        
+        # Apply filters
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            issues = issues.filter(status=status_filter)
+        
+        priority_filter = request.query_params.get('priority')
+        if priority_filter:
+            issues = issues.filter(priority=priority_filter)
+        
+        # Paginate
+        page = self.paginate_queryset(issues)
+        if page is not None:
+            serializer = IssueListSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = IssueListSerializer(issues, many=True)
+        return Response(serializer.data)
