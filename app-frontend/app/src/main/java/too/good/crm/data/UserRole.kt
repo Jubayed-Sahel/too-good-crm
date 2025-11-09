@@ -11,23 +11,24 @@ enum class ActiveMode {
     CLIENT
 }
 
-data class UserProfile(
-    val id: String,
+data class AppUserProfile(
+    val id: Int,
     val name: String,
     val email: String,
     val role: UserRole,
+    val organizationId: Int,
+    val organizationName: String,
     val activeMode: ActiveMode = if (role == UserRole.VENDOR) ActiveMode.VENDOR else ActiveMode.CLIENT
 )
 
 object UserSession {
-    // In a real app, this would be managed by a ViewModel with proper state management
-    private var _currentUser: UserProfile? = null
+    private var _currentProfile: AppUserProfile? = null
     private var _activeMode: ActiveMode = ActiveMode.VENDOR
 
-    var currentUser: UserProfile?
-        get() = _currentUser
+    var currentProfile: AppUserProfile?
+        get() = _currentProfile
         set(value) {
-            _currentUser = value
+            _currentProfile = value
             _activeMode = value?.activeMode ?: ActiveMode.VENDOR
         }
 
@@ -38,7 +39,7 @@ object UserSession {
         }
 
     fun canSwitchMode(): Boolean {
-        return currentUser?.role == UserRole.BOTH
+        return _currentProfile?.role == UserRole.BOTH
     }
 
     fun switchMode() {
@@ -48,18 +49,24 @@ object UserSession {
             } else {
                 ActiveMode.VENDOR
             }
+
+            // Update current profile with new mode
+            _currentProfile = _currentProfile?.copy(activeMode = _activeMode)
         }
     }
 
-    // Sample user with both roles
-    fun getSampleUser(): UserProfile {
-        return UserProfile(
-            id = "1",
+    // Sample user with both roles for testing
+    fun initializeSampleUser() {
+        _currentProfile = AppUserProfile(
+            id = 1,
             name = "John Doe",
             email = "john.doe@company.com",
             role = UserRole.BOTH,
+            organizationId = 1,
+            organizationName = "Sample Company",
             activeMode = ActiveMode.VENDOR
         )
+        _activeMode = ActiveMode.VENDOR
     }
 }
 
