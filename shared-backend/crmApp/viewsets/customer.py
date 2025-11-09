@@ -50,48 +50,47 @@ class CustomerViewSet(
         import logging
         logger = logging.getLogger(__name__)
         
-        try:
-            organization = self.get_organization_from_request(self.request)
+        # Get organization from request or use user's primary profile organization
+        organization_id = self.request.data.get('organization')
+        
+        if not organization_id:
+            # Fallback to user's primary profile organization
+            primary_profile = self.request.user.user_profiles.filter(
+                is_primary=True,
+                status='active'
+            ).first()
             
-            if not organization:
-                logger.error(f"No organization found for user {self.request.user.username}")
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError({
-                    'organization': 'Organization is required. Please ensure you have an active profile.'
-                })
-            
-            # Check permission for creating customers
-            try:
-                self.check_permission(
-                    self.request,
-                    resource='customer',
-                    action='create',
-                    organization=organization
-                )
-            except Exception as e:
-                logger.error(f"Permission check failed: {str(e)}")
-                from rest_framework.exceptions import PermissionDenied
-                raise PermissionDenied(f"You don't have permission to create customers: {str(e)}")
-            
-            logger.info(f"Creating customer for organization: {organization.id}, user: {self.request.user.username}")
-            
-            # Remove organization from validated_data if present (we'll set it ourselves)
-            validated_data = serializer.validated_data
-            validated_data.pop('organization', None)
-            
-            serializer.save(organization_id=organization.id)
-        except Exception as e:
-            logger.error(f"Error in perform_create: {str(e)}", exc_info=True)
-            raise
+            if primary_profile:
+                organization_id = primary_profile.organization_id
+            else:
+                # If no primary, get first active profile
+                first_profile = self.request.user.user_profiles.filter(status='active').first()
+                if first_profile:
+                    organization_id = first_profile.organization_id
+        
+        logger.info(f"Creating customer for organization: {organization_id}, user: {self.request.user.username}")
+        logger.info(f"Request data organization: {self.request.data.get('organization')}")
+        
+        serializer.save(organization_id=organization_id)
     
     def get_queryset(self):
-        """Filter customers based on user's profile type"""
-        queryset = Customer.objects.all()
-        queryset = self.filter_by_organization(queryset, self.request)
-        queryset = self.filter_customer_profile(queryset, self.request)
-        queryset = self.apply_status_filter(queryset, self.request)
-        queryset = self.apply_search_filter(queryset, self.request, ['name', 'email', 'company_name'])
-        queryset = self.apply_assigned_to_filter(queryset, self.request)
+        """Filter customers by user's organizations through user_profiles"""
+        # Get organization IDs from user's active profiles
+        user_orgs = self.request.user.user_profiles.filter(
+            status='active'
+        ).values_list('organization_id', flat=True)
+        
+        queryset = Customer.objects.filter(organization_id__in=user_orgs)
+        
+        # Filter by organization
+        org_id = self.request.query_params.get('organization')
+        if org_id:
+            queryset = queryset.filter(organization_id=org_id)
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
         
         # Filter by customer type
         customer_type = self.request.query_params.get('customer_type')
@@ -119,7 +118,11 @@ class CustomerViewSet(
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get customer statistics"""
-        queryset = self.get_queryset()
+        user_orgs = request.user.user_profiles.filter(
+            status='active'
+        ).values_list('organization_id', flat=True)
+        
+        queryset = Customer.objects.filter(organization_id__in=user_orgs)
         
         stats = {
             'total': queryset.count(),

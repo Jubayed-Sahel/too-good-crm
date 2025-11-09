@@ -206,6 +206,21 @@ export const API_CONFIG = {
       EMPLOYEE_PERFORMANCE: '/analytics/employee_performance/',
       TOP_PERFORMERS: '/analytics/top_performers/',
     },
+
+    // Jitsi Video Calls
+    JITSI: {
+      BASE: '',
+      CALLS: '/jitsi-calls/',
+      CALL_DETAIL: (id: number | string) => `/jitsi-calls/${id}/`,
+      INITIATE_CALL: '/jitsi-calls/initiate_call/',
+      UPDATE_CALL_STATUS: (id: number | string) => `/jitsi-calls/${id}/update_status/`,
+      ACTIVE_CALLS: '/jitsi-calls/active_calls/',
+      MY_ACTIVE_CALL: '/jitsi-calls/my_active_call/',
+      USER_PRESENCE: '/user-presence/',
+      ONLINE_USERS: '/user-presence/online_users/',
+      UPDATE_MY_STATUS: '/user-presence/update_my_status/',
+      HEARTBEAT: '/user-presence/heartbeat/',
+    },
   },
 
   // Query Parameters

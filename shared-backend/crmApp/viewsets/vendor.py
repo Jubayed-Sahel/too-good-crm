@@ -31,22 +31,12 @@ class VendorViewSet(viewsets.ModelViewSet):
         return VendorSerializer
     
     def get_queryset(self):
-        """Filter vendors by user's accessible organizations based on profile type"""
-        from crmApp.utils.profile_context import get_user_accessible_organizations
+        """Filter vendors by user's organizations through user_profiles"""
+        user_orgs = self.request.user.user_profiles.filter(
+            status='active'
+        ).values_list('organization_id', flat=True)
         
-        # Get accessible organization IDs based on profile type
-        accessible_org_ids = get_user_accessible_organizations(self.request.user)
-        
-        if not accessible_org_ids:
-            return Vendor.objects.none()
-        
-        queryset = Vendor.objects.filter(organization_id__in=accessible_org_ids)
-        
-        # Special handling for vendor profile: only show vendors in their own organization
-        if hasattr(self.request.user, 'active_profile') and self.request.user.active_profile:
-            if self.request.user.active_profile.profile_type == 'vendor':
-                # Vendors only see vendors in their own organization
-                queryset = queryset.filter(organization=self.request.user.active_profile.organization)
+        queryset = Vendor.objects.filter(organization_id__in=user_orgs)
         
         # Filter by organization
         org_id = self.request.query_params.get('organization')
