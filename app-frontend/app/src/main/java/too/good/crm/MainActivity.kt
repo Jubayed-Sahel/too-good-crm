@@ -3,7 +3,6 @@ package too.good.crm
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
@@ -45,7 +44,7 @@ import too.good.crm.ui.theme.DesignTokens
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Removed enableEdgeToEdge() as it can interfere with keyboard input
         setContent {
             MaterialTheme(
                 colorScheme = lightColorScheme(
