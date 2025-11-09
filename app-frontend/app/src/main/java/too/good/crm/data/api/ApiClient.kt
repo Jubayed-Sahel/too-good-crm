@@ -1,34 +1,83 @@
 package too.good.crm.data.api
 
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+/**
+ * Retrofit API Client for CRM Backend
+ * Configure BASE_URL and auth token before using
+ */
 object ApiClient {
-    private const val BASE_URL = "http://10.0.2.2:8000/api/"  // Android emulator localhost
+
+    // TODO: Update this with your backend URL
+    private const val BASE_URL = "https://stephine-nonconfiding-pseudotribally.ngrok-free.dev/api/"
+
+    // For local testing on Android Emulator, use:
+    // private const val BASE_URL = "http://10.0.2.2:8000/api/"
+
+    // For physical device on same network, use:
+    // private const val BASE_URL = "http://192.168.x.x:8000/api/"
+
+    private var authToken: String? = null
+
+    /**
+     * Set the authentication token for API requests
+     */
+    fun setAuthToken(token: String) {
+        authToken = token
+    }
+
+    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        level = HttpLoggingInterceptor.Level.BODY
+    }
 
     private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor(loggingInterceptor)
+        .addInterceptor { chain ->
+            val original = chain.request()
+            val requestBuilder = original.newBuilder()
+                .header("Content-Type", "application/json")
+
+            // Add authorization token if available
+            authToken?.let {
+                requestBuilder.header("Authorization", "Token $it")
+            }
+
+            val request = requestBuilder
+                .method(original.method, original.body)
+                .build()
+
+            chain.proceed(request)
+        }
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    private val retrofit: Retrofit = Retrofit.Builder()
+    private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create())
         .build()
 
-    val customerApiService: CustomerApiService by lazy {
-        retrofit.create(CustomerApiService::class.java)
+    /**
+     * Issue API Service instance
+     */
+    val issueApiService: IssueApiService by lazy {
+        retrofit.create(IssueApiService::class.java)
     }
 
+    /**
+     * Auth API Service instance
+     */
     val authApiService: AuthApiService by lazy {
         retrofit.create(AuthApiService::class.java)
     }
 
-    val issueApiService: IssueApiService by lazy {
-        retrofit.create(IssueApiService::class.java)
-    }
+    // Add other API services here as needed
+    // val organizationApiService: OrganizationApiService by lazy { ... }
 }
+

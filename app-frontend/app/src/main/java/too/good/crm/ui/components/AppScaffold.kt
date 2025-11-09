@@ -194,6 +194,12 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("team") }
                 )
                 NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.ReportProblem, contentDescription = null) },
+                    label = { Text("Issues") },
+                    selected = false,
+                    onClick = { onNavigate("vendor-issues") }
+                )
+                NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
                     label = { Text("Settings") },
                     selected = false,
