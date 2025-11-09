@@ -106,14 +106,34 @@ class Customer(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
         is_new = self.pk is None
         super().save(*args, **kwargs)
         
-        # Create or get user profile for customer
+        # Link to existing user profile or create one if it doesn't exist
+        # Note: UserProfile has unique constraint on (user, profile_type), not (user, organization, profile_type)
+        # So a user can only have ONE customer profile, but can be a customer of multiple organizations
         if is_new and self.user and not self.user_profile:
             from .auth import UserProfile
-            user_profile, created = UserProfile.objects.get_or_create(
+            # First, try to get existing customer profile for this user (regardless of organization)
+            user_profile = UserProfile.objects.filter(
                 user=self.user,
-                organization=self.organization,
-                profile_type='customer',
-                defaults={'status': 'active'}
-            )
+                profile_type='customer'
+            ).first()
+            
+            if not user_profile:
+                # No customer profile exists - create one for this organization
+                user_profile = UserProfile.objects.create(
+                    user=self.user,
+                    organization=self.organization,
+                    profile_type='customer',
+                    status='active'
+                )
+            else:
+                # Customer profile exists - update organization if needed
+                # Note: A customer profile can be associated with one primary organization
+                # but the customer can still do business with multiple organizations
+                if user_profile.organization != self.organization:
+                    # Update organization if it's different (customer doing business with new org)
+                    user_profile.organization = self.organization
+                    user_profile.save(update_fields=['organization'])
+            
+            # Link customer record to user profile
             self.user_profile = user_profile
             super().save(update_fields=['user_profile'])

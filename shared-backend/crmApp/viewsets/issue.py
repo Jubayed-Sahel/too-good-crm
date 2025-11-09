@@ -50,51 +50,104 @@ class IssueViewSet(
         """Filter issues based on user type and organization"""
         user = self.request.user
         
-        # Check if user has any profiles
-        if not hasattr(user, 'profiles') or not user.profiles.exists():
-            return Issue.objects.none()
+        # Get active profile from middleware (set by OrganizationContextMiddleware)
+        active_profile = getattr(user, 'active_profile', None)
         
-        # Get active profile
-        from crmApp.models import UserProfile
-        active_profile = user.profiles.filter(is_active=True).first()
+        # Fallback: Get primary profile or first active profile
+        if not active_profile:
+            from crmApp.models import UserProfile
+            active_profile = user.user_profiles.filter(
+                is_primary=True,
+                status='active'
+            ).first() or user.user_profiles.filter(status='active').first()
         
         if not active_profile:
+            logger.warning(f"User {user.email} has no active profile, returning empty queryset")
             return Issue.objects.none()
         
         queryset = Issue.objects.select_related(
             'vendor', 'order', 'assigned_to', 'created_by', 'resolved_by',
             'raised_by_customer', 'organization'
-        )
+        ).prefetch_related('raised_by_customer__user')
         
         # Client/Customer: Can only see issues they raised
         if active_profile.profile_type == 'customer':
             from crmApp.models import Customer
             try:
-                customer = Customer.objects.get(user=user, organization=active_profile.organization)
-                return queryset.filter(raised_by_customer=customer)
-            except Customer.DoesNotExist:
+                # Customer can see issues they raised for any organization
+                # Get all customer records for this user (they can be customer of multiple orgs)
+                customers = Customer.objects.filter(user=user)
+                if customers.exists():
+                    # Get all issues raised by any of this user's customer records
+                    customer_issues = queryset.filter(raised_by_customer__in=customers)
+                    logger.debug(
+                        f"Customer {user.email} queryset: {customer_issues.count()} issues "
+                        f"(Customer records: {customers.count()})"
+                    )
+                    return customer_issues
+                else:
+                    logger.warning(f"Customer {user.email} has no customer records")
+                    return Issue.objects.none()
+            except Exception as e:
+                logger.error(f"Error getting customer issues for {user.email}: {str(e)}", exc_info=True)
                 return Issue.objects.none()
         
-        # Vendor: Can see issues related to their vendor record
+        # Vendor: Can see all issues in their organization
+        # They can view and update issues raised by customers for their organization
         elif active_profile.profile_type == 'vendor':
-            from crmApp.models import Vendor
-            try:
-                vendor = Vendor.objects.get(user=user, organization=active_profile.organization)
-                return queryset.filter(
-                    organization=active_profile.organization
-                ).filter(vendor=vendor)
-            except Vendor.DoesNotExist:
+            if active_profile.organization:
+                organization = active_profile.organization
+                # Show all issues for their organization (customer-raised and internal)
+                vendor_issues = queryset.filter(organization=organization)
+                logger.debug(
+                    f"Vendor {user.email} queryset: {vendor_issues.count()} issues "
+                    f"for organization {organization.name} (ID: {organization.id})"
+                )
+                return vendor_issues
+            else:
+                logger.warning(f"Vendor {user.email} has no organization assigned")
                 return Issue.objects.none()
         
-        # Employee: Can see all issues for their organization
+        # Employee: Can see all issues in their organization
+        # They can view and update issues raised by customers for their organization
         elif active_profile.profile_type == 'employee':
-            if hasattr(user, 'current_organization') and user.current_organization:
-                return queryset.filter(organization=user.current_organization)
-            if active_profile.organization:
-                return queryset.filter(organization=active_profile.organization)
-            return Issue.objects.none()
+            organization = active_profile.organization
+            if organization:
+                # Show all issues for their organization (customer-raised and internal)
+                employee_issues = queryset.filter(organization=organization)
+                logger.debug(
+                    f"Employee {user.email} queryset: {employee_issues.count()} issues "
+                    f"for organization {organization.name} (ID: {organization.id})"
+                )
+                return employee_issues
+            else:
+                logger.warning(f"Employee {user.email} has no organization assigned")
+                return Issue.objects.none()
         
+        logger.warning(f"User {user.email} has unknown profile type: {active_profile.profile_type}")
         return Issue.objects.none()
+    
+    def list(self, request, *args, **kwargs):
+        """Override list to add debug logging"""
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Debug logging
+        active_profile = getattr(request.user, 'active_profile', None)
+        if active_profile:
+            logger.debug(
+                f"Issue list request from {request.user.email} "
+                f"(Profile: {active_profile.profile_type}, "
+                f"Organization: {active_profile.organization.name if active_profile.organization else 'None'}) - "
+                f"Found {queryset.count()} issues"
+            )
+        
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""
@@ -113,20 +166,38 @@ class IssueViewSet(
         if not organization:
             raise ValueError('Organization is required. Please ensure you have an active profile.')
         
-        # Customers can create issues (raise them), but employees/vendors need permission
+        # Only customers can create issues (raise them)
+        # Vendors and employees cannot raise issues - they can only view and update them
         active_profile = getattr(self.request.user, 'active_profile', None)
         if active_profile and active_profile.profile_type == 'customer':
             # Customers can create issues without permission check
-            serializer.save(organization_id=organization.id)
+            # Set is_client_issue=True and get customer record
+            from crmApp.models import Customer
+            try:
+                customer = Customer.objects.get(
+                    user=self.request.user,
+                    organization=organization
+                )
+                serializer.save(
+                    organization_id=organization.id,
+                    is_client_issue=True,
+                    raised_by_customer=customer
+                )
+            except Customer.DoesNotExist:
+                # If customer record doesn't exist, still create issue but log warning
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Customer record not found for user {self.request.user.email}")
+                serializer.save(
+                    organization_id=organization.id,
+                    is_client_issue=True
+                )
         else:
-            # Employees/vendors need issue:create permission
-            self.check_permission(
-                self.request,
-                resource='issue',
-                action='create',
-                organization=organization
+            # Vendors and employees are NOT allowed to raise issues
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(
+                'Only customers can raise issues. Vendors and employees can view and update existing issues.'
             )
-            serializer.save(organization_id=organization.id)
     
     def update(self, request, *args, **kwargs):
         """Override update to sync status changes to Linear and check permissions"""
@@ -137,8 +208,16 @@ class IssueViewSet(
         # Check permission for updating issues
         active_profile = getattr(request.user, 'active_profile', None)
         if active_profile and active_profile.profile_type == 'customer':
+            # Customers can only update their own issues
             self.check_customer_permission(request, instance, action='update')
+        elif active_profile and active_profile.profile_type in ['vendor', 'employee']:
+            # Vendors and employees can update issues in their organization
+            # No strict permission check needed - they have implicit permission for their org's issues
+            if instance.organization != active_profile.organization:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('You can only update issues in your organization.')
         else:
+            # Fallback to permission check for other profile types
             self.check_permission(request, 'issue', 'update', instance=instance)
         
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -166,20 +245,39 @@ class IssueViewSet(
         # Check permission for deleting issues
         active_profile = getattr(request.user, 'active_profile', None)
         if active_profile and active_profile.profile_type == 'customer':
+            # Customers can only delete their own issues
             self.check_customer_permission(request, instance, action='delete')
+        elif active_profile and active_profile.profile_type in ['vendor', 'employee']:
+            # Vendors and employees can delete issues in their organization
+            if instance.organization != active_profile.organization:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('You can only delete issues in your organization.')
         else:
+            # Fallback to permission check for other profile types
             self.check_permission(request, 'issue', 'delete', instance=instance)
         
         return super().destroy(request, *args, **kwargs)
     
     @action(detail=True, methods=['post'])
     def resolve(self, request, pk=None):
-        """Mark issue as resolved and sync to Linear if synced - requires issue:update permission"""
+        """Mark issue as resolved and sync to Linear if synced - vendors and employees can resolve issues in their org"""
         try:
             issue = self.get_object()
             
-            # Check permission
-            self.check_permission(request, 'issue', 'update', instance=issue)
+            # Check permission - vendors and employees can resolve issues in their organization
+            active_profile = getattr(request.user, 'active_profile', None)
+            if active_profile and active_profile.profile_type == 'customer':
+                # Customers cannot resolve issues (only vendors/employees can)
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('Only vendors and employees can resolve issues.')
+            elif active_profile and active_profile.profile_type in ['vendor', 'employee']:
+                # Vendors and employees can resolve issues in their organization
+                if issue.organization != active_profile.organization:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied('You can only resolve issues in your organization.')
+            else:
+                # Fallback to permission check for other profile types
+                self.check_permission(request, 'issue', 'update', instance=issue)
             
             # Check if already resolved
             if issue.status == 'resolved':
@@ -214,9 +312,16 @@ class IssueViewSet(
             if resolution_notes:
                 update_description = f"{update_description}\n\n--- Resolution Notes ---\n{resolution_notes}"
             
+            # Sync status change to Linear (auto-sync)
             linear_updated = self.linear_service.sync_issue_status_to_linear(
                 issue, old_status, description=update_description
             )
+            
+            # Log Linear sync result
+            if linear_updated[0]:
+                logger.info(f"Issue {issue.issue_number} resolved and synced to Linear")
+            else:
+                logger.warning(f"Issue {issue.issue_number} resolved but Linear sync failed: {linear_updated[1]}")
             
             serializer = self.get_serializer(issue)
             response_data = {
@@ -245,12 +350,24 @@ class IssueViewSet(
     
     @action(detail=True, methods=['post'])
     def reopen(self, request, pk=None):
-        """Reopen a resolved issue and sync to Linear if synced - requires issue:update permission"""
+        """Reopen a resolved issue and sync to Linear if synced - vendors and employees can reopen issues in their org"""
         try:
             issue = self.get_object()
             
-            # Check permission
-            self.check_permission(request, 'issue', 'update', instance=issue)
+            # Check permission - vendors and employees can reopen issues in their organization
+            active_profile = getattr(request.user, 'active_profile', None)
+            if active_profile and active_profile.profile_type == 'customer':
+                # Customers cannot reopen issues (only vendors/employees can)
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied('Only vendors and employees can reopen issues.')
+            elif active_profile and active_profile.profile_type in ['vendor', 'employee']:
+                # Vendors and employees can reopen issues in their organization
+                if issue.organization != active_profile.organization:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied('You can only reopen issues in your organization.')
+            else:
+                # Fallback to permission check for other profile types
+                self.check_permission(request, 'issue', 'update', instance=issue)
             
             old_status = issue.status
             issue.status = 'open'
@@ -280,6 +397,72 @@ class IssueViewSet(
             )
         except Exception as e:
             logger.error(f"Error reopening issue {pk}: {str(e)}")
+            return Response(
+                {'error': 'Internal Server Error', 'details': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def assign(self, request, pk=None):
+        """Assign issue to an employee - vendors and employees can assign issues in their org"""
+        try:
+            issue = self.get_object()
+            
+            # Check permission - vendors and employees can assign issues in their organization
+            active_profile = getattr(request.user, 'active_profile', None)
+            if active_profile and active_profile.profile_type in ['vendor', 'employee']:
+                # Vendors and employees can assign issues in their organization
+                if issue.organization != active_profile.organization:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied('You can only assign issues in your organization.')
+            else:
+                # Fallback to permission check for other profile types
+                self.check_permission(request, 'issue', 'update', instance=issue)
+            
+            # Get employee_id from request
+            employee_id = request.data.get('employee_id')
+            if not employee_id:
+                return Response(
+                    {'error': 'Bad Request', 'details': 'employee_id is required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Verify employee belongs to the same organization
+            try:
+                employee = Employee.objects.get(
+                    id=employee_id,
+                    organization=issue.organization,
+                    status='active'
+                )
+            except Employee.DoesNotExist:
+                return Response(
+                    {'error': 'Not Found', 'details': 'Employee not found or not active in this organization'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Assign issue to employee
+            issue.assigned_to = employee
+            # Update status to in_progress if it's open
+            if issue.status == 'open':
+                issue.status = 'in_progress'
+            issue.save()
+            
+            logger.info(
+                f"Issue {issue.issue_number} assigned to employee {employee.full_name} "
+                f"by user {request.user.email}"
+            )
+            
+            serializer = self.get_serializer(issue)
+            return Response(
+                {
+                    'message': f'Issue assigned to {employee.full_name} successfully',
+                    'issue': serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        except Exception as e:
+            logger.error(f"Error assigning issue {pk}: {str(e)}", exc_info=True)
             return Response(
                 {'error': 'Internal Server Error', 'details': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -325,6 +508,8 @@ class IssueViewSet(
             return Response(stats, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(f"Error getting issue stats: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return Response(
                 {'error': 'Internal Server Error', 'details': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -332,12 +517,20 @@ class IssueViewSet(
     
     @action(detail=True, methods=['post'])
     def sync_to_linear(self, request, pk=None):
-        """Sync issue to Linear - requires issue:update permission"""
+        """Sync issue to Linear - vendors and employees can sync issues in their org"""
         try:
             issue = self.get_object()
             
-            # Check permission
-            self.check_permission(request, 'issue', 'update', instance=issue)
+            # Check permission - vendors and employees can sync issues in their organization
+            active_profile = getattr(request.user, 'active_profile', None)
+            if active_profile and active_profile.profile_type in ['vendor', 'employee']:
+                # Vendors and employees can sync issues in their organization
+                if issue.organization != active_profile.organization:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied('You can only sync issues in your organization.')
+            else:
+                # Fallback to permission check for other profile types
+                self.check_permission(request, 'issue', 'update', instance=issue)
             
             # Get team_id
             organization = issue.organization or self.get_organization_from_request(request)
@@ -377,12 +570,20 @@ class IssueViewSet(
     
     @action(detail=True, methods=['post'])
     def sync_from_linear(self, request, pk=None):
-        """Sync issue from Linear (pull latest changes) - requires issue:update permission"""
+        """Sync issue from Linear (pull latest changes) - vendors and employees can sync issues in their org"""
         try:
             issue = self.get_object()
             
-            # Check permission
-            self.check_permission(request, 'issue', 'update', instance=issue)
+            # Check permission - vendors and employees can sync issues in their organization
+            active_profile = getattr(request.user, 'active_profile', None)
+            if active_profile and active_profile.profile_type in ['vendor', 'employee']:
+                # Vendors and employees can sync issues in their organization
+                if issue.organization != active_profile.organization:
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied('You can only sync issues in your organization.')
+            else:
+                # Fallback to permission check for other profile types
+                self.check_permission(request, 'issue', 'update', instance=issue)
             
             # Sync from Linear
             success, error = self.linear_service.sync_issue_from_linear(issue)
@@ -459,6 +660,171 @@ class IssueViewSet(
             
         except Exception as e:
             logger.error(f"Error in bulk sync: {str(e)}")
+            return Response(
+                {'error': 'Internal Server Error', 'details': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def fetch_from_linear(self, request):
+        """
+        Fetch issues from Linear for the vendor/employee's organization
+        Returns Linear issues that can be synced to CRM
+        """
+        try:
+            # Get organization from active profile
+            active_profile = getattr(request.user, 'active_profile', None)
+            if not active_profile:
+                return Response(
+                    {'error': 'Bad Request', 'details': 'No active profile found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Only vendors and employees can fetch from Linear
+            if active_profile.profile_type not in ['vendor', 'employee']:
+                return Response(
+                    {'error': 'Forbidden', 'details': 'Only vendors and employees can fetch issues from Linear'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            organization = active_profile.organization
+            if not organization:
+                return Response(
+                    {'error': 'Bad Request', 'details': 'Organization not found'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get Linear team ID
+            linear_team_id = organization.linear_team_id
+            if not linear_team_id:
+                return Response(
+                    {
+                        'error': 'Bad Request',
+                        'details': 'Linear team ID not configured for this organization'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Get optional parameters
+            limit = int(request.query_params.get('limit', 50))
+            sync_to_crm = request.query_params.get('sync', 'false').lower() == 'true'
+            
+            # Fetch issues from Linear
+            from crmApp.services.linear_service import LinearService
+            linear_service = LinearService()
+            
+            linear_issues = linear_service.get_team_issues(
+                team_id=linear_team_id,
+                limit=limit
+            )
+            
+            issues_data = linear_issues.get('nodes', [])
+            page_info = linear_issues.get('pageInfo', {})
+            
+            # If sync_to_crm is True, sync Linear issues to CRM
+            synced_issues = []
+            if sync_to_crm:
+                from crmApp.services.issue_linear_service import IssueLinearService
+                sync_service = IssueLinearService()
+                
+                for linear_issue in issues_data:
+                    # Check if issue already exists in CRM
+                    existing_issue = Issue.objects.filter(
+                        linear_issue_id=linear_issue['id'],
+                        organization=organization
+                    ).first()
+                    
+                    if existing_issue:
+                        # Update existing issue
+                        try:
+                            # Map Linear state to CRM status
+                            linear_state = linear_issue.get('state', {}).get('name', '').lower()
+                            crm_status = 'open'
+                            if 'done' in linear_state or 'completed' in linear_state or 'resolved' in linear_state:
+                                crm_status = 'resolved'
+                            elif 'in progress' in linear_state or 'started' in linear_state:
+                                crm_status = 'in_progress'
+                            elif 'closed' in linear_state or 'canceled' in linear_state:
+                                crm_status = 'closed'
+                            
+                            existing_issue.title = linear_issue.get('title', existing_issue.title)
+                            existing_issue.description = linear_issue.get('description', existing_issue.description) or ''
+                            existing_issue.status = crm_status
+                            existing_issue.priority = linear_service.map_linear_priority_to_crm(
+                                linear_issue.get('priority', 3)
+                            )
+                            existing_issue.synced_to_linear = True
+                            existing_issue.last_synced_at = timezone.now()
+                            existing_issue.save()
+                            
+                            synced_issues.append({
+                                'linear_id': linear_issue['id'],
+                                'issue_id': existing_issue.id,
+                                'issue_number': existing_issue.issue_number,
+                                'action': 'updated'
+                            })
+                        except Exception as e:
+                            logger.error(f"Error updating issue from Linear: {str(e)}", exc_info=True)
+                    else:
+                        # Create new issue in CRM
+                        try:
+                            # Map Linear state to CRM status
+                            linear_state = linear_issue.get('state', {}).get('name', '').lower()
+                            crm_status = 'open'
+                            if 'done' in linear_state or 'completed' in linear_state or 'resolved' in linear_state:
+                                crm_status = 'resolved'
+                            elif 'in progress' in linear_state or 'started' in linear_state:
+                                crm_status = 'in_progress'
+                            elif 'closed' in linear_state or 'canceled' in linear_state:
+                                crm_status = 'closed'
+                            
+                            new_issue = Issue.objects.create(
+                                organization=organization,
+                                title=linear_issue.get('title', ''),
+                                description=linear_issue.get('description', '') or '',
+                                status=crm_status,
+                                priority=linear_service.map_linear_priority_to_crm(
+                                    linear_issue.get('priority', 3)
+                                ),
+                                category='general',
+                                linear_issue_id=linear_issue['id'],
+                                linear_issue_url=linear_issue.get('url', ''),
+                                linear_team_id=linear_team_id,
+                                synced_to_linear=True,
+                                last_synced_at=timezone.now(),
+                                is_client_issue=False  # Issues from Linear are internal
+                            )
+                            
+                            synced_issues.append({
+                                'linear_id': linear_issue['id'],
+                                'issue_id': new_issue.id,
+                                'issue_number': new_issue.issue_number,
+                                'action': 'created'
+                            })
+                        except Exception as e:
+                            logger.error(f"Error creating issue from Linear: {str(e)}", exc_info=True)
+            
+            # Format response
+            response_data = {
+                'linear_issues': issues_data,
+                'page_info': page_info,
+                'organization': {
+                    'id': organization.id,
+                    'name': organization.name,
+                    'linear_team_id': linear_team_id
+                }
+            }
+            
+            if sync_to_crm:
+                response_data['synced_issues'] = synced_issues
+                response_data['message'] = f"Fetched {len(issues_data)} issues from Linear, synced {len(synced_issues)} to CRM"
+            else:
+                response_data['message'] = f"Fetched {len(issues_data)} issues from Linear (not synced to CRM)"
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            logger.error(f"Error fetching issues from Linear: {str(e)}", exc_info=True)
             return Response(
                 {'error': 'Internal Server Error', 'details': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
