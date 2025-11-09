@@ -16,14 +16,45 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.features.issues.ui.CustomerIssuesListScreen
+import too.good.crm.features.issues.ui.VendorIssuesListScreen
+import too.good.crm.features.issues.viewmodel.IssueViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IssuesScreen(
+    onNavigate: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+
+    // Show different screens based on user role
+    if (activeMode == ActiveMode.CLIENT) {
+        // Customer view - can create and view their own issues
+        CustomerIssuesListScreen(
+            organizationId = UserSession.currentProfile?.organizationId ?: 0,
+            onNavigateToCreate = { /* TODO: Navigate to create issue */ },
+            onNavigateToDetail = { issueId -> /* TODO: Navigate to issue detail */ },
+            onNavigateBack = onBack
+        )
+    } else {
+        // Vendor view - can view and manage all client-raised issues
+        VendorIssuesListScreen(
+            onNavigateToDetail = { issueId -> /* TODO: Navigate to issue detail */ },
+            onNavigateBack = onBack
+        )
+    }
+}
+
+// Old implementation kept below for reference - can be removed later
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun IssuesScreenOld(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
