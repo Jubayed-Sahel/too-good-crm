@@ -7,6 +7,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
 
@@ -19,11 +20,17 @@ from crmApp.serializers import (
     DealUpdateSerializer,
     DealListSerializer,
 )
+from crmApp.services import RBACService
+from crmApp.viewsets.mixins import (
+    PermissionCheckMixin,
+    OrganizationFilterMixin,
+    QueryFilterMixin,
+)
 
 logger = logging.getLogger(__name__)
 
 
-class PipelineViewSet(viewsets.ModelViewSet):
+class PipelineViewSet(viewsets.ModelViewSet, OrganizationFilterMixin, QueryFilterMixin):
     """
     ViewSet for Pipeline management.
     """
@@ -32,17 +39,9 @@ class PipelineViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        """Filter pipelines by user's organizations"""
-        user_orgs = self.request.user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
-        
-        queryset = Pipeline.objects.filter(organization_id__in=user_orgs)
-        
-        # Filter by organization
-        org_id = self.request.query_params.get('organization')
-        if org_id:
-            queryset = queryset.filter(organization_id=org_id)
+        """Filter pipelines by user's accessible organizations based on profile type"""
+        queryset = Pipeline.objects.all()
+        queryset = self.filter_by_organization(queryset, self.request)
         
         # Filter active only
         active_only = self.request.query_params.get('active_only')
@@ -159,7 +158,12 @@ class PipelineStageViewSet(viewsets.ModelViewSet):
         )
 
 
-class DealViewSet(viewsets.ModelViewSet):
+class DealViewSet(
+    viewsets.ModelViewSet,
+    PermissionCheckMixin,
+    OrganizationFilterMixin,
+    QueryFilterMixin,
+):
     """
     ViewSet for Deal management.
     """
@@ -177,22 +181,12 @@ class DealViewSet(viewsets.ModelViewSet):
         return DealSerializer
     
     def get_queryset(self):
-        """Filter deals by user's organizations"""
-        user_orgs = self.request.user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
-        
-        queryset = Deal.objects.filter(organization_id__in=user_orgs)
-        
-        # Filter by organization
-        org_id = self.request.query_params.get('organization')
-        if org_id:
-            queryset = queryset.filter(organization_id=org_id)
-        
-        # Filter by status
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
+        """Filter deals by user's accessible organizations based on profile type"""
+        queryset = Deal.objects.all()
+        queryset = self.filter_by_organization(queryset, self.request)
+        queryset = self.apply_status_filter(queryset, self.request)
+        queryset = self.apply_search_filter(queryset, self.request, ['title', 'customer__name'])
+        queryset = self.apply_assigned_to_filter(queryset, self.request)
         
         # Filter by pipeline
         pipeline_id = self.request.query_params.get('pipeline')
@@ -209,41 +203,51 @@ class DealViewSet(viewsets.ModelViewSet):
         if priority:
             queryset = queryset.filter(priority=priority)
         
-        # Filter by assigned employee
-        assigned_to = self.request.query_params.get('assigned_to')
-        if assigned_to:
-            queryset = queryset.filter(assigned_to_id=assigned_to)
-        
         # Filter won/lost
-        is_won = self.request.query_params.get('is_won')
-        if is_won is not None:
-            queryset = queryset.filter(is_won=is_won.lower() == 'true')
-        
-        is_lost = self.request.query_params.get('is_lost')
-        if is_lost is not None:
-            queryset = queryset.filter(is_lost=is_lost.lower() == 'true')
-        
-        # Search
-        search = self.request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                title__icontains=search
-            ) | queryset.filter(
-                customer__name__icontains=search
-            )
+        queryset = self.apply_boolean_filter(queryset, self.request, 'is_won')
+        queryset = self.apply_boolean_filter(queryset, self.request, 'is_lost')
         
         return queryset.select_related(
             'organization', 'customer', 'pipeline', 'stage', 'assigned_to'
         )
     
+    def perform_create(self, serializer):
+        """Override perform_create to check permissions"""
+        organization = self.get_organization_from_request(self.request)
+        
+        if not organization:
+            raise ValueError('Organization is required. Please ensure you have an active profile.')
+        
+        # Check permission for creating deals
+        self.check_permission(
+            self.request,
+            resource='deal',
+            action='create',
+            organization=organization
+        )
+        
+        serializer.save(organization_id=organization.id)
+    
+    def update(self, request, *args, **kwargs):
+        """Override update to check permissions"""
+        instance = self.get_object()
+        self.check_permission(request, 'deal', 'update', instance=instance)
+        return super().update(request, *args, **kwargs)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Override partial_update to check permissions"""
+        return self.update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Override destroy to check permissions"""
+        instance = self.get_object()
+        self.check_permission(request, 'deal', 'delete', instance=instance)
+        return super().destroy(request, *args, **kwargs)
+    
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get deal statistics"""
-        user_orgs = request.user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
-        
-        queryset = Deal.objects.filter(organization_id__in=user_orgs)
+        queryset = self.get_queryset()
         
         total_value = queryset.aggregate(total=Sum('value'))['total'] or 0
         expected_revenue = queryset.aggregate(total=Sum('expected_revenue'))['total'] or 0
@@ -281,8 +285,10 @@ class DealViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def move_stage(self, request, pk=None):
-        """Move deal to another stage"""
+        """Move deal to another stage - requires deal:update permission"""
         deal = self.get_object()
+        self.check_permission(request, 'deal', 'update', instance=deal)
+        
         stage_id = request.data.get('stage_id')
         
         if not stage_id:
@@ -313,8 +319,10 @@ class DealViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def mark_won(self, request, pk=None):
-        """Mark deal as won"""
+        """Mark deal as won - requires deal:update permission"""
         deal = self.get_object()
+        self.check_permission(request, 'deal', 'update', instance=deal)
+        
         deal.is_won = True
         deal.is_lost = False
         deal.actual_close_date = timezone.now()
@@ -328,8 +336,10 @@ class DealViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def mark_lost(self, request, pk=None):
-        """Mark deal as lost"""
+        """Mark deal as lost - requires deal:update permission"""
         deal = self.get_object()
+        self.check_permission(request, 'deal', 'update', instance=deal)
+        
         deal.is_won = False
         deal.is_lost = True
         deal.lost_reason = request.data.get('lost_reason', '')
@@ -344,8 +354,10 @@ class DealViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def reopen(self, request, pk=None):
-        """Reopen a closed deal"""
+        """Reopen a closed deal - requires deal:update permission"""
         deal = self.get_object()
+        self.check_permission(request, 'deal', 'update', instance=deal)
+        
         deal.is_won = False
         deal.is_lost = False
         deal.actual_close_date = None

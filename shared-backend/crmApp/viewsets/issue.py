@@ -5,29 +5,46 @@ Issue related viewsets
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-# from django_filters.rest_framework import DjangoFilterBackend  # Not installed
+from rest_framework.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
-from crmApp.models import Issue
+
+from crmApp.models import Issue, Employee
 from crmApp.serializers import (
     IssueSerializer,
     IssueListSerializer,
     IssueCreateSerializer,
     IssueUpdateSerializer
 )
-from crmApp.services.linear_service import LinearService
+from crmApp.services import IssueLinearService, RBACService
+from crmApp.viewsets.mixins import (
+    PermissionCheckMixin,
+    OrganizationFilterMixin,
+    LinearSyncMixin,
+    QueryFilterMixin,
+)
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-class IssueViewSet(viewsets.ModelViewSet):
+class IssueViewSet(
+    viewsets.ModelViewSet,
+    PermissionCheckMixin,
+    OrganizationFilterMixin,
+    LinearSyncMixin,
+    QueryFilterMixin,
+):
     """ViewSet for Issue model"""
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['vendor', 'order', 'priority', 'category', 'status', 'assigned_to']
     search_fields = ['issue_number', 'title', 'description']
     ordering_fields = ['created_at', 'updated_at', 'priority', 'status']
     ordering = ['-created_at']
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.linear_service = IssueLinearService()
     
     def get_queryset(self):
         """Filter issues based on user type and organization"""
@@ -53,15 +70,28 @@ class IssueViewSet(viewsets.ModelViewSet):
         if active_profile.profile_type == 'customer':
             from crmApp.models import Customer
             try:
-                customer = Customer.objects.get(user=user)
+                customer = Customer.objects.get(user=user, organization=active_profile.organization)
                 return queryset.filter(raised_by_customer=customer)
             except Customer.DoesNotExist:
                 return Issue.objects.none()
         
-        # Vendor/Employee: Can see all issues for their organization
-        elif active_profile.profile_type in ['vendor', 'employee']:
+        # Vendor: Can see issues related to their vendor record
+        elif active_profile.profile_type == 'vendor':
+            from crmApp.models import Vendor
+            try:
+                vendor = Vendor.objects.get(user=user, organization=active_profile.organization)
+                return queryset.filter(
+                    organization=active_profile.organization
+                ).filter(vendor=vendor)
+            except Vendor.DoesNotExist:
+                return Issue.objects.none()
+        
+        # Employee: Can see all issues for their organization
+        elif active_profile.profile_type == 'employee':
             if hasattr(user, 'current_organization') and user.current_organization:
                 return queryset.filter(organization=user.current_organization)
+            if active_profile.organization:
+                return queryset.filter(organization=active_profile.organization)
             return Issue.objects.none()
         
         return Issue.objects.none()
@@ -76,16 +106,131 @@ class IssueViewSet(viewsets.ModelViewSet):
             return IssueUpdateSerializer
         return IssueSerializer
     
+    def perform_create(self, serializer):
+        """Override perform_create to set organization and check permissions"""
+        organization = self.get_organization_from_request(self.request)
+        
+        if not organization:
+            raise ValueError('Organization is required. Please ensure you have an active profile.')
+        
+        # Customers can create issues (raise them), but employees/vendors need permission
+        active_profile = getattr(self.request.user, 'active_profile', None)
+        if active_profile and active_profile.profile_type == 'customer':
+            # Customers can create issues without permission check
+            serializer.save(organization_id=organization.id)
+        else:
+            # Employees/vendors need issue:create permission
+            self.check_permission(
+                self.request,
+                resource='issue',
+                action='create',
+                organization=organization
+            )
+            serializer.save(organization_id=organization.id)
+    
+    def update(self, request, *args, **kwargs):
+        """Override update to sync status changes to Linear and check permissions"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        old_status = instance.status
+        
+        # Check permission for updating issues
+        active_profile = getattr(request.user, 'active_profile', None)
+        if active_profile and active_profile.profile_type == 'customer':
+            self.check_customer_permission(request, instance, action='update')
+        else:
+            self.check_permission(request, 'issue', 'update', instance=instance)
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        # Refresh instance to get updated data
+        instance.refresh_from_db()
+        
+        # Sync status change to Linear
+        linear_updated = self.linear_service.sync_issue_status_to_linear(instance, old_status)
+        
+        response_serializer = self.get_serializer(instance)
+        response_data = response_serializer.data
+        
+        if linear_updated[0]:
+            response_data['linear_synced'] = True
+        
+        return Response(response_data)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Override destroy to check permissions"""
+        instance = self.get_object()
+        
+        # Check permission for deleting issues
+        active_profile = getattr(request.user, 'active_profile', None)
+        if active_profile and active_profile.profile_type == 'customer':
+            self.check_customer_permission(request, instance, action='delete')
+        else:
+            self.check_permission(request, 'issue', 'delete', instance=instance)
+        
+        return super().destroy(request, *args, **kwargs)
+    
     @action(detail=True, methods=['post'])
     def resolve(self, request, pk=None):
-        """Mark issue as resolved"""
+        """Mark issue as resolved and sync to Linear if synced - requires issue:update permission"""
         try:
             issue = self.get_object()
+            
+            # Check permission
+            self.check_permission(request, 'issue', 'update', instance=issue)
+            
+            # Check if already resolved
+            if issue.status == 'resolved':
+                return Response(
+                    {'error': 'Bad Request', 'details': 'Issue is already resolved'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            old_status = issue.status
             issue.status = 'resolved'
-            issue.resolved_by = request.user
+            issue.resolved_at = timezone.now()
+            
+            # Try to find employee associated with this user
+            try:
+                employee = Employee.objects.get(user=request.user, organization=issue.organization)
+                issue.resolved_by = employee
+            except Employee.DoesNotExist:
+                issue.resolved_by = None
+            
+            # Add resolution notes if provided
+            resolution_notes = request.data.get('resolution_notes')
+            if resolution_notes:
+                if issue.resolution_notes:
+                    issue.resolution_notes += f"\n\n{resolution_notes}"
+                else:
+                    issue.resolution_notes = resolution_notes
+            
             issue.save()
+            
+            # Auto-sync to Linear if already synced
+            update_description = issue.description
+            if resolution_notes:
+                update_description = f"{update_description}\n\n--- Resolution Notes ---\n{resolution_notes}"
+            
+            linear_updated = self.linear_service.sync_issue_status_to_linear(
+                issue, old_status, description=update_description
+            )
+            
             serializer = self.get_serializer(issue)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            response_data = {
+                'message': 'Issue resolved successfully',
+                'issue': serializer.data,
+                'previous_status': old_status
+            }
+            
+            if linear_updated[0]:
+                response_data['linear_synced'] = True
+                response_data['message'] += ' and synced to Linear'
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
         except Issue.DoesNotExist:
             return Response(
                 {'error': 'Not Found', 'details': 'Issue not found'},
@@ -100,14 +245,34 @@ class IssueViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def reopen(self, request, pk=None):
-        """Reopen a resolved issue"""
+        """Reopen a resolved issue and sync to Linear if synced - requires issue:update permission"""
         try:
             issue = self.get_object()
+            
+            # Check permission
+            self.check_permission(request, 'issue', 'update', instance=issue)
+            
+            old_status = issue.status
             issue.status = 'open'
+            issue.resolved_at = None
             issue.resolved_by = None
             issue.save()
+            
+            # Sync to Linear if synced
+            linear_updated = self.linear_service.sync_issue_status_to_linear(issue, old_status)
+            
             serializer = self.get_serializer(issue)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            response_data = {
+                'message': 'Issue reopened successfully',
+                'issue': serializer.data,
+                'previous_status': old_status
+            }
+            
+            if linear_updated[0]:
+                response_data['linear_synced'] = True
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
         except Issue.DoesNotExist:
             return Response(
                 {'error': 'Not Found', 'details': 'Issue not found'},
@@ -167,13 +332,16 @@ class IssueViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def sync_to_linear(self, request, pk=None):
-        """Sync issue to Linear"""
+        """Sync issue to Linear - requires issue:update permission"""
         try:
             issue = self.get_object()
-            linear_service = LinearService()
             
-            # Get team_id from request or settings
-            team_id = request.data.get('team_id') or getattr(request.user.current_organization, 'linear_team_id', None)
+            # Check permission
+            self.check_permission(request, 'issue', 'update', instance=issue)
+            
+            # Get team_id
+            organization = issue.organization or self.get_organization_from_request(request)
+            team_id = self.linear_service.get_team_id(request, organization, issue)
             
             if not team_id:
                 return Response(
@@ -181,31 +349,14 @@ class IssueViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            with transaction.atomic():
-                if issue.synced_to_linear and issue.linear_issue_id:
-                    # Update existing Linear issue
-                    linear_data = linear_service.update_issue(
-                        issue_id=issue.linear_issue_id,
-                        title=issue.title,
-                        description=issue.description,
-                        priority=linear_service.map_priority_to_linear(issue.priority)
-                    )
-                else:
-                    # Create new Linear issue
-                    linear_data = linear_service.create_issue(
-                        team_id=team_id,
-                        title=issue.title,
-                        description=issue.description or '',
-                        priority=linear_service.map_priority_to_linear(issue.priority)
-                    )
-                    
-                    issue.linear_issue_id = linear_data['id']
-                    issue.linear_issue_url = linear_data['url']
-                    issue.linear_team_id = team_id
-                
-                issue.synced_to_linear = True
-                issue.last_synced_at = timezone.now()
-                issue.save()
+            # Sync issue
+            success, linear_data, error = self.linear_service.sync_issue_to_linear(issue, team_id, update_existing=True)
+            
+            if not success:
+                return Response(
+                    {'error': 'Internal Server Error', 'details': error},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
             
             serializer = self.get_serializer(issue)
             return Response(
@@ -226,30 +377,21 @@ class IssueViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=['post'])
     def sync_from_linear(self, request, pk=None):
-        """Sync issue from Linear (pull latest changes)"""
+        """Sync issue from Linear (pull latest changes) - requires issue:update permission"""
         try:
             issue = self.get_object()
             
-            if not issue.synced_to_linear or not issue.linear_issue_id:
+            # Check permission
+            self.check_permission(request, 'issue', 'update', instance=issue)
+            
+            # Sync from Linear
+            success, error = self.linear_service.sync_issue_from_linear(issue)
+            
+            if not success:
                 return Response(
-                    {'error': 'Bad Request', 'details': 'Issue is not synced to Linear'},
+                    {'error': 'Bad Request', 'details': error},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
-            linear_service = LinearService()
-            linear_issue = linear_service.get_issue(issue.linear_issue_id)
-            
-            with transaction.atomic():
-                # Update local issue with Linear data
-                issue.title = linear_issue.get('title', issue.title)
-                issue.description = linear_issue.get('description', issue.description)
-                
-                # Map Linear priority to CRM priority
-                linear_priority = linear_issue.get('priority', 3)
-                issue.priority = linear_service.map_linear_priority_to_crm(linear_priority)
-                
-                issue.last_synced_at = timezone.now()
-                issue.save()
             
             serializer = self.get_serializer(issue)
             return Response(
@@ -269,10 +411,23 @@ class IssueViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['post'])
     def bulk_sync_to_linear(self, request):
-        """Bulk sync multiple issues to Linear"""
+        """Bulk sync multiple issues to Linear - requires issue:update permission"""
         try:
+            # Get organization and check permission
+            organization = self.get_organization_from_request(request)
+            
+            if not organization:
+                return Response(
+                    {'error': 'Bad Request', 'details': 'Organization is required. Please ensure you have an active profile.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Check permission
+            self.check_permission(request, 'issue', 'update', organization=organization)
+            
+            # Get parameters
             issue_ids = request.data.get('issue_ids', [])
-            team_id = request.data.get('team_id')
+            team_id = request.data.get('team_id') or self.linear_service.get_team_id(request, organization)
             
             if not issue_ids:
                 return Response(
@@ -286,62 +441,18 @@ class IssueViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
+            # Get issues
             issues = self.get_queryset().filter(id__in=issue_ids)
-            linear_service = LinearService()
             
-            synced_count = 0
-            failed_count = 0
-            results = []
-            
-            for issue in issues:
-                try:
-                    with transaction.atomic():
-                        if issue.synced_to_linear and issue.linear_issue_id:
-                            linear_data = linear_service.update_issue(
-                                issue_id=issue.linear_issue_id,
-                                title=issue.title,
-                                description=issue.description,
-                                priority=linear_service.map_priority_to_linear(issue.priority)
-                            )
-                        else:
-                            linear_data = linear_service.create_issue(
-                                team_id=team_id,
-                                title=issue.title,
-                                description=issue.description or '',
-                                priority=linear_service.map_priority_to_linear(issue.priority)
-                            )
-                            issue.linear_issue_id = linear_data['id']
-                            issue.linear_issue_url = linear_data['url']
-                            issue.linear_team_id = team_id
-                        
-                        issue.synced_to_linear = True
-                        issue.last_synced_at = timezone.now()
-                        issue.save()
-                        
-                        synced_count += 1
-                        results.append({
-                            'issue_id': issue.id,
-                            'issue_number': issue.issue_number,
-                            'status': 'success',
-                            'linear_url': issue.linear_issue_url
-                        })
-                        
-                except Exception as e:
-                    failed_count += 1
-                    results.append({
-                        'issue_id': issue.id,
-                        'issue_number': issue.issue_number,
-                        'status': 'failed',
-                        'error': str(e)
-                    })
-                    logger.error(f"Failed to sync issue {issue.id}: {str(e)}")
+            # Bulk sync
+            result = self.linear_service.bulk_sync_issues_to_linear(issues, team_id)
             
             return Response(
                 {
-                    'message': f'Bulk sync completed: {synced_count} succeeded, {failed_count} failed',
-                    'synced_count': synced_count,
-                    'failed_count': failed_count,
-                    'results': results
+                    'message': f'Bulk sync completed: {result["synced_count"]} succeeded, {result["failed_count"]} failed',
+                    'synced_count': result['synced_count'],
+                    'failed_count': result['failed_count'],
+                    'results': result['results']
                 },
                 status=status.HTTP_200_OK
             )

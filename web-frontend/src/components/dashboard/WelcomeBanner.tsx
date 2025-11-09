@@ -2,6 +2,42 @@ import { Box, Heading, Text, Flex, VStack, HStack, Button } from '@chakra-ui/rea
 import { useNavigate } from 'react-router-dom';
 import { FiPlus, FiTrendingUp } from 'react-icons/fi';
 
+// CSS keyframes as strings
+const gradientShiftKeyframes = `
+  @keyframes gradientShift {
+    0%, 100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+`;
+
+const fadeInUpKeyframes = `
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+`;
+
+// Inject keyframes into document
+if (typeof document !== 'undefined') {
+  const styleId = 'welcome-banner-keyframes';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = gradientShiftKeyframes + fadeInUpKeyframes;
+    document.head.appendChild(style);
+  }
+}
+
 const WelcomeBanner = () => {
   const navigate = useNavigate();
   const currentHour = new Date().getHours();
@@ -17,9 +53,11 @@ const WelcomeBanner = () => {
 
   return (
     <Box
-      bg="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+      background="linear-gradient(-45deg, #667eea, #764ba2, #667eea, #764ba2)"
+      backgroundSize="400% 400%"
+      animation="gradientShift 15s ease infinite, fadeInUp 0.8s ease-out"
       borderRadius="2xl"
-      boxShadow="lg"
+      boxShadow="2xl"
       p={{ base: 5, md: 6 }}
       color="white"
       position="relative"

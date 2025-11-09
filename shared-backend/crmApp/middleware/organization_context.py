@@ -1,20 +1,28 @@
 """
 Organization Context Middleware
 Handles organization-scoped requests for multi-tenancy
+Uses UserProfile to determine organization context based on profile type
 """
 
 from django.utils.deprecation import MiddlewareMixin
-from crmApp.models import UserOrganization, UserProfile
+from crmApp.models import UserProfile, Organization
+from crmApp.utils.profile_context import (
+    get_user_active_profile,
+    get_user_accessible_organizations,
+    get_customer_vendor_organizations,
+)
 
 
 class OrganizationContextMiddleware(MiddlewareMixin):
     """
     Middleware to set the active organization context for each request.
     
-    Uses X-Organization-ID header to determine which organization
-    the user is currently working with.
+    Uses active UserProfile to determine which organization the user is working with.
     
-    Validates that the user has access to the requested organization.
+    Rules:
+    - Vendor: Uses organization from vendor profile
+    - Employee: Uses organization from employee profile (org they work for)
+    - Customer: No single organization (can access multiple vendor orgs via Customer records)
     """
     
     def process_request(self, request):
@@ -22,50 +30,52 @@ class OrganizationContextMiddleware(MiddlewareMixin):
         
         # Skip for unauthenticated requests
         if not request.user or not request.user.is_authenticated:
-            request.organization = None
-            request.is_organization_owner = False
+            request.user.current_organization = None
+            request.user.active_profile = None
+            request.user.accessible_organization_ids = []
             return None
         
-        # Get organization ID from header
-        org_id = request.headers.get('X-Organization-ID')
+        # Get active profile
+        active_profile = get_user_active_profile(request.user)
+        request.user.active_profile = active_profile
         
-        if not org_id:
-            # No organization context - used for standalone customers or multi-org selection
-            request.organization = None
-            request.is_organization_owner = False
+        if not active_profile:
+            request.user.current_organization = None
+            request.user.accessible_organization_ids = []
             return None
         
-        try:
-            org_id = int(org_id)
-        except (ValueError, TypeError):
-            request.organization = None
-            request.is_organization_owner = False
-            return None
+        # Get organization based on profile type
+        if active_profile.profile_type in ['vendor', 'employee']:
+            # Vendor and Employee have a single organization
+            request.user.current_organization = active_profile.organization
+            request.user.accessible_organization_ids = [active_profile.organization.id] if active_profile.organization else []
+        elif active_profile.profile_type == 'customer':
+            # Customer can access multiple vendor organizations
+            from crmApp.utils.profile_context import get_customer_vendor_organizations
+            customer_orgs = get_customer_vendor_organizations(request.user)
+            request.user.current_organization = customer_orgs[0] if customer_orgs else None
+            request.user.accessible_organization_ids = [org.id for org in customer_orgs]
+        else:
+            request.user.current_organization = None
+            request.user.accessible_organization_ids = []
         
-        # Check if user has access to this organization
-        try:
-            user_org = UserOrganization.objects.select_related('organization').get(
-                user=request.user,
-                organization_id=org_id,
-                is_active=True
-            )
-            
-            request.organization = user_org.organization
-            request.is_organization_owner = user_org.is_owner
-            
-        except UserOrganization.DoesNotExist:
-            # User doesn't have access to this organization
-            request.organization = None
-            request.is_organization_owner = False
+        # Set is_organization_owner (only vendors own their organization)
+        request.user.is_organization_owner = (
+            active_profile.profile_type == 'vendor' and 
+            active_profile.organization is not None
+        )
         
         return None
     
     def process_response(self, request, response):
         """Add organization context to response headers"""
         
-        if hasattr(request, 'organization') and request.organization:
-            response['X-Active-Organization'] = str(request.organization.id)
-            response['X-Organization-Name'] = request.organization.name
-            response['X-Is-Owner'] = str(request.is_organization_owner).lower()
+        if hasattr(request.user, 'current_organization') and request.user.current_organization:
+            response['X-Active-Organization'] = str(request.user.current_organization.id)
+            response['X-Organization-Name'] = request.user.current_organization.name
+            response['X-Is-Owner'] = str(getattr(request.user, 'is_organization_owner', False)).lower()
+        
+        if hasattr(request.user, 'active_profile') and request.user.active_profile:
+            response['X-Active-Profile-Type'] = request.user.active_profile.profile_type
         
         return response

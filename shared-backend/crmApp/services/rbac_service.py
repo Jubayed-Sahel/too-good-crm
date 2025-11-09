@@ -19,28 +19,48 @@ class RBACService:
     ) -> bool:
         """
         Check if user has permission for resource:action in organization.
-        Checks both Employee.role and UserRole assignments.
+        
+        Rules:
+        - Vendors: Have all permissions in their organization
+        - Employees: Have permissions based on their assigned role(s)
+        - Customers: No permissions (read-only access to their own data)
         
         Args:
             user: User instance
             organization: Organization instance
-            resource: Resource name (e.g., 'customers', 'deals')
+            resource: Resource name (e.g., 'customer', 'deal', 'lead')
             action: Action name (e.g., 'create', 'read', 'update', 'delete')
             
         Returns:
             bool: True if user has permission, False otherwise
         """
-        # Check if user is organization owner (has all permissions)
-        is_owner = user.user_organizations.filter(
-            organization=organization,
-            is_owner=True,
-            is_active=True
-        ).exists()
+        from crmApp.models import UserProfile
         
-        if is_owner:
+        # Check if user is vendor - vendors have all permissions
+        vendor_profile = UserProfile.objects.filter(
+            user=user,
+            organization=organization,
+            profile_type='vendor',
+            status='active'
+        ).first()
+        
+        if vendor_profile:
+            # Vendors have all permissions in their organization
             return True
         
-        # Get all roles for the user in this organization
+        # Check if user is employee - employees have permissions based on role
+        employee_profile = UserProfile.objects.filter(
+            user=user,
+            organization=organization,
+            profile_type='employee',
+            status='active'
+        ).first()
+        
+        if not employee_profile:
+            # Not a vendor or employee - no permissions
+            return False
+        
+        # Get all roles for the employee in this organization
         role_ids = set()
         
         # 1. Check Employee.role (primary role)
@@ -53,7 +73,8 @@ class RBACService:
             if employee.role:
                 role_ids.add(employee.role.id)
         except Employee.DoesNotExist:
-            pass
+            # Employee profile exists but no Employee record - no permissions
+            return False
         
         # 2. Check UserRole assignments (additional roles)
         user_roles = UserRole.objects.filter(
@@ -65,6 +86,7 @@ class RBACService:
         role_ids.update(user_roles)
         
         if not role_ids:
+            # Employee has no roles assigned - no permissions
             return False
         
         # Check if any of the user's roles have the required permission
@@ -85,6 +107,11 @@ class RBACService:
         """
         Get all permissions for a user in an organization.
         
+        Rules:
+        - Vendors: Return all permissions in the organization
+        - Employees: Return permissions based on their assigned role(s)
+        - Others: Return empty list
+        
         Args:
             user: User instance
             organization: Organization instance
@@ -92,7 +119,36 @@ class RBACService:
         Returns:
             List of permission dictionaries
         """
-        # Get all roles for the user
+        from crmApp.models import UserProfile
+        
+        # Check if user is vendor - vendors have all permissions
+        vendor_profile = UserProfile.objects.filter(
+            user=user,
+            organization=organization,
+            profile_type='vendor',
+            status='active'
+        ).first()
+        
+        if vendor_profile:
+            # Vendors have all permissions
+            permissions = Permission.objects.filter(
+                organization=organization
+            ).values('id', 'resource', 'action', 'description')
+            return list(permissions)
+        
+        # Check if user is employee
+        employee_profile = UserProfile.objects.filter(
+            user=user,
+            organization=organization,
+            profile_type='employee',
+            status='active'
+        ).first()
+        
+        if not employee_profile:
+            # Not a vendor or employee - no permissions
+            return []
+        
+        # Get all roles for the employee
         role_ids = set()
         
         # Employee role
@@ -105,7 +161,8 @@ class RBACService:
             if employee.role:
                 role_ids.add(employee.role.id)
         except Employee.DoesNotExist:
-            pass
+            # No employee record - no permissions
+            return []
         
         # User roles
         user_roles = UserRole.objects.filter(
@@ -117,6 +174,7 @@ class RBACService:
         role_ids.update(user_roles)
         
         if not role_ids:
+            # Employee has no roles - no permissions
             return []
         
         # Get all unique permissions from these roles

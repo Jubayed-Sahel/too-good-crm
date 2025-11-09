@@ -8,9 +8,7 @@ import {
   HStack,
   Grid,
   Badge,
-  Button,
   Spinner,
-  IconButton,
 } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
@@ -29,6 +27,11 @@ import {
   FiTarget,
 } from 'react-icons/fi';
 import { dealService } from '@/services/deal.service';
+import { customerService } from '@/services/customer.service';
+import { useDeleteDeal } from '@/hooks';
+import { StandardButton, ConfirmDialog } from '@/components/common';
+import twilioService from '@/services/twilio.service';
+import { toaster } from '@/components/ui/toaster';
 import type { Deal } from '@/types';
 
 const DealDetailPage = () => {
@@ -37,6 +40,10 @@ const DealDetailPage = () => {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const deleteDeal = useDeleteDeal();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isCallInitiating, setIsCallInitiating] = useState(false);
+  const [customerPhone, setCustomerPhone] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDeal = async () => {
@@ -46,6 +53,19 @@ const DealDetailPage = () => {
         const dealData = await dealService.getDeal(parseInt(id));
         if (dealData) {
           setDeal(dealData);
+          
+          // Fetch customer phone if customer_id exists
+          if (dealData.customer_id || dealData.customer) {
+            const customerId = dealData.customer_id || (typeof dealData.customer === 'number' ? dealData.customer : null);
+            if (customerId) {
+              try {
+                const customer = await customerService.getCustomer(customerId);
+                setCustomerPhone(customer.phone || null);
+              } catch (err) {
+                console.warn('Failed to fetch customer phone:', err);
+              }
+            }
+          }
         } else {
           setError('Deal not found');
         }
@@ -112,10 +132,78 @@ const DealDetailPage = () => {
 
   const handleDelete = () => {
     if (!deal) return;
-    if (confirm(`Are you sure you want to delete deal "${deal.title}"?`)) {
-      // TODO: Implement delete functionality
-      alert(`Deal "${deal.title}" deleted`);
-      navigate('/deals');
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (!deal || !id) return;
+    deleteDeal.mutate(parseInt(id), {
+      onSuccess: () => {
+        setIsDeleteDialogOpen(false);
+        navigate('/deals');
+      },
+    });
+  };
+
+  const handleCall = async () => {
+    if (!deal || !customerPhone) {
+      toaster.create({
+        title: 'No phone number',
+        description: 'The customer associated with this deal does not have a phone number.',
+        type: 'error',
+      });
+      return;
+    }
+
+    const customerId = deal.customer_id || (typeof deal.customer === 'number' ? deal.customer : null);
+    if (!customerId) {
+      toaster.create({
+        title: 'Customer not found',
+        description: 'Unable to find customer information for this deal.',
+        type: 'error',
+      });
+      return;
+    }
+
+    setIsCallInitiating(true);
+    
+    try {
+      const response = await twilioService.initiateCall(customerId);
+      
+      toaster.create({
+        title: 'Call Initiated',
+        description: `Calling customer at ${customerPhone}...`,
+        type: 'success',
+        duration: 5000,
+      });
+
+      console.log('Call initiated:', response);
+      
+    } catch (error: any) {
+      console.error('Error initiating call:', error);
+      
+      let errorMessage = 'Failed to initiate call. Please try again.';
+      let errorTitle = 'Call Failed';
+      
+      if (error.message) {
+        errorMessage = error.message;
+        
+        if (errorMessage.toLowerCase().includes('not verified') || 
+            errorMessage.toLowerCase().includes('unverified') ||
+            errorMessage.toLowerCase().includes('trial account')) {
+          errorTitle = 'Phone Number Not Verified';
+          errorMessage = `The number ${customerPhone} needs to be verified in your Twilio account.\n\nTrial accounts can only call verified numbers.\n\nVerify at: https://console.twilio.com/us1/develop/phone-numbers/manage/verified`;
+        }
+      }
+      
+      toaster.create({
+        title: errorTitle,
+        description: errorMessage,
+        type: 'error',
+        duration: 10000,
+      });
+    } finally {
+      setIsCallInitiating(false);
     }
   };
 
@@ -157,13 +245,13 @@ const DealDetailPage = () => {
           <Text color="gray.600" fontSize="md" mb={6}>
             The deal you are looking for does not exist.
           </Text>
-          <Button
-            colorPalette="purple"
+          <StandardButton
+            variant="primary"
             onClick={() => navigate('/deals')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2}>Back to Deals</Text>
-          </Button>
+            Back to Deals
+          </StandardButton>
         </Box>
       </DashboardLayout>
     );
@@ -174,31 +262,28 @@ const DealDetailPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Back Button and Actions */}
         <HStack justify="space-between" align="center">
-          <Button
+          <StandardButton
             variant="ghost"
-            colorPalette="gray"
             onClick={() => navigate('/deals')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2}>Back to Deals</Text>
-          </Button>
+            Back to Deals
+          </StandardButton>
           <HStack gap={2}>
-            <Button
+            <StandardButton
               variant="outline"
-              colorPalette="blue"
               onClick={handleEdit}
+              leftIcon={<FiEdit2 />}
             >
-              <FiEdit2 />
-              <Text ml={2}>Edit</Text>
-            </Button>
-            <IconButton
-              aria-label="Delete deal"
-              variant="outline"
-              colorPalette="red"
+              Edit
+            </StandardButton>
+            <StandardButton
+              variant="danger"
               onClick={handleDelete}
+              leftIcon={<FiTrash2 />}
             >
-              <FiTrash2 />
-            </IconButton>
+              Delete
+            </StandardButton>
           </HStack>
         </HStack>
 
@@ -522,38 +607,55 @@ const DealDetailPage = () => {
                 Quick Actions
               </Heading>
               <VStack align="stretch" gap={2}>
-                <Button
+                <StandardButton
                   variant="outline"
-                  colorPalette="purple"
                   w="full"
                   justifyContent="flex-start"
+                  leftIcon={<FiMail />}
                 >
-                  <FiMail />
-                  <Text ml={2}>Send Email</Text>
-                </Button>
-                <Button
+                  Send Email
+                </StandardButton>
+                <StandardButton
                   variant="outline"
-                  colorPalette="blue"
                   w="full"
                   justifyContent="flex-start"
+                  onClick={handleCall}
+                  disabled={!customerPhone || isCallInitiating}
+                  isLoading={isCallInitiating}
+                  leftIcon={<FiPhone />}
                 >
-                  <FiPhone />
-                  <Text ml={2}>Schedule Call</Text>
-                </Button>
-                <Button
+                  Make Call
+                </StandardButton>
+                <StandardButton
                   variant="outline"
-                  colorPalette="green"
                   w="full"
                   justifyContent="flex-start"
+                  leftIcon={<FiFileText />}
                 >
-                  <FiFileText />
-                  <Text ml={2}>Add Note</Text>
-                </Button>
+                  Add Note
+                </StandardButton>
               </VStack>
             </Box>
           </VStack>
         </Grid>
       </VStack>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={confirmDelete}
+        title="Delete Deal"
+        message={
+          deal
+            ? `Are you sure you want to delete deal "${deal.title}"? This action cannot be undone.`
+            : 'Are you sure you want to delete this deal?'
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+        colorScheme="red"
+        isLoading={deleteDeal.isPending}
+      />
     </DashboardLayout>
   );
 };

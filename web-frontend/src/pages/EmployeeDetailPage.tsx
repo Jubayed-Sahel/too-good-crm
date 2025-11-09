@@ -1,8 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, VStack, HStack, Button, Badge, Spinner } from '@chakra-ui/react';
+import { Box, Heading, Text, VStack, HStack, Badge, Spinner } from '@chakra-ui/react';
 import { FiArrowLeft, FiEdit, FiMail, FiPhone, FiMapPin, FiCalendar, FiUser } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { Card } from '../components/common';
+import { Card, StandardButton } from '../components/common';
 import { useEmployees } from '../hooks/useEmployees';
 
 const EmployeeDetailPage = () => {
@@ -47,13 +47,13 @@ const EmployeeDetailPage = () => {
           <Text color="gray.500" mb={4}>
             The employee you're looking for doesn't exist.
           </Text>
-          <Button
-            colorPalette="purple"
+          <StandardButton
+            variant="primary"
             onClick={() => navigate('/employees')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
             Back to Employees
-          </Button>
+          </StandardButton>
         </Card>
       </DashboardLayout>
     );
@@ -66,14 +66,13 @@ const EmployeeDetailPage = () => {
         <Card p={4}>
           <HStack justify="space-between" flexWrap="wrap" gap={3}>
             <HStack gap={3}>
-              <Button
+              <StandardButton
                 variant="ghost"
-                colorPalette="gray"
                 onClick={() => navigate('/employees')}
+                leftIcon={<FiArrowLeft />}
               >
-                <FiArrowLeft />
                 Back
-              </Button>
+              </StandardButton>
               <Box>
                 <Heading size="lg" color="gray.900">
                   {employee.first_name} {employee.last_name}
@@ -95,13 +94,13 @@ const EmployeeDetailPage = () => {
               >
                 {employee.status.replace('-', ' ')}
               </Badge>
-              <Button
-                colorPalette="purple"
+              <StandardButton
+                variant="primary"
                 onClick={() => navigate(`/employees/${employee.id}/edit`)}
+                leftIcon={<FiEdit />}
               >
-                <FiEdit />
                 Edit Employee
-              </Button>
+              </StandardButton>
             </HStack>
           </HStack>
         </Card>

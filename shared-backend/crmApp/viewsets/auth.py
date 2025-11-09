@@ -45,18 +45,26 @@ class UserViewSet(viewsets.ModelViewSet):
     
     def create(self, request, *args, **kwargs):
         """Register a new user and return token"""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        
-        # Create token for new user
-        token, created = Token.objects.get_or_create(user=user)
-        
-        return Response({
-            'user': UserSerializer(user).data,
-            'token': token.key,
-            'message': 'Registration successful'
-        }, status=status.HTTP_201_CREATED)
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            user = serializer.save()
+            
+            # Create token for new user
+            token, created = Token.objects.get_or_create(user=user)
+            
+            return Response({
+                'user': UserSerializer(user).data,
+                'token': token.key,
+                'message': 'Registration successful'
+            }, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Registration error: {type(e).__name__}: {str(e)}")
+            if hasattr(e, 'detail'):
+                print(f"Error detail: {e.detail}")
+            import traceback
+            traceback.print_exc()
+            raise
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
@@ -207,7 +215,17 @@ class LoginViewSet(viewsets.ViewSet):
         """
         Login endpoint - returns Token for authentication
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Log request data for debugging
+        logger.info(f"Login request received: {request.data}")
+        
         serializer = LoginSerializer(data=request.data, context={'request': request})
+        
+        if not serializer.is_valid():
+            logger.warning(f"Login validation failed: {serializer.errors}")
+        
         serializer.is_valid(raise_exception=True)
         
         user = serializer.validated_data['user']
@@ -218,6 +236,8 @@ class LoginViewSet(viewsets.ViewSet):
         
         # Get or create token
         token, created = Token.objects.get_or_create(user=user)
+        
+        logger.info(f"Login successful for user: {user.email}")
         
         return Response({
             'user': UserSerializer(user).data,

@@ -5,9 +5,9 @@
  * This component is responsible ONLY for rendering the UI.
  */
 import React from 'react';
-import { Box, Text, VStack, Button, HStack, Input } from '@chakra-ui/react';
+import { Box, Text, VStack, HStack, SimpleGrid } from '@chakra-ui/react';
 import { FiUserPlus } from 'react-icons/fi';
-import { Card } from '@/components/common';
+import { PageHeader, StandardButton, StandardCard } from '@/components/common';
 import EmployeeTable from './EmployeeTable';
 import type { Employee } from '@/services';
 
@@ -55,58 +55,58 @@ export const EmployeesPageContent: React.FC<EmployeesPageContentProps> = ({
 }) => {
   return (
     <VStack gap={5} align="stretch">
+      {/* Page Header */}
+      <PageHeader
+        title="Employees"
+        description="Manage your team members, roles, and permissions"
+        actions={
+          <StandardButton
+            variant="primary"
+            leftIcon={<FiUserPlus />}
+            onClick={onInviteEmployee}
+          >
+            Invite Employee
+          </StandardButton>
+        }
+      />
+
       {/* Stats Cards */}
-      <Box display="grid" gridTemplateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4}>
-        <Card p={5}>
+      <SimpleGrid columns={{ base: 1, md: 3 }} gap={5}>
+        <StandardCard>
           <VStack align="start" gap={2}>
-            <Text fontSize="sm" color="gray.600">Total Employees</Text>
+            <Text fontSize="sm" color="gray.600" fontWeight="medium" textTransform="uppercase" letterSpacing="wider">
+              Total Employees
+            </Text>
             <Text fontSize="3xl" fontWeight="bold" color="gray.900">
               {stats.total}
             </Text>
           </VStack>
-        </Card>
+        </StandardCard>
 
-        <Card p={5}>
+        <StandardCard>
           <VStack align="start" gap={2}>
-            <Text fontSize="sm" color="gray.600">Active</Text>
+            <Text fontSize="sm" color="gray.600" fontWeight="medium" textTransform="uppercase" letterSpacing="wider">
+              Active
+            </Text>
             <Text fontSize="3xl" fontWeight="bold" color="green.600">
               {stats.active}
             </Text>
           </VStack>
-        </Card>
+        </StandardCard>
 
-        <Card p={5}>
+        <StandardCard>
           <VStack align="start" gap={2}>
-            <Text fontSize="sm" color="gray.600">Departments</Text>
+            <Text fontSize="sm" color="gray.600" fontWeight="medium" textTransform="uppercase" letterSpacing="wider">
+              Departments
+            </Text>
             <Text fontSize="3xl" fontWeight="bold" color="purple.600">
               {stats.departments}
             </Text>
           </VStack>
-        </Card>
-      </Box>
+        </StandardCard>
+      </SimpleGrid>
 
-      {/* Filters */}
-      <Card p={4}>
-        <HStack gap={3} flexWrap="wrap">
-          {onSearchChange && (
-            <Input
-              placeholder="Search employees..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              size="md"
-              maxW="300px"
-            />
-          )}
-          <Box flex={1} />
-          <Button
-            colorPalette="purple"
-            onClick={onInviteEmployee}
-          >
-            <FiUserPlus />
-            Invite Employee
-          </Button>
-        </HStack>
-      </Card>
+      {/* Filters - Now handled by table or separate component */}
 
       {/* Employee Table */}
       <EmployeeTable

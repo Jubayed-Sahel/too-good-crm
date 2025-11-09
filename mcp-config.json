@@ -1,0 +1,53 @@
+{
+  "mcpServers": {
+    "django-crm": {
+      "command": "python",
+      "args": [
+        "shared-backend/mcp_server.py"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "DJANGO_SETTINGS_MODULE": "crmAdmin.settings"
+      }
+    },
+    "chakra-ui-assistant": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@chakra-ui/mcp-server"
+      ]
+    },
+    "edge-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@syunnrai/edge-devtools-mcp"
+      ],
+      "env": {
+        "EDGE_DEBUG_PORT": "9222",
+        "EDGE_DEBUG_HOST": "localhost",
+        "EDGE_HEADLESS": "false"
+      }
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "env": {
+        "CHROME_DEBUG_PORT": "9223",
+        "CHROME_DEBUG_HOST": "localhost",
+        "CHROME_HEADLESS": "false"
+      }
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    }
+  }
+}
+

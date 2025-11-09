@@ -14,7 +14,7 @@ export const semanticTokens = {
       color: '#15803D',     // Green 700
       border: '#BBF7D0',    // Green 200
     },
-    pending: {
+    prospect: {
       bg: '#FEF3C7',        // Yellow 100
       color: '#B45309',     // Yellow 700
       border: '#FDE68A',    // Yellow 200
@@ -23,6 +23,11 @@ export const semanticTokens = {
       bg: '#F3F4F6',        // Gray 100
       color: '#4B5563',     // Gray 600
       border: '#E5E7EB',    // Gray 200
+    },
+    vip: {
+      bg: '#FCE7F3',        // Pink 100
+      color: '#BE185D',     // Pink 700
+      border: '#FBCFE8',    // Pink 200
     },
   },
 

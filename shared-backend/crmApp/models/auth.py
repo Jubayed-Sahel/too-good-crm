@@ -60,16 +60,6 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
     two_factor_enabled = models.BooleanField(default=False)
     two_factor_secret = models.CharField(max_length=255, null=True, blank=True)
     
-    # Current organization context for multi-tenancy
-    current_organization = models.ForeignKey(
-        'Organization',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='current_users',
-        help_text='Currently active organization for this user'
-    )
-    
     objects = UserManager()
     
     USERNAME_FIELD = 'email'
@@ -89,25 +79,6 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
         if self.first_name and self.last_name:
             return f"{self.first_name} {self.last_name}"
         return self.username
-    
-    def get_profiles(self, organization_id=None):
-        """Get all user profiles, optionally filtered by organization."""
-        profiles = self.user_profiles.all()
-        if organization_id:
-            profiles = profiles.filter(organization_id=organization_id)
-        return profiles
-    
-    def has_profile_type(self, profile_type, organization_id=None):
-        """Check if user has a specific profile type."""
-        query = {'profile_type': profile_type, 'status': 'active'}
-        if organization_id:
-            query['organization_id'] = organization_id
-        return self.user_profiles.filter(**query).exists()
-    
-    def is_vendor(self, organization_id=None):
-        """Check if user has vendor profile."""
-        return self.has_profile_type('vendor', organization_id)
-    
     def is_employee(self, organization_id=None):
         """Check if user has employee profile."""
         return self.has_profile_type('employee', organization_id)

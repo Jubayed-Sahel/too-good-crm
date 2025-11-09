@@ -78,7 +78,7 @@ export interface CustomerNote {
   created_at: string;
 }
 
-export type CustomerStatus = 'active' | 'pending'  | 'inactive' 
+export type CustomerStatus = 'active' | 'inactive' | 'prospect' | 'vip' 
 // Deal types
 export interface Deal {
   id: number;

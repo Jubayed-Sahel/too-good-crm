@@ -10,6 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 from crmApp.models import Issue, Customer, Organization
 from crmApp.serializers import IssueSerializer
+from crmApp.services.linear_service import LinearService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -99,15 +100,48 @@ class ClientRaiseIssueView(APIView):
                 f"for organization {organization.name}"
             )
             
+            # Auto-sync to Linear if organization has Linear team configured
+            linear_data = None
+            linear_team_id = organization.linear_team_id or organization.settings.get('linear_team_id')
+            
+            if linear_team_id:
+                try:
+                    linear_service = LinearService()
+                    linear_data = linear_service.create_issue(
+                        team_id=linear_team_id,
+                        title=issue.title,
+                        description=issue.description or '',
+                        priority=linear_service.map_priority_to_linear(issue.priority)
+                    )
+                    
+                    # Update issue with Linear data
+                    issue.linear_issue_id = linear_data['id']
+                    issue.linear_issue_url = linear_data['url']
+                    issue.linear_team_id = linear_team_id
+                    issue.synced_to_linear = True
+                    issue.last_synced_at = timezone.now()
+                    issue.save()
+                    
+                    logger.info(
+                        f"Issue {issue.issue_number} auto-synced to Linear: {linear_data['url']}"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to auto-sync issue to Linear: {str(e)}")
+                    # Don't fail the request if Linear sync fails - issue is still created
+                    linear_data = None
+            
             # Return issue details
             serializer = IssueSerializer(issue)
-            return Response(
-                {
-                    'message': 'Issue raised successfully',
-                    'issue': serializer.data
-                },
-                status=status.HTTP_201_CREATED
-            )
+            response_data = {
+                'message': 'Issue raised successfully',
+                'issue': serializer.data
+            }
+            
+            if linear_data:
+                response_data['linear_data'] = linear_data
+                response_data['message'] += ' and synced to Linear'
+            
+            return Response(response_data, status=status.HTTP_201_CREATED)
                 
         except Exception as e:
             logger.error(f"Error raising client issue: {str(e)}", exc_info=True)

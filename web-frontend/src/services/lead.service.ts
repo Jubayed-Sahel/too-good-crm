@@ -56,10 +56,11 @@ class LeadService {
 
   /**
    * Convert lead to customer/deal
+   * Returns response with customer_id and lead data
    */
-  async convertLead(id: string | number, data: ConvertLeadData): Promise<Lead> {
+  async convertLead(id: string | number, data: ConvertLeadData): Promise<{ customer_id: number; lead: Lead; message: string }> {
     const url = API_CONFIG.ENDPOINTS.LEADS.CONVERT(id);
-    return api.post<Lead>(url, data);
+    return api.post<{ customer_id: number; lead: Lead; message: string }>(url, data);
   }
 
   /**

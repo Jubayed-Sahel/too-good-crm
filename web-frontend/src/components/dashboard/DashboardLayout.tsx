@@ -37,7 +37,8 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
           pt={{ base: '68px', md: 5 }}
           maxW="100%" 
           width="100%"
-        >          <Box 
+        >
+          <Box 
             bg="transparent"
             minH="calc(100vh - 150px)"
             maxW="1600px"

@@ -15,13 +15,13 @@ export interface ProfileContextType {
   activeOrganizationId: number | null;
   isLoading: boolean;
   switchProfile: (profileId: number) => void;
-  refreshProfiles: () => void;
+  refreshProfiles: () => Promise<void>;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [activeProfile, setActiveProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -79,6 +79,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     fetchProfiles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const switchProfile = async (profileId: number) => {
@@ -93,8 +94,20 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const refreshProfiles = () => {
-    fetchProfiles();
+  const refreshProfiles = async () => {
+    // Refresh user data from API to get latest profiles
+    try {
+      if (refreshUser) {
+        await refreshUser();
+        // fetchProfiles will be called automatically via useEffect when user changes
+      } else {
+        fetchProfiles();
+      }
+    } catch (error) {
+      console.error('Failed to refresh profiles:', error);
+      // Fallback to just refreshing from current user data
+      fetchProfiles();
+    }
   };
 
   const contextValue: ProfileContextType = {

@@ -1,30 +1,83 @@
 /**
  * Authentication hook
  */
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, roleSelectionService } from '@/services';
 import { ROUTES } from '@/config/constants';
 import type { User, LoginCredentials, RegisterData } from '@/types';
 
+// Global state to prevent multiple simultaneous refresh calls
+let initializationPromise: Promise<User | null> | null = null;
+
+// Initialize auth state once globally
+const initializeAuthState = (): Promise<User | null> => {
+  // If already initializing, return existing promise
+  if (initializationPromise) {
+    return initializationPromise;
+  }
+
+  // Create and store the promise immediately to prevent race conditions
+  initializationPromise = (async () => {
+    const authenticated = authService.isAuthenticated();
+    
+    if (authenticated) {
+      try {
+        if (import.meta.env.DEV) {
+          console.log('[useAuth] Refreshing user data from API...');
+        }
+        const currentUser = await authService.refreshUser();
+        if (import.meta.env.DEV) {
+          console.log('[useAuth] User data refreshed:', {
+            profiles: currentUser.profiles?.length || 0,
+            primaryProfile: currentUser.primaryProfile?.profile_type,
+          });
+        }
+        return currentUser;
+      } catch (error) {
+        // If refresh fails, fall back to localStorage
+        console.warn('[useAuth] Failed to refresh user data, using cached data:', error);
+        return authService.getCurrentUser();
+      } finally {
+        // Clear promise after a short delay to allow all instances to read the result
+        setTimeout(() => {
+          initializationPromise = null;
+        }, 100);
+      }
+    } else {
+      initializationPromise = null;
+      return null;
+    }
+  })();
+
+  return initializationPromise;
+};
+
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // Check if user is authenticated on mount
-    const checkAuth = () => {
-      const authenticated = authService.isAuthenticated();
-      const currentUser = authService.getCurrentUser();
-
-      setIsAuthenticated(authenticated);
-      setUser(currentUser);
-      setIsLoading(false);
+  React.useEffect(() => {
+    // Initialize auth state - all instances will share the same promise
+    const loadAuthState = async () => {
+      try {
+        const currentUser = await initializeAuthState();
+        setUser(currentUser);
+        setIsAuthenticated(!!currentUser);
+      } catch (error) {
+        // Fallback to localStorage
+        const authenticated = authService.isAuthenticated();
+        const currentUser = authenticated ? authService.getCurrentUser() : null;
+        setUser(currentUser);
+        setIsAuthenticated(!!currentUser);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    checkAuth();
+    loadAuthState();
   }, []);
 
   const handlePostAuth = async (authUser: User) => {
@@ -35,22 +88,25 @@ export const useAuth = () => {
   const navigateToDefaultRoute = (authUser: User) => {
     const primaryProfile = authUser.primaryProfile || authUser.profiles?.[0];
     
-    if (!primaryProfile) {
-      navigate(ROUTES.DASHBOARD);
-      return;
+    let targetRoute = ROUTES.DASHBOARD;
+    
+    if (primaryProfile) {
+      // Navigate based on profile type
+      switch (primaryProfile.profile_type) {
+        case 'customer':
+          targetRoute = '/client/dashboard';
+          break;
+        case 'vendor':
+        case 'employee':
+        default:
+          targetRoute = ROUTES.DASHBOARD;
+          break;
+      }
     }
-
-    // Navigate based on profile type
-    switch (primaryProfile.profile_type) {
-      case 'customer':
-        navigate('/client/dashboard');
-        break;
-      case 'vendor':
-      case 'employee':
-      default:
-        navigate(ROUTES.DASHBOARD);
-        break;
-    }
+    
+    // Use hard redirect to ensure auth state is properly set
+    // This prevents race conditions with React state updates
+    window.location.href = targetRoute;
   };
 
   const login = async (credentials: LoginCredentials) => {
@@ -163,6 +219,17 @@ export const useAuth = () => {
     return user;
   };
 
+  const refreshUser = async () => {
+    try {
+      const updatedUser = await authService.refreshUser();
+      setUser(updatedUser);
+      return updatedUser;
+    } catch (error) {
+      console.error('Failed to refresh user data:', error);
+      throw error;
+    }
+  };
+
   return {
     user,
     isAuthenticated,
@@ -171,5 +238,6 @@ export const useAuth = () => {
     register,
     logout,
     switchRole,
+    refreshUser,
   };
 };

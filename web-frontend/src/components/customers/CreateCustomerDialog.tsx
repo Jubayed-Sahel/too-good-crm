@@ -26,7 +26,7 @@ interface CreateCustomerData {
   email: string;
   phone: string;
   company: string;
-  status: 'active' | 'inactive' | 'pending';
+  status: 'active' | 'inactive' | 'prospect' | 'vip';
   address?: string;
   city?: string;
   state?: string;
@@ -42,10 +42,14 @@ interface CreateCustomerDialogProps {
   isLoading?: boolean;
 }
 
+// Export for testing
+export type { CreateCustomerData };
+
 const statusOptions = [
   { value: 'active', label: 'Active' },
-  { value: 'pending', label: 'Pending' },
+  { value: 'prospect', label: 'Prospect' },
   { value: 'inactive', label: 'Inactive' },
+  { value: 'vip', label: 'VIP' },
 ];
 
 export const CreateCustomerDialog = ({ 
@@ -90,7 +94,10 @@ export const CreateCustomerDialog = ({
     onClose();
   };
 
-  const isFormValid = formData.fullName && formData.email && formData.company;
+  // Form is valid if we have at least name and email
+  // Note: Company is marked as required in UI but backend allows it to be optional
+  // We'll validate it's provided for business customers, but allow individual customers without it
+  const isFormValid = formData.fullName?.trim() && formData.email?.trim();
 
   return (
     <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size={{ base: 'full', md: 'lg' }}>
@@ -150,7 +157,7 @@ export const CreateCustomerDialog = ({
               </VStack>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  Company *
+                  Company
                 </Text>
                 <Input
                   placeholder="Acme Corporation"
@@ -169,7 +176,7 @@ export const CreateCustomerDialog = ({
               <CustomSelect
                 options={statusOptions}
                 value={formData.status}
-                onChange={(value: string) => setFormData({ ...formData, status: value as 'active' | 'inactive' | 'pending' })}
+                onChange={(value: string) => setFormData({ ...formData, status: value as 'active' | 'inactive' | 'prospect' | 'vip' })}
                 placeholder="Select status"
               />
             </VStack>

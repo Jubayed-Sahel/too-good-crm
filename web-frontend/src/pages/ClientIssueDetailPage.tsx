@@ -8,12 +8,12 @@ import {
   HStack,
   Grid,
   Badge,
-  Button,
-  IconButton,
   Textarea,
 } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
-import { Card } from '../components/common';
+import { Card, StandardButton, ConfirmDialog } from '../components/common';
+import { issueService } from '../services/issue.service';
+import api from '../lib/apiClient';
 import {
   FiArrowLeft,
   FiCheckCircle,
@@ -78,6 +78,8 @@ const ClientIssueDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [newComment, setNewComment] = useState('');
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   // Mock data - replace with actual hook
   const issue = mockIssues.find((i) => i.id === id);
@@ -117,40 +119,89 @@ const ClientIssueDetailPage = () => {
     });
   };
 
-  const handleComplete = () => {
-    toaster.create({
-      title: 'Issue Completed',
-      description: 'Issue has been marked as complete.',
-      type: 'success',
-      duration: 3000,
-    });
-    // In real app, make API call to update status
+  const handleComplete = async () => {
+    if (!issue) return;
+    
+    try {
+      // Update issue status to resolved
+      await issueService.update(Number(issue.id), { status: 'resolved' });
+      
+      toaster.create({
+        title: 'Issue Completed',
+        description: 'Issue has been marked as complete.',
+        type: 'success',
+        duration: 3000,
+      });
+      
+      // Refresh page to show updated status
+      window.location.reload();
+    } catch (error: any) {
+      toaster.create({
+        title: 'Failed to complete issue',
+        description: error.message || 'Please try again.',
+        type: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const handleDelete = () => {
     if (!issue) return;
-    if (confirm(`Are you sure you want to delete issue "${issue.title}"?`)) {
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!issue) return;
+    
+    try {
+      await issueService.delete(Number(issue.id));
+      
       toaster.create({
         title: 'Issue Deleted',
         description: `Issue "${issue.title}" has been deleted.`,
-        type: 'info',
+        type: 'success',
         duration: 3000,
       });
+      setIsDeleteDialogOpen(false);
       navigate('/client/issues');
+    } catch (error: any) {
+      toaster.create({
+        title: 'Failed to delete issue',
+        description: error.message || 'Please try again.',
+        type: 'error',
+        duration: 3000,
+      });
     }
   };
 
-  const handleAddComment = () => {
-    if (!newComment.trim()) return;
+  const handleAddComment = async () => {
+    if (!newComment.trim() || !issue) return;
     
-    toaster.create({
-      title: 'Comment Added',
-      description: 'Your comment has been added successfully.',
-      type: 'success',
-      duration: 3000,
-    });
-    setNewComment('');
-    // In real app, make API call to add comment
+    setIsSubmittingComment(true);
+    try {
+      // Call the client issue comment endpoint
+      await issueService.clientAddComment(Number(issue.id), newComment);
+      
+      toaster.create({
+        title: 'Comment Added',
+        description: 'Your comment has been added successfully.',
+        type: 'success',
+        duration: 3000,
+      });
+      setNewComment('');
+      
+      // Refresh page to show updated issue with comment
+      window.location.reload();
+    } catch (error: any) {
+      toaster.create({
+        title: 'Failed to add comment',
+        description: error.message || 'Please try again.',
+        type: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setIsSubmittingComment(false);
+    }
   };
 
   if (isLoading) {
@@ -190,13 +241,13 @@ const ClientIssueDetailPage = () => {
           <Text color="gray.600" fontSize="md" mb={6}>
             The issue you are looking for does not exist.
           </Text>
-          <Button
-            colorPalette="blue"
+          <StandardButton
+            variant="primary"
             onClick={() => navigate('/client/issues')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2}>Back to Issues</Text>
-          </Button>
+            Back to Issues
+          </StandardButton>
         </Box>
       </DashboardLayout>
     );
@@ -207,31 +258,28 @@ const ClientIssueDetailPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Back Button and Actions */}
         <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
-          <Button
+          <StandardButton
             variant="ghost"
-            colorPalette="gray"
             onClick={() => navigate('/client/issues')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2}>Back to Issues</Text>
-          </Button>
+            Back to Issues
+          </StandardButton>
           <HStack gap={2}>
-            <Button
-              variant="solid"
-              colorPalette="green"
+            <StandardButton
+              variant="primary"
               onClick={handleComplete}
+              leftIcon={<FiCheckCircle />}
             >
-              <FiCheckCircle />
-              <Text ml={2}>Mark as Complete</Text>
-            </Button>
-            <IconButton
-              aria-label="Delete issue"
-              variant="outline"
-              colorPalette="red"
+              Mark as Complete
+            </StandardButton>
+            <StandardButton
+              variant="danger"
               onClick={handleDelete}
+              leftIcon={<FiTrash2 />}
             >
-              <FiTrash2 />
-            </IconButton>
+              Delete
+            </StandardButton>
           </HStack>
         </HStack>
 
@@ -528,19 +576,36 @@ const ClientIssueDetailPage = () => {
                   size="lg"
                 />
                 <HStack justify="flex-end">
-                  <Button
-                    colorPalette="blue"
+                  <StandardButton
+                    variant="primary"
                     onClick={handleAddComment}
-                    disabled={!newComment.trim()}
+                    disabled={!newComment.trim() || isSubmittingComment}
+                    isLoading={isSubmittingComment}
+                    leftIcon={<FiMessageSquare />}
                   >
-                    <FiMessageSquare />
-                    <Text ml={2}>Add Comment</Text>
-                  </Button>
+                    Add Comment
+                  </StandardButton>
                 </HStack>
               </VStack>
             </Box>
           </VStack>
         </Card>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={confirmDelete}
+          title="Delete Issue"
+          message={
+            issue
+              ? `Are you sure you want to delete issue "${issue.title}"? This action cannot be undone.`
+              : 'Are you sure you want to delete this issue?'
+          }
+          confirmText="Delete"
+          cancelText="Cancel"
+          colorScheme="red"
+        />
       </VStack>
     </DashboardLayout>
   );
