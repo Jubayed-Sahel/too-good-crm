@@ -24,9 +24,12 @@ class CustomerRepository {
         return try {
             val response = apiService.createCustomer(request)
             if (response.isSuccessful && response.body()?.success == true) {
-                response.body()?.data?.let {
-                    Result.success(it)
-                } ?: Result.failure(Exception("No customer data returned"))
+                val customerData = response.body()?.data
+                if (customerData != null) {
+                    Result.success(customerData)
+                } else {
+                    Result.failure(Exception("No customer data returned"))
+                }
             } else {
                 Result.failure(Exception(response.body()?.message ?: "Failed to create customer"))
             }
@@ -39,9 +42,12 @@ class CustomerRepository {
         return try {
             val response = apiService.updateCustomer(id.toString(), request)
             if (response.isSuccessful && response.body()?.success == true) {
-                response.body()?.data?.let {
-                    Result.success(it)
-                } ?: Result.failure(Exception("No customer data returned"))
+                val customerData = response.body()?.data
+                if (customerData != null) {
+                    Result.success(customerData)
+                } else {
+                    Result.failure(Exception("No customer data returned"))
+                }
             } else {
                 Result.failure(Exception(response.body()?.message ?: "Failed to update customer"))
             }
