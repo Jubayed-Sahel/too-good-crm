@@ -1,11 +1,13 @@
 import React from 'react';
-import { Box, Heading, Text, VStack } from '@chakra-ui/react';
+import { VStack, Button, HStack } from '@chakra-ui/react';
+import { FiPlus } from 'react-icons/fi';
 import {
   CustomerTable,
   CustomerFilters,
   CustomerStats,
   CreateCustomerDialog,
 } from '@/components/customers';
+import { PageHeader, StandardButton } from '@/components/common';
 import type { MappedCustomer, CustomerStats as Stats } from '@/hooks/useCustomersPage';
 
 /**
@@ -74,14 +76,19 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
   return (
     <VStack gap={5} align="stretch">
       {/* Page Header */}
-      <Box>
-        <Heading size="xl" mb={2}>
-          Customers
-        </Heading>
-        <Text color="gray.600" fontSize="sm">
-          Manage your customer relationships and track interactions
-        </Text>
-      </Box>
+      <PageHeader
+        title="Customers"
+        description="Manage your customer relationships, track interactions, and monitor customer activity"
+        actions={
+          <StandardButton
+            variant="primary"
+            leftIcon={<FiPlus />}
+            onClick={onAddCustomer}
+          >
+            Add Customer
+          </StandardButton>
+        }
+        />
 
       {/* Stats Cards */}
       <CustomerStats {...stats} />

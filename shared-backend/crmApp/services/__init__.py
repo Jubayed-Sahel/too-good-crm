@@ -11,6 +11,9 @@ from .lead_service import LeadService
 from .deal_service import DealService
 from .analytics_service import AnalyticsService
 from .rbac_service import RBACService
+from .twilio_service import twilio_service
+from .linear_service import LinearService
+from .issue_linear_service import IssueLinearService
 
 __all__ = [
     'AuthService',
@@ -19,4 +22,7 @@ __all__ = [
     'DealService',
     'AnalyticsService',
     'RBACService',
+    'twilio_service',
+    'LinearService',
+    'IssueLinearService',
 ]

@@ -4,8 +4,16 @@ Handles all Twilio-related operations for VOIP calling
 """
 import logging
 from django.conf import settings
-from twilio.rest import Client
-from twilio.base.exceptions import TwilioRestException
+
+# Optional import - Twilio may not be installed
+try:
+    from twilio.rest import Client
+    from twilio.base.exceptions import TwilioRestException
+    TWILIO_AVAILABLE = True
+except ImportError:
+    TWILIO_AVAILABLE = False
+    Client = None
+    TwilioRestException = Exception
 
 logger = logging.getLogger(__name__)
 

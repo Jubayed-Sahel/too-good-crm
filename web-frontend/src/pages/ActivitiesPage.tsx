@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
+import { VStack, Box, Spinner } from '@chakra-ui/react';
+import { FiPlus } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { toaster } from '../components/ui/toaster';
-import { ConfirmDialog } from '../components/common';
+import { ConfirmDialog, PageHeader, StandardButton } from '../components/common';
 import { useAccountMode } from '@/contexts/AccountModeContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { ActivityStatsCards } from '../components/activities/ActivityStatsCards';
@@ -334,14 +335,19 @@ export const ActivitiesPage = () => {
     <DashboardLayout title="Activities">
       <VStack align="stretch" gap={5}>
         {/* Page Header */}
-        <Box>
-          <Heading size="xl" color="gray.900" mb={2}>
-            Activities
-          </Heading>
-          <Text fontSize="sm" color="gray.600">
-            Manage calls, emails, Telegram messages, and other activities
-          </Text>
-        </Box>
+        <PageHeader
+          title="Activities"
+          description="Manage calls, emails, Telegram messages, and other activities"
+          actions={
+            <StandardButton
+              variant="primary"
+              leftIcon={<FiPlus />}
+              onClick={handleNewActivity}
+            >
+              New Activity
+            </StandardButton>
+          }
+        />
 
         {/* Stats Cards */}
         <ActivityStatsCards {...displayStats} />

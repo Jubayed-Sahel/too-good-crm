@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -7,9 +8,7 @@ import {
   HStack,
   Grid,
   Badge,
-  Button,
   Spinner,
-  IconButton,
 } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
@@ -25,45 +24,57 @@ import {
   FiActivity,
   FiFileText,
 } from 'react-icons/fi';
-import { useCustomers } from '@/hooks';
-import { useMemo } from 'react';
+import { StandardButton, ConfirmDialog } from '@/components/common';
+import { SendEmailDialog, type EmailData } from '@/components/activities/SendEmailDialog';
+import twilioService from '@/services/twilio.service';
+import { activityService } from '@/services/activity.service';
+import { toaster } from '@/components/ui/toaster';
+import { useCustomer, useDeleteCustomer } from '@/hooks/useCustomers';
+import { useProfile } from '@/contexts/ProfileContext';
 
 const CustomerDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, isLoading, error } = useCustomers();
+  
+  // Use useCustomer hook to fetch single customer
+  const customerId = id ? parseInt(id) : 0;
+  const { data: customerData, isLoading, error } = useCustomer(customerId);
+  const deleteCustomer = useDeleteCustomer();
+  const { activeOrganizationId } = useProfile();
+  
+  // State for dialogs
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isCallInitiating, setIsCallInitiating] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  // Find the customer by ID - now uses full mock data with activities, notes, etc.
+  // Transform customer data for display
   const customer = useMemo(() => {
-    if (!customers || !id) return null;
+    if (!customerData) return null;
     
-    const found = customers.find((c) => c.id.toString() === id) as any;
-    if (!found) return null;
-
-    // Return the full customer object with all mock data fields
     return {
-      id: found.id.toString(),
-      name: found.full_name,
-      email: found.email,
-      phone: found.phone || '',
-      company: found.company || '',
-      website: found.website || '',
-      address: found.address || '',
-      city: found.city || '',
-      state: found.state || '',
-      country: found.country || '',
-      status: (found.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'pending',
-      job_title: found.job_title || '',
-      industry: found.industry || '',
-      source: found.source || '',
-      notes: found.notes || '',
-      tags: found.tags || [],
-      totalValue: found.total_value || 0,
-      lifetimeValue: found.lifetime_value || 0,
-      lastContact: found.last_contact || found.updated_at || found.created_at,
-      created_at: found.created_at,
+      id: customerData.id.toString(),
+      name: customerData.full_name || customerData.name || '',
+      email: customerData.email || '',
+      phone: customerData.phone || '',
+      company: customerData.company || customerData.company_name || '',
+      website: customerData.website || '',
+      address: customerData.address || '',
+      city: customerData.city || '',
+      state: customerData.state || '',
+      country: customerData.country || '',
+      status: (customerData.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'prospect' | 'vip',
+      job_title: customerData.job_title || '',
+      industry: customerData.industry || '',
+      source: customerData.source || '',
+      notes: customerData.notes || '',
+      tags: customerData.tags || [],
+      totalValue: customerData.total_value || 0,
+      lifetimeValue: customerData.lifetime_value || 0,
+      lastContact: customerData.updated_at || customerData.created_at,
+      created_at: customerData.created_at,
     };
-  }, [customers, id]);
+  }, [customerData]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -96,17 +107,146 @@ const CustomerDetailPage = () => {
   };
 
   const handleEdit = () => {
-    // TODO: Implement edit functionality
-    alert(`Edit customer: ${customer?.name}`);
+    if (!customer) return;
+    navigate(`/customers/${customer.id}/edit`);
   };
 
   const handleDelete = () => {
     if (!customer) return;
-    if (confirm(`Are you sure you want to delete ${customer.name}?`)) {
-      // TODO: Implement delete functionality
-      alert(`Customer ${customer.name} deleted`);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!customerId) return;
+    
+    try {
+      await deleteCustomer.mutateAsync(customerId);
+      setIsDeleteDialogOpen(false);
+      
+      toaster.create({
+        title: 'Customer deleted',
+        description: 'Customer has been deleted successfully.',
+        type: 'success',
+      });
+      
+      // Navigate to customers list
       navigate('/customers');
+    } catch (error: any) {
+      toaster.create({
+        title: 'Failed to delete customer',
+        description: error.message || 'Please try again.',
+        type: 'error',
+      });
     }
+  };
+
+  const handleSendEmail = () => {
+    if (!customer) return;
+    setIsEmailDialogOpen(true);
+  };
+
+  const handleEmailSubmit = async (data: EmailData) => {
+    if (!customer || !activeOrganizationId) {
+      toaster.create({
+        title: 'Unable to send email',
+        description: 'Customer or organization information not found.',
+        type: 'error',
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      // Create email activity via ActivityService
+      // Organization is automatically set by backend based on user's active organization
+      await activityService.create({
+        activity_type: 'email',
+        title: data.subject,
+        description: data.body,
+        customer: customer.id,
+        email_subject: data.subject,
+        email_body: data.body,
+        status: 'completed',
+      });
+
+      toaster.create({
+        title: 'Email sent successfully',
+        description: `Email sent to ${data.emailAddress}`,
+        type: 'success',
+        duration: 3000,
+      });
+      setIsEmailDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toaster.create({
+        title: 'Failed to send email',
+        description: error.message || error.response?.data?.detail || 'Please try again',
+        type: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleCall = async () => {
+    if (!customer || !customer.phone) {
+      toaster.create({
+        title: 'No phone number',
+        description: 'This customer does not have a phone number.',
+        type: 'error',
+      });
+      return;
+    }
+
+    if (!id) return;
+
+    setIsCallInitiating(true);
+    
+    try {
+      const response = await twilioService.initiateCall(parseInt(id));
+      
+      toaster.create({
+        title: 'Call Initiated',
+        description: `Calling ${customer.name} at ${customer.phone}...`,
+        type: 'success',
+        duration: 5000,
+      });
+
+      console.log('Call initiated:', response);
+      
+    } catch (error: any) {
+      console.error('Error initiating call:', error);
+      
+      let errorMessage = 'Failed to initiate call. Please try again.';
+      let errorTitle = 'Call Failed';
+      
+      if (error.message) {
+        errorMessage = error.message;
+        
+        if (errorMessage.toLowerCase().includes('not verified') || 
+            errorMessage.toLowerCase().includes('unverified') ||
+            errorMessage.toLowerCase().includes('trial account')) {
+          errorTitle = 'Phone Number Not Verified';
+          errorMessage = `The number ${customer.phone} needs to be verified in your Twilio account.\n\nTrial accounts can only call verified numbers.\n\nVerify at: https://console.twilio.com/us1/develop/phone-numbers/manage/verified`;
+        }
+      }
+      
+      toaster.create({
+        title: errorTitle,
+        description: errorMessage,
+        type: 'error',
+        duration: 10000,
+      });
+    } finally {
+      setIsCallInitiating(false);
+    }
+  };
+
+  const handleCreateDeal = () => {
+    if (!customer) return;
+    // Navigate to deals page - user can create a deal there and select this customer
+    navigate('/deals');
   };
 
   if (isLoading) {
@@ -147,13 +287,13 @@ const CustomerDetailPage = () => {
           <Text color="gray.600" fontSize="md" mb={6}>
             {error?.message || 'The customer you are looking for does not exist.'}
           </Text>
-          <Button
-            colorPalette="purple"
+          <StandardButton
+            variant="primary"
             onClick={() => navigate('/customers')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2}>Back to Customers</Text>
-          </Button>
+            Back to Customers
+          </StandardButton>
         </Box>
       </DashboardLayout>
     );
@@ -164,31 +304,28 @@ const CustomerDetailPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Back Button and Actions */}
         <HStack justify="space-between" align="center">
-          <Button
+          <StandardButton
             variant="ghost"
-            colorPalette="gray"
             onClick={() => navigate('/customers')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2}>Back to Customers</Text>
-          </Button>
+            Back to Customers
+          </StandardButton>
           <HStack gap={2}>
-            <Button
+            <StandardButton
               variant="outline"
-              colorPalette="blue"
               onClick={handleEdit}
+              leftIcon={<FiEdit2 />}
             >
-              <FiEdit2 />
-              <Text ml={2}>Edit</Text>
-            </Button>
-            <IconButton
-              aria-label="Delete customer"
-              variant="outline"
-              colorPalette="red"
+              Edit
+            </StandardButton>
+            <StandardButton
+              variant="danger"
               onClick={handleDelete}
+              leftIcon={<FiTrash2 />}
             >
-              <FiTrash2 />
-            </IconButton>
+              Delete
+            </StandardButton>
           </HStack>
         </HStack>
 
@@ -530,37 +667,72 @@ const CustomerDetailPage = () => {
                 Quick Actions
               </Heading>
               <VStack align="stretch" gap={2}>
-                <Button
+                <StandardButton
                   variant="outline"
-                  colorPalette="purple"
                   w="full"
                   justifyContent="flex-start"
+                  onClick={handleSendEmail}
+                  leftIcon={<FiMail />}
                 >
-                  <FiMail />
-                  <Text ml={2}>Send Email</Text>
-                </Button>
-                <Button
+                  Send Email
+                </StandardButton>
+                <StandardButton
                   variant="outline"
-                  colorPalette="blue"
                   w="full"
                   justifyContent="flex-start"
+                  onClick={handleCall}
+                  disabled={!customer?.phone || isCallInitiating}
+                  isLoading={isCallInitiating}
+                  leftIcon={<FiPhone />}
                 >
-                  <FiPhone />
-                  <Text ml={2}>Make Call</Text>
-                </Button>
-                <Button
+                  Make Call
+                </StandardButton>
+                <StandardButton
                   variant="outline"
-                  colorPalette="green"
                   w="full"
                   justifyContent="flex-start"
+                  onClick={handleCreateDeal}
+                  leftIcon={<FiFileText />}
                 >
-                  <FiFileText />
-                  <Text ml={2}>Create Deal</Text>
-                </Button>
+                  Create Deal
+                </StandardButton>
               </VStack>
             </Box>
           </VStack>
         </Grid>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={confirmDelete}
+          title="Delete Customer"
+          message={
+            customer
+              ? `Are you sure you want to delete customer "${customer.name}"? This action cannot be undone.`
+              : 'Are you sure you want to delete this customer?'
+          }
+          confirmText="Delete"
+          cancelText="Cancel"
+          colorScheme="red"
+          isLoading={deleteCustomer.isPending}
+        />
+
+        {/* Send Email Dialog */}
+        <SendEmailDialog
+          open={isEmailDialogOpen}
+          onClose={() => setIsEmailDialogOpen(false)}
+          onSubmit={handleEmailSubmit}
+          initialCustomer={
+            customer
+              ? {
+                  id: parseInt(customer.id),
+                  name: customer.name,
+                  email: customer.email,
+                }
+              : undefined
+          }
+        />
       </VStack>
     </DashboardLayout>
   );

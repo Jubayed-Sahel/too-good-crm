@@ -22,6 +22,14 @@ class Organization(TimestampedModel, AddressMixin):
     # Settings stored as JSON
     settings = models.JSONField(default=dict, blank=True)
     
+    # Linear Integration
+    linear_team_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text='Linear team ID for issue tracking'
+    )
+    
     # Subscription and billing
     subscription_plan = models.CharField(max_length=50, default='free')
     subscription_status = models.CharField(max_length=50, default='active')

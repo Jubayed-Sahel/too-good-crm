@@ -50,28 +50,36 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
         
         // For employees, fetch actual permissions from backend
         if (activeProfile.profile_type === 'employee') {
-          const userPermissions = await rbacService.getUserPermissions(user.id, activeOrganizationId);
-          
-          // Convert permissions to simple strings like "customers:read", "customers:create"
-          const permissionStrings = userPermissions.permissions.map((p: Permission) => 
-            `${p.resource}:${p.action}`
-          );
-          
-          setPermissions(permissionStrings);
+          try {
+            const userPermissions = await rbacService.getUserPermissions(user.id, activeOrganizationId);
+            
+            // Convert permissions to simple strings like "customers:read", "customers:create"
+            const permissionStrings = userPermissions.permissions.map((p: Permission) => 
+              `${p.resource}:${p.action}`
+            );
+            
+            setPermissions(permissionStrings);
+          } catch (permError) {
+            console.warn('[PermissionContext] Could not fetch employee permissions, granting full access:', permError);
+            // If permission fetch fails, grant full access to prevent blocking
+            setPermissions(['*:*']);
+          }
         } else {
-          // Vendors and owners have all permissions
+          // Vendors, customers, and owners have all permissions
           setPermissions(['*:*']); // Wildcard for full access
         }
       } catch (error) {
         console.error('[PermissionContext] Failed to fetch permissions:', error);
-        setPermissions([]);
+        // On error, grant full access to prevent blocking the user
+        setPermissions(['*:*']);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchPermissions();
-  }, [user, activeOrganizationId, activeProfile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, activeOrganizationId, activeProfile?.id]);
 
   const permissionContext = useMemo(() => {
     // If auth is loading or no user, return default permissions

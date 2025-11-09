@@ -18,12 +18,12 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ErrorBoundary>
-      <ChakraProvider value={system}>
+    <ChakraProvider value={system}>
+      <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <App />
         </QueryClientProvider>
-      </ChakraProvider>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </ChakraProvider>
   </StrictMode>,
 )

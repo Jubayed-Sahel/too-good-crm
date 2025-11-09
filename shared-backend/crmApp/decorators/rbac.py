@@ -30,21 +30,23 @@ def require_permission(resource, action):
     def decorator(view_func):
         @wraps(view_func)
         def wrapped_view(self, request, *args, **kwargs):
-            # Get user's organization
-            user_org = request.user.user_organizations.filter(
-                is_active=True
-            ).first()
+            # Get organization from active profile (set by middleware)
+            organization = None
+            if hasattr(request.user, 'current_organization') and request.user.current_organization:
+                organization = request.user.current_organization
+            elif hasattr(request.user, 'active_profile') and request.user.active_profile:
+                organization = request.user.active_profile.organization
             
-            if not user_org:
+            if not organization:
                 return Response(
-                    {'error': 'User must belong to an organization'},
+                    {'error': 'User must have an active profile with an organization'},
                     status=status.HTTP_403_FORBIDDEN
                 )
             
             # Check permission using RBACService
             has_permission = RBACService.check_permission(
                 user=request.user,
-                organization=user_org.organization,
+                organization=organization,
                 resource=resource,
                 action=action
             )
@@ -53,7 +55,8 @@ def require_permission(resource, action):
                 return Response(
                     {
                         'error': f'Permission denied. Required: {resource}:{action}',
-                        'required_permission': f'{resource}:{action}'
+                        'required_permission': f'{resource}:{action}',
+                        'profile_type': request.user.active_profile.profile_type if hasattr(request.user, 'active_profile') and request.user.active_profile else None
                     },
                     status=status.HTTP_403_FORBIDDEN
                 )
@@ -84,14 +87,16 @@ def require_any_permission(*permission_pairs):
     def decorator(view_func):
         @wraps(view_func)
         def wrapped_view(self, request, *args, **kwargs):
-            # Get user's organization
-            user_org = request.user.user_organizations.filter(
-                is_active=True
-            ).first()
+            # Get organization from active profile (set by middleware)
+            organization = None
+            if hasattr(request.user, 'current_organization') and request.user.current_organization:
+                organization = request.user.current_organization
+            elif hasattr(request.user, 'active_profile') and request.user.active_profile:
+                organization = request.user.active_profile.organization
             
-            if not user_org:
+            if not organization:
                 return Response(
-                    {'error': 'User must belong to an organization'},
+                    {'error': 'User must have an active profile with an organization'},
                     status=status.HTTP_403_FORBIDDEN
                 )
             
@@ -100,7 +105,7 @@ def require_any_permission(*permission_pairs):
             for resource, action in permission_pairs:
                 if RBACService.check_permission(
                     user=request.user,
-                    organization=user_org.organization,
+                    organization=organization,
                     resource=resource,
                     action=action
                 ):
@@ -143,14 +148,16 @@ def require_all_permissions(*permission_pairs):
     def decorator(view_func):
         @wraps(view_func)
         def wrapped_view(self, request, *args, **kwargs):
-            # Get user's organization
-            user_org = request.user.user_organizations.filter(
-                is_active=True
-            ).first()
+            # Get organization from active profile (set by middleware)
+            organization = None
+            if hasattr(request.user, 'current_organization') and request.user.current_organization:
+                organization = request.user.current_organization
+            elif hasattr(request.user, 'active_profile') and request.user.active_profile:
+                organization = request.user.active_profile.organization
             
-            if not user_org:
+            if not organization:
                 return Response(
-                    {'error': 'User must belong to an organization'},
+                    {'error': 'User must have an active profile with an organization'},
                     status=status.HTTP_403_FORBIDDEN
                 )
             
@@ -159,7 +166,7 @@ def require_all_permissions(*permission_pairs):
             for resource, action in permission_pairs:
                 if not RBACService.check_permission(
                     user=request.user,
-                    organization=user_org.organization,
+                    organization=organization,
                     resource=resource,
                     action=action
                 ):
@@ -213,14 +220,18 @@ class PermissionMixin:
         if not self.permission_resource:
             return  # Skip RBAC if not configured
         
-        # Get user's organization
-        user_org = request.user.user_organizations.filter(
-            is_active=True
-        ).first()
+        # Get organization from active profile (set by middleware)
+        organization = None
+        if hasattr(request.user, 'current_organization') and request.user.current_organization:
+            organization = request.user.current_organization
+        elif hasattr(request.user, 'active_profile') and request.user.active_profile:
+            organization = request.user.active_profile.organization
+        elif hasattr(obj, 'organization'):
+            organization = obj.organization
         
-        if not user_org:
+        if not organization:
             from rest_framework.exceptions import PermissionDenied
-            raise PermissionDenied('User must belong to an organization')
+            raise PermissionDenied('User must have an active profile with an organization')
         
         # Get the action to check
         rbac_action = self.get_permission_action()
@@ -228,7 +239,47 @@ class PermissionMixin:
         # Check permission
         has_permission = RBACService.check_permission(
             user=request.user,
-            organization=user_org.organization,
+            organization=organization,
+            resource=self.permission_resource,
+            action=rbac_action
+        )
+        
+        if not has_permission:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(
+                f'Permission denied. Required: {self.permission_resource}:{rbac_action}'
+            )
+    
+    def check_permissions(self, request):
+        """Override to add RBAC check for list/create actions"""
+        super().check_permissions(request)
+        
+        if not self.permission_resource:
+            return  # Skip RBAC if not configured
+        
+        # Skip permission check for safe methods (GET, HEAD, OPTIONS) - employees can view
+        # Only enforce permissions for write operations (POST, PUT, PATCH, DELETE)
+        if request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return
+        
+        # Get organization from active profile (set by middleware)
+        organization = None
+        if hasattr(request.user, 'current_organization') and request.user.current_organization:
+            organization = request.user.current_organization
+        elif hasattr(request.user, 'active_profile') and request.user.active_profile:
+            organization = request.user.active_profile.organization
+        
+        if not organization:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('User must have an active profile with an organization')
+        
+        # Get the action to check
+        rbac_action = self.get_permission_action()
+        
+        # Check permission
+        has_permission = RBACService.check_permission(
+            user=request.user,
+            organization=organization,
             resource=self.permission_resource,
             action=rbac_action
         )

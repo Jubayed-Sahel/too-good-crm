@@ -73,12 +73,22 @@ class LinearWebhookView(APIView):
                     status=status.HTTP_401_UNAUTHORIZED
                 )
             
-            data = request.data
+            # Parse webhook payload - Linear sends JSON
+            try:
+                if hasattr(request, 'data') and request.data:
+                    data = request.data
+                else:
+                    import json
+                    data = json.loads(request.body.decode('utf-8')) if request.body else {}
+            except Exception as e:
+                logger.error(f"Error parsing webhook payload: {str(e)}")
+                data = {}
+            
             event_type = data.get('type')
             action = data.get('action')
             issue_data = data.get('data', {})
             
-            logger.info(f"Received Linear webhook: type={event_type}, action={action}")
+            logger.info(f"Received Linear webhook: type={event_type}, action={action}, issue_id={issue_data.get('id')}")
             
             # Handle Issue events
             if event_type == 'Issue':
@@ -134,22 +144,38 @@ class LinearWebhookView(APIView):
                     
                     # Update priority
                     if 'priority' in issue_data:
+                        from crmApp.services.linear_service import LinearService
                         linear_service = LinearService()
                         issue.priority = linear_service.map_linear_priority_to_crm(issue_data['priority'])
                     
                     # Update status based on Linear state
                     if 'state' in issue_data:
-                        state_name = issue_data['state'].get('name', '').lower()
+                        state = issue_data['state']
+                        state_name = state.get('name', '').lower()
+                        state_type = state.get('type', '').lower()
                         
                         # Map Linear states to CRM statuses
-                        if state_name in ['backlog', 'todo', 'triage']:
-                            issue.status = 'open'
-                        elif state_name in ['in progress', 'in review']:
+                        # Use state type if available (started, completed, canceled)
+                        if state_type == 'started':
                             issue.status = 'in_progress'
-                        elif state_name in ['done', 'completed']:
+                        elif state_type == 'completed':
                             issue.status = 'resolved'
-                        elif state_name in ['canceled', 'duplicate']:
+                            if not issue.resolved_at:
+                                issue.resolved_at = timezone.now()
+                        elif state_type == 'canceled':
                             issue.status = 'closed'
+                        else:
+                            # Fallback to state name mapping
+                            if state_name in ['backlog', 'todo', 'triage', 'unstarted']:
+                                issue.status = 'open'
+                            elif state_name in ['in progress', 'in review', 'started']:
+                                issue.status = 'in_progress'
+                            elif state_name in ['done', 'completed', 'resolved']:
+                                issue.status = 'resolved'
+                                if not issue.resolved_at:
+                                    issue.resolved_at = timezone.now()
+                            elif state_name in ['canceled', 'cancelled', 'duplicate']:
+                                issue.status = 'closed'
                     
                     issue.last_synced_at = timezone.now()
                     issue.save()

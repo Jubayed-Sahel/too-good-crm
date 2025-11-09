@@ -5,6 +5,7 @@ import {
   StatsGrid,
   InfoCardsGrid,
 } from '../components/dashboard';
+import { StandardButton } from '../components/common';
 import { useDashboardStats } from '@/hooks';
 
 const DashboardPage = () => {
@@ -43,20 +44,12 @@ const DashboardPage = () => {
             <Text color="gray.600" fontSize="sm" mb={6}>
               {error.message || 'Please try again later or contact support if the problem persists'}
             </Text>
-            <Box
-              as="button"
-              px={6}
-              py={2}
-              bg="red.500"
-              color="white"
-              borderRadius="lg"
-              fontWeight="medium"
-              fontSize="sm"
-              _hover={{ bg: 'red.600' }}
+            <StandardButton
+              variant="danger"
               onClick={() => window.location.reload()}
             >
               Reload Page
-            </Box>
+            </StandardButton>
           </Box>
         </Container>
       </DashboardLayout>
@@ -67,29 +60,8 @@ const DashboardPage = () => {
     <DashboardLayout title="Dashboard">
       <VStack gap={5} align="stretch">
         <WelcomeBanner />
-        {isLoading ? (
-          <Box 
-            display="flex" 
-            flexDirection="column"
-            alignItems="center"
-            justifyContent="center"
-            py={16}
-            gap={4}
-          >
-            <Spinner 
-              size="xl" 
-              color="purple.500"
-            />
-            <Text color="gray.600" fontSize="md">
-              Loading your dashboard...
-            </Text>
-          </Box>
-        ) : (
-          <>
-            {stats && <StatsGrid stats={stats} />}
-            <InfoCardsGrid />
-          </>
-        )}
+        <StatsGrid stats={stats} isLoading={isLoading} />
+        {!isLoading && <InfoCardsGrid />}
       </VStack>
     </DashboardLayout>
   );
