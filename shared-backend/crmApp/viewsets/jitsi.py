@@ -1,0 +1,291 @@
+"""
+ViewSet for Jitsi call management
+"""
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+
+from crmApp.models import JitsiCallSession, UserPresence, User
+from crmApp.serializers import (
+    JitsiCallSessionSerializer,
+    UserPresenceSerializer,
+    OnlineUserSerializer,
+    JitsiInitiateCallSerializer,
+    UpdateCallStatusSerializer,
+    UpdatePresenceSerializer,
+)
+from crmApp.services.jitsi_service import jitsi_service
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class JitsiCallViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Jitsi call sessions.
+    """
+    queryset = JitsiCallSession.objects.all()
+    serializer_class = JitsiCallSessionSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Filter calls by user's organizations"""
+        user_orgs = self.request.user.user_profiles.filter(
+            status='active'
+        ).values_list('organization_id', flat=True)
+        
+        queryset = JitsiCallSession.objects.filter(organization_id__in=user_orgs)
+        
+        # Filter by status
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Filter by user involvement
+        user_filter = self.request.query_params.get('my_calls')
+        if user_filter:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(initiator=self.request.user) |
+                Q(recipient=self.request.user) |
+                Q(participants__contains=[self.request.user.id])
+            )
+        
+        return queryset.select_related('initiator', 'recipient', 'organization').order_by('-created_at')
+    
+    @action(detail=False, methods=['post'])
+    def initiate_call(self, request):
+        """
+        Initiate a new call to another user.
+        
+        Request body:
+        {
+            "recipient_id": 123,  // optional, for 1-on-1 call
+            "call_type": "video"  // "video" or "audio"
+        }
+        """
+        serializer = JitsiInitiateCallSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        recipient_id = serializer.validated_data.get('recipient_id')
+        call_type = serializer.validated_data.get('call_type', 'video')
+        
+        try:
+            # Get recipient user if specified
+            recipient = None
+            if recipient_id:
+                recipient = User.objects.get(id=recipient_id)
+            
+            # Get organization from user's primary profile
+            user_profile = request.user.user_profiles.filter(is_primary=True).first()
+            if not user_profile:
+                return Response(
+                    {'error': 'User must have an active profile'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Initiate call using service
+            call_session = jitsi_service.initiate_call(
+                initiator=request.user,
+                recipient=recipient,
+                call_type=call_type,
+                organization=user_profile.organization
+            )
+            
+            # Return call details
+            return Response({
+                'message': 'Call initiated successfully',
+                'call_session': JitsiCallSessionSerializer(call_session, context={'request': request}).data
+            }, status=status.HTTP_201_CREATED)
+            
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Recipient user not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error initiating call: {str(e)}")
+            return Response(
+                {'error': f'Failed to initiate call: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def update_status(self, request, pk=None):
+        """
+        Update call status (answer, reject, end).
+        
+        Request body:
+        {
+            "action": "answer|reject|end"
+        }
+        """
+        call_session = self.get_object()
+        serializer = UpdateCallStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        action_type = serializer.validated_data['action']
+        
+        try:
+            if action_type == 'answer':
+                jitsi_service.answer_call(call_session, request.user)
+                message = 'Call answered'
+            elif action_type == 'reject':
+                jitsi_service.reject_call(call_session, request.user)
+                message = 'Call rejected'
+            elif action_type == 'end':
+                jitsi_service.end_call(call_session, request.user)
+                message = 'Call ended'
+            
+            call_session.refresh_from_db()
+            
+            return Response({
+                'message': message,
+                'call_session': JitsiCallSessionSerializer(call_session, context={'request': request}).data
+            })
+            
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Error updating call status: {str(e)}")
+            return Response(
+                {'error': f'Failed to update call: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'])
+    def active_calls(self, request):
+        """Get all currently active calls"""
+        organization = request.user.current_organization
+        active_calls = jitsi_service.get_active_calls(organization=organization)
+        
+        serializer = JitsiCallSessionSerializer(
+            active_calls,
+            many=True,
+            context={'request': request}
+        )
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def my_active_call(self, request):
+        """Get user's current active call if any (including pending/ringing)"""
+        try:
+            presence = UserPresence.objects.get(user=request.user)
+            # Return any ongoing call (pending, ringing, or active)
+            if presence.current_call and presence.current_call.status in ['pending', 'ringing', 'active']:
+                serializer = JitsiCallSessionSerializer(
+                    presence.current_call,
+                    context={'request': request}
+                )
+                return Response(serializer.data)
+        except UserPresence.DoesNotExist:
+            pass
+        
+        return Response({'message': 'No active call'}, status=status.HTTP_204_NO_CONTENT)
+
+
+class UserPresenceViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing user presence/status.
+    """
+    queryset = UserPresence.objects.all()
+    serializer_class = UserPresenceSerializer
+    permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post', 'put', 'patch']  # Allow POST for custom actions
+    
+    def get_queryset(self):
+        """Get presence for users in same organization"""
+        user_orgs = self.request.user.user_profiles.filter(
+            status='active'
+        ).values_list('organization_id', flat=True)
+        
+        # Get users in same organizations
+        queryset = UserPresence.objects.filter(
+            user__user_profiles__organization_id__in=user_orgs,
+            user__user_profiles__status='active'
+        ).distinct().select_related('user', 'current_call')
+        
+        return queryset
+    
+    @action(detail=False, methods=['get'])
+    def online_users(self, request):
+        """Get all currently online users"""
+        # Get organization from user's primary profile
+        user_profile = request.user.user_profiles.filter(is_primary=True).first()
+        if not user_profile or not user_profile.organization:
+            return Response([], status=status.HTTP_200_OK)
+        
+        online_users = jitsi_service.get_online_users(organization=user_profile.organization)
+        
+        # Format response
+        users_data = []
+        for presence in online_users:
+            users_data.append({
+                'id': presence.user.id,
+                'username': presence.user.username,
+                'full_name': f"{presence.user.first_name} {presence.user.last_name}".strip() or presence.user.username,
+                'status': presence.status,
+                'available_for_calls': presence.available_for_calls,
+                'status_message': presence.status_message,
+                'current_call_id': presence.current_call_id
+            })
+        
+        serializer = OnlineUserSerializer(users_data, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['post', 'put', 'patch'])
+    def update_my_status(self, request):
+        """Update current user's presence status"""
+        serializer = UpdatePresenceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            presence = jitsi_service.update_user_status(
+                user=request.user,
+                status=serializer.validated_data['status'],
+                available_for_calls=serializer.validated_data.get('available_for_calls'),
+                status_message=serializer.validated_data.get('status_message')
+            )
+            
+            return Response({
+                'message': 'Status updated successfully',
+                'presence': UserPresenceSerializer(presence).data
+            })
+            
+        except Exception as e:
+            logger.error(f"Error updating presence: {str(e)}")
+            return Response(
+                {'error': f'Failed to update status: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['post'])
+    def heartbeat(self, request):
+        """Update user's last seen timestamp (called periodically from frontend)"""
+        try:
+            presence, created = UserPresence.objects.get_or_create(
+                user=request.user,
+                defaults={'status': 'online', 'available_for_calls': True}
+            )
+            
+            # Heartbeat automatically updates last_seen due to auto_now
+            presence.save()
+            
+            return Response({'status': 'ok'})
+            
+        except Exception as e:
+            logger.error(f"Error updating heartbeat: {str(e)}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

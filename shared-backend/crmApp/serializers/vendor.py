@@ -10,12 +10,13 @@ from .auth import UserSerializer, UserProfileSerializer
 class VendorListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for vendor lists"""
     assigned_employee_name = serializers.CharField(source='assigned_employee.full_name', read_only=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True, allow_null=True)  # For Jitsi calls
     
     class Meta:
         model = Vendor
         fields = [
             'id', 'code', 'name', 'company_name', 'email', 'phone',
-            'vendor_type', 'status', 'assigned_employee_name'
+            'vendor_type', 'status', 'assigned_employee_name', 'user_id'
         ]
 
 

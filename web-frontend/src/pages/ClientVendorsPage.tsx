@@ -11,6 +11,8 @@ import {
 } from '../components/client-vendors';
 import { useVendors } from '@/hooks';
 import type { VendorFilters as VendorFiltersType } from '@/types';
+import { initiateCall } from '@/components/jitsi/JitsiCallManager';
+import { toaster } from '@/components/ui/toaster';
 
 const ClientVendorsPage = () => {
   const navigate = useNavigate();
@@ -51,6 +53,7 @@ const ClientVendorsPage = () => {
       totalSpent: 0, // Would need to be calculated from orders
       lastOrder: 'N/A',
       rating: 0,
+      user_id: vendor.user_id || null, // For Jitsi video calls
     }));
     
     // Apply frontend category filter
@@ -77,6 +80,40 @@ const ClientVendorsPage = () => {
   const handleContact = (vendor: Vendor) => {
     setSelectedVendor(vendor);
     setIsContactDialogOpen(true);
+  };
+
+  const handleCall = async (vendor: Vendor) => {
+    if (!vendor.user_id) {
+      toaster.create({
+        title: 'Cannot initiate call',
+        description: 'This vendor does not have a user account linked.',
+        type: 'error',
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const callData = await initiateCall(vendor.user_id, vendor.name, 'audio');
+      
+      toaster.create({
+        title: 'Call initiated',
+        description: `Connecting to ${vendor.name}...`,
+        type: 'success',
+        duration: 3000,
+      });
+
+      // Open Jitsi meeting in new window
+      window.open(callData.jitsi_url, '_blank', 'width=1200,height=800');
+    } catch (error) {
+      console.error('Failed to initiate call:', error);
+      toaster.create({
+        title: 'Call failed',
+        description: 'Failed to initiate call. Please try again.',
+        type: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   // Error state
@@ -144,6 +181,7 @@ const ClientVendorsPage = () => {
             <VendorTable
               vendors={mappedVendors}
               onContact={handleContact}
+              onCall={handleCall}
               onViewOrders={handleViewOrders}
             />
 

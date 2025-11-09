@@ -10,7 +10,7 @@ import {
   Flex,
 } from '@chakra-ui/react';
 import { Checkbox } from '../ui/checkbox';
-import { FiExternalLink, FiEye, FiMail, FiPhone, FiStar, FiPackage } from 'react-icons/fi';
+import { FiExternalLink, FiEye, FiMail, FiPhone, FiStar, FiPackage, FiVideo } from 'react-icons/fi';
 import { Card } from '../common';
 import { ResponsiveTable } from '../common';
 import { useState } from 'react';
@@ -27,16 +27,18 @@ export interface Vendor {
   totalSpent: number;
   rating: number;
   lastOrder: string;
+  user_id?: number | null; // For Jitsi video calls
 }
 
 interface VendorTableProps {
   vendors: Vendor[];
   onContact: (vendor: Vendor) => void;
+  onCall?: (vendor: Vendor) => void;
   onViewOrders: (vendorName: string) => void;
   onView?: (vendor: Vendor) => void;
 }
 
-const VendorTable = ({ vendors, onContact, onViewOrders, onView }: VendorTableProps) => {
+const VendorTable = ({ vendors, onContact, onCall, onViewOrders, onView }: VendorTableProps) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
   const handleSelectAll = (checked: boolean) => {
@@ -170,6 +172,17 @@ const VendorTable = ({ vendors, onContact, onViewOrders, onView }: VendorTablePr
                 <FiPackage size={16} />
                 <Box ml={2}>View Orders</Box>
               </Button>
+              {vendor.user_id && onCall && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="green"
+                  onClick={() => onCall(vendor)}
+                  title="Audio call vendor via Jitsi"
+                >
+                  <FiVideo size={16} />
+                </Button>
+              )}
               <Button
                 size="sm"
                 variant="outline"
@@ -318,11 +331,22 @@ const VendorTable = ({ vendors, onContact, onViewOrders, onView }: VendorTablePr
                     >
                       <FiPackage size={16} />
                     </IconButton>
+                    {vendor.user_id && onCall && (
+                      <IconButton
+                        aria-label="Audio call vendor via Jitsi"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="green"
+                        onClick={() => onCall(vendor)}
+                      >
+                        <FiVideo size={16} />
+                      </IconButton>
+                    )}
                     <IconButton
                       aria-label="Contact vendor"
                       size="sm"
                       variant="ghost"
-                      colorPalette="green"
+                      colorPalette="orange"
                       onClick={() => onContact(vendor)}
                     >
                       <FiExternalLink size={16} />
