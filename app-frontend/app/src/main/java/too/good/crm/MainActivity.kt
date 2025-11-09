@@ -16,13 +16,19 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import too.good.crm.data.ActiveMode
+import too.good.crm.data.UserSession
 import too.good.crm.features.activities.ActivitiesScreen
 import too.good.crm.features.analytics.AnalyticsScreen
 import too.good.crm.features.client.ClientDashboardScreen
 import too.good.crm.features.client.MyVendorsScreen
-import too.good.crm.features.client.issues.IssuesScreen
 import too.good.crm.features.client.orders.MyOrdersScreen
 import too.good.crm.features.client.payment.PaymentScreen
+import too.good.crm.features.issues.ui.VendorIssuesListScreen
+import too.good.crm.features.issues.ui.VendorIssueDetailScreen
+import too.good.crm.features.issues.ui.CustomerIssuesListScreen
+import too.good.crm.features.issues.ui.CustomerIssueDetailScreen
+import too.good.crm.features.issues.ui.CustomerCreateIssueScreen
 import too.good.crm.features.customers.CustomersScreen
 import too.good.crm.features.dashboard.DashboardScreen
 import too.good.crm.features.deals.DealsScreen
@@ -83,7 +89,13 @@ class MainActivity : ComponentActivity() {
                         composable("login") {
                             LoginScreen(
                                 onLoginClicked = {
-                                    navController.navigate("dashboard") {
+                                    // Navigate to appropriate dashboard based on user role
+                                    val destination = if (UserSession.activeMode == ActiveMode.CLIENT) {
+                                        "client-dashboard"
+                                    } else {
+                                        "dashboard"
+                                    }
+                                    navController.navigate(destination) {
                                         popUpTo("main") { inclusive = true }
                                     }
                                 },
@@ -198,6 +210,28 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        composable("vendor-issues") {
+                            VendorIssuesListScreen(
+                                onNavigateToDetail = { issueId ->
+                                    navController.navigate("vendor-issue-detail/$issueId")
+                                },
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("vendor-issue-detail/{issueId}") { backStackEntry ->
+                            val issueId = backStackEntry.arguments?.getString("issueId")?.toIntOrNull() ?: 0
+                            VendorIssueDetailScreen(
+                                issueId = issueId,
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                onOpenLinear = { linearUrl ->
+                                    // TODO: Open Linear URL in browser
+                                }
+                            )
+                        }
                         composable("client-dashboard") {
                             ClientDashboardScreen(
                                 onLogoutClicked = {
@@ -241,11 +275,35 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("issues") {
-                            IssuesScreen(
-                                onNavigate = { route ->
-                                    navController.navigate(route)
+                            CustomerIssuesListScreen(
+                                organizationId = 1, // TODO: Get from user session
+                                onNavigateToCreate = {
+                                    navController.navigate("create-issue")
                                 },
-                                onBack = {
+                                onNavigateToDetail = { issueId ->
+                                    navController.navigate("issue-detail/$issueId")
+                                },
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("issue-detail/{issueId}") { backStackEntry ->
+                            val issueId = backStackEntry.arguments?.getString("issueId")?.toIntOrNull() ?: 0
+                            CustomerIssueDetailScreen(
+                                issueId = issueId,
+                                onNavigateBack = {
+                                    navController.popBackStack()
+                                },
+                                onOpenLinear = { linearUrl ->
+                                    // TODO: Open Linear URL in browser
+                                }
+                            )
+                        }
+                        composable("create-issue") {
+                            CustomerCreateIssueScreen(
+                                organizationId = 1, // TODO: Get from user session
+                                onNavigateBack = {
                                     navController.popBackStack()
                                 }
                             )
