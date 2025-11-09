@@ -13,13 +13,18 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
 
     // TODO: Update this with your backend URL
-    private const val BASE_URL = "https://stephine-nonconfiding-pseudotribally.ngrok-free.dev/api/"
-
     // For local testing on Android Emulator, use:
-    // private const val BASE_URL = "http://10.0.2.2:8000/api/"
+//    private const val BASE_URL = "http://10.0.2.2:8000/api/"
 
     // For physical device on same network, use:
-    // private const val BASE_URL = "http://192.168.x.x:8000/api/"
+    // Step 1: Find your computer's IP address:
+    //   Windows: Open CMD and type: ipconfig (look for IPv4 Address)
+    //   Mac/Linux: Open Terminal and type: ifconfig or ip addr
+    // Step 2: Replace the IP below with your actual IP (e.g., "http://192.168.1.100:8000/api/")
+     private const val BASE_URL = "http://192.168.0.218:8000/api/"
+
+    // For production/ngrok:
+    // private const val BASE_URL = "https://your-ngrok-url.ngrok-free.dev/api/"
 
     private var authToken: String? = null
 
@@ -75,6 +80,13 @@ object ApiClient {
      */
     val authApiService: AuthApiService by lazy {
         retrofit.create(AuthApiService::class.java)
+    }
+
+    /**
+     * Customer API Service instance
+     */
+    val customerApiService: CustomerApiService by lazy {
+        retrofit.create(CustomerApiService::class.java)
     }
 
     // Add other API services here as needed

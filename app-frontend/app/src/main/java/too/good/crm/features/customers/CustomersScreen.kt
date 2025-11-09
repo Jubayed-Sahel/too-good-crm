@@ -106,7 +106,7 @@ fun CustomersScreen(
                 )
             }
         }
-    ) { _ ->
+    ) { paddingValues ->
         AppScaffoldWithDrawer(
             title = "Customers",
             activeMode = activeMode,
