@@ -8,6 +8,12 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), tsconfigPaths()],
   server: {
     port: 5173,
+    host: true, // Allow external access (for ngrok, etc.)
+    allowedHosts: [
+      'clifton-shopworn-unprecipitantly.ngrok-free.dev',
+      'localhost',
+      '.localhost'
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
