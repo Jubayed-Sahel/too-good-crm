@@ -35,6 +35,7 @@ export interface Vendor {
   // Relationships
   organization?: number;
   user?: number;
+  user_id?: number | null;  // For Jitsi video calls
   user_profile?: number;
   assigned_employee?: number;
   assigned_employee_name?: string;

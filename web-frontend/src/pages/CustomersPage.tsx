@@ -5,7 +5,7 @@ import {
 } from '../components/customers';
 import { ConfirmDialog, ErrorState } from '../components/common';
 import { useCustomers, useCustomersPage, useCustomerActions } from '@/hooks';
-import twilioService from '@/services/twilio.service';
+import { initiateCall } from '@/components/jitsi/JitsiCallManager';
 import { toaster } from '@/components/ui/toaster';
 import { useState } from 'react';
 
@@ -56,12 +56,12 @@ const CustomersPage = () => {
     bulkDeleteDialogState,
   } = useCustomerActions({ onSuccess: refetch });
 
-  // Call handler - Twilio integration
+  // Call handler - Jitsi integration
   const handleCall = async (customer: any) => {
-    if (!customer.phone) {
+    if (!customer.user_id) {
       toaster.create({
-        title: 'No Phone Number',
-        description: `${customer.name} does not have a phone number.`,
+        title: 'Cannot Call',
+        description: `${customer.name} is not a registered user. Only users with accounts can receive audio calls.`,
         type: 'error',
       });
       return;
@@ -70,48 +70,17 @@ const CustomersPage = () => {
     setIsCallInitiating(true);
     
     try {
-      const response = await twilioService.initiateCall(customer.id);
+      await initiateCall(customer.user_id, customer.full_name || customer.name, 'audio');
       
-      toaster.create({
-        title: 'Call Initiated',
-        description: `Calling ${customer.name} at ${customer.phone}...`,
-        type: 'success',
-        duration: 5000,
-      });
-
-      console.log('Call initiated:', response);
-      
-      // Optionally refresh customer data to show updated call history
+      // Optionally refresh customer data
       refetch();
       
     } catch (error: any) {
       console.error('Error initiating call:', error);
-      console.error('Full error object:', error);
-      console.error('Error response:', error.response);
-      console.error('Error response data:', error.response?.data);
       
-      // Get the error message
-      let errorMessage = 'Failed to initiate call. Please try again.';
-      let errorTitle = 'Call Failed';
+      // Error toast is already shown by initiateCall helper
+      // Just log for debugging
       
-      if (error.message) {
-        errorMessage = error.message;
-        
-        // Special handling for unverified number error
-        if (errorMessage.toLowerCase().includes('not verified') || 
-            errorMessage.toLowerCase().includes('unverified') ||
-            errorMessage.toLowerCase().includes('trial account')) {
-          errorTitle = 'Phone Number Not Verified';
-          errorMessage = `The number ${customer.phone} needs to be verified in your Twilio account.\n\nTrial accounts can only call verified numbers.\n\nVerify at: https://console.twilio.com/us1/develop/phone-numbers/manage/verified`;
-        }
-      }
-      
-      toaster.create({
-        title: errorTitle,
-        description: errorMessage,
-        type: 'error',
-        duration: 10000,
-      });
     } finally {
       setIsCallInitiating(false);
     }
