@@ -23,10 +23,10 @@ class LinearService:
         """
         self.api_key = api_key or getattr(settings, 'LINEAR_API_KEY', None)
         self.api_url = 'https://api.linear.app/graphql'
-        # Linear API uses Bearer token authentication
+        # Linear API uses the API key directly as Authorization header
         self.headers = {
             'Content-Type': 'application/json',
-            'Authorization': f'Bearer {self.api_key}' if self.api_key else ''
+            'Authorization': self.api_key if self.api_key else ''
         }
     
     def _execute_query(self, query: str, variables: Optional[Dict] = None) -> Dict[str, Any]:
@@ -56,14 +56,63 @@ class LinearService:
             data = response.json()
             
             if 'errors' in data:
-                logger.error(f"Linear API errors: {data['errors']}")
-                raise Exception(f"Linear API error: {data['errors']}")
+                error_msg = str(data['errors'])
+                logger.error(f"Linear API errors: {error_msg}")
+                raise Exception(f"Linear API error: {error_msg}")
             
             return data.get('data', {})
             
+        except requests.exceptions.HTTPError as e:
+            # Try to get error details from response
+            try:
+                error_data = e.response.json()
+                error_msg = error_data.get('errors', [{}])[0].get('message', str(e)) if 'errors' in error_data else str(e)
+                logger.error(f"Linear API HTTP error: {error_msg}")
+                logger.error(f"Response: {e.response.text}")
+                raise Exception(f"Linear API error: {error_msg}")
+            except:
+                logger.error(f"Linear API request failed: {str(e)}")
+                logger.error(f"Response: {e.response.text if hasattr(e, 'response') else 'No response'}")
+                raise Exception(f"Failed to connect to Linear API: {str(e)}")
         except requests.exceptions.RequestException as e:
             logger.error(f"Linear API request failed: {str(e)}")
             raise Exception(f"Failed to connect to Linear API: {str(e)}")
+    
+    def get_default_state_id(self, team_id: str) -> Optional[str]:
+        """
+        Get the default workflow state ID for a team (usually "Todo" or "Backlog")
+        
+        Args:
+            team_id: Linear team ID
+            
+        Returns:
+            Default state ID or None
+        """
+        try:
+            team = self.get_team_by_id(team_id)
+            states = team.get('states', {}).get('nodes', [])
+            
+            # Try to find "Todo" state first (most common default)
+            for state in states:
+                state_name = state.get('name', '').lower()
+                state_type = state.get('type', '').lower()
+                # Linear default states are usually "unstarted" type with names like "Todo", "Backlog"
+                if state_type == 'unstarted' or state_name in ['todo', 'backlog', 'triage']:
+                    return state.get('id')
+            
+            # If no default found, return the first unstarted state
+            for state in states:
+                if state.get('type', '').lower() == 'unstarted':
+                    return state.get('id')
+            
+            # Last resort: return the first state
+            if states:
+                return states[0].get('id')
+                
+            return None
+        except Exception as e:
+            logger.error(f"Error getting default state for team {team_id}: {str(e)}")
+            return None
     
     def create_issue(
         self,
@@ -73,7 +122,8 @@ class LinearService:
         priority: int = 2,
         state_id: Optional[str] = None,
         assignee_id: Optional[str] = None,
-        label_ids: Optional[list] = None
+        label_ids: Optional[list] = None,
+        auto_set_state: bool = True
     ) -> Dict[str, Any]:
         """
         Create a new issue in Linear
@@ -83,9 +133,10 @@ class LinearService:
             title: Issue title
             description: Issue description
             priority: Priority (0=No priority, 1=Urgent, 2=High, 3=Normal, 4=Low)
-            state_id: Optional workflow state ID
+            state_id: Optional workflow state ID (if not provided and auto_set_state=True, uses default state)
             assignee_id: Optional assignee user ID
             label_ids: Optional list of label IDs
+            auto_set_state: If True and state_id is None, automatically sets default state
             
         Returns:
             Created issue data with id and url
@@ -109,10 +160,20 @@ class LinearService:
                         id
                         name
                     }
+                    team {
+                        id
+                        name
+                    }
                 }
             }
         }
         """
+        
+        # If state_id is not provided and auto_set_state is True, get default state
+        if not state_id and auto_set_state:
+            state_id = self.get_default_state_id(team_id)
+            if state_id:
+                logger.info(f"Using default Linear state for team {team_id}: {state_id}")
         
         variables = {
             'input': {
@@ -134,16 +195,23 @@ class LinearService:
         
         if result.get('issueCreate', {}).get('success'):
             issue_data = result['issueCreate']['issue']
-            logger.info(f"Created Linear issue: {issue_data['identifier']} - {title}")
+            logger.info(
+                f"Created Linear issue: {issue_data['identifier']} - {title} "
+                f"(State: {issue_data.get('state', {}).get('name', 'N/A')})"
+            )
             return {
                 'id': issue_data['id'],
                 'identifier': issue_data['identifier'],
                 'url': issue_data['url'],
                 'title': issue_data['title'],
                 'state': issue_data.get('state', {}).get('name'),
+                'state_id': issue_data.get('state', {}).get('id'),
             }
         else:
-            raise Exception("Failed to create Linear issue")
+            errors = result.get('issueCreate', {}).get('errors', [])
+            error_msg = str(errors) if errors else "Failed to create Linear issue"
+            logger.error(f"Linear issue creation failed: {error_msg}")
+            raise Exception(f"Failed to create Linear issue: {error_msg}")
     
     def update_issue(
         self,
@@ -200,6 +268,12 @@ class LinearService:
         if assignee_id is not None:
             input_data['assigneeId'] = assignee_id
         
+        # Don't send empty input
+        if not input_data:
+            logger.warning(f"No update data provided for Linear issue {issue_id}")
+            # Return current issue data
+            return self.get_issue(issue_id)
+        
         variables = {
             'id': issue_id,
             'input': input_data
@@ -209,16 +283,23 @@ class LinearService:
         
         if result.get('issueUpdate', {}).get('success'):
             issue_data = result['issueUpdate']['issue']
-            logger.info(f"Updated Linear issue: {issue_data['identifier']}")
+            logger.info(
+                f"Updated Linear issue: {issue_data['identifier']} "
+                f"(State: {issue_data.get('state', {}).get('name', 'N/A')})"
+            )
             return {
                 'id': issue_data['id'],
                 'identifier': issue_data['identifier'],
                 'url': issue_data['url'],
                 'title': issue_data['title'],
                 'state': issue_data.get('state', {}).get('name'),
+                'state_id': issue_data.get('state', {}).get('id'),
             }
         else:
-            raise Exception("Failed to update Linear issue")
+            errors = result.get('issueUpdate', {}).get('errors', [])
+            error_msg = str(errors) if errors else "Failed to update Linear issue"
+            logger.error(f"Linear issue update failed: {error_msg}")
+            raise Exception(f"Failed to update Linear issue: {error_msg}")
     
     def get_issue(self, issue_id: str) -> Dict[str, Any]:
         """
@@ -432,3 +513,127 @@ class LinearService:
                 return state.get('id')
         
         return None
+    
+    def get_team_issues(
+        self,
+        team_id: str,
+        limit: int = 50,
+        after: Optional[str] = None,
+        filter: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Get issues from a Linear team
+        
+        Args:
+            team_id: Linear team ID
+            limit: Maximum number of issues to return (default: 50, max: 100)
+            after: Cursor for pagination (from previous response)
+            filter: Optional filter dictionary (e.g., {'state': {'type': {'neq': 'canceled'}}})
+            
+        Returns:
+            Dictionary with 'nodes' (list of issues) and 'pageInfo' (pagination info)
+        """
+        query = """
+        query TeamIssues($teamId: String!, $first: Int!, $after: String, $filter: IssueFilter) {
+            team(id: $teamId) {
+                issues(
+                    first: $first,
+                    after: $after,
+                    filter: $filter,
+                    orderBy: updatedAt
+                ) {
+                    nodes {
+                        id
+                        identifier
+                        title
+                        description
+                        priority
+                        url
+                        createdAt
+                        updatedAt
+                        state {
+                            id
+                            name
+                            type
+                        }
+                        assignee {
+                            id
+                            name
+                            email
+                        }
+                        creator {
+                            id
+                            name
+                            email
+                        }
+                        team {
+                            id
+                            name
+                            key
+                        }
+                    }
+                    pageInfo {
+                        hasNextPage
+                        hasPreviousPage
+                        startCursor
+                        endCursor
+                    }
+                }
+            }
+        }
+        """
+        
+        variables = {
+            'teamId': team_id,
+            'first': min(limit, 100),  # Linear max is 100
+        }
+        
+        if after:
+            variables['after'] = after
+        
+        if filter:
+            variables['filter'] = filter
+        
+        result = self._execute_query(query, variables)
+        team_data = result.get('team', {})
+        issues_data = team_data.get('issues', {})
+        
+        return {
+            'nodes': issues_data.get('nodes', []),
+            'pageInfo': issues_data.get('pageInfo', {})
+        }
+    
+    def get_all_team_issues(self, team_id: str, filter: Optional[Dict[str, Any]] = None) -> list:
+        """
+        Get all issues from a Linear team (with pagination)
+        
+        Args:
+            team_id: Linear team ID
+            filter: Optional filter dictionary
+            
+        Returns:
+            List of all issues
+        """
+        all_issues = []
+        after = None
+        page_size = 50
+        
+        while True:
+            result = self.get_team_issues(
+                team_id=team_id,
+                limit=page_size,
+                after=after,
+                filter=filter
+            )
+            
+            issues = result.get('nodes', [])
+            all_issues.extend(issues)
+            
+            page_info = result.get('pageInfo', {})
+            if not page_info.get('hasNextPage', False):
+                break
+            
+            after = page_info.get('endCursor')
+        
+        logger.info(f"Fetched {len(all_issues)} issues from Linear team {team_id}")
+        return all_issues

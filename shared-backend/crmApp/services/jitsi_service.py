@@ -65,6 +65,24 @@ class JitsiService:
                 UserPresence.objects.create(user=recipient, status='offline')
                 raise ValueError(f"{recipient_name} is offline")
         
+        # Get organization from user profile if not provided
+        if not organization:
+            # Try to get organization from initiator's active profile
+            from crmApp.models import UserProfile
+            initiator_profile = UserProfile.objects.filter(
+                user=initiator,
+                status='active',
+                is_primary=True
+            ).first() or UserProfile.objects.filter(
+                user=initiator,
+                status='active'
+            ).first()
+            
+            if initiator_profile and initiator_profile.organization:
+                organization = initiator_profile.organization
+            else:
+                raise ValueError("Organization is required for call sessions. User must have an active profile with an organization.")
+        
         # Generate unique room name
         room_name = self.generate_room_name(
             initiator.id,
@@ -79,7 +97,7 @@ class JitsiService:
             initiator=initiator,
             recipient=recipient,
             participants=[initiator.id] + ([recipient.id] if recipient else []),
-            organization=organization or initiator.current_organization,
+            organization=organization,
             jitsi_server=self.jitsi_server
         )
         
@@ -246,17 +264,18 @@ class JitsiService:
         Get all online users, optionally filtered by organization.
         """
         from django.db.models import Q
+        from crmApp.models import UserProfile
         
         queryset = UserPresence.objects.filter(
             Q(status='online') | Q(status='away')
         ).select_related('user')
         
         if organization:
-            # Filter by organization membership
+            # Filter by organization membership through UserProfile
             queryset = queryset.filter(
-                user__user_organizations__organization=organization,
-                user__user_organizations__is_active=True
-            )
+                user__user_profiles__organization=organization,
+                user__user_profiles__status='active'
+            ).distinct()
         
         # Only return users who are truly online (active in last 5 minutes)
         return [p for p in queryset if p.is_online]

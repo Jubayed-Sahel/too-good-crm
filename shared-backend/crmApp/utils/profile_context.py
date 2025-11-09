@@ -68,13 +68,15 @@ def get_customer_vendor_organizations(user: User) -> List[Organization]:
         return []
     
     # Get customer records for this user
-    customer_records = Customer.objects.filter(
-        user=user
-    ).select_related('organization').distinct('organization')
+    # Use values_list to get distinct organization IDs (MySQL-compatible)
+    organization_ids = Customer.objects.filter(
+        user=user,
+        organization__isnull=False
+    ).values_list('organization_id', flat=True).distinct()
     
-    # Return unique organizations
-    organizations = [customer.organization for customer in customer_records if customer.organization]
-    return list(set(organizations))  # Remove duplicates
+    # Get organization objects
+    organizations = Organization.objects.filter(id__in=organization_ids)
+    return list(organizations)
 
 
 def get_user_accessible_organizations(user: User) -> List[int]:
