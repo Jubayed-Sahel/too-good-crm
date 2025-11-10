@@ -31,8 +31,6 @@ too-good-crm/
 └── PRD.pdf               # Product requirements document
 ```
 
-See [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md) for detailed structure.
-
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -178,7 +176,7 @@ See [Console Error Checking Guide](scripts/CONSOLE_ERROR_CHECKING_GUIDE.md) for 
 
 ### Integrations
 - **Linear** - Issue tracking synchronization
-- **Twilio** - SMS and call management
+- **Jitsi** - Call management
 - **MCP** - AI assistant integration (Django CRM + Edge DevTools)
 
 ## 🏗️ Architecture
@@ -231,7 +229,6 @@ Kotlin + Jetpack Compose
 - API endpoint permissions
 
 ### Security Features
-- HTTPS enforcement (production)
 - CORS configuration
 - CSRF protection
 - SQL injection prevention
@@ -269,56 +266,6 @@ The application uses a comprehensive relational database schema with:
 
 See [database_schema.sql](database_schema.sql) for complete schema.
 
-## 🧪 Testing
-
-### Backend Testing
-```bash
-cd shared-backend
-python manage.py test
-python scripts/test/test_full_lifecycle.py
-```
-
-### Frontend Testing
-```bash
-cd web-frontend
-npm run test
-npm run test:coverage
-```
-
-### API Testing
-```bash
-cd shared-backend
-python scripts/verify/verify_api.py
-```
-
-## 📚 Documentation
-
-### Project Documentation
-- [Backend README](shared-backend/README.md) - Backend API documentation
-- [Frontend README](web-frontend/README.md) - Web frontend documentation
-- [Scripts README](shared-backend/scripts/README.md) - Utility scripts guide
-- [Database README](DATABASE_README.md) - Database documentation
-- [MCP Setup Guide](MCP_SETUP.md) - AI assistant integration setup
-
-### Backend Documentation
-- [API Testing Guide](shared-backend/docs/API_TESTING_GUIDE.md)
-- [Linear Integration](shared-backend/docs/LINEAR_INTEGRATION_GUIDE.md)
-- [Issue Action Endpoints](shared-backend/docs/ISSUE_ACTION_ENDPOINTS.md)
-
-### Frontend Documentation
-- [Auth Implementation](web-frontend/docs/AUTH_IMPLEMENTATION.md)
-- [API Architecture](web-frontend/docs/API_ARCHITECTURE.md)
-- [Permission Management](web-frontend/docs/PERMISSION_MANAGEMENT_GUIDE.md)
-- [Role Management](web-frontend/docs/ROLE_MANAGEMENT_GUIDE.md)
-- [Modularization Progress](web-frontend/docs/MODULARIZATION_PROGRESS.md)
-
-### Implementation Guides
-- [RBAC Implementation](RBAC_IMPLEMENTATION_GUIDE.md)
-- [Backend Implementation](BACKEND_IMPLEMENTATION_COMPLETE.md)
-- [Migration Instructions](MIGRATION_INSTRUCTIONS.md)
-
-## 🛠️ Development
-
 ### Tech Stack
 
 **Backend:**
@@ -343,28 +290,6 @@ python scripts/verify/verify_api.py
 - Retrofit
 - Coroutines
 - Material Design 3
-
-### Code Organization
-
-Both frontend and backend follow clean architecture principles:
-- Separation of concerns
-- Dependency injection
-- Single responsibility
-- DRY (Don't Repeat Yourself)
-
-### Development Workflow
-
-1. Create feature branch
-2. Implement feature
-3. Write tests
-4. Update documentation
-5. Create pull request
-6. Code review
-7. Merge to main
-
-## 🚀 Deployment
-
-### Backend Deployment
 
 **Prerequisites:**
 - Python 3.8+ server
@@ -397,12 +322,6 @@ cd web-frontend
 npm run build
 ```
 
-**Deploy to:**
-- Vercel
-- Netlify
-- AWS S3 + CloudFront
-- Any static hosting
-
 ### Mobile Deployment
 
 **Build APK:**
@@ -411,81 +330,13 @@ cd app-frontend
 ./gradlew assembleRelease
 ```
 
-**Publish to Google Play:**
-- Generate signed APK/AAB
-- Upload to Google Play Console
-- Complete store listing
-- Submit for review
-
-## 📈 Roadmap
-
-### Phase 1 (Completed)
-- ✅ Core CRM functionality
-- ✅ User authentication
-- ✅ RBAC implementation
-- ✅ Basic integrations
-
-### Phase 2 (In Progress)
-- 🔄 Feature modularization
-- 🔄 Enhanced analytics
-- 🔄 Mobile app parity
-- 🔄 Performance optimization
-
-### Phase 3 (Planned)
-- 📋 Email integration
-- 📋 Calendar sync
-- 📋 Advanced reporting
-- 📋 Mobile offline mode
-- 📋 Multi-language support
-
-### Phase 4 (Future)
-- 💡 AI-powered insights
-- 💡 Predictive analytics
-- 💡 Workflow automation
-- 💡 Advanced integrations
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these guidelines:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Write/update tests
-5. Update documentation
-6. Ensure all tests pass
-7. Submit pull request
-
-### Code Standards
-- Follow existing code style
-- Write meaningful commit messages
-- Add comments for complex logic
-- Keep functions small and focused
-- Write tests for new features
-
-## 📄 License
-
-[Add your license here]
-
-## 👥 Team
-
-[Add team information here]
-
-## 📞 Support
-
-For issues, questions, or contributions:
-- Create an issue on GitHub
-- Email: [your-email]
-- Documentation: See docs/ folders
-
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Django REST Framework
 - React and the React ecosystem
 - Jetpack Compose
-- All open-source contributors
 
 ---
 
-**Built with ❤️ by the Too Good CRM team**
+
 
