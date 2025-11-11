@@ -78,9 +78,9 @@ class CustomerAdmin(admin.ModelAdmin):
 
 @admin.register(Lead)
 class LeadAdmin(admin.ModelAdmin):
-    list_display = ('name', 'email', 'company', 'status', 'qualification_status', 'organization', 'created_at')
+    list_display = ('name', 'email', 'organization_name', 'status', 'qualification_status', 'organization', 'created_at')
     list_filter = ('status', 'qualification_status', 'source', 'created_at')
-    search_fields = ('name', 'email', 'company', 'code')
+    search_fields = ('name', 'email', 'organization_name', 'code')
 
 
 @admin.register(Deal)

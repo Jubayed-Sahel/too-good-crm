@@ -8,12 +8,11 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 
-from crmApp.models import Customer, Call
+from crmApp.models import Customer
 from crmApp.serializers import (
     CustomerSerializer,
     CustomerCreateSerializer,
     CustomerListSerializer,
-    CallSerializer,
 )
 from crmApp.services import RBACService
 from crmApp.viewsets.mixins import (
@@ -204,35 +203,4 @@ class CustomerViewSet(
         customer = self.get_object()
         activities_data = self.get_customer_activities(customer)
         return Response(activities_data)
-    
-    @action(detail=True, methods=['post'])
-    def initiate_call(self, request, pk=None):
-        """Initiate a VOIP call to customer via Twilio"""
-        customer = self.get_object()
-        
-        # Check permission
-        self.check_customer_action_permission(request, customer)
-        
-        # Initiate call
-        success, call, error = self.initiate_customer_call(customer, request.user)
-        
-        if not success:
-            if error.get('twilio_error_code'):
-                return Response(error, status=status.HTTP_400_BAD_REQUEST)
-            elif 'not configured' in error.get('error', '').lower():
-                return Response(error, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-            else:
-                return Response(error, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        
-        # Return call details
-        return Response({
-            'message': 'Call initiated successfully',
-            'call': CallSerializer(call).data,
-        }, status=status.HTTP_201_CREATED)
-    
-    @action(detail=True, methods=['get'])
-    def call_history(self, request, pk=None):
-        """Get call history for customer"""
-        customer = self.get_object()
-        calls = Call.objects.filter(customer=customer).order_by('-created_at')
-        return Response(CallSerializer(calls, many=True).data)
+

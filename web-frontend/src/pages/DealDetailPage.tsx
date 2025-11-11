@@ -13,7 +13,6 @@ import {
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
   FiMail,
-  FiPhone,
   FiUser,
   FiEdit2,
   FiTrash2,
@@ -27,11 +26,8 @@ import {
   FiTarget,
 } from 'react-icons/fi';
 import { dealService } from '@/services/deal.service';
-import { customerService } from '@/services/customer.service';
 import { useDeleteDeal } from '@/hooks';
 import { StandardButton, ConfirmDialog } from '@/components/common';
-import twilioService from '@/services/twilio.service';
-import { toaster } from '@/components/ui/toaster';
 import type { Deal } from '@/types';
 
 const DealDetailPage = () => {
@@ -42,8 +38,6 @@ const DealDetailPage = () => {
   const [error, setError] = useState<string | null>(null);
   const deleteDeal = useDeleteDeal();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isCallInitiating, setIsCallInitiating] = useState(false);
-  const [customerPhone, setCustomerPhone] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDeal = async () => {
@@ -53,19 +47,6 @@ const DealDetailPage = () => {
         const dealData = await dealService.getDeal(parseInt(id));
         if (dealData) {
           setDeal(dealData);
-          
-          // Fetch customer phone if customer_id exists
-          if (dealData.customer_id || dealData.customer) {
-            const customerId = dealData.customer_id || (typeof dealData.customer === 'number' ? dealData.customer : null);
-            if (customerId) {
-              try {
-                const customer = await customerService.getCustomer(customerId);
-                setCustomerPhone(customer.phone || null);
-              } catch (err) {
-                console.warn('Failed to fetch customer phone:', err);
-              }
-            }
-          }
         } else {
           setError('Deal not found');
         }
@@ -143,68 +124,6 @@ const DealDetailPage = () => {
         navigate('/deals');
       },
     });
-  };
-
-  const handleCall = async () => {
-    if (!deal || !customerPhone) {
-      toaster.create({
-        title: 'No phone number',
-        description: 'The customer associated with this deal does not have a phone number.',
-        type: 'error',
-      });
-      return;
-    }
-
-    const customerId = deal.customer_id || (typeof deal.customer === 'number' ? deal.customer : null);
-    if (!customerId) {
-      toaster.create({
-        title: 'Customer not found',
-        description: 'Unable to find customer information for this deal.',
-        type: 'error',
-      });
-      return;
-    }
-
-    setIsCallInitiating(true);
-    
-    try {
-      const response = await twilioService.initiateCall(customerId);
-      
-      toaster.create({
-        title: 'Call Initiated',
-        description: `Calling customer at ${customerPhone}...`,
-        type: 'success',
-        duration: 5000,
-      });
-
-      console.log('Call initiated:', response);
-      
-    } catch (error: any) {
-      console.error('Error initiating call:', error);
-      
-      let errorMessage = 'Failed to initiate call. Please try again.';
-      let errorTitle = 'Call Failed';
-      
-      if (error.message) {
-        errorMessage = error.message;
-        
-        if (errorMessage.toLowerCase().includes('not verified') || 
-            errorMessage.toLowerCase().includes('unverified') ||
-            errorMessage.toLowerCase().includes('trial account')) {
-          errorTitle = 'Phone Number Not Verified';
-          errorMessage = `The number ${customerPhone} needs to be verified in your Twilio account.\n\nTrial accounts can only call verified numbers.\n\nVerify at: https://console.twilio.com/us1/develop/phone-numbers/manage/verified`;
-        }
-      }
-      
-      toaster.create({
-        title: errorTitle,
-        description: errorMessage,
-        type: 'error',
-        duration: 10000,
-      });
-    } finally {
-      setIsCallInitiating(false);
-    }
   };
 
   if (isLoading) {
@@ -614,17 +533,6 @@ const DealDetailPage = () => {
                   leftIcon={<FiMail />}
                 >
                   Send Email
-                </StandardButton>
-                <StandardButton
-                  variant="outline"
-                  w="full"
-                  justifyContent="flex-start"
-                  onClick={handleCall}
-                  disabled={!customerPhone || isCallInitiating}
-                  isLoading={isCallInitiating}
-                  leftIcon={<FiPhone />}
-                >
-                  Make Call
                 </StandardButton>
                 <StandardButton
                   variant="outline"

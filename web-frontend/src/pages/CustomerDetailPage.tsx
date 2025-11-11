@@ -26,7 +26,6 @@ import {
 } from 'react-icons/fi';
 import { StandardButton, ConfirmDialog } from '@/components/common';
 import { SendEmailDialog, type EmailData } from '@/components/activities/SendEmailDialog';
-import twilioService from '@/services/twilio.service';
 import { activityService } from '@/services/activity.service';
 import { toaster } from '@/components/ui/toaster';
 import { useCustomer, useDeleteCustomer } from '@/hooks/useCustomers';
@@ -45,7 +44,6 @@ const CustomerDetailPage = () => {
   // State for dialogs
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
-  const [isCallInitiating, setIsCallInitiating] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
 
   // Transform customer data for display
@@ -54,10 +52,10 @@ const CustomerDetailPage = () => {
     
     return {
       id: customerData.id.toString(),
-      name: customerData.full_name || customerData.name || '',
+      name: customerData.full_name || '',
       email: customerData.email || '',
       phone: customerData.phone || '',
-      company: customerData.company || customerData.company_name || '',
+      organization: customerData.organization || '',
       website: customerData.website || '',
       address: customerData.address || '',
       city: customerData.city || '',
@@ -65,12 +63,12 @@ const CustomerDetailPage = () => {
       country: customerData.country || '',
       status: (customerData.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'prospect' | 'vip',
       job_title: customerData.job_title || '',
-      industry: customerData.industry || '',
-      source: customerData.source || '',
+      industry: '',
+      source: '',
       notes: customerData.notes || '',
       tags: customerData.tags || [],
-      totalValue: customerData.total_value || 0,
-      lifetimeValue: customerData.lifetime_value || 0,
+      totalValue: 0,
+      lifetimeValue: 0,
       lastContact: customerData.updated_at || customerData.created_at,
       created_at: customerData.created_at,
     };
@@ -163,7 +161,7 @@ const CustomerDetailPage = () => {
         activity_type: 'email',
         title: data.subject,
         description: data.body,
-        customer: customer.id,
+        customer: parseInt(customer.id),
         email_subject: data.subject,
         email_body: data.body,
         status: 'completed',
@@ -186,60 +184,6 @@ const CustomerDetailPage = () => {
       });
     } finally {
       setIsSendingEmail(false);
-    }
-  };
-
-  const handleCall = async () => {
-    if (!customer || !customer.phone) {
-      toaster.create({
-        title: 'No phone number',
-        description: 'This customer does not have a phone number.',
-        type: 'error',
-      });
-      return;
-    }
-
-    if (!id) return;
-
-    setIsCallInitiating(true);
-    
-    try {
-      const response = await twilioService.initiateCall(parseInt(id));
-      
-      toaster.create({
-        title: 'Call Initiated',
-        description: `Calling ${customer.name} at ${customer.phone}...`,
-        type: 'success',
-        duration: 5000,
-      });
-
-      console.log('Call initiated:', response);
-      
-    } catch (error: any) {
-      console.error('Error initiating call:', error);
-      
-      let errorMessage = 'Failed to initiate call. Please try again.';
-      let errorTitle = 'Call Failed';
-      
-      if (error.message) {
-        errorMessage = error.message;
-        
-        if (errorMessage.toLowerCase().includes('not verified') || 
-            errorMessage.toLowerCase().includes('unverified') ||
-            errorMessage.toLowerCase().includes('trial account')) {
-          errorTitle = 'Phone Number Not Verified';
-          errorMessage = `The number ${customer.phone} needs to be verified in your Twilio account.\n\nTrial accounts can only call verified numbers.\n\nVerify at: https://console.twilio.com/us1/develop/phone-numbers/manage/verified`;
-        }
-      }
-      
-      toaster.create({
-        title: errorTitle,
-        description: errorMessage,
-        type: 'error',
-        duration: 10000,
-      });
-    } finally {
-      setIsCallInitiating(false);
     }
   };
 
@@ -389,10 +333,10 @@ const CustomerDetailPage = () => {
                 <Heading size={{ base: 'xl', md: '2xl' }}>
                   {customer.name}
                 </Heading>
-                {customer.company && (
+                {customer.organization && (
                   <HStack gap={2} opacity={0.9}>
                     <FiBriefcase size={16} />
-                    <Text fontSize="lg">{customer.company}</Text>
+                    <Text fontSize="lg">{customer.organization}</Text>
                   </HStack>
                 )}
                 <HStack gap={2} opacity={0.85}>
@@ -486,7 +430,7 @@ const CustomerDetailPage = () => {
                   </VStack>
                 </HStack>
 
-                {customer.company && (
+                {customer.organization && (
                   <HStack
                     p={4}
                     bg="gray.50"
@@ -504,10 +448,10 @@ const CustomerDetailPage = () => {
                     </Box>
                     <VStack align="start" gap={0.5} flex={1}>
                       <Text fontSize="sm" fontWeight="semibold" color="gray.600">
-                        Company
+                        Organization
                       </Text>
                       <Text fontSize="md" fontWeight="medium" color="gray.900">
-                        {customer.company}
+                        {customer.organization}
                       </Text>
                     </VStack>
                   </HStack>
@@ -675,17 +619,6 @@ const CustomerDetailPage = () => {
                   leftIcon={<FiMail />}
                 >
                   Send Email
-                </StandardButton>
-                <StandardButton
-                  variant="outline"
-                  w="full"
-                  justifyContent="flex-start"
-                  onClick={handleCall}
-                  disabled={!customer?.phone || isCallInitiating}
-                  isLoading={isCallInitiating}
-                  leftIcon={<FiPhone />}
-                >
-                  Make Call
                 </StandardButton>
                 <StandardButton
                   variant="outline"
