@@ -46,7 +46,7 @@ export const EditLeadPage = () => {
     name: '',
     email: '',
     phone: '',
-    company: '',
+    organization_name: '',
     job_title: '',
     source: 'website',
     status: 'active',
@@ -66,7 +66,7 @@ export const EditLeadPage = () => {
         name: lead.name,
         email: lead.email,
         phone: lead.phone || '',
-        company: lead.company || '',
+        organization_name: lead.organization_name || '',
         job_title: lead.job_title || '',
         source: lead.source,
         status: lead.status,
@@ -217,17 +217,17 @@ export const EditLeadPage = () => {
             {/* Company Information */}
             <Box>
               <Heading size="md" mb={4} color="gray.900">
-                Company Information
+                Organization Information
               </Heading>
               <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                 <VStack gap={1} align="stretch">
                   <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                    Company
+                    Organization
                   </Text>
                   <Input
                     placeholder="Acme Corporation"
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    value={formData.organization_name}
+                    onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
                     size="md"
                   />
                 </VStack>
@@ -404,7 +404,7 @@ export const EditLeadPage = () => {
             variant="primary"
             onClick={handleSubmit}
             disabled={!isFormValid || updateLead.isPending}
-            isLoading={updateLead.isPending}
+            loading={updateLead.isPending}
             size="lg"
             leftIcon={<FiSave />}
           >

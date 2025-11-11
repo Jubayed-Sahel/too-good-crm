@@ -41,8 +41,8 @@ from crmApp.viewsets import (
     # Analytics
     AnalyticsViewSet,
     # Jitsi Calls
-    JitsiCallViewSet,
-    UserPresenceViewSet,
+    # JitsiCallViewSet,
+    # UserPresenceViewSet,
 )
 
 # Import issue action views
@@ -95,8 +95,8 @@ router.register(r'notification-preferences', NotificationPreferencesViewSet, bas
 router.register(r'analytics', AnalyticsViewSet, basename='analytics')
 
 # Jitsi call endpoints
-router.register(r'jitsi-calls', JitsiCallViewSet, basename='jitsi-call')
-router.register(r'user-presence', UserPresenceViewSet, basename='user-presence')
+# router.register(r'jitsi-calls', JitsiCallViewSet, basename='jitsi-call')
+# router.register(r'user-presence', UserPresenceViewSet, basename='user-presence')
 
 # URL patterns
 urlpatterns = [

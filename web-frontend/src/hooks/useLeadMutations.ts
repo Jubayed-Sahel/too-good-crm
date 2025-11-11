@@ -24,7 +24,7 @@ export function useCreateLead() {
     onSuccess: (data) => {
       toaster.create({
         title: 'Lead created',
-        description: `Lead "${data.name || data.company}" has been created successfully.`,
+        description: `Lead "${data.name || data.organization_name}" has been created successfully.`,
         type: 'success',
       });
       
@@ -38,7 +38,7 @@ export function useCreateLead() {
         error.response?.data?.email?.[0] ||
         error.response?.data?.phone?.[0] ||
         error.response?.data?.name?.[0] ||
-        error.response?.data?.company?.[0] ||
+        error.response?.data?.organization_name?.[0] ||
         error.response?.data?.lead_score?.[0] ||
         error.response?.data?.estimated_value?.[0] ||
         error.response?.data?.non_field_errors?.[0] ||
@@ -66,7 +66,7 @@ export function useUpdateLead() {
     onSuccess: (data) => {
       toaster.create({
         title: 'Lead updated',
-        description: `Lead "${data.name || data.company}" has been updated successfully.`,
+        description: `Lead "${data.name || data.organization_name}" has been updated successfully.`,
         type: 'success',
       });
       
@@ -138,7 +138,7 @@ export function useConvertLead() {
       const lead = response.lead;
       toaster.create({
         title: 'Lead converted',
-        description: `Lead "${lead.name || lead.company}" has been converted to a customer.`,
+        description: `Lead "${lead.name || lead.organization_name}" has been converted to a customer.`,
         type: 'success',
       });
       
@@ -170,7 +170,7 @@ export function useQualifyLead() {
     onSuccess: (data) => {
       toaster.create({
         title: 'Lead qualified',
-        description: `Lead "${data.name || data.company}" has been marked as qualified.`,
+        description: `Lead "${data.name || data.organization_name}" has been marked as qualified.`,
         type: 'success',
       });
       
@@ -201,7 +201,7 @@ export function useDisqualifyLead() {
     onSuccess: (data) => {
       toaster.create({
         title: 'Lead disqualified',
-        description: `Lead "${data.name || data.company}" has been marked as disqualified.`,
+        description: `Lead "${data.name || data.organization_name}" has been marked as disqualified.`,
         type: 'success',
       });
       
@@ -232,7 +232,7 @@ export function useAssignLead() {
     onSuccess: (data) => {
       toaster.create({
         title: 'Lead assigned',
-        description: `Lead "${data.name || data.company}" has been assigned.`,
+        description: `Lead "${data.name || data.organization_name}" has been assigned.`,
         type: 'success',
       });
       

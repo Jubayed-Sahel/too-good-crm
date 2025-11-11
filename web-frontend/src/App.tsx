@@ -35,6 +35,9 @@ import ClientSettingsPage from './pages/ClientSettingsPage'
 import ClientIssuesPage from './pages/ClientIssuesPage'
 import ClientIssueDetailPage from './pages/ClientIssueDetailPage'
 import PermissionDebugPage from './pages/PermissionDebugPage'
+import EmployeeDashboardPage from './pages/EmployeeDashboardPage'
+import EmployeeTasksPage from './pages/EmployeeTasksPage'
+import EmployeeSettingsPage from './pages/EmployeeSettingsPage'
 import './App.css'
 
 /**
@@ -222,6 +225,64 @@ function App() {
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
                 <PermissionDebugPage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Employee Routes - Only for Employee profile */}
+          <Route
+            path="/employee/dashboard"
+            element={
+              <ProtectedRoute allowedProfiles={['employee']}>
+                <EmployeeDashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee/tasks"
+            element={
+              <ProtectedRoute allowedProfiles={['employee']}>
+                <EmployeeTasksPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee/activities"
+            element={
+              <ProtectedRoute allowedProfiles={['employee']}>
+                <ActivitiesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee/customers"
+            element={
+              <ProtectedRoute allowedProfiles={['employee']}>
+                <CustomersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee/deals"
+            element={
+              <ProtectedRoute allowedProfiles={['employee']}>
+                <DealsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee/leads"
+            element={
+              <ProtectedRoute allowedProfiles={['employee']}>
+                <LeadsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/employee/settings"
+            element={
+              <ProtectedRoute allowedProfiles={['employee']}>
+                <EmployeeSettingsPage />
               </ProtectedRoute>
             }
           />

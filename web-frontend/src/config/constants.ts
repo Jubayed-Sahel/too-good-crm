@@ -21,6 +21,24 @@ export const ROUTES = {
   ANALYTICS: '/analytics',
   EMPLOYEES: '/employees',
   SETTINGS: '/settings',
+  
+  // Employee Routes
+  EMPLOYEE_DASHBOARD: '/employee/dashboard',
+  EMPLOYEE_TASKS: '/employee/tasks',
+  EMPLOYEE_ACTIVITIES: '/employee/activities',
+  EMPLOYEE_CUSTOMERS: '/employee/customers',
+  EMPLOYEE_DEALS: '/employee/deals',
+  EMPLOYEE_LEADS: '/employee/leads',
+  EMPLOYEE_SETTINGS: '/employee/settings',
+  
+  // Customer/Client Routes
+  CLIENT_DASHBOARD: '/client/dashboard',
+  CLIENT_VENDORS: '/client/vendors',
+  CLIENT_ORDERS: '/client/orders',
+  CLIENT_PAYMENTS: '/client/payments',
+  CLIENT_ISSUES: '/client/issues',
+  CLIENT_ACTIVITIES: '/client/activities',
+  CLIENT_SETTINGS: '/client/settings',
 } as const;
 
 // Customer Status Options

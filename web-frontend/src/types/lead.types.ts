@@ -14,7 +14,7 @@ export interface Lead {
   name: string; // Backend uses single name field
   email: string;
   phone?: string;
-  company?: string;
+  organization_name?: string; // Backend field name
   job_title?: string;
   source: LeadSource;
   status: LeadStatus; // active/inactive
@@ -56,7 +56,7 @@ export interface CreateLeadData {
   name: string;
   email: string;
   phone?: string;
-  company?: string;
+  organization_name?: string;
   job_title?: string;
   source: LeadSource;
   qualification_status?: LeadQualificationStatus;
@@ -77,7 +77,7 @@ export interface UpdateLeadData {
   name?: string;
   email?: string;
   phone?: string;
-  company?: string;
+  organization_name?: string;
   job_title?: string;
   source?: LeadSource;
   status?: LeadStatus;
