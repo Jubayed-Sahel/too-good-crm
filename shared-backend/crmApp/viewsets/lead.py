@@ -54,7 +54,7 @@ class LeadViewSet(
         queryset = Lead.objects.all()
         queryset = self.filter_by_organization(queryset, self.request)
         queryset = self.apply_status_filter(queryset, self.request)
-        queryset = self.apply_search_filter(queryset, self.request, ['name', 'email', 'company'])
+        queryset = self.apply_search_filter(queryset, self.request, ['name', 'email', 'organization_name'])
         queryset = self.apply_assigned_to_filter(queryset, self.request)
         
         # Filter by qualification status

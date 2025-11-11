@@ -54,7 +54,7 @@ class LeadService:
             score += 10
         if lead.phone:
             score += 10
-        if lead.company:
+        if lead.organization_name:
             score += 15
         if lead.job_title:
             score += 10
@@ -239,7 +239,7 @@ class LeadService:
             queryset = queryset.filter(
                 Q(name__icontains=search_term) |
                 Q(email__icontains=search_term) |
-                Q(company__icontains=search_term) |
+                Q(organization_name__icontains=search_term) |
                 Q(phone__icontains=search_term)
             )
         

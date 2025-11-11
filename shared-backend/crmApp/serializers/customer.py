@@ -13,7 +13,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
     assigned_to_name = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
     total_value = serializers.SerializerMethodField()
-    company = serializers.CharField(source='company_name', read_only=True)  # Alias for frontend compatibility
+    organization = serializers.CharField(source='company_name', read_only=True)  # Alias for frontend compatibility
     zip_code = serializers.CharField(source='postal_code', read_only=True)  # Alias for frontend compatibility
     user_id = serializers.IntegerField(source='user.id', read_only=True, allow_null=True)  # For Jitsi calls
     
@@ -21,7 +21,7 @@ class CustomerListSerializer(serializers.ModelSerializer):
         model = Customer
         fields = [
             'id', 'code', 'name', 'first_name', 'last_name', 'full_name',
-            'email', 'phone', 'company', 'company_name',
+            'email', 'phone', 'organization', 'company_name',
             'customer_type', 'status', 'assigned_to', 'assigned_to_name',
             'total_value', 'address', 'city', 'state', 'country', 'postal_code', 'zip_code',
             'notes', 'website', 'user_id', 'created_at', 'updated_at'

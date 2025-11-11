@@ -14,7 +14,7 @@ class LeadListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = [
-            'id', 'code', 'name', 'email', 'phone', 'company',
+            'id', 'code', 'name', 'email', 'phone', 'organization_name',
             'job_title', 'status', 'source', 'qualification_status',
             'lead_score', 'estimated_value', 'assigned_to_name',
             'is_converted', 'created_at'
@@ -34,7 +34,7 @@ class LeadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = [
-            'id', 'organization', 'code', 'name', 'company',
+            'id', 'organization', 'code', 'name', 'organization_name',
             'job_title', 'email', 'phone', 'status', 'source',
             'qualification_status', 'assigned_to', 'lead_score',
             'estimated_value', 'is_converted', 'converted_at',
@@ -58,7 +58,7 @@ class LeadCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = [
-            'organization', 'name', 'company', 'job_title',
+            'organization', 'name', 'organization_name', 'job_title',
             'email', 'phone', 'source', 'qualification_status',
             'assigned_to_id', 'lead_score', 'estimated_value',
             'tags', 'notes', 'campaign', 'referrer',
@@ -125,10 +125,10 @@ class LeadCreateSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """Object-level validation"""
-        # Ensure at least name or company is provided
-        if not attrs.get('name') and not attrs.get('company'):
+        # Ensure at least name or organization_name is provided
+        if not attrs.get('name') and not attrs.get('organization_name'):
             raise serializers.ValidationError(
-                "Either 'name' or 'company' must be provided."
+                "Either 'name' or 'organization_name' must be provided."
             )
         
         # Ensure at least email or phone is provided
@@ -147,7 +147,7 @@ class LeadUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lead
         fields = [
-            'name', 'company', 'job_title', 'email', 'phone',
+            'name', 'organization_name', 'job_title', 'email', 'phone',
             'status', 'source', 'qualification_status',
             'assigned_to_id', 'lead_score', 'estimated_value',
             'tags', 'notes', 'campaign', 'referrer',
@@ -177,7 +177,7 @@ class ConvertLeadSerializer(serializers.Serializer):
         customer = Customer.objects.create(
             organization=lead.organization,
             name=lead.name,
-            company_name=lead.company,
+            company_name=lead.organization_name,
             email=lead.email,
             phone=lead.phone,
             customer_type=validated_data.get('customer_type', 'business'),

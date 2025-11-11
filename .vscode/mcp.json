@@ -12,19 +12,7 @@
         "PYTHONPATH": "${workspaceFolder}/shared-backend"
       }
     },
-    "edge-devtools": {
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@syunnrai/edge-devtools-mcp"
-      ],
-      "env": {
-        "EDGE_DEBUG_PORT": "9222",
-        "EDGE_DEBUG_HOST": "localhost",
-        "EDGE_HEADLESS": "false"
-      }
-    },
+  
     "chrome-devtools": {
       "type": "stdio",
       "command": "npx",

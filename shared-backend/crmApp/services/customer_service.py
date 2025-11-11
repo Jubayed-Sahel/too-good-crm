@@ -66,7 +66,7 @@ class CustomerService:
                 'email': lead.email,
                 'phone': lead.phone,
                 'mobile': lead.mobile,
-                'company_name': lead.company,
+                'company_name': lead.organization_name,
                 'address_line1': lead.address_line1,
                 'address_line2': lead.address_line2,
                 'city': lead.city,
@@ -76,7 +76,7 @@ class CustomerService:
                 'assigned_to': lead.assigned_to,
                 'source': lead.source,
                 'status': 'active',
-                'customer_type': 'business' if lead.company else 'individual',
+                'customer_type': 'business' if lead.organization_name else 'individual',
             }
             
             # Update with additional data if provided

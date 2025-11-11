@@ -34,7 +34,7 @@ class Lead(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, StatusMi
     
     # Basic information
     name = models.CharField(max_length=255)
-    company = models.CharField(max_length=255, null=True, blank=True)
+    organization_name = models.CharField(max_length=255, null=True, blank=True)
     job_title = models.CharField(max_length=100, null=True, blank=True)
     
     # Lead details
