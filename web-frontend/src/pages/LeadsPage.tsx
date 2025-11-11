@@ -211,7 +211,7 @@ export const LeadsPage = () => {
       Name: lead.name,
       Email: lead.email,
       Phone: lead.phone || '',
-      Company: lead.company || '',
+      Organization: lead.organization_name || '',
       Status: lead.qualification_status,
       Score: lead.lead_score,
       Source: lead.source,

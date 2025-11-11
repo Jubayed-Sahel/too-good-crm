@@ -15,6 +15,7 @@ import {
   FiCreditCard,
   FiAlertCircle,
   FiRefreshCw,
+  FiCheckSquare,
 } from 'react-icons/fi';
 import { HiUserGroup } from 'react-icons/hi';
 import { useAccountMode } from '@/contexts/AccountModeContext';
@@ -94,6 +95,17 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiSettings, label: 'Settings', path: '/settings', resource: 'settings' },
   ];
 
+  // Employee menu items
+  const employeeMenuItems = [
+    { icon: FiHome, label: 'Dashboard', path: '/employee/dashboard', resource: 'dashboard' },
+    { icon: FiCheckSquare, label: 'My Tasks', path: '/employee/tasks', resource: 'tasks' },
+    { icon: FiUsers, label: 'Customers', path: '/employee/customers', resource: 'customers' },
+    { icon: FiFileText, label: 'Deals', path: '/employee/deals', resource: 'deals' },
+    { icon: FiUserPlus, label: 'Leads', path: '/employee/leads', resource: 'leads' },
+    { icon: FiActivity, label: 'Activities', path: '/employee/activities', resource: 'activities' },
+    { icon: FiSettings, label: 'Settings', path: '/employee/settings', resource: 'settings' },
+  ];
+
   // Client menu items
   const clientMenuItems = [
     { icon: FiHome, label: 'Dashboard', path: '/client/dashboard', resource: 'vendors' },
@@ -107,7 +119,15 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
 
   // Filter menu items based on permissions
   const menuItems = useMemo(() => {
-    const items = isClientMode ? clientMenuItems : vendorMenuItems;
+    // Determine which menu to use based on profile type
+    let items;
+    if (isClientMode) {
+      items = clientMenuItems;
+    } else if (currentProfile?.profile_type === 'employee') {
+      items = employeeMenuItems;
+    } else {
+      items = vendorMenuItems;
+    }
     
     // If permissions are still loading, return empty array to avoid flicker
     if (permissionsLoading) {
@@ -121,7 +141,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     
     // Filter based on permissions
     return items.filter(item => canAccess(item.resource));
-  }, [isClientMode, isVendor, canAccess, permissionsLoading]);
+  }, [isClientMode, currentProfile, isVendor, canAccess, permissionsLoading]);
 
   // Check if user has multiple profiles (memoized)
   const hasMultipleProfiles = useMemo(() => 

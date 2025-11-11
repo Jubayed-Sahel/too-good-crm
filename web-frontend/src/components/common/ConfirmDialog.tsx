@@ -24,7 +24,7 @@ export interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   isLoading?: boolean;
-  colorScheme?: 'red' | 'orange' | 'purple' | 'blue';
+  colorScheme?: 'red' | 'orange' | 'purple' | 'blue' | 'green';
 }
 
 export const ConfirmDialog = ({

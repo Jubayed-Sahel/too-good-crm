@@ -53,14 +53,14 @@ from .call import (
     InitiateCallSerializer,
 )
 
-from .jitsi import (
-    JitsiCallSessionSerializer,
-    UserPresenceSerializer,
-    OnlineUserSerializer,
-    InitiateCallSerializer as JitsiInitiateCallSerializer,
-    UpdateCallStatusSerializer,
-    UpdatePresenceSerializer,
-)
+# from .jitsi import (
+#     JitsiCallSessionSerializer,
+#     UserPresenceSerializer,
+#     OnlineUserSerializer,
+#     InitiateCallSerializer as JitsiInitiateCallSerializer,
+#     UpdateCallStatusSerializer,
+#     UpdatePresenceSerializer,
+# )
 
 from .lead import (
     LeadSerializer,
@@ -158,12 +158,12 @@ __all__ = [
     'InitiateCallSerializer',
     
     # Jitsi Calls
-    'JitsiCallSessionSerializer',
-    'UserPresenceSerializer',
-    'OnlineUserSerializer',
-    'JitsiInitiateCallSerializer',
-    'UpdateCallStatusSerializer',
-    'UpdatePresenceSerializer',
+    # 'JitsiCallSessionSerializer',
+    # 'UserPresenceSerializer',
+    # 'OnlineUserSerializer',
+    # 'JitsiInitiateCallSerializer',
+    # 'UpdateCallStatusSerializer',
+    # 'UpdatePresenceSerializer',
     
     # Lead
     'LeadSerializer',

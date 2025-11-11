@@ -41,7 +41,7 @@ export const EditCustomerPage = () => {
     last_name: '',
     email: '',
     phone: '',
-    company: '',
+    organization: '',
     job_title: '',
     website: '',
     status: 'active' as CustomerStatus,
@@ -62,7 +62,7 @@ export const EditCustomerPage = () => {
         last_name: customer.last_name || '',
         email: customer.email || '',
         phone: customer.phone || '',
-        company: customer.company || '',
+        organization: customer.organization || '',
         job_title: customer.job_title || '',
         website: customer.website || '',
         status: customer.status || 'active',
@@ -233,17 +233,17 @@ export const EditCustomerPage = () => {
             {/* Company Information */}
             <Box>
               <Heading size="md" mb={4} color="gray.900">
-                Company Information
+                Organization Information
               </Heading>
               <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                 <VStack gap={1} align="stretch">
                   <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                    Company
+                    Organization
                   </Text>
                   <Input
                     placeholder="Acme Corporation"
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    value={formData.organization}
+                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
                     size="md"
                   />
                 </VStack>
@@ -401,7 +401,7 @@ export const EditCustomerPage = () => {
             variant="primary"
             onClick={handleSubmit}
             disabled={!isFormValid || isSaving}
-            isLoading={isSaving}
+            loading={isSaving}
             size="lg"
             leftIcon={<FiSave />}
           >

@@ -9,6 +9,7 @@ import {
   Grid,
   Badge,
   Spinner,
+  Button
 } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
@@ -285,10 +286,10 @@ const LeadDetailPage = () => {
                   <Heading size={{ base: 'xl', md: '2xl' }}>
                     {lead.name}
                   </Heading>
-                  {lead.company && (
+                  {lead.organization_name && (
                     <HStack gap={2} opacity={0.9}>
                       <FiBriefcase size={16} />
-                      <Text fontSize="lg">{lead.company}</Text>
+                      <Text fontSize="lg">{lead.organization_name}</Text>
                     </HStack>
                   )}
                   {lead.job_title && (

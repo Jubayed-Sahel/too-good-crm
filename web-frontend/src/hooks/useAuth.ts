@@ -1,7 +1,7 @@
 /**
  * Authentication hook
  */
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, roleSelectionService } from '@/services';
 import { ROUTES } from '@/config/constants';
@@ -88,16 +88,18 @@ export const useAuth = () => {
   const navigateToDefaultRoute = (authUser: User) => {
     const primaryProfile = authUser.primaryProfile || authUser.profiles?.[0];
     
-    let targetRoute = ROUTES.DASHBOARD;
+    let targetRoute: string = ROUTES.DASHBOARD;
     
     if (primaryProfile) {
       // Navigate based on profile type
       switch (primaryProfile.profile_type) {
         case 'customer':
-          targetRoute = '/client/dashboard';
+          targetRoute = ROUTES.CLIENT_DASHBOARD;
+          break;
+        case 'employee':
+          targetRoute = ROUTES.EMPLOYEE_DASHBOARD;
           break;
         case 'vendor':
-        case 'employee':
         default:
           targetRoute = ROUTES.DASHBOARD;
           break;
@@ -212,17 +214,18 @@ export const useAuth = () => {
     const primaryProfile = authUser.primaryProfile || authUser.profiles?.[0];
     
     if (!primaryProfile) {
-      return '/dashboard';
+      return ROUTES.DASHBOARD;
     }
 
     // Return route based on profile type
     switch (primaryProfile.profile_type) {
       case 'customer':
-        return '/client/dashboard';
-      case 'vendor':
+        return ROUTES.CLIENT_DASHBOARD;
       case 'employee':
+        return ROUTES.EMPLOYEE_DASHBOARD;
+      case 'vendor':
       default:
-        return '/dashboard';
+        return ROUTES.DASHBOARD;
     }
   };
 
