@@ -191,17 +191,11 @@ class DealCreateSerializer(serializers.ModelSerializer):
             )
         return value
     
-    def validate_expected_close_date(self, value):
-        """Validate expected close date is not in the past"""
-        if value:
-            from datetime import date
-            if value < date.today():
-                raise serializers.ValidationError(
-                    "Expected close date cannot be in the past."
-                )
-        return value
-    
     def validate(self, attrs):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"DealCreateSerializer.validate() called with attrs: {attrs}")
+        
         # Handle backward compatibility for customer/customer_id
         if 'customer' in attrs:
             attrs['customer_id'] = attrs.pop('customer')
@@ -212,18 +206,23 @@ class DealCreateSerializer(serializers.ModelSerializer):
         if 'assigned_to' in attrs:
             attrs['assigned_to_id'] = attrs.pop('assigned_to')
         
+        logger.info(f"After field mapping: {attrs}")
+        
         # Ensure customer is provided
         if not attrs.get('customer_id'):
+            logger.warning("Customer validation failed - customer_id is missing")
             raise serializers.ValidationError({
                 'customer': "Customer is required for creating a deal."
             })
         
         # Ensure title is provided
         if not attrs.get('title'):
+            logger.warning("Title validation failed - title is missing")
             raise serializers.ValidationError({
                 'title': "Deal title is required."
             })
         
+        logger.info(f"Validation passed, returning: {attrs}")
         return attrs
 
 

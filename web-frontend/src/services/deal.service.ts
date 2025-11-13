@@ -181,7 +181,8 @@ class DealService {
    * Get all pipelines
    */
   async getPipelines(): Promise<Pipeline[]> {
-    return api.get<Pipeline[]>(API_CONFIG.ENDPOINTS.PIPELINES.LIST);
+    const response = await api.get<PaginatedResponse<Pipeline>>(API_CONFIG.ENDPOINTS.PIPELINES.LIST);
+    return response.results || [];
   }
 
   /**
@@ -229,7 +230,8 @@ class DealService {
   async getPipelineStages(pipelineId?: number): Promise<PipelineStage[]> {
     const endpoint = API_CONFIG.ENDPOINTS.PIPELINES.STAGES;
     const queryString = pipelineId ? buildQueryString({ pipeline: pipelineId }) : '';
-    return api.get<PipelineStage[]>(`${endpoint}${queryString}`);
+    const response = await api.get<PaginatedResponse<PipelineStage>>(`${endpoint}${queryString}`);
+    return response.results || [];
   }
 
   /**

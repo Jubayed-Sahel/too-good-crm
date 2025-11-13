@@ -393,7 +393,9 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
         stageId
       );
       
+      console.log('🔍 Deal data before cleaning:', transformedData);
       const backendData = cleanFormData(transformedData);
+      console.log('🔍 Deal data after cleaning:', backendData);
 
       await createMutation.mutateAsync(backendData);
     } catch (err: any) {

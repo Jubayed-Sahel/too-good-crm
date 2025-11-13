@@ -248,6 +248,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             ]
             
             vendor_profile = None
+            customer_profile = None
             for profile_type, is_primary in profiles_to_create:
                 profile = UserProfile.objects.create(
                     user=user,
@@ -259,6 +260,8 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 )
                 if profile_type == 'vendor':
                     vendor_profile = profile
+                elif profile_type == 'customer':
+                    customer_profile = profile
             
             # Create vendor record linked to the vendor profile
             if vendor_profile:
@@ -282,6 +285,69 @@ class UserCreateSerializer(serializers.ModelSerializer):
                     import logging
                     logger = logging.getLogger(__name__)
                     logger.warning(f"Failed to create vendor record during registration: {e}")
+            
+            # Create customer record linked to the customer profile
+            # ALSO: Link to any existing customer records created by vendors
+            if customer_profile:
+                try:
+                    from crmApp.models import Customer
+                    
+                    # Create customer record in user's own organization
+                    customer, created = Customer.objects.get_or_create(
+                        user=user,
+                        organization=organization,
+                        defaults={
+                            'user_profile': customer_profile,
+                            'name': user.full_name,
+                            'first_name': user.first_name,
+                            'last_name': user.last_name,
+                            'email': user.email,
+                            'customer_type': 'individual',
+                            'status': 'active'
+                        }
+                    )
+                    # Update user_profile if it wasn't set
+                    if not customer.user_profile:
+                        customer.user_profile = customer_profile
+                        customer.save(update_fields=['user_profile'])
+                    
+                    # IMPORTANT: Link to existing customer records created by other vendors
+                    # Find all customer records with this email that don't have a user linked yet
+                    orphan_customers = Customer.objects.filter(
+                        email__iexact=user.email,
+                        user__isnull=True  # Not yet linked to a user account
+                    ).exclude(
+                        organization=organization  # Exclude the one we just created
+                    )
+                    
+                    # Link all orphan customer records to this user
+                    for orphan in orphan_customers:
+                        orphan.user = user
+                        # Don't override the organization - keep the vendor's organization
+                        # Create/link to customer profile for that organization
+                        vendor_customer_profile, profile_created = UserProfile.objects.get_or_create(
+                            user=user,
+                            profile_type='customer',
+                            defaults={
+                                'organization': orphan.organization,
+                                'is_primary': False,
+                                'status': 'active',
+                                'activated_at': timezone.now()
+                            }
+                        )
+                        orphan.user_profile = vendor_customer_profile
+                        orphan.save(update_fields=['user', 'user_profile'])
+                    
+                    if orphan_customers.exists():
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.info(f"Linked {orphan_customers.count()} existing customer records to user {user.email}")
+                    
+                except Exception as e:
+                    # Log error but don't fail registration
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to create/link customer records during registration: {e}")
         
         return user
 
