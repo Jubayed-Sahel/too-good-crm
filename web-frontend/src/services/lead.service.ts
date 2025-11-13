@@ -2,7 +2,7 @@
  * Leads Service - Connected to Backend API
  */
 import api from '@/lib/apiClient';
-import { API_CONFIG, buildUrl } from '@/config/api.config';
+import { API_CONFIG, buildQueryString } from '@/config/api.config';
 import type {
   Lead,
   LeadActivity,
@@ -19,8 +19,9 @@ class LeadService {
    * Get all leads with optional filters
    */
   async getLeads(filters?: LeadFilters): Promise<PaginatedResponse<Lead>> {
-    const url = buildUrl(API_CONFIG.ENDPOINTS.LEADS.LIST, filters as any);
-    return api.get<PaginatedResponse<Lead>>(url);
+    const endpoint = API_CONFIG.ENDPOINTS.LEADS.LIST;
+    const queryString = filters ? buildQueryString(filters as any) : '';
+    return api.get<PaginatedResponse<Lead>>(`${endpoint}${queryString}`);
   }
 
   /**

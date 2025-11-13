@@ -2,7 +2,7 @@
  * Customer service
  */
 import api from '@/lib/apiClient';
-import { API_CONFIG, buildUrl } from '@/config/api.config';
+import { API_CONFIG, buildQueryString } from '@/config/api.config';
 import type { Customer, CustomerNote, PaginatedResponse } from '@/types';
 
 export interface CustomerFilters {
@@ -22,8 +22,9 @@ class CustomerService {
    * Get paginated list of customers
    */
   async getCustomers(params?: CustomerFilters): Promise<PaginatedResponse<Customer>> {
-    const url = buildUrl(API_CONFIG.ENDPOINTS.CUSTOMERS.LIST, params);
-    return api.get<PaginatedResponse<Customer>>(url);
+    const endpoint = API_CONFIG.ENDPOINTS.CUSTOMERS.LIST;
+    const queryString = params ? buildQueryString(params) : '';
+    return api.get<PaginatedResponse<Customer>>(`${endpoint}${queryString}`);
   }
 
   /**

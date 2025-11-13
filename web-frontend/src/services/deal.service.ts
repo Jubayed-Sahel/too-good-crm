@@ -3,7 +3,7 @@
  * Handles deal and pipeline-related API calls
  */
 import api from '@/lib/apiClient';
-import { API_CONFIG, buildUrl } from '@/config/api.config';
+import { API_CONFIG, buildQueryString } from '@/config/api.config';
 import type { Deal, PaginatedResponse } from '@/types';
 
 export interface DealStats {
@@ -91,8 +91,9 @@ class DealService {
    * Get paginated list of deals
    */
   async getDeals(filters?: DealFilters): Promise<PaginatedResponse<Deal>> {
-    const url = buildUrl(API_CONFIG.ENDPOINTS.DEALS.LIST, filters);
-    return api.get<PaginatedResponse<Deal>>(url);
+    const endpoint = API_CONFIG.ENDPOINTS.DEALS.LIST;
+    const queryString = filters ? buildQueryString(filters) : '';
+    return api.get<PaginatedResponse<Deal>>(`${endpoint}${queryString}`);
   }
 
   /**
@@ -130,8 +131,9 @@ class DealService {
    * Get deal statistics
    */
   async getStats(filters?: Pick<DealFilters, 'pipeline' | 'assigned_to'>): Promise<DealStats> {
-    const url = buildUrl(API_CONFIG.ENDPOINTS.DEALS.STATS, filters);
-    return api.get<DealStats>(url);
+    const endpoint = API_CONFIG.ENDPOINTS.DEALS.STATS;
+    const queryString = filters ? buildQueryString(filters) : '';
+    return api.get<DealStats>(`${endpoint}${queryString}`);
   }
 
   /**
@@ -225,10 +227,9 @@ class DealService {
    * Get pipeline stages
    */
   async getPipelineStages(pipelineId?: number): Promise<PipelineStage[]> {
-    const url = pipelineId 
-      ? buildUrl(API_CONFIG.ENDPOINTS.PIPELINES.STAGES, { pipeline: pipelineId })
-      : API_CONFIG.ENDPOINTS.PIPELINES.STAGES;
-    return api.get<PipelineStage[]>(url);
+    const endpoint = API_CONFIG.ENDPOINTS.PIPELINES.STAGES;
+    const queryString = pipelineId ? buildQueryString({ pipeline: pipelineId }) : '';
+    return api.get<PipelineStage[]>(`${endpoint}${queryString}`);
   }
 
   /**
@@ -304,8 +305,9 @@ class DealService {
    * Export deals to CSV
    */
   async exportDeals(filters?: DealFilters): Promise<Blob> {
-    const url = buildUrl('/deals/export/', filters);
-    return api.get<Blob>(url, {
+    const endpoint = '/deals/export/';
+    const queryString = filters ? buildQueryString(filters) : '';
+    return api.get<Blob>(`${endpoint}${queryString}`, {
       responseType: 'blob',
     });
   }
