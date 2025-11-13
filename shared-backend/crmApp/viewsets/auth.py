@@ -6,7 +6,6 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.authtoken.models import Token
 from django.contrib.auth import login, logout
 from django.utils import timezone
 
@@ -20,6 +19,7 @@ from crmApp.serializers import (
     LoginSerializer,
     ChangePasswordSerializer,
 )
+from crmApp.services import AuthService
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -44,18 +44,19 @@ class UserViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated()]
     
     def create(self, request, *args, **kwargs):
-        """Register a new user and return token"""
+        """Register a new user and return JWT tokens"""
         try:
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             user = serializer.save()
             
-            # Create token for new user
-            token, created = Token.objects.get_or_create(user=user)
+            # Generate JWT tokens for new user
+            result = AuthService.login_user(user.email, request.data.get('password'))
             
             return Response({
                 'user': UserSerializer(user).data,
-                'token': token.key,
+                'access': result['tokens']['access'],
+                'refresh': result['tokens']['refresh'],
                 'message': 'Registration successful'
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
@@ -206,14 +207,14 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 
 class LoginViewSet(viewsets.ViewSet):
     """
-    ViewSet for user authentication.
+    ViewSet for user authentication with JWT tokens.
     """
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
     
     def create(self, request):
         """
-        Login endpoint - returns Token for authentication
+        Login endpoint - returns JWT access and refresh tokens
         """
         import logging
         logger = logging.getLogger(__name__)
@@ -234,33 +235,34 @@ class LoginViewSet(viewsets.ViewSet):
         user.last_login_at = timezone.now()
         user.save(update_fields=['last_login_at'])
         
-        # Get or create token
-        token, created = Token.objects.get_or_create(user=user)
+        # Generate JWT tokens using AuthService
+        result = AuthService.login_user(user.email, request.data.get('password'))
         
         logger.info(f"Login successful for user: {user.email}")
         
         return Response({
             'user': UserSerializer(user).data,
-            'token': token.key,
+            'access': result['tokens']['access'],
+            'refresh': result['tokens']['refresh'],
             'message': 'Login successful'
         })
 
 
 class LogoutViewSet(viewsets.ViewSet):
     """
-    ViewSet for user logout.
+    ViewSet for user logout (JWT doesn't require server-side logout).
     """
     permission_classes = [IsAuthenticated]
     
     def create(self, request):
         """
-        Logout endpoint - deletes auth token
+        Logout endpoint - JWT tokens are stateless, so client just needs to delete tokens
         """
         try:
-            # Delete the user's token
-            request.user.auth_token.delete()
             logout(request)
-            return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
+            return Response({
+                'message': 'Successfully logged out. Please delete tokens on client side.'
+            }, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -293,4 +295,46 @@ class ChangePasswordViewSet(viewsets.ViewSet):
         }, status=status.HTTP_200_OK)
 
 
-# RefreshTokenViewSet removed - using simple Token authentication instead
+class RefreshTokenViewSet(viewsets.ViewSet):
+    """
+    ViewSet for refreshing JWT access tokens.
+    """
+    permission_classes = [AllowAny]
+    
+    def create(self, request):
+        """
+        Refresh token endpoint - returns new access token
+        POST /api/auth/refresh/
+        Body: { "refresh": "<refresh_token>" }
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        refresh_token = request.data.get('refresh')
+        
+        if not refresh_token:
+            return Response(
+                {'error': 'Refresh token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Use AuthService to refresh the access token
+            result = AuthService.refresh_access_token(refresh_token)
+            
+            logger.info("Token refresh successful")
+            
+            return Response({
+                'access': result['tokens']['access'],
+                'refresh': result['tokens']['refresh'],
+                'message': 'Token refreshed successfully'
+            })
+        except Exception as e:
+            logger.warning(f"Token refresh failed: {str(e)}")
+            return Response(
+                {'error': 'Invalid or expired refresh token'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+
+# RefreshTokenViewSet now implemented above - using JWT authentication

@@ -33,7 +33,8 @@ export const ROUTES = {
 
 // Storage Keys
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: 'authToken',
+  ACCESS_TOKEN: 'accessToken',
+  REFRESH_TOKEN: 'refreshToken',
   USER: 'user',
   THEME: 'chakra-ui-color-mode',
   ACCOUNT_MODE: 'accountMode',

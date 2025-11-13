@@ -117,12 +117,19 @@ class AuthService:
             refresh_token: Refresh token string
             
         Returns:
-            Dict with new access token, or None if invalid
+            Dict with new tokens, or None if invalid
         """
         try:
             refresh = RefreshToken(refresh_token)
+            # Rotate refresh token for security
+            refresh.set_jti()
+            refresh.set_exp()
+            
             return {
-                'access': str(refresh.access_token),
+                'tokens': {
+                    'access': str(refresh.access_token),
+                    'refresh': str(refresh),
+                }
             }
         except Exception:
             return None

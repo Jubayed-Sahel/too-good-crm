@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     
     # Third party apps
     'rest_framework',
-    'rest_framework.authtoken',  # Token authentication
+    'rest_framework_simplejwt',  # JWT authentication
     'corsheaders',
     
     # Your apps
@@ -152,7 +152,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',  # Primary authentication
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Primary JWT authentication
         'rest_framework.authentication.SessionAuthentication',  # For browsable API
     ],
     'DEFAULT_PAGINATION_CLASS': 'crmApp.pagination.StandardResultsSetPagination',

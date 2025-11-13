@@ -1,11 +1,10 @@
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import {
   CustomersPageContent,
   CustomersPageLoading,
-} from '@/components/customers';
-import { ConfirmDialog } from '@/components/common';
-import { ErrorState } from '@/components/common';
-import { useCustomers, useCustomersPage, useCustomerActions } from '../hooks/index';
+} from '../../components/customers';
+import { ConfirmDialog, ErrorState } from '../../components/common';
+import { useCustomers, useCustomersPage, useCustomerActions } from '@/hooks';
 // import { initiateCall } from '@/components/jitsi/JitsiCallManager';
 import { toaster } from '@/components/ui/toaster';
 // import { useState } from 'react';

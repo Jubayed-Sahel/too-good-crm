@@ -1,17 +1,15 @@
-import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import {
   CustomersPageContent,
   CustomersPageLoading,
-} from '@/components/customers';
-import { ConfirmDialog } from '@/components/common';
-import { ErrorState } from '@/components/common';
-import { useCustomers, useCustomersPage, useCustomerActions } from '../hooks/index';
+} from '../../components/customers';
+import { ConfirmDialog, ErrorState } from '../../components/common';
+import { useCustomers, useCustomersPage, useCustomerActions } from '@/hooks';
 // import { initiateCall } from '@/components/jitsi/JitsiCallManager';
 import { toaster } from '@/components/ui/toaster';
-// import { useState } from 'react';
 
 /**
- * CustomersPage - Container Component
+ * EmployeeCustomersPage - Container Component
  * 
  * This component follows the Container/Presenter pattern:
  * - Fetches data using custom hooks
@@ -26,10 +24,7 @@ import { toaster } from '@/components/ui/toaster';
  * 
  * No business logic or UI implementation details here.
  */
-const CustomersPage = () => {
-  // Call state
-  // const [isCallInitiating, setIsCallInitiating] = useState(false);
-
+const EmployeeCustomersPage = () => {
   // Data fetching
   const { customers, isLoading, error, refetch } = useCustomers();
 
@@ -67,8 +62,6 @@ const CustomersPage = () => {
     //   });
     //   return;
     // }
-
-    // setIsCallInitiating(true);
     
     // try {
     //   await initiateCall(customer.user_id, customer.full_name || customer.name, 'audio');
@@ -81,9 +74,6 @@ const CustomersPage = () => {
     //   
     //   // Error toast is already shown by initiateCall helper
     //   // Just log for debugging
-    //   
-    // } finally {
-    //   setIsCallInitiating(false);
     // }
 
     toaster.create({
@@ -170,4 +160,5 @@ const CustomersPage = () => {
   );
 };
 
-export default CustomersPage;
+export default EmployeeCustomersPage;
+

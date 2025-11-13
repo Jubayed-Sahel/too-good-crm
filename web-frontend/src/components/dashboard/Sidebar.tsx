@@ -100,9 +100,13 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiHome, label: 'Dashboard', path: '/employee/dashboard', resource: 'dashboard' },
     { icon: FiCheckSquare, label: 'My Tasks', path: '/employee/tasks', resource: 'tasks' },
     { icon: FiUsers, label: 'Customers', path: '/employee/customers', resource: 'customers' },
+    { icon: FiTrendingUp, label: 'Sales', path: '/employee/sales', resource: 'deals' },
     { icon: FiFileText, label: 'Deals', path: '/employee/deals', resource: 'deals' },
     { icon: FiUserPlus, label: 'Leads', path: '/employee/leads', resource: 'leads' },
+    { icon: HiUserGroup, label: 'Team', path: '/employee/employees', resource: 'employees' },
     { icon: FiActivity, label: 'Activities', path: '/employee/activities', resource: 'activities' },
+    { icon: FiAlertCircle, label: 'Issues', path: '/employee/issues', resource: 'issues' },
+    { icon: FiBarChart2, label: 'Analytics', path: '/employee/analytics', resource: 'analytics' },
     { icon: FiSettings, label: 'Settings', path: '/employee/settings', resource: 'settings' },
   ];
 
