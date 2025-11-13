@@ -143,26 +143,6 @@ const ClientOrdersPage = () => {
           orders={mappedOrders}
           onView={handleViewDetails}
         />
-
-        {/* Empty State */}
-        {mappedOrders.length === 0 && (
-          <Box
-            textAlign="center"
-            py={12}
-            px={6}
-            bg="gray.50"
-            borderRadius="lg"
-          >
-            <Heading size="md" color="gray.600" mb={2}>
-              No orders found
-            </Heading>
-            <Text color="gray.500">
-              {searchQuery || statusFilter !== 'all' || vendorFilter !== 'all'
-                ? 'Try adjusting your filters'
-                : 'Get started by placing your first order'}
-            </Text>
-          </Box>
-        )}
       </VStack>
     </DashboardLayout>
   );

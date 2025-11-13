@@ -182,35 +182,12 @@ const ClientVendorsPage = () => {
             <Spinner size="xl" color="blue.500" />
           </Box>
         ) : (
-          <>
-            {/* Vendor Table */}
-            <VendorTable
-              vendors={mappedVendors}
-              onContact={handleContact}
-              onCall={handleCall}
-              onViewOrders={handleViewOrders}
-            />
-
-            {/* Empty State */}
-            {mappedVendors.length === 0 && (
-              <Box
-                textAlign="center"
-                py={12}
-                px={6}
-                bg="gray.50"
-                borderRadius="lg"
-              >
-                <Heading size="lg" color="gray.600" mb={2}>
-                  No vendors found
-                </Heading>
-                <Text color="gray.500" fontSize="md">
-                  {searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
-                    ? 'Try adjusting your filters'
-                    : 'Get started by adding your first vendor'}
-                </Text>
-              </Box>
-            )}
-          </>
+          <VendorTable
+            vendors={mappedVendors}
+            onContact={handleContact}
+            onCall={handleCall}
+            onViewOrders={handleViewOrders}
+          />
         )}
       </VStack>
 

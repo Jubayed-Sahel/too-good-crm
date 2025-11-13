@@ -247,15 +247,6 @@ const EmployeeLeadsPage = () => {
         <PageHeader
           title="Leads"
           description="Manage your lead pipeline and track conversions"
-          actions={
-            <StandardButton
-              variant="primary"
-              leftIcon={<FiPlus />}
-              onClick={() => setIsCreateDialogOpen(true)}
-            >
-              New Lead
-            </StandardButton>
-          }
         />
 
         {/* Statistics Cards */}
@@ -277,38 +268,16 @@ const EmployeeLeadsPage = () => {
             <Spinner size="xl" color="purple.500" />
           </Box>
         ) : (
-          <>
-            {/* Leads Table */}
-            {leads.length > 0 ? (
-              <LeadsTable
-                leads={leads}
-                isLoading={leadsLoading}
-                onView={handleViewLead}
-                onEdit={handleEditLead}
-                onDelete={handleDeleteLead}
-                onConvert={handleConvertLead}
-                onBulkDelete={handleBulkDelete}
-                onBulkExport={handleBulkExport}
-              />
-            ) : (
-              <Box
-                textAlign="center"
-                py={12}
-                px={6}
-                bg="gray.50"
-                borderRadius="lg"
-              >
-                <Heading size="md" color="gray.600" mb={2}>
-                  No leads found
-                </Heading>
-                <Text color="gray.500">
-                  {Object.keys(filters).length > 0
-                    ? 'Try adjusting your filters'
-                    : 'Get started by adding your first lead'}
-                </Text>
-              </Box>
-            )}
-          </>
+          <LeadsTable
+            leads={leads}
+            isLoading={leadsLoading}
+            onView={handleViewLead}
+            onEdit={handleEditLead}
+            onDelete={handleDeleteLead}
+            onConvert={handleConvertLead}
+            onBulkDelete={handleBulkDelete}
+            onBulkExport={handleBulkExport}
+          />
         )}
       </VStack>
 

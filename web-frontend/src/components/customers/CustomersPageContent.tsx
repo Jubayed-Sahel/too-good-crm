@@ -79,16 +79,7 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
       <PageHeader
         title="Customers"
         description="Manage your customer relationships, track interactions, and monitor customer activity"
-        actions={
-          <StandardButton
-            variant="primary"
-            leftIcon={<FiPlus />}
-            onClick={onAddCustomer}
-          >
-            Add Customer
-          </StandardButton>
-        }
-        />
+      />
 
       {/* Stats Cards */}
       <CustomerStats {...stats} />

@@ -146,26 +146,6 @@ const ClientPaymentsPage = () => {
           onPayNow={handlePayNow}
           onDownloadReceipt={handleDownloadReceipt}
         />
-
-        {/* Empty State */}
-        {mappedPayments.length === 0 && (
-          <Box
-            textAlign="center"
-            py={12}
-            px={6}
-            bg="gray.50"
-            borderRadius="lg"
-          >
-            <Heading size="md" color="gray.600" mb={2}>
-              No payments found
-            </Heading>
-            <Text color="gray.500">
-              {searchQuery || statusFilter !== 'all' || vendorFilter !== 'all'
-                ? 'Try adjusting your filters'
-                : 'No payment records available'}
-            </Text>
-          </Box>
-        )}
       </VStack>
     </DashboardLayout>
   );

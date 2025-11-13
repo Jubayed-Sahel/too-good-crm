@@ -323,37 +323,14 @@ const EmployeeIssuesPage = () => {
             <Spinner size="xl" color="purple.500" />
           </Box>
         ) : (
-          <>
-            {/* Issues Table */}
-            <IssuesDataTable
-              issues={issues}
-              onView={handleView}
-              onEdit={handleEdit}
-              onResolve={handleResolve}
-              onDelete={handleDelete}
-              onUpdateStatus={handleUpdateStatus}
-            />
-
-            {/* Empty State */}
-            {issues.length === 0 && (
-              <Box textAlign="center" py={12}>
-                <Text color="gray.500" fontSize="lg" mb={4}>
-                  {canRaiseIssue 
-                    ? "No issues found matching your filters"
-                    : "No issues have been raised by customers yet"}
-                </Text>
-                {canRaiseIssue && (
-                  <StandardButton
-                    onClick={() => setIsCreateDialogOpen(true)}
-                    variant="primary"
-                    leftIcon={<FiPlus />}
-                  >
-                    Raise Your First Issue
-                  </StandardButton>
-                )}
-              </Box>
-            )}
-          </>
+          <IssuesDataTable
+            issues={issues}
+            onView={handleView}
+            onEdit={handleEdit}
+            onResolve={handleResolve}
+            onDelete={handleDelete}
+            onUpdateStatus={handleUpdateStatus}
+          />
         )}
 
         {/* Modals */}

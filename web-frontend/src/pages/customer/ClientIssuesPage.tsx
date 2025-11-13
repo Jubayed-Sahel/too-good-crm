@@ -187,18 +187,6 @@ const ClientIssuesPage = () => {
               onDelete={handleDelete}
             />
 
-            {/* Empty State */}
-            {issues.length === 0 && (
-              <Box textAlign="center" py={12}>
-                <Text color="gray.500" fontSize="lg">
-                  No issues found matching your filters
-                </Text>
-                <Text color="gray.400" fontSize="sm" mt={2}>
-                  Click "Raise Issue" to report a problem to an organization
-                </Text>
-              </Box>
-            )}
-
             {/* Raise Issue Modal */}
             <ClientRaiseIssueModal
               isOpen={isRaiseModalOpen}
