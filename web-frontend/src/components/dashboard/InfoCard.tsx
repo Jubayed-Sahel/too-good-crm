@@ -15,7 +15,7 @@ const InfoCard = ({ title, icon, iconBg, iconColor, children }: InfoCardProps) =
       bg="white"
       borderRadius="xl"
       boxShadow="md"
-      p={{ base: 4, md: 5 }}
+      p={{ base: 5, md: 6 }}
       border="1px"
       borderColor="gray.100"
     >

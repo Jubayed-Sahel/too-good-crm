@@ -158,7 +158,7 @@ const EmployeeEditEmployeePage = () => {
                 Back
               </Button>
               <Box>
-                <Heading size="lg" color="gray.900">
+                <Heading size="2xl" color="gray.900">
                   Edit Employee
                 </Heading>
                 <Text fontSize="sm" color="gray.600">

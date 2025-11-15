@@ -91,7 +91,7 @@ export const ProfileSwitcher = () => {
         >
           <HStack gap={2}>
             <Box color={`${activeColor}.500`}>
-              <ActiveIcon size={18} />
+              <ActiveIcon size={20} />
             </Box>
             <VStack align="start" gap={0}>
               <Text fontSize="xs" color="gray.500" lineHeight="1">

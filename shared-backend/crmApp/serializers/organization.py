@@ -50,10 +50,53 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
             is_active=True
         )
         
+        # Create vendor profile for the user
+        self._create_vendor_profile(user, organization)
+        
         # Create default permissions for the organization
         self._create_default_permissions(organization)
         
         return organization
+    
+    def _create_vendor_profile(self, user, organization):
+        """Create vendor profile and vendor record for the user"""
+        from crmApp.models import UserProfile, Vendor
+        from django.utils import timezone
+        
+        # Check if vendor profile already exists
+        vendor_profile = UserProfile.objects.filter(
+            user=user,
+            profile_type='vendor'
+        ).first()
+        
+        if not vendor_profile:
+            # Create vendor profile
+            vendor_profile = UserProfile.objects.create(
+                user=user,
+                organization=organization,
+                profile_type='vendor',
+                is_primary=True,
+                status='active',
+                activated_at=timezone.now()
+            )
+        else:
+            # Update existing vendor profile with organization
+            vendor_profile.organization = organization
+            vendor_profile.status = 'active'
+            vendor_profile.activated_at = timezone.now()
+            vendor_profile.save()
+        
+        # Create or update vendor record
+        Vendor.objects.update_or_create(
+            user=user,
+            organization=organization,
+            defaults={
+                'user_profile': vendor_profile,
+                'name': organization.name,
+                'email': user.email,
+                'status': 'active'
+            }
+        )
     
     def _create_default_permissions(self, organization):
         """Create default permissions for a new organization"""

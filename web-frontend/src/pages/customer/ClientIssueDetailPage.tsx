@@ -349,7 +349,7 @@ const ClientIssueDetailPage = () => {
             <VStack align="stretch" gap={4}>
               <HStack gap={2}>
                 <Box p={2} bg="blue.50" borderRadius="md" color="blue.600">
-                  <FiCalendar size={18} />
+                  <FiCalendar size={20} />
                 </Box>
                 <Heading size="md" color="gray.900">
                   Timeline
@@ -389,7 +389,7 @@ const ClientIssueDetailPage = () => {
             <VStack align="stretch" gap={4}>
               <HStack gap={2}>
                 <Box p={2} bg="purple.50" borderRadius="md" color="purple.600">
-                  <FiAlertCircle size={18} />
+                  <FiAlertCircle size={20} />
                 </Box>
                 <Heading size="md" color="gray.900">
                   Issue Details
@@ -440,7 +440,7 @@ const ClientIssueDetailPage = () => {
           <VStack align="stretch" gap={5}>
             <HStack gap={2}>
               <Box p={2} bg="green.50" borderRadius="md" color="green.600">
-                <FiMessageSquare size={18} />
+                <FiMessageSquare size={20} />
               </Box>
               <Heading size="md" color="gray.900">
                 Comments & Updates

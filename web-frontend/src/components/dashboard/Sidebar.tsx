@@ -251,7 +251,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                       onClick={handleOpenRoleSwitcher}
                       w="full"
                     >
-                      <FiRefreshCw size={12} />
+                      <FiRefreshCw size={14} />
                       <Text ml={1}>Switch Profile ({profiles?.length})</Text>
                     </Button>
                   )}

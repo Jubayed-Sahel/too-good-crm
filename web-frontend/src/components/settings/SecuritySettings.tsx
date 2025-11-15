@@ -70,7 +70,7 @@ const SecuritySettings = () => {
         <form onSubmit={handlePasswordChange}>
           <VStack align="stretch" gap={4}>
             <HStack gap={2}>
-              <FiLock size={18} color="#3182CE" />
+              <FiLock size={20} color="#3182CE" />
               <Text fontSize="sm" fontWeight="semibold" color="gray.700">
                 Change Password
               </Text>

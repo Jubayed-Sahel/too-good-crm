@@ -29,9 +29,9 @@ const CustomerFilters = ({
   return (
     <Stack
       direction={{ base: 'column', md: 'row' }}
-      gap={4}
-      justifyContent="space-between"
-      alignItems={{ base: 'stretch', md: 'center' }}
+      gap={3}
+      justify="space-between"
+      align={{ base: 'stretch', md: 'center' }}
     >
       {/* Search and Filter */}
       <Stack direction={{ base: 'column', sm: 'row' }} gap={3} flex="1">
@@ -44,7 +44,7 @@ const CustomerFilters = ({
             pointerEvents="none"
             color="gray.400"
           >
-            <FiSearch size={18} />
+            <FiSearch size={20} />
           </Box>
           <Input
             placeholder="Search customers..."

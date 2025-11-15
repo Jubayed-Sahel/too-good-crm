@@ -157,7 +157,7 @@ export const EditLeadPage = () => {
           >
             Back
           </StandardButton>
-          <Heading size="xl" mb={2}>
+          <Heading size="2xl" mb={2}>
             Edit Lead
           </Heading>
           <Text color="gray.600" fontSize="sm">

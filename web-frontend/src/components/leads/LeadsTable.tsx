@@ -101,7 +101,7 @@ export const LeadsTable = ({
                   {lead.name}
                 </Text>
                 <HStack gap={1.5}>
-                  <FiBriefcase size={12} color="#718096" />
+                  <FiBriefcase size={14} color="#718096" />
                   <Text fontSize="sm" color="gray.600">
                     {lead.company || 'No company'}
                   </Text>

@@ -196,7 +196,7 @@ const CustomerDetailModal = ({
                       borderRadius="md"
                       color="purple.600"
                     >
-                      <FiMail size={18} />
+                      <FiMail size={20} />
                     </Box>
                     <Text fontSize="sm" fontWeight="semibold" color="gray.600">
                       Email Address
@@ -221,7 +221,7 @@ const CustomerDetailModal = ({
                       borderRadius="md"
                       color="blue.600"
                     >
-                      <FiPhone size={18} />
+                      <FiPhone size={20} />
                     </Box>
                     <Text fontSize="sm" fontWeight="semibold" color="gray.600">
                       Phone Number
@@ -250,7 +250,7 @@ const CustomerDetailModal = ({
                 >
                   <HStack gap={3}>
                     <Box p={2} bg="green.100" borderRadius="md" color="green.600">
-                      <FiDollarSign size={18} />
+                      <FiDollarSign size={20} />
                     </Box>
                     <Text fontSize="md" fontWeight="medium" color="gray.700">
                       Total Value
@@ -275,7 +275,7 @@ const CustomerDetailModal = ({
                         borderRadius="md"
                         color="orange.600"
                       >
-                        <FiBriefcase size={18} />
+                        <FiBriefcase size={20} />
                       </Box>
                       <Text fontSize="md" fontWeight="medium" color="gray.700">
                         Company
@@ -306,7 +306,7 @@ const CustomerDetailModal = ({
                 >
                   <HStack gap={3} mb={2}>
                     <Box p={2} bg="blue.100" borderRadius="md" color="blue.600">
-                      <FiCalendar size={18} />
+                      <FiCalendar size={20} />
                     </Box>
                     <Text fontSize="sm" fontWeight="semibold" color="blue.800">
                       Last Contact
@@ -331,7 +331,7 @@ const CustomerDetailModal = ({
                       borderRadius="md"
                       color="purple.600"
                     >
-                      <FiUser size={18} />
+                      <FiUser size={20} />
                     </Box>
                     <Text fontSize="sm" fontWeight="semibold" color="purple.800">
                       Customer ID

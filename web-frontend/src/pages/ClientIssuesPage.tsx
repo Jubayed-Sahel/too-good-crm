@@ -153,8 +153,8 @@ const ClientIssuesPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <Box>
-          <Heading size="xl" color="gray.900" mb={2}>
-            Issues
+          <Heading size="2xl" color="gray.900" mb={2}>
+            My Issues
           </Heading>
           <Text fontSize="sm" color="gray.600">
             Track and manage issues related to vendors, orders and projects

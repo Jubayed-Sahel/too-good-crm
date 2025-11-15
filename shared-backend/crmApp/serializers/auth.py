@@ -152,11 +152,17 @@ class UserProfileCreateSerializer(serializers.ModelSerializer):
                 f"User already has a {profile_type} profile. Each user can only have one profile of each type."
             )
         
-        # Validate organization requirement
+        # Validate organization requirement - only vendor profiles require organization
         organization = attrs.get('organization')
-        if profile_type in ['vendor', 'employee'] and not organization:
+        if profile_type == 'vendor' and not organization:
             raise serializers.ValidationError(
-                f"{profile_type} profile must have an organization."
+                "Vendor profile must have an organization."
+            )
+        
+        # Employee and customer profiles should not have organization specified
+        if profile_type in ['employee', 'customer'] and organization:
+            raise serializers.ValidationError(
+                f"{profile_type} profiles should not have an organization directly assigned."
             )
         
         return attrs
@@ -170,18 +176,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         validators=[validate_password]
     )
     password_confirm = serializers.CharField(write_only=True, required=True)
-    organization_name = serializers.CharField(
-        write_only=True,
-        required=False,
-        help_text="Organization name for vendor signup"
-    )
     
     class Meta:
         model = User
         fields = [
             'email', 'username', 'first_name', 'last_name',
-            'password', 'password_confirm', 'phone', 'profile_image',
-            'organization_name'
+            'password', 'password_confirm', 'phone', 'profile_image'
         ]
     
     def validate(self, attrs):
@@ -193,100 +193,17 @@ class UserCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         """
-        Create a new user with auto-created profiles.
-        Automatically creates all 3 profiles (vendor, employee, customer) for the user.
+        Create a new user without organization.
+        User can create organization later from vendor profile settings.
+        Creates only user account - no profiles yet.
         """
-        from crmApp.models import Organization, UserOrganization, UserProfile, Vendor
-        from django.utils.text import slugify
-        from django.utils import timezone
         from django.db import transaction
         
         validated_data.pop('password_confirm')
-        organization_name = validated_data.pop('organization_name', None)
-        
-        # Use organization_name if provided, otherwise create default from user's name
-        if not organization_name:
-            user_full_name = f"{validated_data.get('first_name', '')} {validated_data.get('last_name', '')}".strip()
-            if user_full_name:
-                organization_name = f"{user_full_name}'s Organization"
-            else:
-                organization_name = f"{validated_data.get('username', 'User')}'s Organization"
         
         with transaction.atomic():
-            # Create user
+            # Create user only
             user = User.objects.create_user(**validated_data)
-            
-            # Create organization for the user
-            base_slug = slugify(organization_name)
-            slug = base_slug
-            counter = 1
-            while Organization.objects.filter(slug=slug).exists():
-                slug = f"{base_slug}-{counter}"
-                counter += 1
-            
-            # Get Linear team ID from environment
-            from django.conf import settings
-            linear_team_id = getattr(settings, 'LINEAR_TEAM_ID', None)
-            
-            organization = Organization.objects.create(
-                name=organization_name,
-                slug=slug,
-                email=user.email,
-                is_active=True,
-                linear_team_id=linear_team_id  # Auto-configure Linear on registration
-            )
-            
-            # Link user to organization as owner
-            UserOrganization.objects.create(
-                user=user,
-                organization=organization,
-                is_owner=True,
-                is_active=True
-            )
-            
-            # Create all 3 profiles (vendor, employee, customer)
-            # Vendor profile is primary by default
-            profiles_to_create = [
-                ('vendor', True),    # Primary profile
-                ('employee', False),
-                ('customer', False),
-            ]
-            
-            vendor_profile = None
-            for profile_type, is_primary in profiles_to_create:
-                profile = UserProfile.objects.create(
-                    user=user,
-                    organization=organization,
-                    profile_type=profile_type,
-                    is_primary=is_primary,
-                    status='active',
-                    activated_at=timezone.now()
-                )
-                if profile_type == 'vendor':
-                    vendor_profile = profile
-            
-            # Create vendor record linked to the vendor profile
-            if vendor_profile:
-                try:
-                    vendor, created = Vendor.objects.get_or_create(
-                        user=user,
-                        organization=organization,
-                        defaults={
-                            'user_profile': vendor_profile,
-                            'name': organization_name,
-                            'email': user.email,
-                            'status': 'active'
-                        }
-                    )
-                    # Update user_profile if it wasn't set
-                    if not vendor.user_profile:
-                        vendor.user_profile = vendor_profile
-                        vendor.save(update_fields=['user_profile'])
-                except Exception as e:
-                    # Log error but don't fail registration
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.warning(f"Failed to create vendor record during registration: {e}")
         
         return user
 

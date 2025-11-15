@@ -57,7 +57,7 @@ const IssueFilters = ({
               pointerEvents="none"
               color="gray.400"
             >
-              <FiSearch size={18} />
+              <FiSearch size={20} />
             </Box>
             <Input
               placeholder="Search issues..."

@@ -346,7 +346,7 @@ const ClientOrderDetailPage = () => {
           onClick={() => navigate('/client/orders')}
         >
           <HStack gap={2}>
-            <FiArrowLeft size={18} />
+            <FiArrowLeft size={20} />
             <Text>Back to Orders</Text>
           </HStack>
         </Button>
@@ -390,7 +390,7 @@ const ClientOrderDetailPage = () => {
             {order.status === 'completed' && (
               <Button colorPalette="green" size="lg" alignSelf="flex-start">
                 <HStack gap={2}>
-                  <FiDownload size={18} />
+                  <FiDownload size={20} />
                   <Text>Download Invoice</Text>
                 </HStack>
               </Button>

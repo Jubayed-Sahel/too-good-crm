@@ -113,7 +113,7 @@ const ClientPaymentsPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <Box>
-          <Heading size="xl" color="gray.900" mb={2}>
+          <Heading size="2xl" color="gray.900" mb={2}>
             Payments
           </Heading>
           <Text fontSize="sm" color="gray.600">

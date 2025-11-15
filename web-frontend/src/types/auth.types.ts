@@ -88,7 +88,6 @@ export interface RegisterData {
   password: string;
   password_confirm: string;
   phone?: string;
-  organization_name?: string;
 }
 
 export interface AuthError {

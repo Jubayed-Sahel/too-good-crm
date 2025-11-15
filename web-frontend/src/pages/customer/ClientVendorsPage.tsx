@@ -154,8 +154,8 @@ const ClientVendorsPage = () => {
       <VStack gap={5} align="stretch">
         {/* Page Header */}
         <Box>
-          <Heading size="xl" mb={2}>
-            My Vendors
+          <Heading size="2xl" mb={2}>
+            Our Vendors
           </Heading>
           <Text color="gray.600" fontSize="sm">
             Manage your vendor relationships and view order history

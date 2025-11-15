@@ -11,7 +11,7 @@ export const SkeletonCard = ({ variant = 'info' }: SkeletonCardProps) => {
         bg="white"
         borderRadius="xl"
         boxShadow="sm"
-        p={6}
+        p={{ base: 5, md: 6 }}
         borderWidth="1px"
         borderColor="gray.200"
       >
@@ -36,7 +36,7 @@ export const SkeletonCard = ({ variant = 'info' }: SkeletonCardProps) => {
         bg="white"
         borderRadius="xl"
         boxShadow="sm"
-        p={4}
+        p={{ base: 4, md: 5 }}
         borderWidth="1px"
         borderColor="gray.200"
       >
@@ -59,7 +59,7 @@ export const SkeletonCard = ({ variant = 'info' }: SkeletonCardProps) => {
         bg="white"
         borderRadius="xl"
         boxShadow="sm"
-        p={6}
+        p={{ base: 5, md: 6 }}
         borderWidth="1px"
         borderColor="gray.200"
       >
@@ -82,7 +82,7 @@ export const SkeletonCard = ({ variant = 'info' }: SkeletonCardProps) => {
       bg="white"
       borderRadius="xl"
       boxShadow="sm"
-      p={6}
+      p={{ base: 5, md: 6 }}
       borderWidth="1px"
       borderColor="gray.200"
     >

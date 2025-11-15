@@ -155,7 +155,7 @@ const EmployeeSalesPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <Box>
-          <Heading size="xl" mb={2}>
+          <Heading size="2xl" mb={2}>
             Sales Pipeline
           </Heading>
           <Text color="gray.600" fontSize="sm">
@@ -433,7 +433,7 @@ const EmployeeSalesPage = () => {
                 pointerEvents="none"
                 color="gray.400"
               >
-                <FiSearch size={18} />
+                <FiSearch size={20} />
               </Box>
               <Input
                 placeholder="Search deals or customers..."
@@ -518,11 +518,11 @@ const EmployeeSalesPage = () => {
               },
               '&::-webkit-scrollbar-track': {
                 background: '#f1f1f1',
-                borderRadius: '10px',
+                borderRadius: '8px',
               },
               '&::-webkit-scrollbar-thumb': {
                 background: '#888',
-                borderRadius: '10px',
+                borderRadius: '8px',
               },
               '&::-webkit-scrollbar-thumb:hover': {
                 background: '#555',
@@ -676,7 +676,7 @@ const EmployeeSalesPage = () => {
                                   borderWidth="1px"
                                   borderColor="gray.200"
                                 >
-                                  <FiUser size={12} color="var(--gray-600)" />
+                                  <FiUser size={14} color="var(--gray-600)" />
                                 </Box>
                                 <Text fontSize="xs" color="gray.700" fontWeight="medium" flex={1}>
                                   {deal.customer}
@@ -717,7 +717,7 @@ const EmployeeSalesPage = () => {
                               {/* Footer Info */}
                               <VStack align="stretch" gap={1.5} pt={2} borderTop="1px" borderColor="gray.100">
                                 <HStack gap={1.5} fontSize="xs" color="gray.500">
-                                  <FiCalendar size={11} />
+                                  <FiCalendar size={14} />
                                   <Text>
                                     {deal.actualCloseDate 
                                       ? `Closed ${formatDate(deal.actualCloseDate)}`

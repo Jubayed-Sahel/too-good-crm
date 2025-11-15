@@ -287,14 +287,14 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onCall, onBulkDele
                 <Table.Cell>
                   <VStack align="flex-start" gap={0}>
                     <HStack gap={1}>
-                      <FiMail size={12} color="#718096" />
+                      <FiMail size={14} color="#718096" />
                       <Text fontSize="sm" color="gray.600">
                         {customer.email}
                       </Text>
                     </HStack>
                     {customer.phone && (
                       <HStack gap={1}>
-                        <FiPhone size={12} color="#718096" />
+                        <FiPhone size={14} color="#718096" />
                         <Text fontSize="xs" color="gray.500">
                           {customer.phone}
                         </Text>

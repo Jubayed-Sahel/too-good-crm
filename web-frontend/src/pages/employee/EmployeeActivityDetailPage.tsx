@@ -263,14 +263,14 @@ const EmployeeActivityDetailPage = () => {
             {/* Customer Info */}
             <HStack gap={4} color="whiteAlpha.900">
               <HStack gap={2}>
-                <FiUser size={18} />
+                <FiUser size={20} />
                 <Text fontSize="md" fontWeight="medium">
                   {activity.customer_name}
                 </Text>
               </HStack>
               {activity.duration_minutes && (
                 <HStack gap={2}>
-                  <FiClock size={18} />
+                  <FiClock size={20} />
                   <Text fontSize="md" fontWeight="medium">
                     {activity.duration_minutes} minutes
                   </Text>

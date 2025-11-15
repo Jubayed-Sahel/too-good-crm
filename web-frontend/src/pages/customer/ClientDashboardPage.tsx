@@ -58,8 +58,8 @@ const ClientDashboardPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <Box>
-          <Heading size="xl" color="gray.900" mb={2}>
-            Welcome Back!
+          <Heading size="2xl" color="gray.900" mb={2}>
+            Welcome back!
           </Heading>
           <Text fontSize="sm" color="gray.600">
             Here's an overview of your vendor relationships and orders

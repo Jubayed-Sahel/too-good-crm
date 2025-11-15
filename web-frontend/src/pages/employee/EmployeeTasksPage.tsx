@@ -6,7 +6,7 @@ const EmployeeTasksPage = () => {
     <DashboardLayout>
       <VStack align="stretch" gap={6}>
         <Box>
-          <Heading size="xl" mb={2}>
+          <Heading size="2xl" mb={2}>
             My Tasks
           </Heading>
           <Text color="gray.600">
@@ -14,7 +14,7 @@ const EmployeeTasksPage = () => {
           </Text>
         </Box>
 
-        <Box p={6} bg="white" borderRadius="lg" borderWidth={1} borderColor="gray.200">
+        <Box p={{ base: 5, md: 6 }} bg="white" borderRadius="xl" borderWidth={1} borderColor="gray.200">
           <Text color="gray.600">No tasks assigned</Text>
         </Box>
       </VStack>

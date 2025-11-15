@@ -147,7 +147,7 @@ const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExpor
                   {deal.title}
                 </Text>
                 <HStack gap={1.5}>
-                  <FiUser size={12} color="#718096" />
+                  <FiUser size={14} color="#718096" />
                   <Text fontSize="sm" color="gray.600">
                     {deal.customer}
                   </Text>
@@ -310,7 +310,7 @@ const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExpor
                 </Table.Cell>
                 <Table.Cell>
                   <HStack gap={1.5}>
-                    <FiUser size={12} color="#718096" />
+                    <FiUser size={14} color="#718096" />
                     <Text fontSize="sm" color="gray.600">
                       {deal.customer}
                     </Text>

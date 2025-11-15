@@ -261,13 +261,13 @@ const VendorTable = ({ vendors, onContact, onCall, onViewOrders, onView }: Vendo
                 <Table.Cell>
                   <VStack align="flex-start" gap={0}>
                     <HStack gap={1}>
-                      <FiMail size={12} color="#3b82f6" />
+                      <FiMail size={14} color="#3b82f6" />
                       <Text fontSize="sm" color="gray.600">
                         {vendor.email}
                       </Text>
                     </HStack>
                     <HStack gap={1}>
-                      <FiPhone size={12} color="#3b82f6" />
+                      <FiPhone size={14} color="#3b82f6" />
                       <Text fontSize="xs" color="gray.500">
                         {vendor.phone}
                       </Text>

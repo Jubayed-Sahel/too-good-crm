@@ -161,7 +161,7 @@ const EmployeeEditCustomerPage = () => {
           >
             Back
           </StandardButton>
-          <Heading size="xl" mb={2}>
+          <Heading size="2xl" mb={2}>
             Edit Customer
           </Heading>
           <Text color="gray.600" fontSize="sm">

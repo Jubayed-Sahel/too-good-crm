@@ -81,6 +81,13 @@ export const useAuth = () => {
   }, []);
 
   const handlePostAuth = async (authUser: User) => {
+    // Check if user has any profiles
+    if (!authUser.profiles || authUser.profiles.length === 0) {
+      // New user without profiles - direct to settings to create organization
+      window.location.href = ROUTES.SETTINGS + '?tab=organization&firstTime=true';
+      return;
+    }
+    
     // No role selection dialog - just navigate to default route based on primary profile
     navigateToDefaultRoute(authUser);
   };
