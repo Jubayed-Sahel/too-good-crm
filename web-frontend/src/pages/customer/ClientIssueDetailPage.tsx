@@ -9,11 +9,13 @@ import {
   Grid,
   Badge,
   Textarea,
+  Spinner,
 } from '@chakra-ui/react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { Card, StandardButton, ConfirmDialog } from '../../components/common';
+import { Card, StandardButton, ConfirmDialog, ErrorState } from '../../components/common';
 import { issueService } from '../../services/issue.service';
-import api from '../../lib/apiClient';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Issue } from '../../types';
 import {
   FiArrowLeft,
   FiCheckCircle,
@@ -29,61 +31,42 @@ import {
 } from 'react-icons/fi';
 import { toaster } from '../../components/ui/toaster';
 
-// Mock data - replace with actual API call
-const mockIssues = [
-  {
-    id: '1',
-    issueNumber: 'ISS-001',
-    title: 'Product quality concern',
-    description: 'The product received does not match the quality shown in photos. Material feels cheap and colors are different.',
-    vendor: 'Tech Solutions Inc',
-    orderNumber: 'ORD-2024-001',
-    priority: 'high' as const,
-    status: 'open' as const,
-    category: 'quality',
-    createdAt: '2024-01-15T10:30:00Z',
-    updatedAt: '2024-01-15T10:30:00Z',
-    comments: [
-      {
-        id: '1',
-        author: 'Support Team',
-        message: 'We have received your complaint and are investigating the matter.',
-        createdAt: '2024-01-15T11:00:00Z',
-      },
-      {
-        id: '2',
-        author: 'Tech Solutions Inc',
-        message: 'We sincerely apologize for the quality issue. We are preparing a replacement shipment.',
-        createdAt: '2024-01-15T14:30:00Z',
-      },
-    ],
-  },
-  {
-    id: '2',
-    issueNumber: 'ISS-002',
-    title: 'Delayed delivery',
-    description: 'Order was supposed to arrive 5 days ago but still not received.',
-    vendor: 'Marketing Pro',
-    orderNumber: 'ORD-2024-002',
-    priority: 'urgent' as const,
-    status: 'in_progress' as const,
-    category: 'delivery',
-    createdAt: '2024-01-16T09:15:00Z',
-    updatedAt: '2024-01-17T08:20:00Z',
-    comments: [],
-  },
-];
-
 const ClientIssueDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-  // Mock data - replace with actual hook
-  const issue = mockIssues.find((i) => i.id === id);
-  const isLoading = false;
+  // Fetch issue data
+  const { data: issue, isLoading, error } = useQuery<Issue>({
+    queryKey: ['issue', id],
+    queryFn: () => issueService.getById(Number(id)),
+    enabled: !!id,
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: () => issueService.delete(Number(id)),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['issues'] });
+      toaster.create({
+        title: 'Issue Deleted',
+        description: 'Issue has been successfully deleted',
+        type: 'success',
+        duration: 3000,
+      });
+      navigate('/client/issues');
+    },
+    onError: (error: any) => {
+      toaster.create({
+        title: 'Delete Failed',
+        description: error.response?.data?.details || 'Failed to delete issue',
+        type: 'error',
+        duration: 3000,
+      });
+    },
+  });
 
   const getPriorityColor = (priority: string) => {
     const colors = {
@@ -150,28 +133,9 @@ const ClientIssueDetailPage = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = async () => {
-    if (!issue) return;
-    
-    try {
-      await issueService.delete(Number(issue.id));
-      
-      toaster.create({
-        title: 'Issue Deleted',
-        description: `Issue "${issue.title}" has been deleted.`,
-        type: 'success',
-        duration: 3000,
-      });
-      setIsDeleteDialogOpen(false);
-      navigate('/client/issues');
-    } catch (error: any) {
-      toaster.create({
-        title: 'Failed to delete issue',
-        description: error.message || 'Please try again.',
-        type: 'error',
-        duration: 3000,
-      });
-    }
+  const confirmDelete = () => {
+    deleteMutation.mutate();
+    setIsDeleteDialogOpen(false);
   };
 
   const handleAddComment = async () => {
@@ -207,54 +171,27 @@ const ClientIssueDetailPage = () => {
   if (isLoading) {
     return (
       <DashboardLayout title="Issue Details">
-        <Box display="flex" justifyContent="center" alignItems="center" minH="60vh">
-          <VStack gap={4}>
-            <Text fontSize="md" color="gray.600">
-              Loading issue details...
-            </Text>
-          </VStack>
+        <Box display="flex" justifyContent="center" alignItems="center" minH="400px">
+          <Spinner size="xl" color="purple.500" />
         </Box>
       </DashboardLayout>
     );
   }
 
-  if (!issue) {
+  if (error || !issue) {
     return (
       <DashboardLayout title="Issue Details">
-        <Box textAlign="center" py={12}>
-          <Box
-            w={16}
-            h={16}
-            bg="red.50"
-            borderRadius="full"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
-            mx="auto"
-            mb={4}
-          >
-            <Text fontSize="3xl">⚠️</Text>
-          </Box>
-          <Heading size="lg" color="red.600" mb={3}>
-            Issue Not Found
-          </Heading>
-          <Text color="gray.600" fontSize="md" mb={6}>
-            The issue you are looking for does not exist.
-          </Text>
-          <StandardButton
-            variant="primary"
-            onClick={() => navigate('/client/issues')}
-            leftIcon={<FiArrowLeft />}
-          >
-            Back to Issues
-          </StandardButton>
-        </Box>
+        <ErrorState
+          title="Failed to load issue"
+          error={error}
+          onRetry={() => navigate('/client/issues')}
+        />
       </DashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout title={issue.issueNumber}>
+    <DashboardLayout title={issue.issue_number}>
       <VStack align="stretch" gap={5}>
         {/* Back Button and Actions */}
         <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
@@ -328,7 +265,7 @@ const ClientIssueDetailPage = () => {
                   </Box>
                   <Box>
                     <Text fontSize="sm" fontWeight="semibold" opacity={0.9}>
-                      Issue #{issue.issueNumber}
+                      Issue #{issue.issue_number}
                     </Text>
                     <Heading size="xl" fontWeight="bold">
                       {issue.title}
@@ -373,11 +310,11 @@ const ClientIssueDetailPage = () => {
                     Vendor
                   </Text>
                   <Text fontSize="sm" fontWeight="semibold">
-                    {issue.vendor}
+                    {issue.vendor_name || `Vendor #${issue.vendor}`}
                   </Text>
                 </Box>
               </HStack>
-              {issue.orderNumber && (
+              {issue.order_number && (
                 <HStack gap={2}>
                   <FiPackage size={16} />
                   <Box>
@@ -385,7 +322,7 @@ const ClientIssueDetailPage = () => {
                       Order Number
                     </Text>
                     <Text fontSize="sm" fontWeight="semibold">
-                      {issue.orderNumber}
+                      {issue.order_number}
                     </Text>
                   </Box>
                 </HStack>
@@ -428,7 +365,7 @@ const ClientIssueDetailPage = () => {
                     </Text>
                   </HStack>
                   <Text fontSize="sm" color="gray.900" fontWeight="semibold">
-                    {formatDate(issue.createdAt)}
+                    {formatDate(issue.created_at)}
                   </Text>
                 </HStack>
 
@@ -440,7 +377,7 @@ const ClientIssueDetailPage = () => {
                     </Text>
                   </HStack>
                   <Text fontSize="sm" color="gray.900" fontWeight="semibold">
-                    {formatDate(issue.updatedAt)}
+                    {formatDate(issue.updated_at)}
                   </Text>
                 </HStack>
               </VStack>

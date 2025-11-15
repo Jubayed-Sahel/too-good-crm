@@ -25,6 +25,7 @@ import EmployeesPage from './pages/vendor/EmployeesPage'
 import EmployeeDetailPage from './pages/vendor/EmployeeDetailPage'
 import EditEmployeePage from './pages/vendor/EditEmployeePage'
 import IssuesPage from './pages/IssuesPage'
+import IssueDetailPage from './pages/vendor/IssueDetailPage'
 import SettingsPage from './pages/SettingsPage'
 import ClientDashboardPage from './pages/ClientDashboardPage'
 import ClientVendorsPage from './pages/ClientVendorsPage'
@@ -177,6 +178,22 @@ function App() {
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
                 <IssuesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/issues/:id"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <IssueDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/issues/:id/edit"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <IssueDetailPage />
               </ProtectedRoute>
             }
           />
