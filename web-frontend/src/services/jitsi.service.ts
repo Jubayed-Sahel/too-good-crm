@@ -1,3 +1,5 @@
+// JITSI IMPLEMENTATION COMMENTED OUT - NOT IN USE
+/*
 /**
  * Jitsi Video Call Service
  * Handles Jitsi Meet integration for in-app video/audio calls
@@ -220,4 +222,9 @@ class JitsiService {
 
 // Export singleton instance
 export const jitsiService = new JitsiService();
+export default jitsiService;
+*/
+
+// Placeholder exports to prevent import errors
+export const jitsiService = {} as any;
 export default jitsiService;

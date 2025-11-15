@@ -1,3 +1,5 @@
+// JITSI CALL MANAGER COMPONENT - COMMENTED OUT (NOT IN USE)
+/*
 /**
  * Jitsi Call Manager Component
  * Handles incoming call notifications, call state management, and toast notifications
@@ -383,4 +385,13 @@ export const initiateCall = async (
     });
     throw error;
   }
+};
+*/
+
+// Placeholder exports to prevent import errors
+export const JitsiCallManager = () => null;
+export default JitsiCallManager;
+export const initiateCall = async () => {
+  console.warn('Jitsi functionality is currently disabled');
+  return null;
 };
