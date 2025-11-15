@@ -32,6 +32,7 @@ export { default as EditEmployeePage } from './EditEmployeePage';
 export { default as ActivitiesPage } from './ActivitiesPage';
 export { default as ActivityDetailPage } from './ActivityDetailPage';
 export { default as IssuesPage } from './IssuesPage';
+export { default as IssueDetailPage } from './IssueDetailPage';
 
 // Settings & Debug
 export { default as SettingsPage } from './SettingsPage';

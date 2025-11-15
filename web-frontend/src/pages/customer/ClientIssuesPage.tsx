@@ -4,7 +4,7 @@ import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { IssueStats, IssueFilters, IssuesTable, ClientRaiseIssueModal } from '../../components/client-issues';
-import { ErrorState } from '../../components/common';
+import { ErrorState, ConfirmDialog } from '../../components/common';
 import type { Issue as ComponentIssue } from '../../components/client-issues';
 import { useIssues, useIssueStats } from '../../hooks/useIssues';
 import { issueService } from '../../services/issue.service';
@@ -15,6 +15,8 @@ const ClientIssuesPage = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isRaiseModalOpen, setIsRaiseModalOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [issueToDelete, setIssueToDelete] = useState<ComponentIssue | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -80,6 +82,8 @@ const ClientIssuesPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });
       queryClient.invalidateQueries({ queryKey: ['issueStats'] });
+      setIsDeleteDialogOpen(false);
+      setIssueToDelete(null);
       toaster.create({
         title: 'Issue Deleted',
         description: 'Issue has been successfully deleted.',
@@ -117,11 +121,24 @@ const ClientIssuesPage = () => {
 
   // Handlers
   const handleView = (issue: ComponentIssue) => {
+    console.log('View clicked for issue:', issue);
     navigate(`/client/issues/${issue.id}`);
   };
 
   const handleDelete = (issueId: string) => {
-    deleteIssueMutation.mutate(Number(issueId));
+    console.log('Delete clicked for issue ID:', issueId);
+    const issue = issues.find(i => i.id === issueId);
+    console.log('Found issue:', issue);
+    if (issue) {
+      setIssueToDelete(issue);
+      setIsDeleteDialogOpen(true);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (issueToDelete) {
+      deleteIssueMutation.mutate(Number(issueToDelete.id));
+    }
   };
 
   const handleRaiseIssue = (data: ClientRaiseIssueData) => {
@@ -193,6 +210,26 @@ const ClientIssuesPage = () => {
               onClose={() => setIsRaiseModalOpen(false)}
               onSubmit={handleRaiseIssue}
               isLoading={raiseIssueMutation.isPending}
+            />
+
+            {/* Delete Confirmation Dialog */}
+            <ConfirmDialog
+              isOpen={isDeleteDialogOpen}
+              onClose={() => {
+                setIsDeleteDialogOpen(false);
+                setIssueToDelete(null);
+              }}
+              onConfirm={confirmDelete}
+              title="Delete Issue"
+              message={
+                issueToDelete
+                  ? `Are you sure you want to delete issue "${issueToDelete.title}"? This action cannot be undone.`
+                  : 'Are you sure you want to delete this issue?'
+              }
+              confirmText="Delete"
+              cancelText="Cancel"
+              colorScheme="red"
+              isLoading={deleteIssueMutation.isPending}
             />
           </>
         )}
