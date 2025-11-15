@@ -17,8 +17,7 @@ import {
   Button,
   SimpleGrid,
   Text,
-  NativeSelectRoot,
-  NativeSelectField,
+  Box,
 } from '@chakra-ui/react';
 import { FiAlertCircle } from 'react-icons/fi';
 
@@ -124,17 +123,22 @@ export const CreateIssueDialog = ({
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Vendor *
                 </Text>
-                <NativeSelectRoot size="sm">
-                  <NativeSelectField
-                    value={formData.vendor}
-                    onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
-                  >
-                    <option value="">Select vendor</option>
-                    {vendors.map(vendor => (
-                      <option key={vendor} value={vendor}>{vendor}</option>
-                    ))}
-                  </NativeSelectField>
-                </NativeSelectRoot>
+                <select
+                  value={formData.vendor}
+                  onChange={(e) => setFormData({ ...formData, vendor: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #E2E8F0',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="">Select vendor</option>
+                  {vendors.map(vendor => (
+                    <option key={vendor} value={vendor}>{vendor}</option>
+                  ))}
+                </select>
               </VStack>
             </SimpleGrid>
 
@@ -144,32 +148,42 @@ export const CreateIssueDialog = ({
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Category *
                 </Text>
-                <NativeSelectRoot size="sm">
-                  <NativeSelectField
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  >
-                    {categories.map(cat => (
-                      <option key={cat.value} value={cat.value}>{cat.label}</option>
-                    ))}
-                  </NativeSelectField>
-                </NativeSelectRoot>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #E2E8F0',
+                    fontSize: '14px',
+                  }}
+                >
+                  {categories.map(cat => (
+                    <option key={cat.value} value={cat.value}>{cat.label}</option>
+                  ))}
+                </select>
               </VStack>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
                   Priority *
                 </Text>
-                <NativeSelectRoot size="sm">
-                  <NativeSelectField
-                    value={formData.priority}
-                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                  </NativeSelectField>
-                </NativeSelectRoot>
+                <select
+                  value={formData.priority}
+                  onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #E2E8F0',
+                    fontSize: '14px',
+                  }}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
               </VStack>
             </SimpleGrid>
 

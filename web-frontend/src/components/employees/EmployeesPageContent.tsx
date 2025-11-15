@@ -5,8 +5,8 @@
  * This component is responsible ONLY for rendering the UI.
  */
 import React from 'react';
-import { Box, Text, VStack, HStack, SimpleGrid } from '@chakra-ui/react';
-import { FiUserPlus } from 'react-icons/fi';
+import { Box, Text, VStack, HStack, SimpleGrid, Input } from '@chakra-ui/react';
+import { FiUserPlus, FiSearch } from 'react-icons/fi';
 import { PageHeader, StandardButton, StandardCard } from '@/components/common';
 import EmployeeTable from './EmployeeTable';
 import type { Employee } from '@/services';
@@ -45,6 +45,8 @@ export const EmployeesPageContent: React.FC<EmployeesPageContentProps> = ({
   stats,
   searchQuery = '',
   onSearchChange,
+  statusFilter = 'all',
+  onStatusChange,
   onEdit,
   onDelete,
   onView,
@@ -106,7 +108,46 @@ export const EmployeesPageContent: React.FC<EmployeesPageContentProps> = ({
         </StandardCard>
       </SimpleGrid>
 
-      {/* Filters - Now handled by table or separate component */}
+      {/* Filters */}
+      <StandardCard>
+        <HStack gap={4} flexWrap="wrap">
+          {/* Search */}
+          <Box flex={{ base: '1', md: '2' }} minW="200px" position="relative">
+            <Box position="absolute" left={3} top="50%" transform="translateY(-50%)" pointerEvents="none" zIndex={1}>
+              <FiSearch size={18} color="#718096" />
+            </Box>
+            <Input
+              placeholder="Search by name, email, or department..."
+              value={searchQuery}
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              size="md"
+              pl={10}
+            />
+          </Box>
+
+          {/* Status Filter */}
+          <Box flex={{ base: '1', md: '1' }} minW="150px">
+            <select
+              value={statusFilter}
+              onChange={(e) => onStatusChange?.(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                border: '1px solid #E2E8F0',
+                fontSize: '14px',
+                backgroundColor: 'white',
+              }}
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="on-leave">On Leave</option>
+              <option value="terminated">Terminated</option>
+            </select>
+          </Box>
+        </HStack>
+      </StandardCard>
 
       {/* Employee Table */}
       <EmployeeTable

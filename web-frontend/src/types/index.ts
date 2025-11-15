@@ -16,14 +16,6 @@ export * from './auth.types';  // This exports the correct User type with profil
 import type { Activity } from './activity.types';
 import type { User } from './auth.types';
 
-// Legacy User Profile (deprecated - use UserProfile from auth.types instead)
-export interface LegacyUserProfile {
-  phone: string;
-  avatar: string | null;
-  job_title: string;
-  department: string;
-}
-
 export interface LoginCredentials {
   username: string;
   password: string;

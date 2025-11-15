@@ -84,11 +84,6 @@ export const AnimatedCard = ({
       borderColor="gray.100"
       animation={`fadeInUp 0.5s ease-out ${delay}s both`}
       transition="all 0.3s cubic-bezier(0.4, 0, 0.2, 1)"
-      _hover={hoverEffect ? {
-        transform: "translateY(-4px)",
-        boxShadow: "xl",
-        borderColor: "purple.200",
-      } : undefined}
       position="relative"
       overflow="hidden"
       _before={{
@@ -102,13 +97,14 @@ export const AnimatedCard = ({
         opacity: 0,
         transition: "opacity 0.3s",
       }}
-      _hover={{
-        ...( hoverEffect && {
-          _before: {
-            opacity: 1,
-          }
-        })
-      }}
+      _hover={hoverEffect ? {
+        transform: "translateY(-4px)",
+        boxShadow: "xl",
+        borderColor: "purple.200",
+        _before: {
+          opacity: 1,
+        }
+      } : undefined}
     >
       {children}
     </Box>

@@ -22,6 +22,13 @@ export const API_CONFIG = {
       CHANGE_PASSWORD: '/api/auth/change-password/',
     },
 
+    // Role Selection
+    ROLE_SELECTION: {
+      AVAILABLE_ROLES: '/api/auth/role-selection/available_roles/',
+      SELECT_ROLE: '/api/auth/role-selection/select_role/',
+      CURRENT_ROLE: '/api/auth/role-selection/current_role/',
+    },
+
     // Users
     USERS: {
       LIST: '/api/users/',
@@ -88,6 +95,7 @@ export const API_CONFIG = {
     EMPLOYEES: {
       LIST: '/api/employees/',
       DETAIL: (id: number | string) => `/api/employees/${id}/`,
+      INVITE: '/api/employees/invite/',
       DEPARTMENTS: '/api/employees/departments/',
       TERMINATE: (id: number | string) => `/api/employees/${id}/terminate/`,
     },

@@ -3,6 +3,7 @@
  * Handles employee-related API calls
  */
 import api from '@/lib/apiClient';
+import { API_CONFIG } from '@/config/api.config';
 
 export interface Employee {
   id: number;
@@ -61,13 +62,11 @@ export interface EmployeeFilters {
 }
 
 class EmployeeService {
-  private readonly baseUrl = '/employees';
-
   /**
    * Get all employees
    */
   async getEmployees(filters?: EmployeeFilters): Promise<Employee[]> {
-    const response = await api.get<any>(this.baseUrl, { params: filters });
+    const response = await api.get<any>(API_CONFIG.ENDPOINTS.EMPLOYEES.LIST, { params: filters });
     // Handle both paginated and non-paginated responses
     if (response.results) {
       return response.results;
@@ -79,28 +78,28 @@ class EmployeeService {
    * Get employee by ID
    */
   async getEmployee(id: number): Promise<Employee> {
-    return api.get<Employee>(`${this.baseUrl}/${id}/`);
+    return api.get<Employee>(API_CONFIG.ENDPOINTS.EMPLOYEES.DETAIL(id));
   }
 
   /**
    * Create employee
    */
   async createEmployee(data: Partial<Employee>): Promise<Employee> {
-    return api.post<Employee>(this.baseUrl, data);
+    return api.post<Employee>(API_CONFIG.ENDPOINTS.EMPLOYEES.LIST, data);
   }
 
   /**
    * Update employee
    */
   async updateEmployee(id: number, data: Partial<Employee>): Promise<Employee> {
-    return api.patch<Employee>(`${this.baseUrl}/${id}/`, data);
+    return api.patch<Employee>(API_CONFIG.ENDPOINTS.EMPLOYEES.DETAIL(id), data);
   }
 
   /**
    * Delete employee
    */
   async deleteEmployee(id: number): Promise<void> {
-    return api.delete(`${this.baseUrl}/${id}/`);
+    return api.delete(API_CONFIG.ENDPOINTS.EMPLOYEES.DETAIL(id));
   }
 
   /**
@@ -108,14 +107,14 @@ class EmployeeService {
    * Creates user account and employee record automatically
    */
   async inviteEmployee(data: InviteEmployeeRequest): Promise<InviteEmployeeResponse> {
-    return api.post<InviteEmployeeResponse>(`${this.baseUrl}/invite/`, data);
+    return api.post<InviteEmployeeResponse>(API_CONFIG.ENDPOINTS.EMPLOYEES.INVITE, data);
   }
 
   /**
    * Get list of departments
    */
   async getDepartments(): Promise<string[]> {
-    return api.get<string[]>(`${this.baseUrl}/departments/`);
+    return api.get<string[]>(API_CONFIG.ENDPOINTS.EMPLOYEES.DEPARTMENTS);
   }
 
   /**
@@ -123,7 +122,7 @@ class EmployeeService {
    */
   async terminateEmployee(id: number, terminationDate?: string): Promise<{ message: string; employee: Employee }> {
     return api.post<{ message: string; employee: Employee }>(
-      `${this.baseUrl}/${id}/terminate/`,
+      API_CONFIG.ENDPOINTS.EMPLOYEES.TERMINATE(id),
       { termination_date: terminationDate }
     );
   }

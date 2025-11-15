@@ -3,6 +3,7 @@
  */
 import { useState, useEffect } from 'react';
 import { employeeService, type Employee } from '@/services';
+import { useAuth } from '@/hooks';
 
 interface PaginatedResponse<T> {
   count: number;
@@ -11,7 +12,15 @@ interface PaginatedResponse<T> {
   results: T[];
 }
 
-export const useEmployees = (params?: Record<string, any>) => {
+interface UseEmployeesParams extends Record<string, any> {
+  organization?: number;
+  status?: string;
+  department?: string;
+  search?: string;
+}
+
+export const useEmployees = (params?: UseEmployeesParams) => {
+  const { user } = useAuth();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -21,7 +30,15 @@ export const useEmployees = (params?: Record<string, any>) => {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await employeeService.getEmployees(params);
+      
+      // Build query params with organization filter
+      const queryParams = {
+        ...params,
+        // Include organization from user's active profile if not provided
+        organization: params?.organization || user?.active_profile?.organization,
+      };
+      
+      const response = await employeeService.getEmployees(queryParams);
       
       console.log('📥 Fetched employees response:', response);
       
@@ -29,7 +46,6 @@ export const useEmployees = (params?: Record<string, any>) => {
       if (response && typeof response === 'object' && 'results' in response) {
         const paginatedResponse = response as unknown as PaginatedResponse<Employee>;
         console.log('📊 Employees from paginated response:', paginatedResponse.results);
-        console.log('🎯 First employee role_name:', paginatedResponse.results[0]?.role_name);
         setEmployees(paginatedResponse.results);
         setPagination({
           count: paginatedResponse.count,
@@ -41,12 +57,19 @@ export const useEmployees = (params?: Record<string, any>) => {
         setEmployees(response);
         setPagination(null);
       } else {
+        console.warn('⚠️ Unexpected response format:', response);
         setEmployees([]);
         setPagination(null);
       }
-    } catch (err) {
-      setError(err as Error);
-      console.error('Error fetching employees:', err);
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.detail 
+        || err?.response?.data?.error
+        || err?.message 
+        || 'Failed to fetch employees';
+      
+      setError(new Error(errorMessage));
+      console.error('❌ Error fetching employees:', err);
+      setEmployees([]);
     } finally {
       setIsLoading(false);
     }
@@ -54,15 +77,19 @@ export const useEmployees = (params?: Record<string, any>) => {
 
   useEffect(() => {
     fetchEmployees();
-  }, [JSON.stringify(params)]);
+  }, [JSON.stringify(params), user?.active_profile?.organization]);
 
-  const inviteEmployee = async (data: { email: string; first_name: string; last_name: string; role?: string }) => {
+  const inviteEmployee = async (data: { email: string; first_name: string; last_name: string; role_id?: number }) => {
     try {
       const newEmployee = await employeeService.inviteEmployee(data);
       await fetchEmployees(); // Refetch to get updated list
       return newEmployee;
-    } catch (err) {
-      throw err;
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.error
+        || err?.response?.data?.detail
+        || err?.message
+        || 'Failed to invite employee';
+      throw new Error(errorMessage);
     }
   };
 
@@ -70,8 +97,12 @@ export const useEmployees = (params?: Record<string, any>) => {
     try {
       await employeeService.terminateEmployee(id);
       setEmployees((prev) => prev.filter((employee) => employee.id !== id));
-    } catch (err) {
-      throw err;
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.error
+        || err?.response?.data?.detail
+        || err?.message
+        || 'Failed to terminate employee';
+      throw new Error(errorMessage);
     }
   };
 

@@ -118,6 +118,9 @@ const EmployeeTable = ({
             {/* Header */}
             <Flex justify="space-between" align="start">
               <VStack align="start" gap={1} flex={1}>
+                <Text fontWeight="semibold" fontSize="md" color="gray.900">
+                  {employee.first_name} {employee.last_name}
+                </Text>
                 <Text fontSize="sm" color="gray.600">
                   {employee.job_title || 'No Job Title'}
                 </Text>
@@ -279,6 +282,7 @@ const EmployeeTable = ({
                   />
                 </Table.ColumnHeader>
               )}
+              <Table.ColumnHeader px={2} py={2}>Name</Table.ColumnHeader>
               <Table.ColumnHeader px={2} py={2}>Job Title</Table.ColumnHeader>
               <Table.ColumnHeader px={2} py={2}>Role</Table.ColumnHeader>
               <Table.ColumnHeader px={2} py={2}>Email</Table.ColumnHeader>
@@ -308,6 +312,11 @@ const EmployeeTable = ({
                       />
                     </Table.Cell>
                   )}
+                  <Table.Cell px={2} py={2}>
+                    <Text fontSize="sm" fontWeight="semibold" color="gray.900" whiteSpace="nowrap">
+                      {employee.first_name} {employee.last_name}
+                    </Text>
+                  </Table.Cell>
                   <Table.Cell px={2} py={2}>
                     <Text fontSize="sm" color="gray.600" whiteSpace="nowrap">
                       {employee.job_title || '-'}
