@@ -100,3 +100,27 @@ class VendorViewSet(viewsets.ModelViewSet):
         
         serializer = IssueListSerializer(issues, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Get vendor statistics"""
+        queryset = self.get_queryset()
+        
+        # Basic counts
+        total_count = queryset.count()
+        active_count = queryset.filter(status='active').count()
+        inactive_count = queryset.filter(status='inactive').count()
+        
+        # Group by vendor type
+        type_stats = {}
+        vendor_types = queryset.values_list('vendor_type', flat=True).distinct()
+        for vtype in vendor_types:
+            if vtype:
+                type_stats[vtype] = queryset.filter(vendor_type=vtype).count()
+        
+        return Response({
+            'total': total_count,
+            'active': active_count,
+            'inactive': inactive_count,
+            'by_type': type_stats
+        })

@@ -54,14 +54,14 @@ export const issueService = {
    * Raise issue (with auto-sync to Linear)
    */
   raise: async (data: any): Promise<any> => {
-    return api.post('/issues/raise/', data);
+    return api.post('/api/issues/raise/', data);
   },
 
   /**
    * Resolve issue (with optional resolution notes)
    */
   resolve: async (id: number, resolutionNotes?: string): Promise<Issue> => {
-    return api.post<Issue>(`/issues/resolve/${id}/`, { resolution_notes: resolutionNotes });
+    return api.post<Issue>(`/api/issues/resolve/${id}/`, { resolution_notes: resolutionNotes });
   },
 
   /**
@@ -93,9 +93,9 @@ export const issueService = {
    * Raise issue as a client about an organization
    */
   clientRaise: async (data: ClientRaiseIssueData): Promise<any> => {
-    console.log('🌐 [issueService] POST /client/issues/raise/', data);
+    console.log('🌐 [issueService] POST /api/client/issues/raise/', data);
     try {
-      const response = await api.post('/client/issues/raise/', data);
+      const response = await api.post('/api/client/issues/raise/', data);
       console.log('✅ [issueService] Response:', response);
       return response;
     } catch (error: any) {
@@ -110,14 +110,14 @@ export const issueService = {
    * Get client issue details
    */
   clientGetIssue: async (id: number): Promise<Issue> => {
-    return api.get<Issue>(`/client/issues/${id}/`);
+    return api.get<Issue>(`/api/client/issues/${id}/`);
   },
 
   /**
    * Add comment to client issue
    */
   clientAddComment: async (id: number, comment: string): Promise<Issue> => {
-    return api.post<Issue>(`/client/issues/${id}/comment/`, { comment });
+    return api.post<Issue>(`/api/client/issues/${id}/comment/`, { comment });
   },
 
   /**
@@ -126,7 +126,7 @@ export const issueService = {
    * @param sync - Whether to sync Linear issues to CRM (default: false)
    */
   fetchFromLinear: async (limit: number = 50, sync: boolean = false): Promise<any> => {
-    return api.get('/issues/fetch_from_linear/', {
+    return api.get('/api/issues/fetch_from_linear/', {
       params: { limit, sync: sync.toString() }
     });
   },
@@ -135,13 +135,13 @@ export const issueService = {
    * Sync issue to Linear
    */
   syncToLinear: async (id: number): Promise<any> => {
-    return api.post(`/issues/${id}/sync_to_linear/`);
+    return api.post(`/api/issues/${id}/sync_to_linear/`);
   },
 
   /**
    * Sync issue from Linear (pull latest changes)
    */
   syncFromLinear: async (id: number): Promise<Issue> => {
-    return api.post<Issue>(`/issues/${id}/sync_from_linear/`);
+    return api.post<Issue>(`/api/issues/${id}/sync_from_linear/`);
   },
 };

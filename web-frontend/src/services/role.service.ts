@@ -159,14 +159,14 @@ class RoleService {
    * Debug permission context - check why permissions might be empty
    */
   async debugPermissionContext(): Promise<any> {
-    return api.get('/permissions/debug_context/');
+    return api.get('/api/permissions/debug_context/');
   }
 
   /**
    * Fix missing permissions - create default permissions for organizations that have none
    */
   async fixMissingPermissions(): Promise<any> {
-    return api.post('/permissions/fix_missing_permissions/');
+    return api.post('/api/permissions/fix_missing_permissions/');
   }
 
   /**

@@ -4,6 +4,7 @@
  */
 
 import api from '@/lib/apiClient';
+import { API_CONFIG } from '@/config/api.config';
 import type {
   Role,
   Permission,
@@ -35,7 +36,7 @@ class RBACService {
    * Get all permissions for the organization
    */
   async getPermissions(filters?: { resource?: string; action?: string }): Promise<Permission[]> {
-    return api.get<Permission[]>('/permissions/', {
+    return api.get<Permission[]>(API_CONFIG.ENDPOINTS.PERMISSIONS.LIST, {
       params: filters,
     });
   }
@@ -44,28 +45,28 @@ class RBACService {
    * Get single permission by ID
    */
   async getPermission(id: number): Promise<Permission> {
-    return api.get<Permission>(`/permissions/${id}/`);
+    return api.get<Permission>(API_CONFIG.ENDPOINTS.PERMISSIONS.DETAIL(id));
   }
 
   /**
    * Create new permission
    */
   async createPermission(data: CreatePermissionRequest): Promise<Permission> {
-    return api.post<Permission>('/permissions/', data);
+    return api.post<Permission>(API_CONFIG.ENDPOINTS.PERMISSIONS.LIST, data);
   }
 
   /**
    * Update permission
    */
   async updatePermission(id: number, data: Partial<CreatePermissionRequest>): Promise<Permission> {
-    return api.patch<Permission>(`/permissions/${id}/`, data);
+    return api.patch<Permission>(API_CONFIG.ENDPOINTS.PERMISSIONS.DETAIL(id), data);
   }
 
   /**
    * Delete permission
    */
   async deletePermission(id: number): Promise<void> {
-    await api.delete(`/permissions/${id}/`);
+    await api.delete(API_CONFIG.ENDPOINTS.PERMISSIONS.DETAIL(id));
   }
 
   /**
@@ -73,7 +74,7 @@ class RBACService {
    */
   async getAvailableResources(): Promise<AvailableResource[]> {
     return api.get<AvailableResource[]>(
-      '/permissions/available_resources/'
+      API_CONFIG.ENDPOINTS.PERMISSIONS.AVAILABLE_RESOURCES
     );
   }
 
@@ -82,7 +83,7 @@ class RBACService {
    */
   async getAvailableActions(resource?: string): Promise<AvailableAction[]> {
     return api.get<AvailableAction[]>(
-      '/permissions/available_actions/',
+      API_CONFIG.ENDPOINTS.PERMISSIONS.AVAILABLE_ACTIONS,
       { params: resource ? { resource } : undefined }
     );
   }
@@ -93,42 +94,42 @@ class RBACService {
    * Get all roles for the organization
    */
   async getRoles(): Promise<Role[]> {
-    return api.get<Role[]>('/roles/');
+    return api.get<Role[]>(API_CONFIG.ENDPOINTS.ROLES.LIST);
   }
 
   /**
    * Get single role by ID (with permissions)
    */
   async getRole(id: number): Promise<Role> {
-    return api.get<Role>(`/roles/${id}/`);
+    return api.get<Role>(API_CONFIG.ENDPOINTS.ROLES.DETAIL(id));
   }
 
   /**
    * Create new role
    */
   async createRole(data: CreateRoleRequest): Promise<Role> {
-    return api.post<Role>('/roles/', data);
+    return api.post<Role>(API_CONFIG.ENDPOINTS.ROLES.LIST, data);
   }
 
   /**
    * Update role
    */
   async updateRole(id: number, data: Partial<CreateRoleRequest>): Promise<Role> {
-    return api.patch<Role>(`/roles/${id}/`, data);
+    return api.patch<Role>(API_CONFIG.ENDPOINTS.ROLES.DETAIL(id), data);
   }
 
   /**
    * Delete role
    */
   async deleteRole(id: number): Promise<void> {
-    await api.delete(`/roles/${id}/`);
+    await api.delete(API_CONFIG.ENDPOINTS.ROLES.DETAIL(id));
   }
 
   /**
    * Get all permissions for a role
    */
   async getRolePermissions(roleId: number): Promise<Permission[]> {
-    return api.get<Permission[]>(`/roles/${roleId}/permissions/`);
+    return api.get<Permission[]>(API_CONFIG.ENDPOINTS.ROLES.PERMISSIONS(roleId));
   }
 
   /**
@@ -136,7 +137,7 @@ class RBACService {
    */
   async getRoleUsers(roleId: number): Promise<RoleWithUsers> {
     const users = await api.get<{ users: RoleWithUsers['users'] }>(
-      `/roles/${roleId}/users/`
+      API_CONFIG.ENDPOINTS.ROLES.USERS(roleId)
     );
     const role = await this.getRole(roleId);
     return { ...role, users: users.users };
@@ -150,7 +151,7 @@ class RBACService {
     data: AssignPermissionRequest
   ): Promise<AssignPermissionResponse> {
     return api.post<AssignPermissionResponse>(
-      `/roles/${roleId}/assign_permission/`,
+      API_CONFIG.ENDPOINTS.ROLES.ASSIGN_PERMISSION(roleId),
       data
     );
   }
@@ -163,7 +164,7 @@ class RBACService {
     data: RemovePermissionRequest
   ): Promise<RemovePermissionResponse> {
     return api.post<RemovePermissionResponse>(
-      `/roles/${roleId}/remove_permission/`,
+      API_CONFIG.ENDPOINTS.ROLES.REMOVE_PERMISSION(roleId),
       data
     );
   }
@@ -176,7 +177,7 @@ class RBACService {
     data: UpdatePermissionsRequest
   ): Promise<UpdatePermissionsResponse> {
     return api.post<UpdatePermissionsResponse>(
-      `/roles/${roleId}/update_permissions/`,
+      API_CONFIG.ENDPOINTS.ROLES.UPDATE_PERMISSIONS(roleId),
       data
     );
   }
@@ -187,7 +188,7 @@ class RBACService {
    * Get all user role assignments
    */
   async getUserRoles(filters?: { user_id?: number; role_id?: number }): Promise<UserRole[]> {
-    const response = await api.get<{ results: UserRole[] } | UserRole[]>('/user-roles/', {
+    const response = await api.get<{ results: UserRole[] } | UserRole[]>(API_CONFIG.ENDPOINTS.USER_ROLES.LIST, {
       params: filters,
     });
     
@@ -204,21 +205,21 @@ class RBACService {
    * Get single user role by ID
    */
   async getUserRole(id: number): Promise<UserRole> {
-    return api.get<UserRole>(`/user-roles/${id}/`);
+    return api.get<UserRole>(API_CONFIG.ENDPOINTS.USER_ROLES.DETAIL(id));
   }
 
   /**
    * Assign role to user
    */
   async assignRoleToUser(data: AssignRoleRequest): Promise<UserRole> {
-    return api.post<UserRole>('/user-roles/', data);
+    return api.post<UserRole>(API_CONFIG.ENDPOINTS.USER_ROLES.LIST, data);
   }
 
   /**
    * Remove user role assignment
    */
   async removeRoleFromUser(userRoleId: number): Promise<void> {
-    await api.delete(`/user-roles/${userRoleId}/`);
+    await api.delete(API_CONFIG.ENDPOINTS.USER_ROLES.DETAIL(userRoleId));
   }
 
   /**
@@ -226,7 +227,7 @@ class RBACService {
    */
   async bulkAssignRole(data: BulkAssignRoleRequest): Promise<BulkAssignResponse> {
     return api.post<BulkAssignResponse>(
-      '/user-roles/bulk_assign/',
+      API_CONFIG.ENDPOINTS.USER_ROLES.BULK_ASSIGN,
       data
     );
   }
@@ -236,7 +237,7 @@ class RBACService {
    */
   async bulkRemoveRole(data: BulkAssignRoleRequest): Promise<BulkRemoveResponse> {
     return api.post<BulkRemoveResponse>(
-      '/user-roles/bulk_remove/',
+      API_CONFIG.ENDPOINTS.USER_ROLES.BULK_REMOVE,
       data
     );
   }
@@ -245,7 +246,7 @@ class RBACService {
    * Get all users assigned to a specific role
    */
   async getUsersByRole(roleId: number): Promise<UserRole[]> {
-    return api.get<UserRole[]>('/user-roles/by_role/', {
+    return api.get<UserRole[]>(API_CONFIG.ENDPOINTS.USER_ROLES.BY_ROLE, {
       params: { role_id: roleId },
     });
   }
@@ -254,7 +255,7 @@ class RBACService {
    * Get all roles assigned to a specific user
    */
   async getRolesByUser(userId: number): Promise<UserRolesResponse> {
-    return api.get<UserRolesResponse>('/user-roles/by_user/', {
+    return api.get<UserRolesResponse>(API_CONFIG.ENDPOINTS.USER_ROLES.BY_USER, {
       params: { user_id: userId },
     });
   }
@@ -264,7 +265,7 @@ class RBACService {
    */
   async toggleUserRoleActive(data: ToggleActiveRequest): Promise<{ message: string; is_active: boolean }> {
     return api.post<{ message: string; is_active: boolean }>(
-      '/user-roles/toggle_active/',
+      API_CONFIG.ENDPOINTS.USER_ROLES.TOGGLE_ACTIVE,
       data
     );
   }

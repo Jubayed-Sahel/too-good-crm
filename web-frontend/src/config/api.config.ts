@@ -105,6 +105,7 @@ export const API_CONFIG = {
       LIST: '/api/vendors/',
       DETAIL: (id: number | string) => `/api/vendors/${id}/`,
       TYPES: '/api/vendors/types/',
+      STATS: '/api/vendors/stats/',
     },
 
     // RBAC - Roles
@@ -199,13 +200,6 @@ export const API_CONFIG = {
       SEND: '/api/employee-invitations/send/',
       ACCEPT: (token: string) => `/api/employee-invitations/${token}/accept/`,
       DECLINE: (token: string) => `/api/employee-invitations/${token}/decline/`,
-    },
-
-    // Role Selection
-    ROLE_SELECTION: {
-      AVAILABLE_ROLES: '/api/auth/role-selection/available_roles/',
-      SELECT_ROLE: '/api/auth/role-selection/select_role/',
-      CURRENT_ROLE: '/api/auth/role-selection/current_role/',
     },
 
     // Analytics
