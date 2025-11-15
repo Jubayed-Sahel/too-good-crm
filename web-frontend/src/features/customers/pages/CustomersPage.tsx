@@ -6,9 +6,9 @@ import {
 import { ConfirmDialog } from '@/components/common';
 import { ErrorState } from '@/components/common';
 import { useCustomers, useCustomersPage, useCustomerActions } from '../hooks/index';
-// import { initiateCall } from '@/components/jitsi/JitsiCallManager';
+import { initiateCall } from '@/components/jitsi/JitsiCallManager';
 import { toaster } from '@/components/ui/toaster';
-// import { useState } from 'react';
+import { useState } from 'react';
 
 /**
  * CustomersPage - Container Component
@@ -28,7 +28,7 @@ import { toaster } from '@/components/ui/toaster';
  */
 const CustomersPage = () => {
   // Call state
-  // const [isCallInitiating, setIsCallInitiating] = useState(false);
+  const [isCallInitiating, setIsCallInitiating] = useState(false);
 
   // Data fetching
   const { customers, isLoading, error, refetch } = useCustomers();
@@ -57,40 +57,34 @@ const CustomersPage = () => {
     bulkDeleteDialogState,
   } = useCustomerActions({ onSuccess: refetch });
 
-  // Call handler - Jitsi integration (COMMENTED OUT)
+  // Call handler - Jitsi integration
   const handleCall = async (customer: any) => {
-    // if (!customer.user_id) {
-    //   toaster.create({
-    //     title: 'Cannot Call',
-    //     description: `${customer.name} is not a registered user. Only users with accounts can receive audio calls.`,
-    //     type: 'error',
-    //   });
-    //   return;
-    // }
+    if (!customer.user_id) {
+      toaster.create({
+        title: 'Cannot Call',
+        description: `${customer.name} is not a registered user. Only users with accounts can receive audio calls.`,
+        type: 'error',
+      });
+      return;
+    }
 
-    // setIsCallInitiating(true);
+    setIsCallInitiating(true);
     
-    // try {
-    //   await initiateCall(customer.user_id, customer.full_name || customer.name, 'audio');
-    //   
-    //   // Optionally refresh customer data
-    //   refetch();
-    //   
-    // } catch (error: any) {
-    //   console.error('Error initiating call:', error);
-    //   
-    //   // Error toast is already shown by initiateCall helper
-    //   // Just log for debugging
-    //   
-    // } finally {
-    //   setIsCallInitiating(false);
-    // }
-
-    toaster.create({
-      title: 'Feature Disabled',
-      description: 'Video/Audio calling is currently disabled.',
-      type: 'info',
-    });
+    try {
+      await initiateCall(customer.user_id, customer.full_name || customer.name, 'audio');
+      
+      // Optionally refresh customer data
+      refetch();
+      
+    } catch (error: any) {
+      console.error('Error initiating call:', error);
+      
+      // Error toast is already shown by initiateCall helper
+      // Just log for debugging
+      
+    } finally {
+      setIsCallInitiating(false);
+    }
   };
 
   // Error state

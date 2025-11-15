@@ -8,28 +8,19 @@ import type { AuthResponse, LoginCredentials, RegisterData, User, UserProfile } 
 
 // Storage keys
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'accessToken',
-  REFRESH_TOKEN: 'refreshToken',
+  AUTH_TOKEN: 'authToken',
   USER: 'user',
 } as const;
 
 interface LoginResponse {
-  access: string;
-  refresh: string;
+  token: string;
   user: User;
   message?: string;
 }
 
 interface RegisterResponse {
-  access: string;
-  refresh: string;
+  token: string;
   user: User;
-  message?: string;
-}
-
-interface RefreshResponse {
-  access: string;
-  refresh: string;
   message?: string;
 }
 
@@ -45,10 +36,10 @@ class AuthService {
 
     // Process user data and store
     const processedUser = this.processUserData(response.user);
-    this.setAuthData(response.access, response.refresh, processedUser);
+    this.setAuthData(response.token, processedUser);
 
     return {
-      token: response.access,
+      token: response.token,
       user: processedUser,
       message: response.message || 'Registration successful',
     };
@@ -76,10 +67,10 @@ class AuthService {
 
       // Process user data and store
       const processedUser = this.processUserData(response.user);
-      this.setAuthData(response.access, response.refresh, processedUser);
+      this.setAuthData(response.token, processedUser);
 
       return {
-        token: response.access,
+        token: response.token,
         user: processedUser,
         message: response.message || 'Login successful',
       };
@@ -113,49 +104,14 @@ class AuthService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    return !!this.getAccessToken();
+    return !!this.getAuthToken();
   }
 
   /**
-   * Get access token
+   * Get auth token
    */
-  getAccessToken(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
-  }
-
-  /**
-   * Get refresh token
-   */
-  getRefreshToken(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
-  }
-
-  /**
-   * Refresh access token using refresh token
-   */
-  async refreshAccessToken(): Promise<string> {
-    const refreshToken = this.getRefreshToken();
-    
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    try {
-      const response = await api.post<RefreshResponse>(
-        API_CONFIG.ENDPOINTS.AUTH.REFRESH,
-        { refresh: refreshToken }
-      );
-
-      // Store new tokens
-      localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, response.access);
-      localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.refresh);
-
-      return response.access;
-    } catch (error) {
-      // If refresh fails, clear auth data
-      this.clearAuthData();
-      throw error;
-    }
+  getAuthToken(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
   }
 
   /**
@@ -211,9 +167,8 @@ class AuthService {
   /**
    * Store authentication data
    */
-  private setAuthData(accessToken: string, refreshToken: string, user: User): void {
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
-    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+  private setAuthData(token: string, user: User): void {
+    localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
   }
 
@@ -221,8 +176,7 @@ class AuthService {
    * Clear authentication data
    */
   private clearAuthData(): void {
-    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
-    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
   }
 }

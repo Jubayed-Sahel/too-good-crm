@@ -6,8 +6,7 @@
 
 // Local Storage Keys
 export const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'accessToken',
-  REFRESH_TOKEN: 'refreshToken',
+  AUTH_TOKEN: 'authToken',
   USER: 'user',
 } as const;
 

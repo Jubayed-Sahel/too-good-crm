@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Box,
   Button,
@@ -15,7 +13,7 @@ import { Toaster, toaster } from "../ui/toaster";
 import { Field } from "../ui/field";
 import { FiEye, FiEyeOff, FiZap } from "react-icons/fi";
 import { useAuth } from "@/hooks";
-import { loginSchema, type LoginFormData } from "@/schemas/auth.schema";
+import type { LoginCredentials } from "@/types";
 
 // CSS keyframes as strings
 const floatKeyframes = `
@@ -58,27 +56,30 @@ if (typeof document !== 'undefined') {
 
 const LoginForm = () => {
   const { login } = useAuth();
+  const [formData, setFormData] = useState<LoginCredentials>({
+    username: "",
+    password: "",
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // React Hook Form with Zod validation
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const onSubmit = async (data: LoginFormData) => {
+    if (!formData.username || !formData.password) {
+      toaster.create({
+        title: "Error",
+        description: "Please fill in all fields",
+        type: "error",
+        duration: 3000,
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      await login(data);
+      await login(formData);
       
       toaster.create({
         title: "Success",
@@ -222,18 +223,16 @@ const LoginForm = () => {
               </Text>
             </Box>
 
-            <form onSubmit={handleSubmit(onSubmit)}>
+            <form onSubmit={handleSubmit}>
               <VStack gap={4}>
-                <Field 
-                  label="Username" 
-                  required
-                  invalid={!!errors.username}
-                  errorText={errors.username?.message}
-                >
+                <Field label="Username" required>
                   <Input
                     type="text"
                     placeholder="Enter your username"
-                    {...register("username")}
+                    value={formData.username}
+                    onChange={(e) =>
+                      setFormData({ ...formData, username: e.target.value })
+                    }
                     size="md"
                     h="12"
                     borderRadius="lg"
@@ -246,17 +245,15 @@ const LoginForm = () => {
                   />
                 </Field>
 
-                <Field 
-                  label="Password" 
-                  required
-                  invalid={!!errors.password}
-                  errorText={errors.password?.message}
-                >
+                <Field label="Password" required>
                   <Box position="relative" w="full">
                     <Input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      {...register("password")}
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
                       size="md"
                       h="12"
                       pr="12"
