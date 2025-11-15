@@ -4,7 +4,7 @@
  */
 
 export type IssuePriority = 'low' | 'medium' | 'high' | 'critical';
-export type IssueCategory = 'quality' | 'delivery' | 'payment' | 'communication' | 'other';
+export type IssueCategory = 'general' | 'quality' | 'delivery' | 'billing' | 'payment' | 'communication' | 'technical' | 'other';
 export type IssueStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
 
 export interface Issue {

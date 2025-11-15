@@ -56,6 +56,20 @@ class ClientRaiseIssueView(APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
             
+            # Log request for debugging
+            logger.info(f"Customer issue raise request from {request.user.email}")
+            logger.debug(f"Request data: {request.data}")
+            
+            # Validate required fields
+            if not request.data.get('title'):
+                return Response(
+                    {
+                        'error': 'Bad Request',
+                        'details': 'title is required'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             # Get organization
             organization_id = request.data.get('organization')
             if not organization_id:
@@ -78,20 +92,27 @@ class ClientRaiseIssueView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # Create issue in a transaction (simplified to avoid transaction conflicts)
-            with transaction.atomic():
-                # Get or create customer record for this organization
-                user = request.user
-                name = f"{user.first_name} {user.last_name}".strip() or user.username or user.email
-                
-                # Try to get existing customer record first
-                customer = Customer.objects.filter(
+            # Get or create customer record for this organization (OUTSIDE transaction to avoid conflicts)
+            user = request.user
+            name = f"{user.first_name} {user.last_name}".strip() or user.username or user.email
+            
+            # Get customer profile for this organization
+            customer_profile_for_org = UserProfile.objects.filter(
+                user=request.user,
+                organization=organization,
+                profile_type='customer',
+                status='active'
+            ).first()
+            
+            logger.debug(f"Customer profile for org: {customer_profile_for_org}")
+            
+            # Get or create customer record (use get_or_create properly)
+            try:
+                customer, created = Customer.objects.get_or_create(
                     user=request.user,
-                    organization=organization
-                ).first()
-                
-                if not customer:
-                    customer_defaults = {
+                    organization=organization,
+                    defaults={
+                        'user_profile': customer_profile_for_org,
                         'name': name,
                         'first_name': user.first_name or '',
                         'last_name': user.last_name or '',
@@ -99,31 +120,25 @@ class ClientRaiseIssueView(APIView):
                         'customer_type': 'individual',
                         'status': 'active'
                     }
-                    
-                    customer, created = Customer.objects.get_or_create(
-                        user=request.user,
-                        organization=organization,
-                        defaults=customer_defaults
-                    )
-                    
-                    if created and not customer.user_profile:
-                        existing_profile = UserProfile.objects.filter(
-                            user=request.user,
-                            profile_type='customer'
-                        ).first()
-                        if existing_profile:
-                            customer.user_profile = existing_profile
-                            customer.save(update_fields=['user_profile'])
+                )
                 
-                if not customer:
-                    return Response(
-                        {
-                            'error': 'Bad Request',
-                            'details': 'Customer record not found for this organization. Please contact support.'
-                        },
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                
+                if created:
+                    logger.info(f"✅ Created new customer record for {user.email} in organization {organization.name}")
+                else:
+                    logger.debug(f"✅ Using existing customer record for {user.email} in {organization.name}")
+                    
+            except Exception as e:
+                logger.error(f"Failed to get/create customer record: {str(e)}", exc_info=True)
+                return Response(
+                    {
+                        'error': 'Internal Server Error',
+                        'details': f'Failed to create customer record: {str(e)}'
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Create issue (no explicit transaction needed - Django auto-wraps the view)
+            try:
                 # Map frontend category/priority to backend values
                 category = request.data.get('category', 'general')
                 priority = request.data.get('priority', 'medium')
@@ -177,6 +192,16 @@ class ClientRaiseIssueView(APIView):
                 logger.info(
                     f"Issue {issue.issue_number} raised by customer {customer.email} "
                     f"for organization {organization.name}"
+                )
+                
+            except Exception as e:
+                logger.error(f"Failed to create issue: {str(e)}", exc_info=True)
+                return Response(
+                    {
+                        'error': 'Internal Server Error',
+                        'details': f'Failed to create issue: {str(e)}'
+                    },
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
                 )
             
             # Refresh organization to get latest linear_team_id

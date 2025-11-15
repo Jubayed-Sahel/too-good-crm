@@ -52,8 +52,12 @@ const ClientIssuesPage = () => {
 
   // Raise issue mutation
   const raiseIssueMutation = useMutation({
-    mutationFn: (data: ClientRaiseIssueData) => issueService.clientRaise(data),
-    onSuccess: () => {
+    mutationFn: (data: ClientRaiseIssueData) => {
+      console.log('🚀 [ClientIssuesPage] Calling issueService.clientRaise with:', data);
+      return issueService.clientRaise(data);
+    },
+    onSuccess: (response) => {
+      console.log('✅ [ClientIssuesPage] Issue raised successfully:', response);
       queryClient.invalidateQueries({ queryKey: ['issues'] });
       queryClient.invalidateQueries({ queryKey: ['issueStats'] });
       toaster.create({
@@ -65,9 +69,12 @@ const ClientIssuesPage = () => {
       setIsRaiseModalOpen(false);
     },
     onError: (error: any) => {
+      console.error('❌ [ClientIssuesPage] Failed to raise issue:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
       toaster.create({
         title: 'Error',
-        description: error.response?.data?.error || 'Failed to raise issue. Please try again.',
+        description: error.response?.data?.details || error.response?.data?.error || error.message || 'Failed to raise issue. Please try again.',
         type: 'error',
         duration: 5000,
       });

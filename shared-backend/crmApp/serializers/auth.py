@@ -224,11 +224,16 @@ class UserCreateSerializer(serializers.ModelSerializer):
                 slug = f"{base_slug}-{counter}"
                 counter += 1
             
+            # Get Linear team ID from environment
+            from django.conf import settings
+            linear_team_id = getattr(settings, 'LINEAR_TEAM_ID', None)
+            
             organization = Organization.objects.create(
                 name=organization_name,
                 slug=slug,
                 email=user.email,
-                is_active=True
+                is_active=True,
+                linear_team_id=linear_team_id  # Auto-configure Linear on registration
             )
             
             # Link user to organization as owner

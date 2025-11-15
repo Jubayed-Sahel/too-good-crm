@@ -93,7 +93,17 @@ export const issueService = {
    * Raise issue as a client about an organization
    */
   clientRaise: async (data: ClientRaiseIssueData): Promise<any> => {
-    return api.post('/client/issues/raise/', data);
+    console.log('🌐 [issueService] POST /client/issues/raise/', data);
+    try {
+      const response = await api.post('/client/issues/raise/', data);
+      console.log('✅ [issueService] Response:', response);
+      return response;
+    } catch (error: any) {
+      console.error('❌ [issueService] Error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      throw error;
+    }
   },
 
   /**
