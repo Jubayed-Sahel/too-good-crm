@@ -74,9 +74,6 @@ export function transformCustomerFormData(data: any, organizationId: number) {
  * Transform deal form data to backend format
  */
 export function transformDealFormData(data: any, organizationId: number, stageId?: number | null) {
-  // Only include stage if we have a valid stage ID (number)
-  const resolvedStageId = stageId || data.stage_id || (typeof data.stage === 'number' ? data.stage : undefined);
-  
   return {
     organization: organizationId,
     title: data.title?.trim(),
@@ -86,7 +83,7 @@ export function transformDealFormData(data: any, organizationId: number, stageId
     probability: data.probability ? parseInt(String(data.probability)) : undefined,
     expected_close_date: data.expectedCloseDate || data.expected_close_date || undefined,
     description: data.description?.trim() || undefined,
-    stage: resolvedStageId,
+    stage: stageId || data.stage_id || data.stage || undefined,
     pipeline: data.pipeline || data.pipeline_id || undefined,
     priority: data.priority || 'medium',
     assigned_to: data.assigned_to || data.assigned_to_id || undefined,

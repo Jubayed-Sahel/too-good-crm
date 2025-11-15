@@ -10,7 +10,6 @@ from .auth import (
     LoginViewSet,
     LogoutViewSet,
     ChangePasswordViewSet,
-    RefreshTokenViewSet,
 )
 from .role_selection import RoleSelectionViewSet
 from .employee_invitation import EmployeeInvitationViewSet
@@ -68,7 +67,6 @@ __all__ = [
     'LoginViewSet',
     'LogoutViewSet',
     'ChangePasswordViewSet',
-    'RefreshTokenViewSet',
     'RoleSelectionViewSet',
     'EmployeeInvitationViewSet',
     

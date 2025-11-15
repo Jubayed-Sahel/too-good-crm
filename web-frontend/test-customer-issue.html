@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Customer Issue Creation</title>
+    <link rel="icon" href="data:,">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Customer Issue Creation Test</h1>
+    
+    <div class="section">
+        <h2>Step 1: Check Auth</h2>
+        <button onclick="checkAuth()">Check if Logged In</button>
+        <div id="auth-result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 2: Test Issue Creation</h2>
+        <button onclick="testCreateIssue()">Create Test Issue</button>
+        <div id="create-result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Step 3: Fetch Issues</h2>
+        <button onclick="fetchIssues()">Fetch All Issues</button>
+        <div id="fetch-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000/api';
+        
+        function getToken() {
+            return localStorage.getItem('authToken');
+        }
+
+        async function checkAuth() {
+            const result = document.getElementById('auth-result');
+            const token = getToken();
+            
+            if (!token) {
+                result.innerHTML = '<div class="error"><strong>Not logged in!</strong> Please login first.</div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/users/me/`, {
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    result.innerHTML = `
+                        <div class="success">
+                            <strong>✅ Logged in as:</strong> ${data.email}<br>
+                            <strong>Username:</strong> ${data.username}<br>
+                            <strong>Profiles:</strong> ${data.profiles?.length || 0}<br>
+                            <strong>Primary Profile:</strong> ${data.primaryProfile?.profile_type || 'None'}<br>
+                            <strong>Organization:</strong> ${data.primaryProfile?.organization_name || 'None'} (ID: ${data.primaryProfile?.organization || 'N/A'})
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    result.innerHTML = `<div class="error"><strong>Error:</strong> ${JSON.stringify(data)}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error"><strong>Error:</strong> ${error.message}</div>`;
+            }
+        }
+
+        async function testCreateIssue() {
+            const result = document.getElementById('create-result');
+            const token = getToken();
+            
+            if (!token) {
+                result.innerHTML = '<div class="error"><strong>Not logged in!</strong></div>';
+                return;
+            }
+
+            // Get user's organization
+            let orgId = null;
+            try {
+                const userResponse = await fetch(`${API_BASE}/users/me/`, {
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const userData = await userResponse.json();
+                orgId = userData.primaryProfile?.organization;
+                
+                if (!orgId) {
+                    result.innerHTML = '<div class="error"><strong>No organization found!</strong></div>';
+                    return;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error"><strong>Error getting user:</strong> ${error.message}</div>`;
+                return;
+            }
+
+            // Create issue
+            const issueData = {
+                organization: orgId,
+                title: `Test Issue - ${new Date().toLocaleString()}`,
+                description: 'This is a test issue created from the test page',
+                priority: 'medium',
+                category: 'general'
+            };
+
+            console.log('🚀 Creating issue:', issueData);
+
+            try {
+                const response = await fetch(`${API_BASE}/client/issues/raise/`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(issueData)
+                });
+
+                const data = await response.json();
+                console.log('📥 Response:', data);
+
+                if (response.ok) {
+                    result.innerHTML = `
+                        <div class="success">
+                            <strong>✅ Issue Created!</strong><br>
+                            <strong>Issue Number:</strong> ${data.issue?.issue_number}<br>
+                            <strong>Title:</strong> ${data.issue?.title}<br>
+                            <strong>Status:</strong> ${data.issue?.status}<br>
+                            <strong>Linear Synced:</strong> ${data.issue?.synced_to_linear ? 'Yes' : 'No'}
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    result.innerHTML = `
+                        <div class="error">
+                            <strong>❌ Error ${response.status}:</strong><br>
+                            ${data.error || data.details || 'Unknown error'}
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                console.error('❌ Error:', error);
+                result.innerHTML = `<div class="error"><strong>Error:</strong> ${error.message}</div>`;
+            }
+        }
+
+        async function fetchIssues() {
+            const result = document.getElementById('fetch-result');
+            const token = getToken();
+            
+            if (!token) {
+                result.innerHTML = '<div class="error"><strong>Not logged in!</strong></div>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/issues/`, {
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    const issues = data.results || [];
+                    result.innerHTML = `
+                        <div class="success">
+                            <strong>✅ Found ${issues.length} issues</strong>
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    result.innerHTML = `<div class="error"><strong>Error:</strong> ${JSON.stringify(data)}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error"><strong>Error:</strong> ${error.message}</div>`;
+            }
+        }
+
+        // Auto-check auth on page load
+        window.onload = checkAuth;
+    </script>
+</body>
+</html>

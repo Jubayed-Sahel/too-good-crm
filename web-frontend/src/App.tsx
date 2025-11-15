@@ -3,88 +3,55 @@ import { AccountModeProvider } from './contexts/AccountModeContext'
 import { PermissionProvider } from './contexts/PermissionContext'
 import { ProfileProvider } from './contexts/ProfileContext'
 import { ProtectedRoute } from './components/auth'
-// import { JitsiCallManager } from './components/jitsi/JitsiCallManager'
+import { JitsiCallManager } from './components/jitsi/JitsiCallManager'
 import { useAuth } from './hooks'
-
-// Shared Pages
-import { LoginPage, SignupPage } from './pages/shared'
-
-// Vendor Pages
-import {
-  DashboardPage,
-  CustomersPage,
-  CustomerDetailPage,
-  EditCustomerPage,
-  SalesPage,
-  DealsPage,
-  DealDetailPage,
-  EditDealPage,
-  LeadsPage,
-  LeadDetailPage,
-  EditLeadPage,
-  ActivitiesPage,
-  ActivityDetailPage,
-  AnalyticsPage,
-  EmployeesPage,
-  EmployeeDetailPage,
-  EditEmployeePage,
-  IssuesPage,
-  SettingsPage,
-  PermissionDebugPage,
-} from './pages/vendor'
-
-// Employee Pages
-import {
-  EmployeeDashboardPage,
-  EmployeeTasksPage,
-  EmployeeSettingsPage,
-  EmployeeCustomersPage,
-  EmployeeCustomerDetailPage,
-  EmployeeEditCustomerPage,
-  EmployeeLeadsPage,
-  EmployeeLeadDetailPage,
-  EmployeeEditLeadPage,
-  EmployeeDealsPage,
-  EmployeeDealDetailPage,
-  EmployeeEditDealPage,
-  EmployeeSalesPage,
-  EmployeeEmployeesPage,
-  EmployeeEmployeeDetailPage,
-  EmployeeEditEmployeePage,
-  EmployeeActivitiesPage,
-  EmployeeActivityDetailPage,
-  EmployeeIssuesPage,
-  EmployeeAnalyticsPage,
-  EmployeePermissionDebugPage,
-} from './pages/employee'
-
-// Customer Pages
-import {
-  ClientDashboardPage,
-  ClientVendorsPage,
-  ClientOrdersPage,
-  ClientOrderDetailPage,
-  ClientPaymentsPage,
-  ClientSettingsPage,
-  ClientIssuesPage,
-  ClientIssueDetailPage,
-} from './pages/customer'
-
+import LoginPage from './pages/LoginPage'
+import SignupPage from './pages/SignupPage'
+import DashboardPage from './pages/DashboardPage'
+import CustomersPage from './pages/CustomersPage'
+import CustomerDetailPage from './pages/CustomerDetailPage'
+import SalesPage from './pages/SalesPage'
+import DealsPage from './pages/DealsPage'
+import DealDetailPage from './pages/DealDetailPage'
+import EditDealPage from './pages/EditDealPage'
+import { LeadsPage } from './pages/LeadsPage'
+import EditLeadPage from './pages/EditLeadPage'
+import LeadDetailPage from './pages/LeadDetailPage'
+import EditCustomerPage from './pages/EditCustomerPage'
+import ActivitiesPage from './pages/ActivitiesPage'
+import ActivityDetailPage from './pages/ActivityDetailPage'
+import AnalyticsPage from './pages/AnalyticsPage'
+import EmployeesPage from './pages/EmployeesPage'
+import EmployeeDetailPage from './pages/EmployeeDetailPage'
+import EditEmployeePage from './pages/EditEmployeePage'
+import IssuesPage from './pages/IssuesPage'
+import SettingsPage from './pages/SettingsPage'
+import ClientDashboardPage from './pages/ClientDashboardPage'
+import ClientVendorsPage from './pages/ClientVendorsPage'
+import ClientOrdersPage from './pages/ClientOrdersPage'
+import ClientOrderDetailPage from './pages/ClientOrderDetailPage'
+import ClientPaymentsPage from './pages/ClientPaymentsPage'
+import ClientSettingsPage from './pages/ClientSettingsPage'
+import ClientIssuesPage from './pages/ClientIssuesPage'
+import ClientIssueDetailPage from './pages/ClientIssueDetailPage'
+import PermissionDebugPage from './pages/PermissionDebugPage'
+import EmployeeDashboardPage from './pages/EmployeeDashboardPage'
+import EmployeeTasksPage from './pages/EmployeeTasksPage'
+import EmployeeSettingsPage from './pages/EmployeeSettingsPage'
 import './App.css'
 
 /**
  * Component to manage Jitsi calls for authenticated users
- * COMMENTED OUT - Jitsi implementation disabled
  */
-// function JitsiCallWrapper() {
-//   const { user, isAuthenticated } = useAuth();
-//   
-//   if (!isAuthenticated || !user) {
-//     return null;
-//   }
-//   
-//   return <JitsiCallManager userId={user.id} />;
-// }
+function JitsiCallWrapper() {
+  const { user, isAuthenticated } = useAuth();
+  
+  if (!isAuthenticated || !user) {
+    return null;
+  }
+  
+  return <JitsiCallManager userId={user.id} />;
+}
 
 function App() {
   return (
@@ -93,7 +60,7 @@ function App() {
         <ProfileProvider>
           <PermissionProvider>
             {/* Global Jitsi Call Manager for all authenticated users */}
-            {/* <JitsiCallWrapper /> */}
+            <JitsiCallWrapper />
             
             <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -283,15 +250,7 @@ function App() {
             path="/employee/activities"
             element={
               <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeActivitiesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/activities/:id"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeActivityDetailPage />
+                <ActivitiesPage />
               </ProtectedRoute>
             }
           />
@@ -299,47 +258,7 @@ function App() {
             path="/employee/customers"
             element={
               <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeCustomersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/customers/:id"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeCustomerDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/customers/:id/edit"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeEditCustomerPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/leads"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeLeadsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/leads/:id"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeLeadDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/leads/:id/edit"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeEditLeadPage />
+                <CustomersPage />
               </ProtectedRoute>
             }
           />
@@ -347,71 +266,15 @@ function App() {
             path="/employee/deals"
             element={
               <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeDealsPage />
+                <DealsPage />
               </ProtectedRoute>
             }
           />
           <Route
-            path="/employee/deals/:id"
+            path="/employee/leads"
             element={
               <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeDealDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/deals/:id/edit"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeEditDealPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/sales"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeSalesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/employees"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeEmployeesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/employees/:id"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeEmployeeDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/employees/:id/edit"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeEditEmployeePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/issues"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeIssuesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/analytics"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeeAnalyticsPage />
+                <LeadsPage />
               </ProtectedRoute>
             }
           />
@@ -420,14 +283,6 @@ function App() {
             element={
               <ProtectedRoute allowedProfiles={['employee']}>
                 <EmployeeSettingsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/employee/debug/permissions"
-            element={
-              <ProtectedRoute allowedProfiles={['employee']}>
-                <EmployeePermissionDebugPage />
               </ProtectedRoute>
             }
           />

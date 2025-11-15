@@ -72,9 +72,7 @@ class LeadViewSet(
         # Filter converted/unconverted
         queryset = self.apply_boolean_filter(queryset, self.request, 'is_converted')
         
-        return queryset.select_related(
-            'organization', 'customer', 'assigned_to'
-        ).order_by('-created_at')
+        return queryset.select_related('organization', 'assigned_to', 'converted_by')
     
     def perform_create(self, serializer):
         """Override perform_create to check permissions"""

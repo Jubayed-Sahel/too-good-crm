@@ -48,7 +48,7 @@ class PipelineViewSet(viewsets.ModelViewSet, OrganizationFilterMixin, QueryFilte
         if active_only and active_only.lower() == 'true':
             queryset = queryset.filter(is_active=True)
         
-        return queryset.prefetch_related('stages').order_by('-created_at')
+        return queryset.prefetch_related('stages')
     
     @action(detail=True, methods=['post'])
     def set_default(self, request, pk=None):
@@ -209,24 +209,11 @@ class DealViewSet(
         
         return queryset.select_related(
             'organization', 'customer', 'pipeline', 'stage', 'assigned_to'
-        ).order_by('-created_at')
+        )
     
     def perform_create(self, serializer):
         """Override perform_create to check permissions"""
-        # Try to get organization from user's profile first
         organization = self.get_organization_from_request(self.request)
-        
-        # If not found, try to get it from the validated data
-        if not organization and 'organization' in serializer.validated_data:
-            from crmApp.models import Organization
-            org_id = serializer.validated_data.get('organization')
-            if isinstance(org_id, int):
-                try:
-                    organization = Organization.objects.get(id=org_id)
-                except Organization.DoesNotExist:
-                    pass
-            elif isinstance(org_id, Organization):
-                organization = org_id
         
         if not organization:
             raise ValueError('Organization is required. Please ensure you have an active profile.')
@@ -239,17 +226,7 @@ class DealViewSet(
             organization=organization
         )
         
-        try:
-            # Don't pass organization_id if organization is already in validated_data
-            if 'organization' not in serializer.validated_data:
-                serializer.save(organization=organization)
-            else:
-                serializer.save()
-        except Exception as e:
-            logger.error(f"Error creating deal: {str(e)}", exc_info=True)
-            logger.error(f"Request data: {self.request.data}")
-            logger.error(f"Validated data: {serializer.validated_data}")
-            raise
+        serializer.save(organization_id=organization.id)
     
     def update(self, request, *args, **kwargs):
         """Override update to check permissions"""

@@ -23,11 +23,7 @@ import { Field } from '@/components/ui/field';
 import type { ClientRaiseIssueData, IssuePriority, IssueCategory } from '@/types';
 import { vendorService } from '@/services/vendor.service';
 import { orderService } from '@/services/order.service';
-
-interface Organization {
-  id: number;
-  name: string;
-}
+import { useAuth } from '@/hooks/useAuth';
 
 interface ClientRaiseIssueModalProps {
   isOpen: boolean;
@@ -42,38 +38,75 @@ const ClientRaiseIssueModal = ({
   onSubmit,
   isLoading = false,
 }: ClientRaiseIssueModalProps) => {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const { user } = useAuth();
+  const [organizations, setOrganizations] = useState<Array<{ id: number; name: string }>>([]);
   const [vendors, setVendors] = useState<Array<{ id: number; name: string }>>([]);
   const [orders, setOrders] = useState<Array<{ id: number; order_number: string }>>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(false);
+
+  // Auto-fill organization from user's primary organization
+  const userOrganizationId = (user as any)?.primaryOrganizationId || 0;
 
   const [formData, setFormData] = useState<ClientRaiseIssueData>({
-    organization: 0,
+    organization: userOrganizationId,
     title: '',
     description: '',
     priority: 'medium',
-    category: 'quality',
+    category: 'general',
     vendor: null,
     order: null,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof ClientRaiseIssueData, string>>>({});
 
-  // Fetch organizations (vendors the client is associated with)
+  // Fetch all organizations the user can raise issues about
+  // This includes: 
+  // 1. User's own organization (from their customer profile)
+  // 2. Any organizations they have customer profiles for
   useEffect(() => {
-    if (isOpen) {
-      vendorService.getAll()
-        .then((response: any) => {
-          const orgs = response.results.map((vendor: any) => ({
-            id: vendor.organization || vendor.id,
-            name: vendor.organization_name || vendor.name || `Vendor #${vendor.id}`,
-          }));
-          setOrganizations(orgs);
-        })
-        .catch((error: any) => {
-          console.error('Failed to fetch organizations:', error);
-        });
+    if (isOpen && user) {
+      setLoadingOrgs(true);
+      console.log('📋 Fetching organizations for user:', user.email);
+      console.log('👤 User profiles:', user.profiles);
+      
+      // Get all unique organizations from user's profiles
+      const orgSet = new Set<number>();
+      const orgMap = new Map<number, string>();
+      
+      // Add organizations from all profiles (vendor, employee, customer)
+      user.profiles?.forEach((profile: any) => {
+        if (profile.organization) {
+          orgSet.add(profile.organization);
+          orgMap.set(profile.organization, profile.organization_name || `Organization #${profile.organization}`);
+        }
+      });
+      
+      // Convert to array
+      const orgList = Array.from(orgSet).map(id => ({
+        id,
+        name: orgMap.get(id) || `Organization #${id}`
+      }));
+      
+      console.log('✅ Found organizations:', orgList);
+      setOrganizations(orgList);
+      
+      // Auto-select user's primary organization if available
+      if (userOrganizationId && orgList.some(org => org.id === userOrganizationId)) {
+        setFormData(prev => ({
+          ...prev,
+          organization: userOrganizationId
+        }));
+      } else if (orgList.length > 0) {
+        // If user's primary org not in list, select first available
+        setFormData(prev => ({
+          ...prev,
+          organization: orgList[0].id
+        }));
+      }
+      
+      setLoadingOrgs(false);
     }
-  }, [isOpen]);
+  }, [isOpen, user, userOrganizationId]);
 
   // Fetch vendors when organization is selected
   useEffect(() => {
@@ -139,14 +172,20 @@ const ClientRaiseIssueModal = ({
   };
 
   const handleSubmit = () => {
+    console.log('🚀 Submitting issue:', formData);
+    console.log('👤 User organization ID:', userOrganizationId);
+    
     if (validate()) {
+      console.log('✅ Validation passed, calling onSubmit...');
       onSubmit(formData);
+    } else {
+      console.log('❌ Validation failed:', errors);
     }
   };
 
   const handleClose = () => {
     setFormData({
-      organization: 0,
+      organization: userOrganizationId,
       title: '',
       description: '',
       priority: 'medium',
@@ -169,15 +208,22 @@ const ClientRaiseIssueModal = ({
         <DialogBody>
           <VStack gap={4} align="stretch">
             <Field label="Organization" required invalid={!!errors.organization} errorText={errors.organization}>
-              <CustomSelect
-                value={formData.organization.toString()}
-                onChange={(value) => handleChange('organization', Number(value))}
-                options={[
-                  { value: '0', label: 'Select Organization' },
-                  ...organizations.map(org => ({ value: org.id.toString(), label: org.name }))
-                ]}
-                placeholder="Select Organization"
-              />
+              <VStack align="stretch" gap={2}>
+                <CustomSelect
+                  value={formData.organization.toString()}
+                  onChange={(value) => handleChange('organization', Number(value))}
+                  options={[
+                    { value: '0', label: loadingOrgs ? 'Loading organizations...' : 'Select Organization' },
+                    ...organizations.map(org => ({ value: org.id.toString(), label: org.name }))
+                  ]}
+                  placeholder="Select Organization"
+                />
+                <Text fontSize="xs" color="gray.500">
+                  {organizations.length === 0 && !loadingOrgs 
+                    ? 'No organizations available. You need to be part of an organization to raise issues.'
+                    : 'Select the organization you want to raise an issue about'}
+                </Text>
+              </VStack>
             </Field>
 
             <Field label="Title" required invalid={!!errors.title} errorText={errors.title}>
@@ -216,10 +262,12 @@ const ClientRaiseIssueModal = ({
                   value={formData.category}
                   onChange={(value) => handleChange('category', value as IssueCategory)}
                   options={[
+                    { value: 'general', label: 'General' },
                     { value: 'quality', label: 'Quality' },
                     { value: 'delivery', label: 'Delivery' },
-                    { value: 'payment', label: 'Payment' },
+                    { value: 'billing', label: 'Billing/Payment' },
                     { value: 'communication', label: 'Communication' },
+                    { value: 'technical', label: 'Technical' },
                     { value: 'other', label: 'Other' },
                   ]}
                 />

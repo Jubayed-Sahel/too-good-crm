@@ -64,7 +64,7 @@ class VendorViewSet(viewsets.ModelViewSet):
                 contact_person__icontains=search
             )
         
-        return queryset.select_related('organization', 'user_profile').order_by('-created_at')
+        return queryset.select_related('organization')
     
     @action(detail=False, methods=['get'])
     def types(self, request):

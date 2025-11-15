@@ -30,10 +30,10 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor - Add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('authToken');
     
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Token ${token}`;
     }
 
     // Log request in development
@@ -78,47 +78,19 @@ apiClient.interceptors.response.use(
       });
     }
 
-    // Handle 401 Unauthorized - Try to refresh token
+    // Handle 401 Unauthorized
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      try {
-        // Try to refresh the token
-        const refreshToken = localStorage.getItem('refreshToken');
-        
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        // Call refresh endpoint
-        const response = await axios.post(`${API_CONFIG.BASE_URL}/auth/refresh/`, {
-          refresh: refreshToken
-        });
-
-        const { access, refresh } = response.data;
-
-        // Store new tokens
-        localStorage.setItem('accessToken', access);
-        localStorage.setItem('refreshToken', refresh);
-
-        // Retry the original request with new token
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${access}`;
-        }
-
-        return apiClient(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed - clear auth data and redirect to login
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
-        
-        return Promise.reject(refreshError);
+      // Token is invalid - clear auth data and redirect to login
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
       }
+      
+      return Promise.reject(error);
     }
 
     // Handle 403 Forbidden

@@ -77,6 +77,15 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
       <PageHeader
         title="Deals"
         description="Track your sales pipeline, manage deal progress, and close more deals"
+        actions={
+          <StandardButton
+            variant="primary"
+            leftIcon={<FiPlus />}
+            onClick={onOpenCreateDialog}
+          >
+            New Deal
+          </StandardButton>
+        }
       />
 
       {/* Statistics Cards */}
@@ -97,14 +106,33 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
       />
 
       {/* Deals Table */}
-      <DealsTable
-        deals={mappedDeals}
-        onEdit={onEditDeal}
-        onDelete={onDeleteDeal}
-        onView={onViewDeal}
-        onBulkDelete={onBulkDelete}
-        onBulkExport={onBulkExport ? (ids) => onBulkExport(ids, mappedDeals) : undefined}
-      />
+      {mappedDeals.length > 0 ? (
+        <DealsTable
+          deals={mappedDeals}
+          onEdit={onEditDeal}
+          onDelete={onDeleteDeal}
+          onView={onViewDeal}
+          onBulkDelete={onBulkDelete}
+          onBulkExport={onBulkExport ? (ids) => onBulkExport(ids, mappedDeals) : undefined}
+        />
+      ) : (
+        <Box
+          py={12}
+          px={6}
+          textAlign="center"
+          bg="gray.50"
+          borderRadius="lg"
+        >
+          <Heading size="md" color="gray.600" mb={2}>
+            No deals found
+          </Heading>
+          <Text color="gray.500">
+            {searchQuery || stageFilter !== 'all'
+              ? 'Try adjusting your search or filters'
+              : 'Get started by adding your first deal'}
+          </Text>
+        </Box>
+      )}
 
       {/* Create Deal Dialog */}
       <CreateDealDialog

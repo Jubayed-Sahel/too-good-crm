@@ -3,7 +3,7 @@ Customer related serializers
 """
 
 from rest_framework import serializers
-from crmApp.models import Customer, UserProfile, User, Employee
+from crmApp.models import Customer, UserProfile
 from .employee import EmployeeListSerializer
 from .auth import UserSerializer, UserProfileSerializer
 
@@ -221,37 +221,19 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         return attrs
     
     def create(self, validated_data):
-        """Create customer and link to user profile if user is provided"""
+        """Create customer and auto-create user profile if user is linked"""
         user_id = validated_data.pop('user_id', None)
         assigned_to_id = validated_data.pop('assigned_to_id', None)
         
-        # If user_id is provided, check if customer already exists for this user in this organization
+        customer = Customer(**validated_data)
+        
         if user_id:
-            try:
-                user = User.objects.get(id=user_id)
-                
-                # Check if customer record already exists for this user in this organization
-                existing_customer = Customer.objects.filter(
-                    user=user,
-                    organization=validated_data.get('organization')
-                ).first()
-                
-                if existing_customer:
-                    # Return existing customer record instead of creating duplicate
-                    return existing_customer
-                
-                # Create new customer with user link
-                customer = Customer(**validated_data)
-                customer.user = user
-                
-            except User.DoesNotExist:
-                # User doesn't exist, create customer without user link
-                customer = Customer(**validated_data)
-        else:
-            customer = Customer(**validated_data)
+            from crmApp.models import User
+            customer.user = User.objects.get(id=user_id)
         
         if assigned_to_id:
+            from crmApp.models import Employee
             customer.assigned_to = Employee.objects.get(id=assigned_to_id)
         
-        customer.save()  # This will auto-link to customer UserProfile
+        customer.save()  # This will auto-create UserProfile
         return customer
