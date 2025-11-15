@@ -30,7 +30,7 @@ class Lead(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, StatusMi
         ('lost', 'Lost'),
     ]
     
-    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='leads')
+    organization = models.ForeignKey('crmApp.Organization', on_delete=models.CASCADE, related_name='leads')
     
     # Basic information
     name = models.CharField(max_length=255)

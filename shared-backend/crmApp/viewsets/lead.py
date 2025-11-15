@@ -37,6 +37,8 @@ class LeadViewSet(
     queryset = Lead.objects.all()
     serializer_class = LeadSerializer
     permission_classes = [IsAuthenticated]
+    filterset_fields = ['organization']
+    
     
     def get_serializer_class(self):
         if self.action == 'list':
