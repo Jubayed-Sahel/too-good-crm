@@ -218,6 +218,11 @@ class DealViewSet(
         if not organization:
             raise ValueError('Organization is required. Please ensure you have an active profile.')
         
+        # Log incoming data for debugging
+        logger.info(f"Creating deal with data: {self.request.data}")
+        logger.info(f"Organization from profile: {organization.id}")
+        logger.info(f"Validated data: {serializer.validated_data}")
+        
         # Check permission for creating deals
         self.check_permission(
             self.request,
@@ -226,7 +231,15 @@ class DealViewSet(
             organization=organization
         )
         
-        serializer.save(organization_id=organization.id)
+        # Only set organization if not already in validated_data
+        if 'organization' not in serializer.validated_data and 'organization_id' not in serializer.validated_data:
+            serializer.save(organization=organization)
+        else:
+            # Ensure the organization matches the user's profile
+            org_id = serializer.validated_data.get('organization') or serializer.validated_data.get('organization_id')
+            if org_id != organization.id:
+                raise ValueError('Organization ID mismatch. You can only create deals for your own organization.')
+            serializer.save()
     
     def update(self, request, *args, **kwargs):
         """Override update to check permissions"""

@@ -366,18 +366,24 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
           try {
             // Get default pipeline or first pipeline
             const pipelines = await dealService.getPipelines();
-            const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
             
-            if (defaultPipeline) {
-              // Get stages for the pipeline
-              const stages = await dealService.getPipelineStages(defaultPipeline.id);
+            // Ensure pipelines is an array before using .find()
+            if (Array.isArray(pipelines) && pipelines.length > 0) {
+              const defaultPipeline = pipelines.find(p => p.is_default) || pipelines[0];
               
-              // Find stage by name using utility function
-              stageId = findStageIdByName(String(stageValue), stages);
-              
-              if (!stageId) {
-                console.warn(`Stage "${stageValue}" not found in pipeline stages`);
+              if (defaultPipeline) {
+                // Get stages for the pipeline
+                const stages = await dealService.getPipelineStages(defaultPipeline.id);
+                
+                // Find stage by name using utility function
+                stageId = findStageIdByName(String(stageValue), stages);
+                
+                if (!stageId) {
+                  console.warn(`Stage "${stageValue}" not found in pipeline stages`);
+                }
               }
+            } else {
+              console.warn('No pipelines available');
             }
           } catch (err) {
             console.warn('Failed to fetch pipeline stages:', err);
@@ -386,30 +392,64 @@ export const useDealActions = ({ onSuccess }: UseDealActionsProps = {}): UseDeal
         }
       }
 
+      // Validate that we have a customer ID before proceeding
+      if (!customerId) {
+        toaster.create({
+          title: 'Customer Required',
+          description: 'Please select a valid customer before creating a deal.',
+          type: 'error',
+          duration: 5000,
+        });
+        return;
+      }
+
       // Transform form data to backend format
       const transformedData = transformDealFormData(
-        { ...data, customer: customerId || data.customer },
+        { ...data, customer: customerId },
         organizationId,
         stageId
       );
       
+      console.log('📤 Transformed deal data:', transformedData);
+      
       const backendData = cleanFormData(transformedData);
+      
+      console.log('📤 Cleaned deal data (sending to backend):', backendData);
 
       await createMutation.mutateAsync(backendData);
     } catch (err: any) {
       console.error('Error preparing deal creation:', err);
       
-      const errorMessage = 
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to create deal. Please check your input and try again.';
+      // Extract detailed error messages from backend
+      let errorMessage = 'Failed to create deal. Please check your input and try again.';
+      
+      if (err.errors) {
+        // Handle validation errors from backend (APIError format)
+        const errorDetails = Object.entries(err.errors)
+          .map(([field, messages]) => {
+            const msgArray = Array.isArray(messages) ? messages : [messages];
+            return `${field}: ${msgArray.join(', ')}`;
+          })
+          .join('; ');
+        errorMessage = errorDetails;
+      } else if (err.response?.data?.errors) {
+        // Handle errors from axios response
+        const errorDetails = Object.entries(err.response.data.errors)
+          .map(([field, messages]) => {
+            const msgArray = Array.isArray(messages) ? messages : [messages];
+            return `${field}: ${msgArray.join(', ')}`;
+          })
+          .join('; ');
+        errorMessage = errorDetails;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
       
       toaster.create({ 
         title: 'Failed to create deal', 
         description: errorMessage, 
         type: 'error',
-        duration: 5000,
+        duration: 7000,
       });
     }
   };

@@ -1,5 +1,7 @@
 import { Table, Badge, Button, HStack, Text, Box } from '@chakra-ui/react';
-import { FiEye, FiEdit, FiCheckCircle, FiTrash2, FiExternalLink } from 'react-icons/fi';
+import { FiEye, FiEdit, FiCheckCircle, FiTrash2, FiExternalLink, FiDownload } from 'react-icons/fi';
+import { Checkbox } from '../ui/checkbox';
+import { useState } from 'react';
 import type { Issue, IssueStatus } from '@/types';
 
 const formatDate = (dateString: string) => {
@@ -14,6 +16,8 @@ interface IssuesDataTableProps {
   onResolve: (issue: Issue) => void;
   onDelete: (issueId: number) => void;
   onUpdateStatus: (issueId: number, status: IssueStatus) => void;
+  onBulkDelete?: (issueIds: number[]) => void;
+  onBulkExport?: (issueIds: number[]) => void;
 }
 
 const getPriorityColor = (priority: string) => {
@@ -52,7 +56,42 @@ const IssuesDataTable = ({
   onEdit,
   onResolve,
   onDelete,
+  onBulkDelete,
+  onBulkExport,
 }: IssuesDataTableProps) => {
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(issues.map((issue) => issue.id));
+    } else {
+      setSelectedIds([]);
+    }
+  };
+
+  const handleSelectOne = (issueId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedIds([...selectedIds, issueId]);
+    } else {
+      setSelectedIds(selectedIds.filter((id) => id !== issueId));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.length > 0) {
+      onBulkDelete?.(selectedIds);
+      setSelectedIds([]);
+    }
+  };
+
+  const handleBulkExport = () => {
+    if (selectedIds.length > 0) {
+      onBulkExport?.(selectedIds);
+    }
+  };
+
+  const isAllSelected = issues.length > 0 && selectedIds.length === issues.length;
+
   return (
     <Box
       bg="white"
@@ -61,10 +100,51 @@ const IssuesDataTable = ({
       borderColor="gray.200"
       overflow="hidden"
     >
+      {/* Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <Box bg="purple.50" px={4} py={3} borderBottomWidth="1px" borderColor="purple.200">
+          <HStack justify="space-between">
+            <Text fontSize="sm" fontWeight="medium" color="purple.900">
+              {selectedIds.length} {selectedIds.length === 1 ? 'issue' : 'issues'} selected
+            </Text>
+            <HStack gap={2}>
+              {onBulkExport && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="purple"
+                  onClick={handleBulkExport}
+                >
+                  <FiDownload />
+                  <Text ml={2}>Export</Text>
+                </Button>
+              )}
+              {onBulkDelete && (
+                <Button
+                  size="sm"
+                  colorPalette="red"
+                  onClick={handleBulkDelete}
+                >
+                  <FiTrash2 />
+                  <Text ml={2}>Delete</Text>
+                </Button>
+              )}
+            </HStack>
+          </HStack>
+        </Box>
+      )}
+
       <Box overflowX="auto">
-        <Table.Root size="sm">
+        <Table.Root size="sm" variant="line">
           <Table.Header>
             <Table.Row bg="gray.50">
+              <Table.ColumnHeader width="40px">
+                <Checkbox
+                  checked={isAllSelected}
+                  onCheckedChange={(e) => handleSelectAll(e.checked as boolean)}
+                  aria-label="Select all issues"
+                />
+              </Table.ColumnHeader>
               <Table.ColumnHeader>Issue #</Table.ColumnHeader>
               <Table.ColumnHeader>Title</Table.ColumnHeader>
               <Table.ColumnHeader>Source</Table.ColumnHeader>
@@ -80,6 +160,13 @@ const IssuesDataTable = ({
           <Table.Body>
             {issues.map((issue) => (
               <Table.Row key={issue.id} _hover={{ bg: 'gray.50' }}>
+                <Table.Cell>
+                  <Checkbox
+                    checked={selectedIds.includes(issue.id)}
+                    onCheckedChange={(e) => handleSelectOne(issue.id, e.checked as boolean)}
+                    aria-label={`Select issue ${issue.issue_number}`}
+                  />
+                </Table.Cell>
                 <Table.Cell>
                   <Text fontWeight="semibold" color="purple.600">
                     {issue.issue_number}

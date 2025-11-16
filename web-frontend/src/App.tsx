@@ -3,8 +3,8 @@ import { AccountModeProvider } from './contexts/AccountModeContext'
 import { PermissionProvider } from './contexts/PermissionContext'
 import { ProfileProvider } from './contexts/ProfileContext'
 import { ProtectedRoute } from './components/auth'
-import { JitsiCallManager } from './components/jitsi/JitsiCallManager'
-import { useAuth } from './hooks'
+// import { JitsiCallManager } from './components/jitsi/JitsiCallManager'
+// import { useAuth } from './hooks'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardPage from './pages/DashboardPage'
@@ -20,6 +20,7 @@ import LeadDetailPage from './pages/LeadDetailPage'
 import EditCustomerPage from './pages/EditCustomerPage'
 import ActivitiesPage from './pages/ActivitiesPage'
 import ActivityDetailPage from './pages/ActivityDetailPage'
+import EditActivityPage from './pages/EditActivityPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import EmployeesPage from './pages/vendor/EmployeesPage'
 import EmployeeDetailPage from './pages/vendor/EmployeeDetailPage'
@@ -44,15 +45,15 @@ import './App.css'
 /**
  * Component to manage Jitsi calls for authenticated users
  */
-function JitsiCallWrapper() {
-  const { user, isAuthenticated } = useAuth();
-  
-  if (!isAuthenticated || !user) {
-    return null;
-  }
-  
-  return <JitsiCallManager userId={user.id} />;
-}
+// function JitsiCallWrapper() {
+//   const { user, isAuthenticated } = useAuth();
+//   
+//   if (!isAuthenticated || !user) {
+//     return null;
+//   }
+//   
+//   return <JitsiCallManager />;
+// }
 
 function App() {
   return (
@@ -61,7 +62,7 @@ function App() {
         <ProfileProvider>
           <PermissionProvider>
             {/* Global Jitsi Call Manager for all authenticated users */}
-            <JitsiCallWrapper />
+            {/* <JitsiCallWrapper /> */}
             
             <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
@@ -170,6 +171,14 @@ function App() {
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
                 <ActivityDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/activities/:id/edit"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
+                <EditActivityPage />
               </ProtectedRoute>
             }
           />

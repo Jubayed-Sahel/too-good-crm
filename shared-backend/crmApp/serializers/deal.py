@@ -212,16 +212,17 @@ class DealCreateSerializer(serializers.ModelSerializer):
         if 'assigned_to' in attrs:
             attrs['assigned_to_id'] = attrs.pop('assigned_to')
         
-        # Ensure customer is provided
+        # Ensure customer is provided (check both customer and customer_id)
         if not attrs.get('customer_id'):
             raise serializers.ValidationError({
                 'customer': "Customer is required for creating a deal."
             })
         
-        # Ensure title is provided
-        if not attrs.get('title'):
+        # Ensure title is provided and meets minimum length
+        title = attrs.get('title', '').strip()
+        if not title or len(title) < 3:
             raise serializers.ValidationError({
-                'title': "Deal title is required."
+                'title': "Deal title is required and must be at least 3 characters long."
             })
         
         return attrs

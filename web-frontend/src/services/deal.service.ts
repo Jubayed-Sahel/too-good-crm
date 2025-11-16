@@ -179,7 +179,9 @@ class DealService {
    * Get all pipelines
    */
   async getPipelines(): Promise<Pipeline[]> {
-    return api.get<Pipeline[]>(API_CONFIG.ENDPOINTS.PIPELINES.LIST);
+    const response = await api.get<PaginatedResponse<Pipeline> | Pipeline[]>(API_CONFIG.ENDPOINTS.PIPELINES.LIST + '?page_size=100');
+    // Handle both paginated and non-paginated responses
+    return Array.isArray(response) ? response : response.results;
   }
 
   /**
@@ -225,10 +227,13 @@ class DealService {
    * Get pipeline stages
    */
   async getPipelineStages(pipelineId?: number): Promise<PipelineStage[]> {
-    const url = pipelineId 
+    const baseUrl = pipelineId 
       ? buildUrl(API_CONFIG.ENDPOINTS.PIPELINES.STAGES, { pipeline: pipelineId })
       : API_CONFIG.ENDPOINTS.PIPELINES.STAGES;
-    return api.get<PipelineStage[]>(url);
+    const url = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'page_size=100';
+    const response = await api.get<PaginatedResponse<PipelineStage> | PipelineStage[]>(url);
+    // Handle both paginated and non-paginated responses
+    return Array.isArray(response) ? response : response.results;
   }
 
   /**

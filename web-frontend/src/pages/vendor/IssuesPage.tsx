@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VStack, Box, Spinner, Text, HStack } from '@chakra-ui/react';
+import { VStack, Box, Heading, Text, Badge, Spinner } from '@chakra-ui/react';
 import { FiPlus, FiRefreshCw, FiDownload } from 'react-icons/fi';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { IssueStatsGrid, IssueFiltersPanel, IssuesDataTable, CreateIssueModal, ResolveIssueModal } from '../../components/issues';
@@ -22,14 +22,12 @@ const IssuesPage = () => {
   // Only customers can raise issues - vendors and employees can only view and update
   const canRaiseIssue = activeProfileType === 'customer';
   // Vendors and employees can fetch from Linear
-  const canFetchFromLinear = activeProfileType === 'vendor' || activeProfileType === 'employee';
-  
+  // const canFetchFromLinear = activeProfileType === 'vendor' || activeProfileType === 'employee';
+
   // Fetch from Linear state
-  const [isFetchingFromLinear, setIsFetchingFromLinear] = useState(false);
-  const [linearIssues, setLinearIssues] = useState<any[]>([]);
-  const [showLinearIssues, setShowLinearIssues] = useState(false);
-  
-  // Filters
+  // const [isFetchingFromLinear, setIsFetchingFromLinear] = useState(false);
+  // const [linearIssues, setLinearIssues] = useState<any[]>([]);
+  // const [showLinearIssues, setShowLinearIssues] = useState(false);  // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<IssueStatus | 'all'>('all');
   const [priorityFilter, setPriorityFilter] = useState<IssuePriority | 'all'>('all');
@@ -91,9 +89,7 @@ const IssuesPage = () => {
         data: { status: newStatus },
       });
       
-      const message = response.linear_synced 
-        ? `Issue status changed to ${newStatus} and synced to Linear`
-        : `Issue status changed to ${newStatus}`;
+      const message = `Issue status changed to ${newStatus}`;
       
       toaster.create({
         title: 'Status Updated',
@@ -189,6 +185,7 @@ const IssuesPage = () => {
     refetchStats();
   };
 
+  /* Linear integration disabled
   const handleFetchFromLinear = async (syncToCrm: boolean = false) => {
     if (!canFetchFromLinear) {
       toaster.create({
@@ -234,6 +231,7 @@ const IssuesPage = () => {
       setIsFetchingFromLinear(false);
     }
   };
+  */
 
   // Error state
   if (error) {
@@ -269,6 +267,7 @@ const IssuesPage = () => {
               >
                 Refresh
               </StandardButton>
+              {/* Linear integration disabled
               {canFetchFromLinear && (
                 <>
                   <StandardButton
@@ -289,6 +288,7 @@ const IssuesPage = () => {
                   </StandardButton>
                 </>
               )}
+              */}
               {canRaiseIssue && (
                 <StandardButton
                   variant="primary"

@@ -77,6 +77,34 @@ export const CreateDealDialog = ({
   });
 
   const handleSubmit = () => {
+    // Basic validation before submitting
+    if (!formData.title || formData.title.trim().length < 3) {
+      alert('Deal title must be at least 3 characters long');
+      return;
+    }
+    
+    if (!formData.customer && !formData.customerName) {
+      alert('Please select a customer');
+      return;
+    }
+    
+    if (!formData.value || formData.value <= 0) {
+      alert('Deal value must be greater than 0');
+      return;
+    }
+    
+    // Validate expected close date is not in the past
+    if (formData.expectedCloseDate) {
+      const selectedDate = new Date(formData.expectedCloseDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        alert('Expected close date cannot be in the past');
+        return;
+      }
+    }
+    
     onSubmit(formData);
     handleClose();
   };
@@ -103,7 +131,11 @@ export const CreateDealDialog = ({
     });
   };
 
-  const isFormValid = formData.title && formData.customerName && formData.value > 0;
+  const isFormValid = 
+    formData.title && 
+    formData.title.trim().length >= 3 &&
+    (formData.customer || formData.customerName) && 
+    formData.value > 0;
 
   return (
     <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size={{ base: 'full', md: 'lg' }}>

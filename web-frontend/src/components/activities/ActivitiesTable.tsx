@@ -324,7 +324,7 @@ export const ActivitiesTable = ({
       )}
 
       <Box overflowX="auto">
-        <Table.Root size="md">
+        <Table.Root size="sm" variant="line">
           <Table.Header>
             <Table.Row>
               <Table.ColumnHeader px={4} py={3} width="50px">

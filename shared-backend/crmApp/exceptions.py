@@ -64,11 +64,12 @@ def custom_exception_handler(exc, context):
         }
         response.data = custom_response_data
         
-        # Log error for debugging
+        # Log error for debugging with full details
         logger.error(
             f"API Error: {custom_response_data['error']} - "
             f"Status: {response.status_code} - "
-            f"View: {context.get('view', 'Unknown')}"
+            f"View: {context.get('view', 'Unknown')} - "
+            f"Full Details: {response.data}"
         )
     
     return response

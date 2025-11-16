@@ -217,7 +217,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
               </Box>
             </Flex>
 
-            {/* Current Profile & Organization */}
+            {/* Current Profile */}
             {currentProfile && (
               <Box
                 p={3}
@@ -238,11 +238,6 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                       {currentProfile.profile_type_display}
                     </Badge>
                   </HStack>
-                  <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-                    {currentProfile.profile_type === 'customer' && !currentProfile.organization_name
-                      ? 'Independent Customer'
-                      : currentProfile.organization_name || 'No Organization'}
-                  </Text>
                   {hasMultipleProfiles && (
                     <Button
                       size="xs"
