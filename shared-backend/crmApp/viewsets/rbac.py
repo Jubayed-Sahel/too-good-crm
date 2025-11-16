@@ -29,19 +29,29 @@ class PermissionViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter permissions by organization"""
-        # Get user's organizations
-        user_orgs = self.request.user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
-        
-        # Debug logging
-        print(f"[DEBUG] User: {self.request.user.email}")
-        print(f"[DEBUG] User organizations: {list(user_orgs)}")
-        
-        permissions = Permission.objects.filter(organization_id__in=user_orgs)
-        print(f"[DEBUG] Found {permissions.count()} permissions")
-        
-        return permissions
+        try:
+            # Get user's organizations
+            user_orgs = self.request.user.user_organizations.filter(
+                is_active=True
+            ).values_list('organization_id', flat=True)
+            
+            # If user has no organizations, return empty queryset
+            if not user_orgs:
+                return Permission.objects.none()
+            
+            # Debug logging
+            print(f"[DEBUG] User: {self.request.user.email}")
+            print(f"[DEBUG] User organizations: {list(user_orgs)}")
+            
+            permissions = Permission.objects.filter(organization_id__in=user_orgs)
+            print(f"[DEBUG] Found {permissions.count()} permissions")
+            
+            return permissions
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in PermissionViewSet.get_queryset: {str(e)}", exc_info=True)
+            return Permission.objects.none()
     
     def perform_create(self, serializer):
         """Ensure permission is created for user's organization"""
@@ -58,15 +68,21 @@ class PermissionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def by_resource(self, request):
         """Group permissions by resource"""
-        permissions = self.get_queryset()
-        grouped = {}
-        
-        for perm in permissions:
-            if perm.resource not in grouped:
-                grouped[perm.resource] = []
-            grouped[perm.resource].append(PermissionSerializer(perm).data)
-        
-        return Response(grouped)
+        try:
+            permissions = self.get_queryset()
+            grouped = {}
+            
+            for perm in permissions:
+                if perm.resource not in grouped:
+                    grouped[perm.resource] = []
+                grouped[perm.resource].append(PermissionSerializer(perm).data)
+            
+            return Response(grouped)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in PermissionViewSet.by_resource: {str(e)}", exc_info=True)
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     @action(detail=False, methods=['get'])
     def available_resources(self, request):
@@ -217,13 +233,23 @@ class RoleViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter roles by organization"""
-        user_orgs = self.request.user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
-        
-        return Role.objects.filter(
-            organization_id__in=user_orgs
-        ).prefetch_related('role_permissions__permission')
+        try:
+            user_orgs = self.request.user.user_organizations.filter(
+                is_active=True
+            ).values_list('organization_id', flat=True)
+            
+            # If user has no organizations, return empty queryset
+            if not user_orgs:
+                return Role.objects.none()
+            
+            return Role.objects.filter(
+                organization_id__in=user_orgs
+            ).prefetch_related('role_permissions__permission')
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in RoleViewSet.get_queryset: {str(e)}", exc_info=True)
+            return Role.objects.none()
     
     def perform_create(self, serializer):
         """Create role for user's organization"""

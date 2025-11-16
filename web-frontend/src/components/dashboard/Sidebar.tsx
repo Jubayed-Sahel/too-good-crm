@@ -16,6 +16,7 @@ import {
   FiAlertCircle,
   FiRefreshCw,
   FiCheckSquare,
+  FiLock,
 } from 'react-icons/fi';
 import { HiUserGroup } from 'react-icons/hi';
 import { useAccountMode } from '@/contexts/AccountModeContext';
@@ -91,7 +92,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiActivity, label: 'Activities', path: '/activities', resource: 'activities' },
     { icon: FiAlertCircle, label: 'Issues', path: '/issues', resource: 'issues' },
     { icon: FiBarChart2, label: 'Analytics', path: '/analytics', resource: 'analytics' },
-    { icon: HiUserGroup, label: 'Team', path: '/employees', resource: 'employees' },
+    { icon: HiUserGroup, label: 'Team', path: '/team', resource: 'employees' },
     { icon: FiSettings, label: 'Settings', path: '/settings', resource: 'settings' },
   ];
 
@@ -117,7 +118,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiSettings, label: 'Settings', path: '/client/settings', resource: 'settings' },
   ];
 
-  // Filter menu items based on permissions
+  // Get menu items - employees see all vendor items, but with permission indicators
   const menuItems = useMemo(() => {
     // Determine which menu to use based on profile type
     // Priority: currentProfile.profile_type > isClientMode
@@ -129,8 +130,9 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       // Customer/Client mode - show client menu
       items = clientMenuItems;
     } else if (profileType === 'employee') {
-      // Employee mode - show employee menu
-      items = employeeMenuItems;
+      // Employee mode - show ALL vendor menu items (same as vendor)
+      // Access will be controlled by permissions at the page level
+      items = vendorMenuItems;
     } else {
       // Vendor mode (default) - show vendor menu
       items = vendorMenuItems;
@@ -141,13 +143,13 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       return [];
     }
     
-    // If vendor, show all items
-    if (isVendor) {
-      return items;
-    }
-    
-    // Filter based on permissions
-    return items.filter(item => canAccess(item.resource));
+    // For employees, show all items but mark which ones they don't have access to
+    // For vendors, show all items (full access)
+    // For customers, show all client items
+    return items.map(item => ({
+      ...item,
+      hasAccess: isVendor || canAccess(item.resource),
+    }));
   }, [isClientMode, currentProfile, isVendor, canAccess, permissionsLoading]);
 
   // Check if user has multiple profiles (memoized)
@@ -264,35 +266,56 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
 
           {/* Navigation Menu */}
           <VStack align="stretch" flex={1} p={4} gap={1}>
-            {menuItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                style={{ textDecoration: 'none' }}
-              >
-                {({ isActive }) => (
-                  <Flex
-                    align="center"
-                    gap={3}
-                    px={4}
-                    py={3}
-                    borderRadius="lg"
-                    bg={isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'transparent'}
-                    color={isActive ? (isClientMode ? 'blue.600' : 'purple.600') : 'gray.700'}
-                    fontWeight={isActive ? 'semibold' : 'medium'}
-                    _hover={{
-                      bg: isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'gray.50',
-                      color: isActive ? (isClientMode ? 'blue.600' : 'purple.600') : 'gray.900',
-                    }}
-                    cursor="pointer"
-                    transition="all 0.2s"
-                  >
-                    <Box as={item.icon} fontSize="lg" />
-                    <Text>{item.label}</Text>
-                  </Flex>
-                )}
-              </NavLink>
-            ))}
+            {menuItems.map((item) => {
+              const hasAccess = item.hasAccess ?? true;
+              const isRestricted = !hasAccess && !isVendor;
+              
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  style={{ textDecoration: 'none' }}
+                >
+                  {({ isActive }) => (
+                    <Flex
+                      align="center"
+                      gap={3}
+                      px={4}
+                      py={3}
+                      borderRadius="lg"
+                      bg={isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'transparent'}
+                      color={
+                        isRestricted 
+                          ? 'gray.400' 
+                          : isActive 
+                            ? (isClientMode ? 'blue.600' : 'purple.600') 
+                            : 'gray.700'
+                      }
+                      fontWeight={isActive ? 'semibold' : 'medium'}
+                      opacity={isRestricted ? 0.6 : 1}
+                      _hover={{
+                        bg: isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'gray.50',
+                        color: isRestricted 
+                          ? 'gray.400' 
+                          : isActive 
+                            ? (isClientMode ? 'blue.600' : 'purple.600') 
+                            : 'gray.900',
+                      }}
+                      cursor={isRestricted ? 'not-allowed' : 'pointer'}
+                      transition="all 0.2s"
+                      position="relative"
+                      title={isRestricted ? 'You do not have permission to access this feature' : ''}
+                    >
+                      <Box as={item.icon} fontSize="lg" />
+                      <Text flex={1}>{item.label}</Text>
+                      {isRestricted && (
+                        <Box as={FiLock} fontSize="sm" color="gray.400" />
+                      )}
+                    </Flex>
+                  )}
+                </NavLink>
+              );
+            })}
           </VStack>
 
           {/* Sign Out Button */}

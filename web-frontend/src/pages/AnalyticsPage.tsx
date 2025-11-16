@@ -9,6 +9,7 @@ import {
   ConversionFunnel,
   RecentActivities,
 } from '../components/analytics';
+import { RequirePermission } from '../components/guards/RequirePermission';
 import { exportData } from '@/utils';
 import { toaster } from '@/components/ui/toaster';
 import { analyticsService } from '@/services';
@@ -88,7 +89,8 @@ const AnalyticsPage = () => {
 
   return (
     <DashboardLayout title="Analytics">
-      <VStack align="stretch" gap={5}>
+      <RequirePermission resource="analytics">
+        <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <AnalyticsHeader
           onExport={handleExport}
@@ -123,6 +125,7 @@ const AnalyticsPage = () => {
           <RecentActivities />
         </Grid>
       </VStack>
+      </RequirePermission>
     </DashboardLayout>
   );
 };

@@ -23,6 +23,7 @@ import ActivityDetailPage from './pages/ActivityDetailPage'
 import EditActivityPage from './pages/EditActivityPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import EmployeesPage from './pages/vendor/EmployeesPage'
+import TeamPage from './pages/vendor/TeamPage'
 import EmployeeDetailPage from './pages/vendor/EmployeeDetailPage'
 import EditEmployeePage from './pages/vendor/EditEmployeePage'
 import IssuesPage from './pages/IssuesPage'
@@ -219,6 +220,14 @@ function App() {
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
                 <EmployeesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/team"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor']}>
+                <TeamPage />
               </ProtectedRoute>
             }
           />

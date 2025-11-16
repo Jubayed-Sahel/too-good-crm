@@ -59,12 +59,23 @@ class EmployeeSerializer(serializers.ModelSerializer):
     
     def update(self, instance, validated_data):
         """Override update to handle role assignment properly"""
-        print(f"📝 EmployeeSerializer.update called with validated_data: {validated_data}")
+        import logging
+        logger = logging.getLogger(__name__)
         
-        # Handle role field - it comes as integer ID but needs to be set as FK
+        logger.info(f"📝 EmployeeSerializer.update called")
+        logger.info(f"   validated_data: {validated_data}")
+        logger.info(f"   initial_data: {self.initial_data}")
+        
+        # Handle role field - check both validated_data and initial_data
+        # The role might come as an integer ID in initial_data but not be in validated_data
         role_id = validated_data.pop('role', None)
         
-        print(f"🎯 Role ID from validated_data: {role_id} (type: {type(role_id)})")
+        # If role not in validated_data, check initial_data
+        if role_id is None and 'role' in self.initial_data:
+            role_id = self.initial_data.get('role')
+            logger.info(f"   Role found in initial_data: {role_id}")
+        
+        logger.info(f"🎯 Role ID: {role_id} (type: {type(role_id)})")
         
         # Update other fields
         for attr, value in validated_data.items():
@@ -76,19 +87,37 @@ class EmployeeSerializer(serializers.ModelSerializer):
             if isinstance(role_id, int):
                 # If it's an integer, fetch the Role object
                 try:
-                    role = Role.objects.get(id=role_id)
+                    # Validate that role belongs to the same organization
+                    role = Role.objects.get(
+                        id=role_id,
+                        organization=instance.organization
+                    )
                     instance.role = role
-                    print(f"✅ Role set to: {role.name} (ID: {role.id})")
+                    logger.info(f"✅ Role set to: {role.name} (ID: {role.id})")
                 except Role.DoesNotExist:
-                    instance.role = None
-                    print(f"❌ Role with ID {role_id} not found")
+                    logger.error(f"❌ Role with ID {role_id} not found or doesn't belong to organization {instance.organization.id}")
+                    raise serializers.ValidationError({
+                        'role': f'Role with ID {role_id} not found or does not belong to your organization.'
+                    })
+            elif role_id is None:
+                # Explicitly set to None to remove role
+                instance.role = None
+                logger.info("✅ Role removed (set to None)")
             else:
-                # If it's already a Role object
+                # If it's already a Role object, validate it belongs to organization
+                if role_id.organization != instance.organization:
+                    raise serializers.ValidationError({
+                        'role': 'Role does not belong to your organization.'
+                    })
                 instance.role = role_id
-                print(f"✅ Role object set directly: {role_id}")
+                logger.info(f"✅ Role object set directly: {role_id}")
+        elif 'role' in self.initial_data and self.initial_data['role'] is None:
+            # Explicitly setting role to None
+            instance.role = None
+            logger.info("✅ Role removed (explicit None)")
         
         instance.save()
-        print(f"💾 Employee saved. Current role: {instance.role}")
+        logger.info(f"💾 Employee saved. Current role: {instance.role} (ID: {instance.role.id if instance.role else None})")
         return instance
 
 

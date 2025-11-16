@@ -7,8 +7,10 @@
 export { authService } from './auth.service';
 export { rbacService } from './rbac.service';
 export { roleService } from './role.service';
+export { permissionService } from './permission.service';
 export { roleSelectionService } from './role-selection.service';
 export type { Role, Permission, UserRole } from './role.service';
+export type { PermissionsByResource } from './permission.service';
 
 // User Management
 export { userProfileService } from './userProfile.service';

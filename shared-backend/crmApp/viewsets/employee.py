@@ -36,43 +36,53 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         Returns employees in organizations where user is a member,
         PLUS the user's own employee records in any organization.
         """
-        user_orgs = self.request.user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
-        
-        # Get employees in user's organizations OR where the user is the employee
-        from django.db.models import Q
-        queryset = Employee.objects.filter(
-            Q(organization_id__in=user_orgs) | Q(user=self.request.user)
-        )
-        
-        # Filter by organization if provided
-        org_id = self.request.query_params.get('organization')
-        if org_id:
-            queryset = queryset.filter(organization_id=org_id)
-        
-        # Filter by status
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-        
-        # Filter by department
-        department = self.request.query_params.get('department')
-        if department:
-            queryset = queryset.filter(department=department)
-        
-        # Search by name or email
-        search = self.request.query_params.get('search')
-        if search:
-            queryset = queryset.filter(
-                first_name__icontains=search
-            ) | queryset.filter(
-                last_name__icontains=search
-            ) | queryset.filter(
-                email__icontains=search
-            )
-        
-        return queryset.select_related('user', 'manager', 'organization', 'role').order_by('-created_at', 'first_name', 'last_name').distinct()
+        try:
+            user_orgs = self.request.user.user_organizations.filter(
+                is_active=True
+            ).values_list('organization_id', flat=True)
+            
+            # Get employees in user's organizations OR where the user is the employee
+            from django.db.models import Q
+            if user_orgs:
+                queryset = Employee.objects.filter(
+                    Q(organization_id__in=user_orgs) | Q(user=self.request.user)
+                )
+            else:
+                # If user has no organizations, only show their own employee records
+                queryset = Employee.objects.filter(user=self.request.user)
+            
+            # Filter by organization if provided
+            org_id = self.request.query_params.get('organization')
+            if org_id:
+                queryset = queryset.filter(organization_id=org_id)
+            
+            # Filter by status
+            status_filter = self.request.query_params.get('status')
+            if status_filter:
+                queryset = queryset.filter(status=status_filter)
+            
+            # Filter by department
+            department = self.request.query_params.get('department')
+            if department:
+                queryset = queryset.filter(department=department)
+            
+            # Search by name or email
+            search = self.request.query_params.get('search')
+            if search:
+                queryset = queryset.filter(
+                    first_name__icontains=search
+                ) | queryset.filter(
+                    last_name__icontains=search
+                ) | queryset.filter(
+                    email__icontains=search
+                )
+            
+            return queryset.select_related('user', 'manager', 'organization', 'role').order_by('-created_at', 'first_name', 'last_name').distinct()
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in EmployeeViewSet.get_queryset: {str(e)}", exc_info=True)
+            return Employee.objects.none()
     
     @action(detail=True, methods=['get'])
     def issues(self, request, pk=None):

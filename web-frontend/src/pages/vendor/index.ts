@@ -23,8 +23,9 @@ export { default as DealDetailPage } from './DealDetailPage';
 export { default as EditDealPage } from './EditDealPage';
 export { default as SalesPage } from './SalesPage';
 
-// Employee Management
+// Employee/Team Management
 export { default as EmployeesPage } from './EmployeesPage';
+export { default as TeamPage } from './TeamPage';
 export { default as EmployeeDetailPage } from './EmployeeDetailPage';
 export { default as EditEmployeePage } from './EditEmployeePage';
 

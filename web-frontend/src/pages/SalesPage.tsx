@@ -25,6 +25,7 @@ import {
 } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import CustomSelect from '../components/ui/CustomSelect';
+import { RequirePermission } from '../components/guards/RequirePermission';
 import { mockPipelineDeals, getPipelineStats } from '@/services/mockData';
 
 // Interface for Deal type
@@ -152,7 +153,8 @@ const SalesPage = () => {
 
   return (
     <DashboardLayout title="Sales Pipeline">
-      <VStack align="stretch" gap={5}>
+      <RequirePermission resource="deals">
+        <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <Box>
           <Heading size="2xl" mb={2}>
@@ -779,6 +781,7 @@ const SalesPage = () => {
           </Box>
         </Box>
       </VStack>
+      </RequirePermission>
     </DashboardLayout>
   );
 };

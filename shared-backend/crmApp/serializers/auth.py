@@ -36,25 +36,37 @@ class UserSerializer(serializers.ModelSerializer):
     
     def get_profiles(self, obj):
         """Get all active user profiles"""
-        profiles = obj.user_profiles.filter(status='active').select_related('organization')
-        return UserProfileSerializer(profiles, many=True).data
+        try:
+            profiles = obj.user_profiles.filter(status='active').select_related('organization')
+            return UserProfileSerializer(profiles, many=True).data
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in UserSerializer.get_profiles: {str(e)}", exc_info=True)
+            return []
     
     def get_organizations(self, obj):
         """Get all organizations user belongs to with ownership status"""
-        from crmApp.models import UserOrganization
-        
-        user_orgs = UserOrganization.objects.filter(
-            user=obj,
-            is_active=True
-        ).select_related('organization')
-        
-        return [{
-            'id': uo.organization.id,
-            'name': uo.organization.name,
-            'slug': uo.organization.slug,
-            'is_owner': uo.is_owner,
-            'joined_at': uo.joined_at,
-        } for uo in user_orgs]
+        try:
+            from crmApp.models import UserOrganization
+            
+            user_orgs = UserOrganization.objects.filter(
+                user=obj,
+                is_active=True
+            ).select_related('organization')
+            
+            return [{
+                'id': uo.organization.id,
+                'name': uo.organization.name,
+                'slug': uo.organization.slug,
+                'is_owner': uo.is_owner,
+                'joined_at': uo.joined_at,
+            } for uo in user_orgs if uo.organization]
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error in UserSerializer.get_organizations: {str(e)}", exc_info=True)
+            return []
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
