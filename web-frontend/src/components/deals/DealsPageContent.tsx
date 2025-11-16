@@ -15,6 +15,7 @@ import {
 } from '../deals';
 import { PageHeader, StandardButton } from '@/components/common';
 import type { MappedDeal } from '@/hooks/useDealsPage';
+import type { PermissionActions } from '@/hooks/usePermissionActions';
 
 interface DealsPageContentProps {
   // Data
@@ -48,6 +49,7 @@ interface DealsPageContentProps {
   onBulkDelete?: (dealIds: string[]) => void;
   onBulkExport?: (dealIds: string[], allDeals: MappedDeal[]) => void;
   onViewDeal: (deal: any) => void;
+  permissions: PermissionActions;
 }
 
 export const DealsPageContent: React.FC<DealsPageContentProps> = ({
@@ -70,6 +72,7 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
   onBulkDelete,
   onBulkExport,
   onViewDeal,
+  permissions,
 }) => {
   return (
     <VStack gap={5} align="stretch">
@@ -78,13 +81,15 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
         title="Deals"
         description="Track your sales pipeline, manage deal progress, and close more deals"
         actions={
-          <StandardButton
-            variant="primary"
-            leftIcon={<FiPlus />}
-            onClick={onOpenCreateDialog}
-          >
-            New Deal
-          </StandardButton>
+          permissions.canCreate ? (
+            <StandardButton
+              variant="primary"
+              leftIcon={<FiPlus />}
+              onClick={onOpenCreateDialog}
+            >
+              New Deal
+            </StandardButton>
+          ) : undefined
         }
       />
 
@@ -114,6 +119,7 @@ export const DealsPageContent: React.FC<DealsPageContentProps> = ({
           onView={onViewDeal}
           onBulkDelete={onBulkDelete}
           onBulkExport={onBulkExport ? (ids) => onBulkExport(ids, mappedDeals) : undefined}
+          permissions={permissions}
         />
       ) : (
         <Box

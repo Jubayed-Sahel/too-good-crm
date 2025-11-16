@@ -1,15 +1,18 @@
-import { VStack, Box, Text, Heading, Container } from '@chakra-ui/react';
+import { VStack, Box, Text, Heading, Container, SimpleGrid } from '@chakra-ui/react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import {
-  WelcomeBanner,
   StatsGrid,
   InfoCardsGrid,
 } from '../../components/dashboard';
+import { EmployeeWelcomeBanner } from '../../components/dashboard/EmployeeWelcomeBanner';
+import { MyWorkSection } from '../../components/dashboard/MyWorkSection';
 import { StandardButton } from '../../components/common';
 import { useDashboardStats } from '@/hooks';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 const EmployeeDashboardPage = () => {
   const { stats, isLoading, error } = useDashboardStats();
+  const { canAccess } = usePermissions();
 
   if (error) {
     return (
@@ -59,9 +62,34 @@ const EmployeeDashboardPage = () => {
   return (
     <DashboardLayout title="Dashboard">
       <VStack gap={5} align="stretch">
-        <WelcomeBanner />
-        <StatsGrid stats={stats || undefined} isLoading={isLoading} />
-        {!isLoading && <InfoCardsGrid />}
+        <EmployeeWelcomeBanner />
+        
+        {/* Stats Grid - Only show if employee has access to relevant resources */}
+        {(canAccess('deals') || canAccess('leads') || canAccess('customers')) && (
+          <StatsGrid stats={stats || undefined} isLoading={isLoading} />
+        )}
+
+        {/* Main Content Grid */}
+        <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
+          {/* My Work Section */}
+          <MyWorkSection />
+          
+          {/* Quick Access Cards - Only show if employee has permissions */}
+          {canAccess('deals') || canAccess('leads') || canAccess('customers') ? (
+            <InfoCardsGrid />
+          ) : (
+            <Box p={6} bg="white" borderRadius="xl" borderWidth="1px" borderColor="gray.200">
+              <VStack gap={3} align="center" py={8}>
+                <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+                  Quick Access
+                </Text>
+                <Text fontSize="sm" color="gray.500" textAlign="center">
+                  Your quick access options will appear here based on your permissions.
+                </Text>
+              </VStack>
+            </Box>
+          )}
+        </SimpleGrid>
       </VStack>
     </DashboardLayout>
   );

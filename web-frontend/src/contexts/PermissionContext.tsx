@@ -58,11 +58,19 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
               `${p.resource}:${p.action}`
             );
             
-            setPermissions(permissionStrings);
+            console.log('[PermissionContext] Employee permissions:', permissionStrings);
+            
+            // If no permissions found, employee has no role assigned - restrict access
+            if (permissionStrings.length === 0) {
+              console.warn('[PermissionContext] Employee has no permissions assigned. Access will be restricted.');
+              setPermissions([]); // Empty = no permissions (only dashboard, settings, customers allowed)
+            } else {
+              setPermissions(permissionStrings);
+            }
           } catch (permError) {
-            console.warn('[PermissionContext] Could not fetch employee permissions, granting full access:', permError);
-            // If permission fetch fails, grant full access to prevent blocking
-            setPermissions(['*:*']);
+            console.error('[PermissionContext] Could not fetch employee permissions:', permError);
+            // If permission fetch fails, restrict access (don't grant full access)
+            setPermissions([]); // Empty = no permissions (only dashboard, settings, customers allowed)
           }
         } else {
           // Vendors, customers, and owners have all permissions
@@ -70,8 +78,12 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
         }
       } catch (error) {
         console.error('[PermissionContext] Failed to fetch permissions:', error);
-        // On error, grant full access to prevent blocking the user
-        setPermissions(['*:*']);
+        // On error, restrict access for employees, grant full access for others
+        if (activeProfile?.profile_type === 'employee') {
+          setPermissions([]); // Empty = no permissions for employees
+        } else {
+          setPermissions(['*:*']); // Full access for vendors/owners
+        }
       } finally {
         setIsLoading(false);
       }
@@ -116,6 +128,12 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
       // Vendors/Owners have full access
       if (isVendor || isOwner) {
         return true;
+      }
+
+      // For employees with no permissions, deny access (except dashboard, settings, customers which are handled separately)
+      if (isEmployee && permissions.length === 0) {
+        console.log(`[PermissionContext] Employee has no permissions - denying access to ${resource}:${action}`);
+        return false;
       }
 
       // Check wildcard permission
