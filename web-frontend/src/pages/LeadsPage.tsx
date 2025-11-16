@@ -11,6 +11,7 @@ import {
 } from '../components/leads';
 import { ConfirmDialog, PageHeader, StandardButton, ErrorState } from '../components/common';
 import { RequirePermission } from '../components/guards/RequirePermission';
+import { usePermissionActions } from '@/hooks/usePermissionActions';
 import { 
   useLeads, 
   useLeadStats, 
@@ -27,6 +28,7 @@ import { useProfile } from '@/contexts/ProfileContext';
 export const LeadsPage = () => {
   const navigate = useNavigate();
   const { activeOrganizationId } = useProfile();
+  const permissions = usePermissionActions('leads');
   const [filters, setFilters] = useState<LeadFiltersType>({});
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   
@@ -265,13 +267,15 @@ export const LeadsPage = () => {
           title="Leads"
           description="Manage your lead pipeline and track conversions"
           actions={
-            <StandardButton
-              variant="primary"
-              leftIcon={<FiPlus />}
-              onClick={() => setIsCreateDialogOpen(true)}
-            >
-              New Lead
-            </StandardButton>
+            permissions.canCreate ? (
+              <StandardButton
+                variant="primary"
+                leftIcon={<FiPlus />}
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
+                New Lead
+              </StandardButton>
+            ) : undefined
           }
         />
 

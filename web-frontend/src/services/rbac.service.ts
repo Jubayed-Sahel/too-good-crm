@@ -5,6 +5,7 @@
 
 import api from '@/lib/apiClient';
 import { API_CONFIG } from '@/config/api.config';
+import { employeeService } from './employee.service';
 import type {
   Role,
   Permission,
@@ -337,22 +338,55 @@ class RBACService {
    * Get user permissions (for useRBAC hook)
    */
   async getUserPermissions(userId: number, organizationId?: number): Promise<UserPermissions> {
-    // Get user's roles - filter by organization if provided
-    const userRoles = await this.getUserRoles({ user_id: userId });
+    const roleIds = new Set<number>();
+    const roles: Role[] = [];
     
-    // Filter by organization if provided
+    // 1. Get Employee.role (primary role from Employee model)
+    if (organizationId) {
+      try {
+        const employees = await employeeService.getEmployees({ 
+          organization: organizationId 
+        });
+        const employee = employees.find(emp => emp.user === userId && emp.status === 'active');
+        if (employee?.role) {
+          roleIds.add(employee.role);
+          // Fetch role details
+          const role = await this.getRole(employee.role);
+          if (role) {
+            roles.push(role);
+          }
+        }
+      } catch (error) {
+        console.warn('[rbacService] Could not fetch employee record:', error);
+      }
+    }
+    
+    // 2. Get UserRole assignments (additional roles)
+    const userRoles = await this.getUserRoles({ user_id: userId });
     const filteredRoles = organizationId 
       ? userRoles.filter(ur => ur.organization === organizationId)
       : userRoles;
     
-    const roles = filteredRoles.map(ur => typeof ur.role === 'object' ? ur.role : { id: ur.role } as Role);
+    for (const ur of filteredRoles) {
+      const roleId = typeof ur.role === 'object' ? ur.role.id : ur.role;
+      if (!roleIds.has(roleId)) {
+        roleIds.add(roleId);
+        const role = typeof ur.role === 'object' ? ur.role : await this.getRole(roleId);
+        if (role) {
+          roles.push(role);
+        }
+      }
+    }
     
     // Get all permissions from those roles
     const permissions: Permission[] = [];
-    for (const ur of filteredRoles) {
-      const roleId = typeof ur.role === 'object' ? ur.role.id : ur.role;
-      const rolePerms = await this.getRolePermissions(roleId);
-      permissions.push(...rolePerms);
+    for (const roleId of roleIds) {
+      try {
+        const rolePerms = await this.getRolePermissions(roleId);
+        permissions.push(...rolePerms);
+      } catch (error) {
+        console.warn(`[rbacService] Could not fetch permissions for role ${roleId}:`, error);
+      }
     }
     
     // Remove duplicates

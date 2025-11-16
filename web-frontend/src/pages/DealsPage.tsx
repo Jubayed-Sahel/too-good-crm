@@ -14,8 +14,12 @@ import { DealsPageContent, DealsPageLoading } from '../components/deals';
 import { ConfirmDialog } from '../components/common';
 import { RequirePermission } from '../components/guards/RequirePermission';
 import { useDeals, useDealsPage, useDealActions } from '@/hooks';
+import { usePermissionActions } from '@/hooks/usePermissionActions';
 
 const DealsPage = () => {
+  // Permission checks
+  const permissions = usePermissionActions('deals');
+  
   // Data fetching - handles API communication
   const { deals, isLoading, refetch } = useDeals({ page_size: 1000 });
   
@@ -95,6 +99,7 @@ const DealsPage = () => {
         onBulkDelete={handleBulkDelete}
         onBulkExport={handleBulkExport}
         onViewDeal={handleViewDeal}
+        permissions={permissions}
       />
       
       {/* Delete Confirmation Dialog */}

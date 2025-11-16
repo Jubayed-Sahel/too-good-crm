@@ -16,7 +16,6 @@ import {
   FiAlertCircle,
   FiRefreshCw,
   FiCheckSquare,
-  FiLock,
 } from 'react-icons/fi';
 import { HiUserGroup } from 'react-icons/hi';
 import { useAccountMode } from '@/contexts/AccountModeContext';
@@ -118,7 +117,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiSettings, label: 'Settings', path: '/client/settings', resource: 'settings' },
   ];
 
-  // Get menu items - employees see all vendor items, but with permission indicators
+  // Get menu items - employees only see items they have permission for
   const menuItems = useMemo(() => {
     // Determine which menu to use based on profile type
     // Priority: currentProfile.profile_type > isClientMode
@@ -130,11 +129,66 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       // Customer/Client mode - show client menu
       items = clientMenuItems;
     } else if (profileType === 'employee') {
-      // Employee mode - show ALL vendor menu items (same as vendor)
-      // Access will be controlled by permissions at the page level
-      items = vendorMenuItems;
+      // Employee mode - use employee-specific menu items, filtered by permissions
+      // Map vendor menu items to employee paths and filter by permissions
+      items = vendorMenuItems
+        .map(item => {
+          // Map to employee-specific paths
+          const employeePathMap: Record<string, string> = {
+            '/dashboard': '/employee/dashboard',
+            '/customers': '/employee/customers',
+            '/sales': '/employee/deals', // Sales uses deals
+            '/deals': '/employee/deals',
+            '/leads': '/employee/leads',
+            '/activities': '/employee/activities',
+            '/issues': '/issues', // Keep same path
+            '/analytics': '/analytics', // Keep same path
+            '/team': '/team', // Keep same path (but will be filtered out)
+            '/settings': '/employee/settings',
+          };
+          
+          return {
+            ...item,
+            path: employeePathMap[item.path] || item.path,
+          };
+        })
+        .filter((item, index, self) => {
+          // Always show these items regardless of permissions
+          if (item.resource === 'dashboard' || item.resource === 'settings' || item.resource === 'customers') {
+            return true;
+          }
+          // Hide team page for employees (vendor only)
+          if (item.resource === 'employees') {
+            return false;
+          }
+          // Remove "Sales" for employees since it maps to the same path as "Deals"
+          // Check if another item with the same path exists (Deals)
+          const duplicatePath = self.findIndex((otherItem, otherIndex) => 
+            otherIndex !== index && otherItem.path === item.path
+          );
+          if (duplicatePath >= 0 && item.label === 'Sales') {
+            return false; // Remove Sales, keep Deals
+          }
+          // For other items, check if employee has permission
+          return canAccess(item.resource);
+        });
+      
+      // Add "My Tasks" as first item after Dashboard for employees
+      const tasksItem = { 
+        icon: FiCheckSquare, 
+        label: 'My Tasks', 
+        path: '/employee/tasks', 
+        resource: 'tasks' 
+      };
+      // Insert after dashboard
+      const dashboardIndex = items.findIndex(item => item.resource === 'dashboard');
+      if (dashboardIndex >= 0) {
+        items.splice(dashboardIndex + 1, 0, tasksItem);
+      } else {
+        items.unshift(tasksItem);
+      }
     } else {
-      // Vendor mode (default) - show vendor menu
+      // Vendor mode (default) - show vendor menu (full access)
       items = vendorMenuItems;
     }
     
@@ -143,12 +197,10 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       return [];
     }
     
-    // For employees, show all items but mark which ones they don't have access to
-    // For vendors, show all items (full access)
-    // For customers, show all client items
+    // All items in the list are accessible (already filtered for employees)
     return items.map(item => ({
       ...item,
-      hasAccess: isVendor || canAccess(item.resource),
+      hasAccess: true, // All items shown are accessible
     }));
   }, [isClientMode, currentProfile, isVendor, canAccess, permissionsLoading]);
 
@@ -267,9 +319,6 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
           {/* Navigation Menu */}
           <VStack align="stretch" flex={1} p={4} gap={1}>
             {menuItems.map((item) => {
-              const hasAccess = item.hasAccess ?? true;
-              const isRestricted = !hasAccess && !isVendor;
-              
               return (
                 <NavLink
                   key={item.path}
@@ -285,32 +334,23 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                       borderRadius="lg"
                       bg={isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'transparent'}
                       color={
-                        isRestricted 
-                          ? 'gray.400' 
-                          : isActive 
-                            ? (isClientMode ? 'blue.600' : 'purple.600') 
-                            : 'gray.700'
+                        isActive 
+                          ? (isClientMode ? 'blue.600' : 'purple.600') 
+                          : 'gray.700'
                       }
                       fontWeight={isActive ? 'semibold' : 'medium'}
-                      opacity={isRestricted ? 0.6 : 1}
                       _hover={{
                         bg: isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'gray.50',
-                        color: isRestricted 
-                          ? 'gray.400' 
-                          : isActive 
-                            ? (isClientMode ? 'blue.600' : 'purple.600') 
-                            : 'gray.900',
+                        color: isActive 
+                          ? (isClientMode ? 'blue.600' : 'purple.600') 
+                          : 'gray.900',
                       }}
-                      cursor={isRestricted ? 'not-allowed' : 'pointer'}
+                      cursor="pointer"
                       transition="all 0.2s"
                       position="relative"
-                      title={isRestricted ? 'You do not have permission to access this feature' : ''}
                     >
                       <Box as={item.icon} fontSize="lg" />
                       <Text flex={1}>{item.label}</Text>
-                      {isRestricted && (
-                        <Box as={FiLock} fontSize="sm" color="gray.400" />
-                      )}
                     </Flex>
                   )}
                 </NavLink>

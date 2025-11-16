@@ -15,6 +15,7 @@ import { Card } from '../common';
 import { ResponsiveTable } from '../common';
 import { useState } from 'react';
 import { formatCurrency, formatDate } from '@/utils';
+import type { PermissionActions } from '@/hooks/usePermissionActions';
 
 // Simple progress bar component
 const SimpleProgress = ({ value, colorPalette }: { value: number; colorPalette: string }) => {
@@ -64,9 +65,10 @@ interface DealsTableProps {
   onView: (deal: Deal) => void;
   onBulkDelete?: (dealIds: string[]) => void;
   onBulkExport?: (dealIds: string[]) => void;
+  permissions: PermissionActions;
 }
 
-const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExport }: DealsTableProps) => {
+const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExport, permissions }: DealsTableProps) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const handleSelectAll = (checked: boolean) => {
@@ -216,25 +218,29 @@ const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExpor
                 <FiEye size={16} />
                 <Box ml={2}>View</Box>
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                colorPalette="blue"
-                flex={1}
-                onClick={() => onEdit(deal)}
-              >
-                <FiEdit size={16} />
-                <Box ml={2}>Edit</Box>
-              </Button>
-              <IconButton
-                aria-label="Delete"
-                size="sm"
-                variant="outline"
-                colorPalette="red"
-                onClick={() => onDelete(deal)}
-              >
-                <FiTrash2 size={16} />
-              </IconButton>
+              {permissions.canUpdate && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="blue"
+                  flex={1}
+                  onClick={() => onEdit(deal)}
+                >
+                  <FiEdit size={16} />
+                  <Box ml={2}>Edit</Box>
+                </Button>
+              )}
+              {permissions.canDelete && (
+                <IconButton
+                  aria-label="Delete"
+                  size="sm"
+                  variant="outline"
+                  colorPalette="red"
+                  onClick={() => onDelete(deal)}
+                >
+                  <FiTrash2 size={16} />
+                </IconButton>
+              )}
             </HStack>
           </VStack>
         </Card>
@@ -253,22 +259,26 @@ const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExpor
               {selectedIds.length} deal(s) selected
             </Text>
             <HStack gap={2}>
-              <Button
-                size="sm"
-                variant="outline"
-                colorPalette="purple"
-                onClick={handleBulkExport}
-              >
-                Export Selected
-              </Button>
-              <Button
-                size="sm"
-                variant="solid"
-                colorPalette="red"
-                onClick={handleBulkDelete}
-              >
-                Delete Selected
-              </Button>
+              {permissions.canExport && onBulkExport && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="purple"
+                  onClick={handleBulkExport}
+                >
+                  Export Selected
+                </Button>
+              )}
+              {permissions.canDelete && onBulkDelete && (
+                <Button
+                  size="sm"
+                  variant="solid"
+                  colorPalette="red"
+                  onClick={handleBulkDelete}
+                >
+                  Delete Selected
+                </Button>
+              )}
             </HStack>
           </HStack>
         </Box>
@@ -278,12 +288,14 @@ const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExpor
         <Table.Root size="sm" variant="line">
           <Table.Header>
             <Table.Row bg="gray.50">
-              <Table.ColumnHeader px={4} py={3} width="50px">
-                <Checkbox
-                  checked={isAllSelected}
-                  onCheckedChange={(details) => handleSelectAll(details.checked as boolean)}
-                />
-              </Table.ColumnHeader>
+              {(permissions.canDelete || permissions.canExport) && (
+                <Table.ColumnHeader px={4} py={3} width="50px">
+                  <Checkbox
+                    checked={isAllSelected}
+                    onCheckedChange={(details) => handleSelectAll(details.checked as boolean)}
+                  />
+                </Table.ColumnHeader>
+              )}
               <Table.ColumnHeader>Deal Title</Table.ColumnHeader>
               <Table.ColumnHeader>Customer</Table.ColumnHeader>
               <Table.ColumnHeader textAlign="right">Value</Table.ColumnHeader>
@@ -297,12 +309,14 @@ const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExpor
           <Table.Body>
             {deals.map((deal) => (
               <Table.Row key={deal.id} _hover={{ bg: 'gray.50' }}>
-                <Table.Cell px={4} py={3}>
-                  <Checkbox
-                    checked={selectedIds.includes(deal.id)}
-                    onCheckedChange={(details) => handleSelectOne(deal.id, details.checked as boolean)}
-                  />
-                </Table.Cell>
+                {(permissions.canDelete || permissions.canExport) && (
+                  <Table.Cell px={4} py={3}>
+                    <Checkbox
+                      checked={selectedIds.includes(deal.id)}
+                      onCheckedChange={(details) => handleSelectOne(deal.id, details.checked as boolean)}
+                    />
+                  </Table.Cell>
+                )}
                 <Table.Cell>
                   <Text fontWeight="semibold" fontSize="sm" color="gray.900">
                     {deal.title}
@@ -365,24 +379,28 @@ const DealsTable = ({ deals, onEdit, onDelete, onView, onBulkDelete, onBulkExpor
                     >
                       <FiEye size={16} />
                     </IconButton>
-                    <IconButton
-                      aria-label="Edit deal"
-                      size="sm"
-                      variant="ghost"
-                      colorPalette="blue"
-                      onClick={() => onEdit(deal)}
-                    >
-                      <FiEdit size={16} />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Delete deal"
-                      size="sm"
-                      variant="ghost"
-                      colorPalette="red"
-                      onClick={() => onDelete(deal)}
-                    >
-                      <FiTrash2 size={16} />
-                    </IconButton>
+                    {permissions.canUpdate && (
+                      <IconButton
+                        aria-label="Edit deal"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="blue"
+                        onClick={() => onEdit(deal)}
+                      >
+                        <FiEdit size={16} />
+                      </IconButton>
+                    )}
+                    {permissions.canDelete && (
+                      <IconButton
+                        aria-label="Delete deal"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="red"
+                        onClick={() => onDelete(deal)}
+                      >
+                        <FiTrash2 size={16} />
+                      </IconButton>
+                    )}
                   </HStack>
                 </Table.Cell>
               </Table.Row>

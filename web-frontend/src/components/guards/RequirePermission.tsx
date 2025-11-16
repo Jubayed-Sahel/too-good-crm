@@ -20,7 +20,7 @@ export const RequirePermission = ({
   children,
   alwaysAllow = false 
 }: RequirePermissionProps) => {
-  const { canAccess, isVendor, isLoading } = usePermissions();
+  const { canAccess, isVendor, isLoading, isEmployee } = usePermissions();
 
   // Always allow if flag is set (for dashboard, settings, customers)
   if (alwaysAllow) {
@@ -37,7 +37,21 @@ export const RequirePermission = ({
     return <>{children}</>;
   }
 
-  // Check permission
+  // For employees, check permission strictly
+  if (isEmployee) {
+    const hasAccess = canAccess(resource, action);
+    if (!hasAccess) {
+      console.log(`[RequirePermission] Employee denied access to ${resource}:${action}`);
+      return (
+        <AccessDenied 
+          resource={resource}
+          message={`You don't have access to ${resource}. Please contact your administrator.`}
+        />
+      );
+    }
+  }
+
+  // Check permission for other profile types
   if (!canAccess(resource, action)) {
     return (
       <AccessDenied 

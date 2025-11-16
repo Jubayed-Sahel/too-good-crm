@@ -71,3 +71,5 @@ export {
 export * from './useOrganization';
 export * from './useRBAC';
 export * from './useUser';
+export { usePermissionActions } from './usePermissionActions';
+export type { PermissionActions } from './usePermissionActions';
