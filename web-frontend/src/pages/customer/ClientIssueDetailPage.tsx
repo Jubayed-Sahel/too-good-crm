@@ -8,8 +8,8 @@ import {
   HStack,
   Grid,
   Badge,
-  Textarea,
   Spinner,
+  Textarea,
 } from '@chakra-ui/react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { Card, StandardButton, ConfirmDialog, ErrorState } from '../../components/common';
@@ -18,16 +18,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Issue } from '../../types';
 import {
   FiArrowLeft,
-  FiCheckCircle,
   FiTrash2,
   FiAlertCircle,
   FiClock,
   FiUser,
   FiPackage,
   FiCalendar,
-  FiMessageSquare,
   FiTag,
   FiEdit2,
+  FiMessageSquare,
 } from 'react-icons/fi';
 import { toaster } from '../../components/ui/toaster';
 
@@ -35,8 +34,9 @@ const ClientIssueDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [newComment, setNewComment] = useState('');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   // Fetch issue data
   const { data: issue, isLoading, error } = useQuery<Issue>({
@@ -102,32 +102,6 @@ const ClientIssueDetailPage = () => {
     });
   };
 
-  const handleComplete = async () => {
-    if (!issue) return;
-    
-    try {
-      // Update issue status to resolved
-      await issueService.update(Number(issue.id), { status: 'resolved' });
-      
-      toaster.create({
-        title: 'Issue Completed',
-        description: 'Issue has been marked as complete.',
-        type: 'success',
-        duration: 3000,
-      });
-      
-      // Refresh page to show updated status
-      window.location.reload();
-    } catch (error: any) {
-      toaster.create({
-        title: 'Failed to complete issue',
-        description: error.message || 'Please try again.',
-        type: 'error',
-        duration: 3000,
-      });
-    }
-  };
-
   const handleDelete = () => {
     if (!issue) return;
     setIsDeleteDialogOpen(true);
@@ -143,7 +117,6 @@ const ClientIssueDetailPage = () => {
     
     setIsSubmittingComment(true);
     try {
-      // Call the client issue comment endpoint
       await issueService.clientAddComment(Number(issue.id), newComment);
       
       toaster.create({
@@ -152,14 +125,14 @@ const ClientIssueDetailPage = () => {
         type: 'success',
         duration: 3000,
       });
-      setNewComment('');
       
-      // Refresh page to show updated issue with comment
-      window.location.reload();
+      setNewComment('');
+      // Refresh issue data to show updated description with comment
+      queryClient.invalidateQueries({ queryKey: ['issue', id] });
     } catch (error: any) {
       toaster.create({
         title: 'Failed to add comment',
-        description: error.message || 'Please try again.',
+        description: error.response?.data?.details || 'Please try again.',
         type: 'error',
         duration: 3000,
       });
@@ -202,22 +175,13 @@ const ClientIssueDetailPage = () => {
           >
             Back to Issues
           </StandardButton>
-          <HStack gap={2}>
-            <StandardButton
-              variant="primary"
-              onClick={handleComplete}
-              leftIcon={<FiCheckCircle />}
-            >
-              Mark as Complete
-            </StandardButton>
-            <StandardButton
-              variant="danger"
-              onClick={handleDelete}
-              leftIcon={<FiTrash2 />}
-            >
-              Delete
-            </StandardButton>
-          </HStack>
+          <StandardButton
+            variant="danger"
+            onClick={handleDelete}
+            leftIcon={<FiTrash2 />}
+          >
+            Delete
+          </StandardButton>
         </HStack>
 
         {/* Header Section with Issue Info */}
@@ -443,61 +407,28 @@ const ClientIssueDetailPage = () => {
                 <FiMessageSquare size={20} />
               </Box>
               <Heading size="md" color="gray.900">
-                Comments & Updates
+                Discussion & Updates
               </Heading>
-              <Badge colorPalette="gray" ml="auto">
-                {issue.comments?.length || 0} Comments
-              </Badge>
             </HStack>
 
-            {/* Existing Comments */}
-            {issue.comments && issue.comments.length > 0 ? (
-              <VStack align="stretch" gap={3}>
-                {issue.comments.map((comment) => (
-                  <Box
-                    key={comment.id}
-                    p={4}
-                    bg="gray.50"
-                    borderRadius="lg"
-                    borderWidth="1px"
-                    borderColor="gray.200"
-                  >
-                    <HStack justify="space-between" mb={2}>
-                      <HStack gap={2}>
-                        <Box
-                          w={8}
-                          h={8}
-                          bg="blue.100"
-                          borderRadius="full"
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
-                        >
-                          <Text fontSize="sm" fontWeight="bold" color="blue.600">
-                            {comment.author.charAt(0)}
-                          </Text>
-                        </Box>
-                        <Text fontSize="sm" fontWeight="semibold" color="gray.900">
-                          {comment.author}
-                        </Text>
-                      </HStack>
-                      <Text fontSize="xs" color="gray.500">
-                        {formatDate(comment.createdAt)}
-                      </Text>
-                    </HStack>
-                    <Text fontSize="sm" color="gray.700" ml={10}>
-                      {comment.message}
-                    </Text>
-                  </Box>
-                ))}
-              </VStack>
-            ) : (
-              <Box textAlign="center" py={6}>
-                <Text color="gray.500" fontSize="sm">
-                  No comments yet. Be the first to add a comment.
+            {/* Current Description with Comments */}
+            <Box>
+              <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={2}>
+                Full Description & Comments:
+              </Text>
+              <Box
+                p={4}
+                bg="gray.50"
+                borderRadius="lg"
+                borderWidth="1px"
+                borderColor="gray.200"
+                whiteSpace="pre-wrap"
+              >
+                <Text fontSize="sm" color="gray.700" lineHeight="1.7">
+                  {issue.description}
                 </Text>
               </Box>
-            )}
+            </Box>
 
             {/* Add Comment Form */}
             <Box pt={3} borderTopWidth="1px" borderColor="gray.200">
@@ -510,14 +441,14 @@ const ClientIssueDetailPage = () => {
                   onChange={(e) => setNewComment(e.target.value)}
                   placeholder="Type your comment or update here..."
                   rows={3}
-                  size="lg"
+                  size="sm"
                 />
                 <HStack justify="flex-end">
                   <StandardButton
                     variant="primary"
                     onClick={handleAddComment}
                     disabled={!newComment.trim() || isSubmittingComment}
-                    isLoading={isSubmittingComment}
+                    loading={isSubmittingComment}
                     leftIcon={<FiMessageSquare />}
                   >
                     Add Comment

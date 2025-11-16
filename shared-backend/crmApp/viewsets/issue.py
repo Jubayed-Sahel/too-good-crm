@@ -127,6 +127,24 @@ class IssueViewSet(
         logger.warning(f"User {user.email} has unknown profile type: {active_profile.profile_type}")
         return Issue.objects.none()
     
+    def retrieve(self, request, *args, **kwargs):
+        """Override retrieve to sync comments from Linear before returning issue"""
+        instance = self.get_object()
+        
+        # Sync comments from Linear if issue is synced
+        if instance.linear_issue_id:
+            try:
+                success, count, error = self.linear_service.sync_comments_from_linear(instance)
+                if success and count > 0:
+                    logger.info(f"Synced {count} new comments from Linear for issue {instance.issue_number}")
+                elif not success:
+                    logger.warning(f"Failed to sync comments from Linear: {error}")
+            except Exception as e:
+                logger.error(f"Error syncing comments from Linear: {str(e)}", exc_info=True)
+        
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
     def list(self, request, *args, **kwargs):
         """Override list to add debug logging"""
         queryset = self.filter_queryset(self.get_queryset())

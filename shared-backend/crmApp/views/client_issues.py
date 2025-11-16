@@ -314,6 +314,19 @@ class ClientIssueDetailView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
+            # Sync comments from Linear if issue is synced
+            if issue.linear_issue_id:
+                try:
+                    from crmApp.services.issue_linear_service import IssueLinearService
+                    linear_service = IssueLinearService()
+                    success, count, error = linear_service.sync_comments_from_linear(issue)
+                    if success and count > 0:
+                        logger.info(f"Synced {count} new comments from Linear for issue {issue.issue_number}")
+                    elif not success:
+                        logger.warning(f"Failed to sync comments from Linear: {error}")
+                except Exception as e:
+                    logger.error(f"Error syncing comments from Linear: {str(e)}", exc_info=True)
+            
             serializer = IssueSerializer(issue)
             return Response(serializer.data, status=status.HTTP_200_OK)
                 
@@ -376,10 +389,21 @@ class ClientIssueCommentView(APIView):
             
             # Append comment to description with timestamp
             timestamp = timezone.now().strftime('%Y-%m-%d %H:%M')
-            issue.description += f"\n\n--- Comment by {customer.first_name} {customer.last_name} at {timestamp} ---\n{comment}"
+            author_name = f"{customer.first_name} {customer.last_name}"
+            issue.description += f"\n\n--- Comment by {author_name} at {timestamp} ---\n{comment}"
             issue.save()
             
             logger.info(f"Comment added to issue {issue.issue_number} by customer {customer.email}")
+            
+            # Sync comment to Linear if issue is synced
+            if issue.linear_issue_id:
+                from crmApp.services.issue_linear_service import IssueLinearService
+                linear_service = IssueLinearService()
+                success, error = linear_service.add_comment_to_linear(issue, comment, author_name)
+                
+                if not success:
+                    logger.warning(f"Failed to sync comment to Linear: {error}")
+                    # Continue anyway - comment is saved in CRM
             
             serializer = IssueSerializer(issue)
             return Response(
