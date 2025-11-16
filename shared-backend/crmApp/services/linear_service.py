@@ -330,6 +330,18 @@ class LinearService:
                 }
                 createdAt
                 updatedAt
+                comments {
+                    nodes {
+                        id
+                        body
+                        createdAt
+                        user {
+                            id
+                            name
+                            email
+                        }
+                    }
+                }
             }
         }
         """
@@ -338,6 +350,92 @@ class LinearService:
         result = self._execute_query(query, variables)
         
         return result.get('issue', {})
+    
+    def get_issue_comments(self, issue_id: str) -> list:
+        """
+        Get comments for a Linear issue
+        
+        Args:
+            issue_id: Linear issue ID
+            
+        Returns:
+            List of comments
+        """
+        query = """
+        query IssueComments($id: String!) {
+            issue(id: $id) {
+                comments {
+                    nodes {
+                        id
+                        body
+                        createdAt
+                        updatedAt
+                        user {
+                            id
+                            name
+                            email
+                        }
+                    }
+                }
+            }
+        }
+        """
+        
+        variables = {'id': issue_id}
+        result = self._execute_query(query, variables)
+        
+        issue = result.get('issue', {})
+        comments = issue.get('comments', {}).get('nodes', [])
+        
+        logger.info(f"Retrieved {len(comments)} comments from Linear issue {issue_id}")
+        return comments
+    
+    def create_comment(self, issue_id: str, comment_body: str) -> Dict[str, Any]:
+        """
+        Create a comment on a Linear issue
+        
+        Args:
+            issue_id: Linear issue ID
+            comment_body: Comment text/body
+            
+        Returns:
+            Comment data
+        """
+        query = """
+        mutation CommentCreate($input: CommentCreateInput!) {
+            commentCreate(input: $input) {
+                success
+                comment {
+                    id
+                    body
+                    createdAt
+                    user {
+                        id
+                        name
+                    }
+                }
+            }
+        }
+        """
+        
+        variables = {
+            'input': {
+                'issueId': issue_id,
+                'body': comment_body,
+            }
+        }
+        
+        result = self._execute_query(query, variables)
+        
+        if result.get('commentCreate', {}).get('success'):
+            comment_data = result['commentCreate']['comment']
+            logger.info(
+                f"Created comment on Linear issue {issue_id} by {comment_data.get('user', {}).get('name', 'Unknown')}"
+            )
+            return comment_data
+        else:
+            logger.error(f"Failed to create comment on Linear issue {issue_id}")
+            raise Exception("Failed to create comment on Linear issue")
     
     def get_team_states(self, team_id: str) -> list:
         """

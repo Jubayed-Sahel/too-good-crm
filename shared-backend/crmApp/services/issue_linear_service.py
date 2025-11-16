@@ -341,4 +341,98 @@ class IssueLinearService:
             'failed_count': failed_count,
             'results': results
         }
+    
+    def add_comment_to_linear(self, issue, comment_text, author_name=None):
+        """
+        Add a comment to a Linear issue.
+        
+        Args:
+            issue: Issue instance
+            comment_text: Comment text to add
+            author_name: Name of the comment author (optional)
+            
+        Returns:
+            Tuple (success: bool, error: str or None)
+        """
+        try:
+            # Check if issue is synced to Linear
+            if not issue.linear_issue_id:
+                logger.warning(f"Issue {issue.issue_number} is not synced to Linear, skipping comment sync")
+                return False, "Issue not synced to Linear"
+            
+            # Format comment with author if provided
+            formatted_comment = comment_text
+            if author_name:
+                formatted_comment = f"**Comment from {author_name}:**\n\n{comment_text}"
+            
+            # Create comment in Linear
+            self.linear_service.create_comment(issue.linear_issue_id, formatted_comment)
+            
+            logger.info(f"Added comment to Linear issue {issue.issue_number}")
+            return True, None
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Failed to add comment to Linear issue {issue.issue_number}: {error_msg}")
+            return False, error_msg
+    
+    def sync_comments_from_linear(self, issue):
+        """
+        Sync comments from Linear to CRM issue description.
+        
+        Args:
+            issue: Issue instance
+            
+        Returns:
+            Tuple (success: bool, comments_count: int, error: str or None)
+        """
+        try:
+            # Check if issue is synced to Linear
+            if not issue.linear_issue_id:
+                return False, 0, "Issue not synced to Linear"
+            
+            # Get comments from Linear
+            comments = self.linear_service.get_issue_comments(issue.linear_issue_id)
+            
+            if not comments:
+                return True, 0, None
+            
+            # Parse existing description to avoid duplicating comments
+            existing_description = issue.description
+            
+            # Append new comments from Linear
+            new_comments_added = 0
+            for comment in comments:
+                user = comment.get('user', {})
+                author = user.get('name', 'Linear User')
+                timestamp = comment.get('createdAt', '')
+                body = comment.get('body', '')
+                
+                # Check if this comment is already in the description
+                comment_marker = f"--- Linear Comment by {author} at"
+                if comment_marker not in existing_description or body not in existing_description:
+                    # Format timestamp
+                    from datetime import datetime
+                    try:
+                        dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                        formatted_time = dt.strftime('%Y-%m-%d %H:%M')
+                    except:
+                        formatted_time = timestamp
+                    
+                    # Append comment
+                    existing_description += f"\n\n--- Linear Comment by {author} at {formatted_time} ---\n{body}"
+                    new_comments_added += 1
+            
+            # Update issue if new comments were added
+            if new_comments_added > 0:
+                issue.description = existing_description
+                issue.save()
+                logger.info(f"Synced {new_comments_added} comments from Linear to issue {issue.issue_number}")
+            
+            return True, new_comments_added, None
+            
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Failed to sync comments from Linear for issue {issue.issue_number}: {error_msg}")
+            return False, 0, error_msg
 
