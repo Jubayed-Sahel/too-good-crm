@@ -102,16 +102,25 @@ export const ManageRoleDialog = ({
     setIsLoading(true);
 
     try {
+      const roleId = parseInt(selectedRoleId);
       console.log('🔄 Updating employee role:', {
         employeeId: employee.id,
-        roleId: parseInt(selectedRoleId)
+        employeeName: `${employee.first_name} ${employee.last_name}`,
+        roleId: roleId,
+        roleName: roles.find(r => r.id === roleId)?.name,
+        organizationId: activeOrganizationId
       });
       
-      const updatedEmployee = await employeeService.updateEmployee(employee.id, {
-        role: parseInt(selectedRoleId),
-      });
+      const updateData = {
+        role: roleId,
+      };
+      
+      console.log('📤 Sending update request:', updateData);
+      
+      const updatedEmployee = await employeeService.updateEmployee(employee.id, updateData);
       
       console.log('✅ Employee updated:', updatedEmployee);
+      console.log('✅ Updated role:', updatedEmployee.role, updatedEmployee.role_name);
 
       toaster.create({
         title: 'Role Updated',
@@ -124,11 +133,29 @@ export const ManageRoleDialog = ({
       handleClose();
     } catch (error: any) {
       console.error('❌ Error updating role:', error);
+      
+      // Extract detailed error message
+      let errorMessage = 'Failed to update employee role';
+      if (error.response?.data) {
+        const errorData = error.response.data;
+        if (errorData.role) {
+          errorMessage = Array.isArray(errorData.role) ? errorData.role[0] : errorData.role;
+        } else if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toaster.create({
         title: 'Update Failed',
-        description: error.message || 'Failed to update employee role',
+        description: errorMessage,
         type: 'error',
-        duration: 3000,
+        duration: 5000,
       });
     } finally {
       setIsLoading(false);

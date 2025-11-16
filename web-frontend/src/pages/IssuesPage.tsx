@@ -5,6 +5,7 @@ import { FiPlus, FiRefreshCw, FiDownload } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { IssueStatsGrid, IssueFiltersPanel, IssuesDataTable, CreateIssueModal, ResolveIssueModal } from '../components/issues';
 import { ErrorState, PageHeader, StandardButton, ConfirmDialog } from '../components/common';
+import { RequirePermission } from '../components/guards/RequirePermission';
 import { useIssues, useIssueStats, useIssueMutations } from '../hooks/useIssues';
 import { useProfile } from '../contexts/ProfileContext';
 import { issueService } from '../services/issue.service';
@@ -250,7 +251,8 @@ const IssuesPage = () => {
 
   return (
     <DashboardLayout title="Issues">
-      <VStack align="stretch" gap={5}>
+      <RequirePermission resource="issues">
+        <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <PageHeader
           title="Issue Management"
@@ -402,6 +404,7 @@ const IssuesPage = () => {
           isLoading={deleteIssue.isPending}
         />
       </VStack>
+      </RequirePermission>
     </DashboardLayout>
   );
 };

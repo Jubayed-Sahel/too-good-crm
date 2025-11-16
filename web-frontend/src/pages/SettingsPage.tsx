@@ -6,8 +6,6 @@ import {
   SettingsTabs,
   ProfileSettings,
   OrganizationSettings,
-  TeamSettings,
-  RolesSettings,
   NotificationSettings,
   SecuritySettings,
   BillingSettings,
@@ -22,10 +20,6 @@ const SettingsPage = () => {
         return <ProfileSettings />;
       case 'organization':
         return <OrganizationSettings />;
-      case 'team':
-        return <TeamSettings />;
-      case 'roles':
-        return <RolesSettings />;
       case 'notifications':
         return <NotificationSettings />;
       case 'security':

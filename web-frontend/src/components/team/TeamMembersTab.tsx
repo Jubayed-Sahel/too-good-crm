@@ -1,26 +1,22 @@
 /**
- * EmployeesPage - Container Component
- * 
- * This component follows the Container/Presenter pattern:
- * - Fetches data using custom hooks
- * - Manages state
- * - Delegates presentation to EmployeesPageContent component
+ * Team Members Tab - Manages team members/employees
  */
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Heading, Text } from '@chakra-ui/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { EmployeesPageContent, EmployeesPageLoading } from '../../components/employees';
-import { InviteEmployeeDialog } from '../../components/employees/InviteEmployeeDialog';
-import { ConfirmDialog } from '../../components/common';
-import { RequirePermission } from '../../components/guards/RequirePermission';
-import { toaster } from '../../components/ui/toaster';
+import { Box, VStack, HStack, SimpleGrid, Text, Stack, Input } from '@chakra-ui/react';
+import { FiUserPlus, FiSearch } from 'react-icons/fi';
+import { StandardButton, StandardCard } from '@/components/common';
+import CustomSelect from '@/components/ui/CustomSelect';
+import EmployeeTable from '../employees/EmployeeTable';
+import { InviteEmployeeDialog } from '../employees/InviteEmployeeDialog';
+import { ConfirmDialog } from '../common';
+import { toaster } from '../ui/toaster';
 import { useEmployees } from '@/hooks/useEmployees';
 import { employeeService } from '@/services';
 import type { Employee } from '@/services';
 import { exportData } from '@/utils';
 
-const EmployeesPage = () => {
+export const TeamMembersTab = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -113,7 +109,6 @@ const EmployeesPage = () => {
   
   const confirmBulkDelete = async () => {
     try {
-      // Delete employees in parallel
       await Promise.all(
         employeesToBulkDelete.map(id => employeeService.deleteEmployee(parseInt(id)))
       );
@@ -152,7 +147,7 @@ const EmployeesPage = () => {
     if (selectedEmployees.length === 0) {
       toaster.create({
         title: 'Export unavailable',
-        description: 'No matching employees found for export. Please refresh and try again.',
+        description: 'No matching employees found for export.',
         type: 'warning',
       });
       return;
@@ -178,50 +173,132 @@ const EmployeesPage = () => {
     });
   };
 
-  // Error state
-  if (error) {
-    return (
-      <DashboardLayout title="Team">
-        <Box textAlign="center" py={12}>
-          <Heading size="md" color="red.600" mb={2}>
-            Failed to load employees
-          </Heading>
-          <Text color="gray.500">
-            {error.message || 'Please try again later'}
-          </Text>
-        </Box>
-      </DashboardLayout>
-    );
-  }
-
-  // Loading state
   if (isLoading) {
     return (
-      <DashboardLayout title="Team">
-        <EmployeesPageLoading />
-      </DashboardLayout>
+      <VStack gap={5} align="stretch">
+        <Text>Loading team members...</Text>
+      </VStack>
     );
   }
 
-  // Main content
+  if (error) {
+    return (
+      <Box textAlign="center" py={12}>
+        <Text color="red.600" fontWeight="semibold" mb={2}>
+          Failed to load team members
+        </Text>
+        <Text color="gray.500">
+          {error.message || 'Please try again later'}
+        </Text>
+      </Box>
+    );
+  }
+
   return (
-    <DashboardLayout title="Team">
-      <RequirePermission resource="employees">
-        <EmployeesPageContent
+    <VStack gap={5} align="stretch">
+      {/* Action Button */}
+      <HStack justify="flex-end">
+        <StandardButton
+          variant="primary"
+          leftIcon={<FiUserPlus />}
+          onClick={() => setIsInviteDialogOpen(true)}
+        >
+          Invite Employee
+        </StandardButton>
+      </HStack>
+
+      {/* Stats Cards */}
+      <SimpleGrid columns={{ base: 1, md: 3 }} gap={5}>
+        <StandardCard>
+          <VStack align="start" gap={2}>
+            <Text fontSize="sm" color="gray.600" fontWeight="medium" textTransform="uppercase" letterSpacing="wider">
+              Total Employees
+            </Text>
+            <Text fontSize="3xl" fontWeight="bold" color="gray.900">
+              {stats.total}
+            </Text>
+          </VStack>
+        </StandardCard>
+
+        <StandardCard>
+          <VStack align="start" gap={2}>
+            <Text fontSize="sm" color="gray.600" fontWeight="medium" textTransform="uppercase" letterSpacing="wider">
+              Active
+            </Text>
+            <Text fontSize="3xl" fontWeight="bold" color="green.600">
+              {stats.active}
+            </Text>
+          </VStack>
+        </StandardCard>
+
+        <StandardCard>
+          <VStack align="start" gap={2}>
+            <Text fontSize="sm" color="gray.600" fontWeight="medium" textTransform="uppercase" letterSpacing="wider">
+              Departments
+            </Text>
+            <Text fontSize="3xl" fontWeight="bold" color="purple.600">
+              {stats.departments}
+            </Text>
+          </VStack>
+        </StandardCard>
+      </SimpleGrid>
+
+      {/* Filters */}
+      <Stack
+        direction={{ base: 'column', md: 'row' }}
+        gap={3}
+        justify="space-between"
+        align={{ base: 'stretch', md: 'center' }}
+      >
+        <HStack gap={3} flex="1" flexWrap={{ base: 'wrap', md: 'nowrap' }}>
+          {/* Search */}
+          <Box position="relative" flex="1" minW={{ base: '100%', md: '300px' }}>
+            <Box
+              position="absolute"
+              left="12px"
+              top="50%"
+              transform="translateY(-50%)"
+              pointerEvents="none"
+              color="gray.400"
+            >
+              <FiSearch size={20} />
+            </Box>
+            <Input
+              placeholder="Search by name, email, or department..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              pl="40px"
+              h="40px"
+              borderRadius="lg"
+            />
+          </Box>
+
+          {/* Status Filter */}
+          <CustomSelect
+            value={statusFilter}
+            onChange={(value: string) => setStatusFilter(value)}
+            options={[
+              { value: 'all', label: 'All Status' },
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' },
+              { value: 'on-leave', label: 'On Leave' },
+              { value: 'terminated', label: 'Terminated' },
+            ]}
+            width={{ base: '100%', md: 'auto' }}
+            minWidth="160px"
+            accentColor="purple"
+          />
+        </HStack>
+      </Stack>
+
+      {/* Employee Table */}
+      <EmployeeTable
         employees={filteredEmployees}
-        stats={stats}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        statusFilter={statusFilter}
-        onStatusChange={setStatusFilter}
         onEdit={handleEdit}
         onDelete={handleDelete}
         onView={handleView}
         onBulkDelete={handleBulkDelete}
         onBulkExport={handleBulkExport}
-        onInviteEmployee={() => setIsInviteDialogOpen(true)}
-        isInviteDialogOpen={isInviteDialogOpen}
-        onCloseInviteDialog={() => setIsInviteDialogOpen(false)}
         onRoleUpdate={refetch}
       />
       
@@ -264,10 +341,7 @@ const EmployeesPage = () => {
         colorScheme="red"
         isLoading={false}
       />
-      </RequirePermission>
-    </DashboardLayout>
+    </VStack>
   );
 };
-
-export default EmployeesPage;
 

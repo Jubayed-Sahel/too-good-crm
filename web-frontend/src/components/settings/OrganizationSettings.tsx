@@ -204,7 +204,7 @@ const OrganizationSettings = () => {
       setTimeout(() => {
         toaster.create({
           title: 'Organization Ready',
-          description: 'Default permissions have been created. You can now create roles in the Roles tab.',
+          description: 'Default permissions have been created. Visit the Team page to manage roles and permissions.',
           type: 'info',
           duration: 5000,
         });

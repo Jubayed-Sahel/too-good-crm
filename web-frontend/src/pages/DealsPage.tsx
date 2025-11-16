@@ -12,6 +12,7 @@
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { DealsPageContent, DealsPageLoading } from '../components/deals';
 import { ConfirmDialog } from '../components/common';
+import { RequirePermission } from '../components/guards/RequirePermission';
 import { useDeals, useDealsPage, useDealActions } from '@/hooks';
 
 const DealsPage = () => {
@@ -60,7 +61,8 @@ const DealsPage = () => {
   // Main content
   return (
     <DashboardLayout title="Deals">
-      <DealsPageContent
+      <RequirePermission resource="deals">
+        <DealsPageContent
         // Data
         mappedDeals={mappedDeals}
         stats={stats}
@@ -124,6 +126,7 @@ const DealsPage = () => {
         colorScheme="red"
         isLoading={false}
       />
+      </RequirePermission>
     </DashboardLayout>
   );
 };

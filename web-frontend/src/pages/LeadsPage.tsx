@@ -10,6 +10,7 @@ import {
   CreateLeadDialog 
 } from '../components/leads';
 import { ConfirmDialog, PageHeader, StandardButton, ErrorState } from '../components/common';
+import { RequirePermission } from '../components/guards/RequirePermission';
 import { 
   useLeads, 
   useLeadStats, 
@@ -257,7 +258,8 @@ export const LeadsPage = () => {
 
   return (
     <DashboardLayout title="Leads">
-      <VStack gap={5} align="stretch">
+      <RequirePermission resource="leads">
+        <VStack gap={5} align="stretch">
         {/* Page Header */}
         <PageHeader
           title="Leads"
@@ -364,6 +366,7 @@ export const LeadsPage = () => {
         colorScheme="red"
         isLoading={deleteLead.isPending}
       />
+      </RequirePermission>
     </DashboardLayout>
   );
 };

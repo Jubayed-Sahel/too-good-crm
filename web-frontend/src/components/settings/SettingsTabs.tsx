@@ -14,8 +14,6 @@ interface SettingsTabsProps {
 const tabs: SettingsTab[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'organization', label: 'Organization' },
-  { id: 'team', label: 'Team Members' },
-  { id: 'roles', label: 'Roles & Permissions' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'security', label: 'Security' },
   { id: 'billing', label: 'Billing' },

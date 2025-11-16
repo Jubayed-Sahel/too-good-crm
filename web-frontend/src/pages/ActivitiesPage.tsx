@@ -5,6 +5,7 @@ import { FiPlus } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { toaster } from '../components/ui/toaster';
 import { ConfirmDialog, PageHeader, StandardButton } from '../components/common';
+import { RequirePermission } from '../components/guards/RequirePermission';
 import { useAccountMode } from '@/contexts/AccountModeContext';
 import { useProfile } from '@/contexts/ProfileContext';
 import { ActivityStatsCards } from '../components/activities/ActivityStatsCards';
@@ -333,7 +334,8 @@ export const ActivitiesPage = () => {
 
   return (
     <DashboardLayout title="Activities">
-      <VStack align="stretch" gap={5}>
+      <RequirePermission resource="activities">
+        <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <PageHeader
           title="Activities"
@@ -442,6 +444,7 @@ export const ActivitiesPage = () => {
         colorScheme="red"
         isLoading={false}
       />
+      </RequirePermission>
     </DashboardLayout>
   );
 };
