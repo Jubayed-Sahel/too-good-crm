@@ -195,18 +195,8 @@ class UserProfile(TimestampedModel):
             models.Index(fields=['user', 'organization']),
             models.Index(fields=['profile_type', 'status']),
         ]
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(profile_type='customer') | models.Q(organization__isnull=False),
-                name='customer_profile_no_org_required'
-            )
-        ]
-        constraints = [
-            models.CheckConstraint(
-                check=models.Q(profile_type='customer') | models.Q(organization__isnull=False),
-                name='customer_profile_no_org_required'
-            )
-        ]
+        # Note: Removed organization requirement constraint to allow initial registration
+        # without organization. Users can set up organization later.
     
     def __str__(self):
         org_name = self.organization.name if self.organization else 'No Organization'
@@ -216,9 +206,8 @@ class UserProfile(TimestampedModel):
         """Validate profile constraints."""
         from django.core.exceptions import ValidationError
         
-        # Vendor and employee profiles must have organization
-        if self.profile_type in ['vendor', 'employee'] and not self.organization:
-            raise ValidationError(f"{self.get_profile_type_display()} profile must have an organization.")
+        # Note: Removed organization requirement validation to allow initial registration
+        # without organization. Users can set up organization later from settings.
         
         # Check if user already has this profile type
         existing = UserProfile.objects.filter(

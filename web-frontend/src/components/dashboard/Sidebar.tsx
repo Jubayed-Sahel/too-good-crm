@@ -120,12 +120,19 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   // Filter menu items based on permissions
   const menuItems = useMemo(() => {
     // Determine which menu to use based on profile type
+    // Priority: currentProfile.profile_type > isClientMode
     let items;
-    if (isClientMode) {
+    
+    const profileType = currentProfile?.profile_type;
+    
+    if (profileType === 'customer' || isClientMode) {
+      // Customer/Client mode - show client menu
       items = clientMenuItems;
-    } else if (currentProfile?.profile_type === 'employee') {
+    } else if (profileType === 'employee') {
+      // Employee mode - show employee menu
       items = employeeMenuItems;
     } else {
+      // Vendor mode (default) - show vendor menu
       items = vendorMenuItems;
     }
     

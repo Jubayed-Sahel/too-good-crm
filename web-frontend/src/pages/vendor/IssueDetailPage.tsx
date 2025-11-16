@@ -11,6 +11,7 @@ import {
   Spinner,
   Textarea,
   Input,
+  Separator,
 } from '@chakra-ui/react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { Card, StandardButton, ConfirmDialog, ErrorState } from '../../components/common';
@@ -27,9 +28,12 @@ import {
   FiCalendar,
   FiEdit2,
   FiSave,
+  FiMessageSquare,
+  FiFileText,
+  FiSend,
 } from 'react-icons/fi';
 import { toaster } from '../../components/ui/toaster';
-import type { Issue, IssueStatus, IssuePriority, IssueCategory } from '../../types';
+import type { Issue, IssueStatus, IssuePriority, IssueCategory, IssueComment } from '../../types';
 
 const IssueDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +47,7 @@ const IssueDetailPage = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
   const [resolutionNotes, setResolutionNotes] = useState('');
+  const [newComment, setNewComment] = useState('');
 
   // Form fields for editing
   const [editTitle, setEditTitle] = useState('');
@@ -57,6 +62,15 @@ const IssueDetailPage = () => {
     queryFn: () => issueService.getById(Number(id)),
     enabled: !!id,
   });
+
+  // Fetch comments
+  const { data: commentsData, isLoading: isLoadingComments } = useQuery<{ comments: IssueComment[]; count: number }>({
+    queryKey: ['issueComments', id],
+    queryFn: () => issueService.getComments(Number(id)),
+    enabled: !!id,
+  });
+
+  const comments = commentsData?.comments || [];
 
   // Initialize edit form when issue loads
   useEffect(() => {
@@ -159,6 +173,36 @@ const IssueDetailPage = () => {
     deleteMutation.mutate();
   };
 
+  // Add comment mutation
+  const addCommentMutation = useMutation({
+    mutationFn: (content: string) => issueService.addComment(Number(id), content),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['issueComments', id] });
+      setNewComment('');
+      toaster.create({
+        title: 'Comment Added',
+        description: data.synced_to_linear 
+          ? 'Your comment has been added and synced to Linear' 
+          : 'Your comment has been added to this issue',
+        type: 'success',
+        duration: 3000,
+      });
+    },
+    onError: (error: any) => {
+      toaster.create({
+        title: 'Failed to Add Comment',
+        description: error.response?.data?.details || 'An error occurred',
+        type: 'error',
+        duration: 4000,
+      });
+    },
+  });
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+    addCommentMutation.mutate(newComment);
+  };
+
   const getPriorityColor = (priority: string) => {
     const colors = {
       urgent: 'red',
@@ -244,7 +288,6 @@ const IssueDetailPage = () => {
                     </StandardButton>
                     <StandardButton
                       variant="primary"
-                      colorPalette="green"
                       onClick={() => setIsResolveDialogOpen(true)}
                       leftIcon={<FiCheckCircle />}
                     >
@@ -254,7 +297,6 @@ const IssueDetailPage = () => {
                 )}
                 <StandardButton
                   variant="outline"
-                  colorPalette="red"
                   onClick={() => setIsDeleteDialogOpen(true)}
                   leftIcon={<FiTrash2 />}
                 >
@@ -273,7 +315,7 @@ const IssueDetailPage = () => {
                 <StandardButton
                   variant="primary"
                   onClick={handleSave}
-                  isLoading={updateMutation.isPending}
+                  loading={updateMutation.isPending}
                   leftIcon={<FiSave />}
                 >
                   Save Changes
@@ -291,39 +333,67 @@ const IssueDetailPage = () => {
               <VStack align="stretch" gap={4}>
                 <HStack align="center" gap={2}>
                   <FiAlertCircle color="#805AD5" size={24} />
-                  <Heading size="md">Title</Heading>
+                  <Heading size="md">Issue Title</Heading>
                 </HStack>
                 {isEditing ? (
                   <Input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    placeholder="Issue title"
+                    placeholder="Enter issue title"
                     size="lg"
                   />
                 ) : (
-                  <Heading size="lg" fontWeight="semibold">
+                  <Heading size="lg" fontWeight="semibold" color="gray.800">
                     {issue.title}
                   </Heading>
                 )}
               </VStack>
             </Card>
 
-            {/* Description */}
+            {/* Description Section */}
             <Card>
               <VStack align="stretch" gap={4}>
-                <Heading size="md">Description</Heading>
-                {isEditing ? (
-                  <Textarea
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    placeholder="Issue description"
-                    minH="200px"
-                  />
-                ) : (
-                  <Text color="gray.700" whiteSpace="pre-wrap">
-                    {issue.description}
+                <HStack justify="space-between" align="center">
+                  <HStack align="center" gap={2}>
+                    <FiFileText color="#4299E1" size={20} />
+                    <Heading size="md">Description</Heading>
+                  </HStack>
+                  {!isEditing && (
+                    <Text fontSize="xs" color="gray.500">
+                      Created {formatDate(issue.created_at)}
+                    </Text>
+                  )}
+                </HStack>
+                
+                {isEditing && (
+                  <Text fontSize="xs" color="gray.600" fontStyle="italic">
+                    Note: This is the main issue description only. Use the Comments section below for updates and discussions.
                   </Text>
                 )}
+                
+                <Box
+                  p={4}
+                  bg="gray.50"
+                  borderRadius="lg"
+                  borderWidth="1px"
+                  borderColor="gray.200"
+                >
+                  {isEditing ? (
+                    <Textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      placeholder="Enter detailed description of the issue (initial problem statement)..."
+                      minH="200px"
+                      bg="white"
+                      borderColor="gray.300"
+                      _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px #805AD5' }}
+                    />
+                  ) : (
+                    <Text color="gray.700" whiteSpace="pre-wrap" lineHeight="tall">
+                      {issue.description || 'No description provided'}
+                    </Text>
+                  )}
+                </Box>
               </VStack>
             </Card>
 
@@ -333,20 +403,131 @@ const IssueDetailPage = () => {
                 <VStack align="stretch" gap={4}>
                   <HStack align="center" gap={2}>
                     <FiCheckCircle color="#38A169" size={20} />
-                    <Heading size="md">Resolution Notes</Heading>
+                    <Heading size="md" color="green.600">Resolution Notes</Heading>
                   </HStack>
-                  <Text color="gray.700" whiteSpace="pre-wrap">
-                    {issue.resolution_notes}
-                  </Text>
-                  {issue.resolved_at && (
-                    <Text fontSize="sm" color="gray.500">
-                      Resolved on {formatDate(issue.resolved_at)}
-                      {issue.resolved_by_name && ` by ${issue.resolved_by_name}`}
+                  <Box
+                    p={4}
+                    bg="green.50"
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="green.200"
+                  >
+                    <Text color="gray.700" whiteSpace="pre-wrap" lineHeight="tall">
+                      {issue.resolution_notes}
                     </Text>
+                  </Box>
+                  {issue.resolved_at && (
+                    <HStack gap={2} fontSize="sm" color="gray.600">
+                      <FiClock size={14} />
+                      <Text>
+                        Resolved on {formatDate(issue.resolved_at)}
+                        {issue.resolved_by_name && ` by ${issue.resolved_by_name}`}
+                      </Text>
+                    </HStack>
                   )}
                 </VStack>
               </Card>
             )}
+
+            {/* Comments/Activity Section */}
+            <Card>
+              <VStack align="stretch" gap={4}>
+                <VStack align="stretch" gap={2}>
+                  <HStack align="center" gap={2}>
+                    <FiMessageSquare color="#805AD5" size={20} />
+                    <Heading size="md">Comments & Activity</Heading>
+                    <Badge colorPalette="purple" size="sm">
+                      {comments.length}
+                    </Badge>
+                  </HStack>
+                  <Text fontSize="xs" color="gray.600">
+                    Add updates, discussions, and follow-up information here. Comments are separate from the main description above.
+                  </Text>
+                </VStack>
+
+                <Separator />
+
+                {/* Comments List */}
+                {comments.length > 0 ? (
+                  <VStack align="stretch" gap={3}>
+                    {comments.map((comment) => (
+                      <Box
+                        key={comment.id}
+                        p={4}
+                        bg="purple.50"
+                        borderRadius="lg"
+                        borderLeftWidth="3px"
+                        borderLeftColor="purple.500"
+                      >
+                        <HStack justify="space-between" mb={2}>
+                          <HStack gap={2}>
+                            <FiUser size={14} color="#805AD5" />
+                            <Text fontSize="sm" fontWeight="semibold" color="purple.700">
+                              {comment.author_name}
+                            </Text>
+                            {comment.synced_to_linear && (
+                              <Badge size="xs" colorPalette="green">
+                                Synced to Linear
+                              </Badge>
+                            )}
+                          </HStack>
+                          <Text fontSize="xs" color="gray.500">
+                            {formatDate(comment.created_at)}
+                          </Text>
+                        </HStack>
+                        <Text color="gray.700" fontSize="sm" lineHeight="tall">
+                          {comment.content}
+                        </Text>
+                      </Box>
+                    ))}
+                  </VStack>
+                ) : (
+                  <Box
+                    p={6}
+                    textAlign="center"
+                    bg="gray.50"
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="gray.200"
+                    borderStyle="dashed"
+                  >
+                    <FiMessageSquare size={32} color="#CBD5E0" style={{ margin: '0 auto 8px' }} />
+                    <Text color="gray.500" fontSize="sm">
+                      No comments yet. Be the first to add a comment!
+                    </Text>
+                  </Box>
+                )}
+
+                <Separator />
+
+                {/* Add Comment */}
+                <VStack align="stretch" gap={3}>
+                  <Text fontSize="sm" fontWeight="medium" color="gray.700">
+                    Add a Comment
+                  </Text>
+                  <Textarea
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Write a comment, add updates, or ask questions..."
+                    minH="100px"
+                    borderColor="gray.300"
+                    _focus={{ borderColor: 'purple.500', boxShadow: '0 0 0 1px #805AD5' }}
+                  />
+                  <HStack justify="flex-end">
+                    <StandardButton
+                      variant="primary"
+                      onClick={handleAddComment}
+                      loading={addCommentMutation.isPending}
+                      disabled={!newComment.trim()}
+                      leftIcon={<FiSend />}
+                      size="sm"
+                    >
+                      Add Comment
+                    </StandardButton>
+                  </HStack>
+                </VStack>
+              </VStack>
+            </Card>
           </VStack>
 
           {/* Sidebar */}
@@ -537,27 +718,55 @@ const IssueDetailPage = () => {
           </VStack>
         </Grid>
 
-        {/* Resolve Dialog */}
-        <ConfirmDialog
-          isOpen={isResolveDialogOpen}
-          onClose={() => setIsResolveDialogOpen(false)}
-          onConfirm={handleResolve}
-          title="Resolve Issue"
-          confirmText="Resolve"
-          cancelText="Cancel"
-          colorScheme="green"
-          isLoading={resolveMutation.isPending}
-        >
-          <VStack align="stretch" gap={4}>
-            <Text>Add resolution notes (optional):</Text>
-            <Textarea
-              value={resolutionNotes}
-              onChange={(e) => setResolutionNotes(e.target.value)}
-              placeholder="Describe how the issue was resolved..."
-              minH="100px"
-            />
-          </VStack>
-        </ConfirmDialog>
+        {/* Resolve Dialog - Custom Implementation */}
+        {isResolveDialogOpen && (
+          <Box
+            position="fixed"
+            top={0}
+            left={0}
+            right={0}
+            bottom={0}
+            bg="blackAlpha.600"
+            zIndex={1000}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            onClick={() => setIsResolveDialogOpen(false)}
+          >
+            <Card
+              maxW="500px"
+              w="full"
+              mx={4}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <VStack align="stretch" gap={4}>
+                <Heading size="md">Resolve Issue</Heading>
+                <Text>Add resolution notes (optional):</Text>
+                <Textarea
+                  value={resolutionNotes}
+                  onChange={(e) => setResolutionNotes(e.target.value)}
+                  placeholder="Describe how the issue was resolved..."
+                  minH="100px"
+                />
+                <HStack justify="flex-end" gap={2}>
+                  <StandardButton
+                    variant="outline"
+                    onClick={() => setIsResolveDialogOpen(false)}
+                  >
+                    Cancel
+                  </StandardButton>
+                  <StandardButton
+                    variant="primary"
+                    onClick={handleResolve}
+                    loading={resolveMutation.isPending}
+                  >
+                    Resolve
+                  </StandardButton>
+                </HStack>
+              </VStack>
+            </Card>
+          </Box>
+        )}
 
         {/* Delete Confirmation Dialog */}
         <ConfirmDialog

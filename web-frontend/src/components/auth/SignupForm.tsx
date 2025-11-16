@@ -8,6 +8,7 @@ import {
   VStack,
   Text,
   Link,
+  HStack,
 } from "@chakra-ui/react";
 import { Toaster, toaster } from "../ui/toaster";
 import { Field } from "../ui/field";

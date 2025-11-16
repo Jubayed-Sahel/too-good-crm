@@ -103,7 +103,7 @@ export function transformLeadFormData(data: any, organizationId: number) {
     last_name: data.last_name?.trim() || undefined,
     email: data.email?.trim(),
     phone: data.phone?.trim() || undefined,
-    company: data.company?.trim() || data.company_name?.trim() || undefined,
+    organization_name: data.company?.trim() || data.organization_name?.trim() || data.company_name?.trim() || undefined,
     job_title: data.job_title?.trim() || undefined,
     source: data.source || 'website',
     qualification_status: data.qualification_status || data.status || 'new',

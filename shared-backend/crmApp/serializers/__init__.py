@@ -86,6 +86,11 @@ from .issue import (
     IssueUpdateSerializer,
 )
 
+from .issue_comment import (
+    IssueCommentSerializer,
+    CreateIssueCommentSerializer,
+)
+
 from .order import (
     OrderItemSerializer,
     OrderSerializer,
@@ -185,6 +190,8 @@ __all__ = [
     'IssueListSerializer',
     'IssueCreateSerializer',
     'IssueUpdateSerializer',
+    'IssueCommentSerializer',
+    'CreateIssueCommentSerializer',
     
     # Order
     'OrderItemSerializer',

@@ -133,10 +133,14 @@ export function useConvertLead() {
   return useMutation({
     mutationFn: ({ id, data }: { id: string | number; data: ConvertLeadData }) =>
       leadService.convertLead(id, data),
-    onSuccess: (convertedLead) => {
+    onSuccess: (response) => {
+      // Response structure: { customer_id, lead, message }
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: leadKeys.detail(convertedLead.id) });
+      if (response.lead?.id) {
+        queryClient.invalidateQueries({ queryKey: leadKeys.detail(response.lead.id) });
+      }
       queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
+      queryClient.invalidateQueries({ queryKey: ['customers'] }); // Invalidate customers too
     },
   });
 }

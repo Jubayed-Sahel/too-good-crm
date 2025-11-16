@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.utils import timezone
-from crmApp.models import Issue, Customer, Organization
+from crmApp.models import Issue, Customer, Organization, IssueComment
 from crmApp.serializers import IssueSerializer
 from crmApp.services.linear_service import LinearService
 import logging
@@ -376,9 +376,9 @@ class ClientIssueCommentView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # Add comment to description (or create separate comment model in future)
-            comment = request.data.get('comment', '').strip()
-            if not comment:
+            # Get comment content
+            comment_text = request.data.get('comment', '').strip()
+            if not comment_text:
                 return Response(
                     {
                         'error': 'Bad Request',
@@ -387,11 +387,14 @@ class ClientIssueCommentView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Append comment to description with timestamp
-            timestamp = timezone.now().strftime('%Y-%m-%d %H:%M')
-            author_name = f"{customer.first_name} {customer.last_name}"
-            issue.description += f"\n\n--- Comment by {author_name} at {timestamp} ---\n{comment}"
-            issue.save()
+            # Create IssueComment
+            author_name = f"{customer.first_name} {customer.last_name}".strip() or customer.user.username
+            comment = IssueComment.objects.create(
+                issue=issue,
+                author=request.user,
+                author_name=author_name,
+                content=comment_text
+            )
             
             logger.info(f"Comment added to issue {issue.issue_number} by customer {customer.email}")
             
@@ -399,19 +402,23 @@ class ClientIssueCommentView(APIView):
             if issue.linear_issue_id:
                 from crmApp.services.issue_linear_service import IssueLinearService
                 linear_service = IssueLinearService()
-                success, error = linear_service.add_comment_to_linear(issue, comment, author_name)
+                success, error = linear_service.add_comment_to_linear(issue, comment_text, author_name)
                 
-                if not success:
+                if success:
+                    comment.synced_to_linear = True
+                    comment.save()
+                else:
                     logger.warning(f"Failed to sync comment to Linear: {error}")
                     # Continue anyway - comment is saved in CRM
             
-            serializer = IssueSerializer(issue)
+            from crmApp.serializers import IssueCommentSerializer
+            comment_serializer = IssueCommentSerializer(comment)
             return Response(
                 {
                     'message': 'Comment added successfully',
-                    'issue': serializer.data
+                    'comment': comment_serializer.data
                 },
-                status=status.HTTP_200_OK
+                status=status.HTTP_201_CREATED
             )
                 
         except Exception as e:
