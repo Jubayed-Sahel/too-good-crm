@@ -48,10 +48,13 @@ export const LeadsPage = () => {
   const convertLead = useConvertLead();
 
   const handleCreateLead = (data: CreateLeadData) => {
+    console.log('🚀 Creating lead with data:', data);
+    
     // Get organization ID from active profile
     const organizationId = activeOrganizationId || data.organization;
     
     if (!organizationId) {
+      console.error('❌ No organization ID found');
       toaster.create({
         title: 'Unable to create lead',
         description: 'Organization information not found. Please select a profile.',
@@ -60,12 +63,18 @@ export const LeadsPage = () => {
       return;
     }
     
+    console.log('📊 Organization ID:', organizationId);
+    
     // Transform form data to backend format
     const transformedData = transformLeadFormData(data, organizationId);
+    console.log('🔄 Transformed data:', transformedData);
+    
     const backendData = cleanFormData(transformedData);
+    console.log('✅ Final backend data:', backendData);
     
     createLead.mutate(backendData as CreateLeadData, {
-      onSuccess: () => {
+      onSuccess: (createdLead) => {
+        console.log('✅ Lead created successfully:', createdLead);
         toaster.create({
           title: 'Lead created successfully',
           type: 'success',
@@ -73,10 +82,15 @@ export const LeadsPage = () => {
         setIsCreateDialogOpen(false);
       },
       onError: (err: any) => {
+        console.error('❌ Failed to create lead:', err);
+        console.error('❌ Error response:', err.response?.data);
+        
         const errorMessage = 
           err.response?.data?.email?.[0] ||
           err.response?.data?.name?.[0] ||
+          err.response?.data?.organization_name?.[0] ||
           err.response?.data?.non_field_errors?.[0] ||
+          err.response?.data?.detail ||
           'Failed to create lead. Please try again.';
         
         toaster.create({

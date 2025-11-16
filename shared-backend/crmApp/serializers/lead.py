@@ -52,7 +52,7 @@ class LeadSerializer(serializers.ModelSerializer):
 
 class LeadCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating leads"""
-    assigned_to_id = serializers.IntegerField(required=False, allow_null=True)
+    assigned_to_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
     zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)
     
     class Meta:
@@ -64,6 +64,22 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             'tags', 'notes', 'campaign', 'referrer',
             'address', 'city', 'state', 'postal_code', 'zip_code', 'country'
         ]
+    
+    def create(self, validated_data):
+        """Custom create to handle assigned_to_id"""
+        assigned_to_id = validated_data.pop('assigned_to_id', None)
+        lead = Lead.objects.create(**validated_data)
+        
+        if assigned_to_id:
+            from crmApp.models import Employee
+            try:
+                employee = Employee.objects.get(id=assigned_to_id, organization=lead.organization)
+                lead.assigned_to = employee
+                lead.save()
+            except Employee.DoesNotExist:
+                pass  # Silently ignore if employee doesn't exist
+        
+        return lead
     
     def validate_email(self, value):
         """Validate email format and uniqueness within organization"""

@@ -9,12 +9,14 @@ from rest_framework.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
 
-from crmApp.models import Issue, Employee
+from crmApp.models import Issue, Employee, IssueComment
 from crmApp.serializers import (
     IssueSerializer,
     IssueListSerializer,
     IssueCreateSerializer,
-    IssueUpdateSerializer
+    IssueUpdateSerializer,
+    IssueCommentSerializer,
+    CreateIssueCommentSerializer
 )
 from crmApp.services import IssueLinearService, RBACService
 from crmApp.viewsets.mixins import (
@@ -245,13 +247,51 @@ class IssueViewSet(
         # Refresh instance to get updated data
         instance.refresh_from_db()
         
-        # Sync status change to Linear
-        linear_updated = self.linear_service.sync_issue_status_to_linear(instance, old_status)
+        # Sync all changes to Linear if issue is synced
+        linear_synced = False
+        if instance.synced_to_linear and instance.linear_issue_id:
+            try:
+                # Check if any relevant fields changed
+                status_changed = instance.status != old_status
+                
+                # Build update payload for Linear
+                linear_update_data = {}
+                
+                if 'title' in request.data:
+                    linear_update_data['title'] = instance.title
+                if 'description' in request.data:
+                    linear_update_data['description'] = instance.description
+                if 'priority' in request.data:
+                    linear_update_data['priority'] = self.linear_service.linear_service.map_priority_to_linear(instance.priority)
+                if status_changed:
+                    # Map status to Linear state
+                    from crmApp.viewsets.mixins import LinearSyncMixin
+                    mixin = LinearSyncMixin()
+                    state_id = mixin.map_status_to_linear_state(
+                        instance.status, 
+                        self.linear_service.linear_service, 
+                        instance.linear_team_id
+                    )
+                    if state_id:
+                        linear_update_data['stateId'] = state_id
+                
+                # Update Linear if there are changes
+                if linear_update_data:
+                    self.linear_service.linear_service.update_issue(
+                        issue_id=instance.linear_issue_id,
+                        **linear_update_data
+                    )
+                    instance.last_synced_at = timezone.now()
+                    instance.save()
+                    linear_synced = True
+                    logger.info(f"Issue {instance.issue_number} changes synced to Linear")
+            except Exception as e:
+                logger.error(f"Failed to sync issue changes to Linear: {str(e)}")
         
         response_serializer = self.get_serializer(instance)
         response_data = response_serializer.data
         
-        if linear_updated[0]:
+        if linear_synced:
             response_data['linear_synced'] = True
         
         return Response(response_data)
@@ -415,6 +455,117 @@ class IssueViewSet(
             )
         except Exception as e:
             logger.error(f"Error reopening issue {pk}: {str(e)}")
+            return Response(
+                {'error': 'Internal Server Error', 'details': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def add_comment(self, request, pk=None):
+        """Add a comment to an issue and sync to Linear if synced"""
+        try:
+            issue = self.get_object()
+            
+            # Check permission - user must have access to this issue
+            active_profile = getattr(request.user, 'active_profile', None)
+            if active_profile:
+                if active_profile.profile_type == 'customer':
+                    # Customers can only comment on issues they created
+                    if issue.customer and issue.customer.user != request.user:
+                        raise PermissionDenied('You can only comment on your own issues.')
+                elif active_profile.profile_type in ['vendor', 'employee']:
+                    # Vendors and employees can comment on issues in their organization
+                    if issue.organization != active_profile.organization:
+                        raise PermissionDenied('You can only comment on issues in your organization.')
+            
+            # Create the comment
+            serializer = CreateIssueCommentSerializer(data={'issue': issue.id, 'content': request.data.get('content')}, context={'request': request})
+            
+            if not serializer.is_valid():
+                return Response(
+                    {'error': 'Bad Request', 'details': serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            comment = serializer.save()
+            
+            # Sync comment to Linear if issue is synced
+            if issue.linear_issue_id:
+                try:
+                    success, error = self.linear_service.add_comment_to_linear(
+                        issue,
+                        comment.content,
+                        comment.author_name
+                    )
+                    
+                    if success:
+                        comment.synced_to_linear = True
+                        comment.save()
+                        logger.info(f"Comment {comment.id} synced to Linear issue {issue.linear_issue_id}")
+                    else:
+                        logger.warning(f"Failed to sync comment to Linear: {error}")
+                except Exception as e:
+                    logger.error(f"Error syncing comment to Linear: {str(e)}")
+            
+            # Return the comment data
+            response_serializer = IssueCommentSerializer(comment)
+            return Response(
+                {
+                    'message': 'Comment added successfully',
+                    'comment': response_serializer.data,
+                    'synced_to_linear': comment.synced_to_linear
+                },
+                status=status.HTTP_201_CREATED
+            )
+            
+        except Issue.DoesNotExist:
+            return Response(
+                {'error': 'Not Found', 'details': 'Issue not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error adding comment to issue {pk}: {str(e)}")
+            return Response(
+                {'error': 'Internal Server Error', 'details': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['get'])
+    def comments(self, request, pk=None):
+        """Get all comments for an issue"""
+        try:
+            issue = self.get_object()
+            
+            # Sync comments from Linear first if issue is synced
+            if issue.linear_issue_id:
+                try:
+                    success, count, error = self.linear_service.sync_comments_from_linear(issue)
+                    if success and count > 0:
+                        logger.info(f"Synced {count} new comments from Linear for issue {issue.issue_number}")
+                    elif not success:
+                        logger.warning(f"Failed to sync comments from Linear: {error}")
+                except Exception as e:
+                    logger.error(f"Error syncing comments from Linear: {str(e)}")
+            
+            # Get comments from database
+            comments = issue.comments.all().order_by('created_at')
+            serializer = IssueCommentSerializer(comments, many=True)
+            
+            return Response(
+                {
+                    'count': comments.count(),
+                    'comments': serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+            
+        except Issue.DoesNotExist:
+            return Response(
+                {'error': 'Not Found', 'details': 'Issue not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error getting comments for issue {pk}: {str(e)}")
             return Response(
                 {'error': 'Internal Server Error', 'details': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR

@@ -56,6 +56,7 @@ from .deal import (
 
 # Issue models
 from .issue import Issue
+from .issue_comment import IssueComment
 
 # Order models
 from .order import (
@@ -106,6 +107,7 @@ __all__ = [
     
     # Operations
     'Issue',
+    'IssueComment',
     'Order',
     'OrderItem',
     'Payment',

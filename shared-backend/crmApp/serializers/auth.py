@@ -193,17 +193,50 @@ class UserCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         """
-        Create a new user without organization.
-        User can create organization later from vendor profile settings.
-        Creates only user account - no profiles yet.
+        Create a new user with ALL three profile types (vendor, employee, customer).
+        Users can switch between profiles after registration.
+        - vendor profile: Set as primary by default (organization will be created later from settings)
+        - employee profile: Available when user joins organization via invitation
+        - customer profile: Available for browsing vendors and placing orders
         """
         from django.db import transaction
+        from django.utils import timezone
         
         validated_data.pop('password_confirm')
         
         with transaction.atomic():
-            # Create user only
+            # Create user
             user = User.objects.create_user(**validated_data)
+            
+            # Create vendor profile (primary by default)
+            UserProfile.objects.create(
+                user=user,
+                organization=None,
+                profile_type='vendor',
+                is_primary=True,  # Vendor is primary by default
+                status='active',
+                activated_at=timezone.now()
+            )
+            
+            # Create employee profile
+            UserProfile.objects.create(
+                user=user,
+                organization=None,
+                profile_type='employee',
+                is_primary=False,
+                status='active',
+                activated_at=timezone.now()
+            )
+            
+            # Create customer profile
+            UserProfile.objects.create(
+                user=user,
+                organization=None,
+                profile_type='customer',
+                is_primary=False,
+                status='active',
+                activated_at=timezone.now()
+            )
         
         return user
 

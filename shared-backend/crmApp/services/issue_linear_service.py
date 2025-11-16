@@ -378,7 +378,7 @@ class IssueLinearService:
     
     def sync_comments_from_linear(self, issue):
         """
-        Sync comments from Linear to CRM issue description.
+        Sync comments from Linear to CRM IssueComment model.
         
         Args:
             issue: Issue instance
@@ -387,6 +387,8 @@ class IssueLinearService:
             Tuple (success: bool, comments_count: int, error: str or None)
         """
         try:
+            from crmApp.models import IssueComment
+            
             # Check if issue is synced to Linear
             if not issue.linear_issue_id:
                 return False, 0, "Issue not synced to Linear"
@@ -397,37 +399,50 @@ class IssueLinearService:
             if not comments:
                 return True, 0, None
             
-            # Parse existing description to avoid duplicating comments
-            existing_description = issue.description
+            # Get existing Linear comment IDs to avoid duplicates
+            existing_linear_ids = set(
+                IssueComment.objects.filter(
+                    issue=issue,
+                    linear_comment_id__isnull=False
+                ).values_list('linear_comment_id', flat=True)
+            )
             
-            # Append new comments from Linear
+            # Add new comments from Linear
             new_comments_added = 0
             for comment in comments:
-                user = comment.get('user', {})
-                author = user.get('name', 'Linear User')
-                timestamp = comment.get('createdAt', '')
-                body = comment.get('body', '')
+                linear_comment_id = comment.get('id')
                 
-                # Check if this comment is already in the description
-                comment_marker = f"--- Linear Comment by {author} at"
-                if comment_marker not in existing_description or body not in existing_description:
-                    # Format timestamp
-                    from datetime import datetime
-                    try:
-                        dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
-                        formatted_time = dt.strftime('%Y-%m-%d %H:%M')
-                    except:
-                        formatted_time = timestamp
-                    
-                    # Append comment
-                    existing_description += f"\n\n--- Linear Comment by {author} at {formatted_time} ---\n{body}"
-                    new_comments_added += 1
+                # Skip if already synced
+                if linear_comment_id in existing_linear_ids:
+                    continue
+                
+                user = comment.get('user', {})
+                author_name = user.get('name', 'Linear User')
+                body = comment.get('body', '')
+                created_at = comment.get('createdAt', '')
+                
+                # Parse timestamp
+                from datetime import datetime
+                try:
+                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                except:
+                    from django.utils import timezone
+                    dt = timezone.now()
+                
+                # Create IssueComment
+                IssueComment.objects.create(
+                    issue=issue,
+                    author=None,  # No CRM user associated
+                    author_name=f"{author_name} (Linear)",
+                    content=body,
+                    linear_comment_id=linear_comment_id,
+                    synced_to_linear=True,
+                    created_at=dt
+                )
+                new_comments_added += 1
             
-            # Update issue if new comments were added
             if new_comments_added > 0:
-                issue.description = existing_description
-                issue.save()
-                logger.info(f"Synced {new_comments_added} comments from Linear to issue {issue.issue_number}")
+                logger.info(f"Synced {new_comments_added} new comments from Linear to issue {issue.issue_number}")
             
             return True, new_comments_added, None
             

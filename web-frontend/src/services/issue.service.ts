@@ -61,7 +61,7 @@ export const issueService = {
    * Resolve issue (with optional resolution notes)
    */
   resolve: async (id: number, resolutionNotes?: string): Promise<Issue> => {
-    return api.post<Issue>(`/api/issues/resolve/${id}/`, { resolution_notes: resolutionNotes });
+    return api.post<Issue>(API_CONFIG.ENDPOINTS.ISSUES.RESOLVE(id), { resolution_notes: resolutionNotes });
   },
 
   /**
@@ -143,5 +143,19 @@ export const issueService = {
    */
   syncFromLinear: async (id: number): Promise<Issue> => {
     return api.post<Issue>(`/api/issues/${id}/sync_from_linear/`);
+  },
+
+  /**
+   * Add comment to issue (vendor/employee)
+   */
+  addComment: async (id: number, content: string): Promise<any> => {
+    return api.post(`/api/issues/${id}/add_comment/`, { content });
+  },
+
+  /**
+   * Get all comments for an issue
+   */
+  getComments: async (id: number): Promise<any> => {
+    return api.get(`/api/issues/${id}/comments/`);
   },
 };

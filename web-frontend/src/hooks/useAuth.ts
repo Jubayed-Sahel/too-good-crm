@@ -83,12 +83,24 @@ export const useAuth = () => {
   const handlePostAuth = async (authUser: User) => {
     // Check if user has any profiles
     if (!authUser.profiles || authUser.profiles.length === 0) {
-      // New user without profiles - direct to settings to create organization
+      // This shouldn't happen with new registration flow, but handle it
+      console.warn('User has no profiles. Redirecting to settings.');
       window.location.href = ROUTES.SETTINGS + '?tab=organization&firstTime=true';
       return;
     }
     
-    // No role selection dialog - just navigate to default route based on primary profile
+    // Get the primary profile (vendor by default after registration)
+    const primaryProfile = authUser.primaryProfile || authUser.profiles[0];
+    
+    // Check if vendor profile (primary) needs organization setup
+    if (primaryProfile.profile_type === 'vendor' && !primaryProfile.organization) {
+      // New vendor without organization - redirect to settings to create one
+      window.location.href = ROUTES.SETTINGS + '?tab=organization&firstTime=true';
+      return;
+    }
+    
+    // Navigate to default route based on primary profile
+    // User can switch roles later from the UI
     navigateToDefaultRoute(authUser);
   };
 

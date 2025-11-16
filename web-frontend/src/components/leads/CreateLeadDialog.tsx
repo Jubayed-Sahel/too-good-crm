@@ -68,8 +68,9 @@ export const CreateLeadDialog = ({
   }, [activeOrganizationId]);
 
   const handleSubmit = () => {
+    console.log('📝 Submitting lead form:', formData);
     onSubmit(formData);
-    handleClose();
+    // Don't close immediately - let parent handle closing on success
   };
 
   const handleClose = () => {

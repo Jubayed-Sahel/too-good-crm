@@ -25,7 +25,11 @@ export interface Issue {
   assigned_to?: number | null;
   assigned_to_name?: string;
   created_by: number;
+  created_by_name?: string;
   resolved_by?: number | null;
+  resolved_by_name?: string;
+  resolved_at?: string;
+  resolution_notes?: string;
   is_client_issue: boolean;
   raised_by_customer?: number | null;
   raised_by_customer_name?: string;
@@ -34,6 +38,7 @@ export interface Issue {
   linear_issue_id?: string;
   linear_issue_url?: string;
   synced_to_linear?: boolean;
+  linear_synced?: boolean; // Added by update/create response when synced
 }
 
 export interface CreateIssueData {
@@ -81,4 +86,16 @@ export interface IssueFilters {
   ordering?: string;
   page?: number;
   page_size?: number;
+}
+
+export interface IssueComment {
+  id: number;
+  issue: number;
+  author?: number | null;
+  author_name: string;
+  content: string;
+  linear_comment_id?: string | null;
+  synced_to_linear: boolean;
+  created_at: string;
+  updated_at: string;
 }
