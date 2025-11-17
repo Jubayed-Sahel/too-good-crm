@@ -59,6 +59,11 @@ class Customer(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
     converted_from_lead = models.ForeignKey('Lead', on_delete=models.SET_NULL, null=True, blank=True, related_name='converted_customers')
     converted_at = models.DateTimeField(null=True, blank=True)
     
+    # Purchase history tracking (stored as JSON for flexibility)
+    purchase_history = models.JSONField(default=list, blank=True, help_text="List of purchases with date, amount, product/service details")
+    total_purchase_value = models.DecimalField(max_digits=15, decimal_places=2, default=0, help_text="Total value of all purchases")
+    last_purchase_date = models.DateField(null=True, blank=True, help_text="Date of most recent purchase")
+    
     class Meta:
         db_table = 'customers'
         verbose_name = 'Customer'

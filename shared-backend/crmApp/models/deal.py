@@ -110,6 +110,12 @@ class Deal(TimestampedModel, CodeMixin, StatusMixin):
     tags = models.JSONField(default=list, blank=True)
     notes = models.TextField(null=True, blank=True)
     
+    # Follow-up and reminders
+    follow_up_date = models.DateTimeField(null=True, blank=True, help_text="Scheduled follow-up date/time")
+    follow_up_notes = models.TextField(null=True, blank=True, help_text="Notes for follow-up")
+    last_contacted_at = models.DateTimeField(null=True, blank=True, help_text="Last time this deal was contacted")
+    next_follow_up_reminder = models.DateTimeField(null=True, blank=True, help_text="Next reminder for follow-up")
+    
     class Meta:
         db_table = 'deals'
         verbose_name = 'Deal'

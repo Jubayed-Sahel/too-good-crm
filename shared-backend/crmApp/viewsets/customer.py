@@ -73,13 +73,28 @@ class CustomerViewSet(
         serializer.save(organization_id=organization_id)
     
     def get_queryset(self):
-        """Filter customers by user's organizations through user_profiles"""
+        """Filter customers by user's organizations through user_profiles.
+        Only show customers that have at least one won deal (as per business rule:
+        customers only appear when deals are marked as won)."""
+        from crmApp.models import Deal
+        
         # Get organization IDs from user's active profiles
         user_orgs = self.request.user.user_profiles.filter(
             status='active'
         ).values_list('organization_id', flat=True)
         
-        queryset = Customer.objects.filter(organization_id__in=user_orgs)
+        # Only show customers that have at least one won deal
+        # This ensures customers only appear when deals are marked as won
+        won_deal_customer_ids = Deal.objects.filter(
+            organization_id__in=user_orgs,
+            is_won=True,
+            customer__isnull=False
+        ).values_list('customer_id', flat=True).distinct()
+        
+        queryset = Customer.objects.filter(
+            organization_id__in=user_orgs,
+            id__in=won_deal_customer_ids
+        )
         
         # Filter by organization
         org_id = self.request.query_params.get('organization')
@@ -203,4 +218,78 @@ class CustomerViewSet(
         customer = self.get_object()
         activities_data = self.get_customer_activities(customer)
         return Response(activities_data)
+    
+    @action(detail=True, methods=['post'])
+    def add_purchase(self, request, pk=None):
+        """Add a purchase to customer history - requires customer:update permission"""
+        from decimal import Decimal
+        from django.utils import timezone
+        from datetime import date
+        
+        customer = self.get_object()
+        self.check_permission(request, 'customer', 'update', instance=customer)
+        
+        purchase_date = request.data.get('purchase_date') or date.today().isoformat()
+        amount = request.data.get('amount')
+        product_name = request.data.get('product_name', '')
+        description = request.data.get('description', '')
+        
+        if not amount:
+            return Response(
+                {'error': 'amount is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            amount_decimal = Decimal(str(amount))
+            
+            # Get or initialize purchase history
+            purchase_history = customer.purchase_history if customer.purchase_history else []
+            
+            # Add new purchase
+            new_purchase = {
+                'id': len(purchase_history) + 1,
+                'date': purchase_date,
+                'amount': float(amount_decimal),
+                'product_name': product_name,
+                'description': description,
+                'created_at': timezone.now().isoformat()
+            }
+            purchase_history.append(new_purchase)
+            
+            # Update customer totals
+            customer.purchase_history = purchase_history
+            customer.total_purchase_value = (customer.total_purchase_value or Decimal('0')) + amount_decimal
+            
+            # Update last purchase date
+            try:
+                from dateutil import parser
+                purchase_dt = parser.parse(purchase_date).date()
+                if not customer.last_purchase_date or purchase_dt > customer.last_purchase_date:
+                    customer.last_purchase_date = purchase_dt
+            except:
+                customer.last_purchase_date = date.today()
+            
+            customer.save()
+            
+            return Response({
+                'message': 'Purchase added successfully.',
+                'customer': CustomerSerializer(customer).data
+            })
+        except Exception as e:
+            return Response(
+                {'error': f'Invalid data: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['get'])
+    def purchase_history(self, request, pk=None):
+        """Get customer purchase history"""
+        customer = self.get_object()
+        
+        return Response({
+            'purchases': customer.purchase_history or [],
+            'total_value': float(customer.total_purchase_value or 0),
+            'last_purchase_date': customer.last_purchase_date
+        })
 

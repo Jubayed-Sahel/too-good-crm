@@ -48,12 +48,12 @@ export const CreateLeadDialog = ({
   isLoading = false,
 }: CreateLeadDialogProps) => {
   const { activeOrganizationId } = useProfile();
-  const [formData, setFormData] = useState<CreateLeadData>({
+  const [formData, setFormData] = useState<Partial<CreateLeadData>>({
     organization: activeOrganizationId || 1,
     name: '',
     email: '',
     phone: '',
-    company: '',
+    organization_name: '',
     job_title: '',
     source: 'website',
     estimated_value: undefined,
@@ -79,7 +79,7 @@ export const CreateLeadDialog = ({
       name: '',
       email: '',
       phone: '',
-      company: '',
+      organization_name: '',
       job_title: '',
       source: 'website',
       estimated_value: undefined,
@@ -88,7 +88,7 @@ export const CreateLeadDialog = ({
     onClose();
   };
 
-  const isFormValid = formData.name && formData.company && formData.email;
+  const isFormValid = formData.name && formData.email;
 
   return (
     <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size={{ base: 'full', md: 'lg' }}>
@@ -150,12 +150,12 @@ export const CreateLeadDialog = ({
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">
-                  Company *
+                  Company
                 </Text>
                 <Input
                   placeholder="Acme Corporation"
-                  value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                  value={formData.organization_name || ''}
+                  onChange={(e) => setFormData({ ...formData, organization_name: e.target.value })}
                   size="sm"
                 />
               </VStack>

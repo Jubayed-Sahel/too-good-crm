@@ -44,6 +44,22 @@ const IssuesPage = () => {
     category: categoryFilter !== 'all' ? categoryFilter : undefined,
   }), [searchQuery, statusFilter, priorityFilter, categoryFilter]);
 
+  // Get organization ID
+  const { activeOrganizationId } = useProfile();
+  
+  // Check if organization is missing
+  if (!activeOrganizationId) {
+    return (
+      <DashboardLayout title="Issues">
+        <ErrorState
+          title="Organization Required"
+          error={new Error("Please select an active profile with an organization to view issues.")}
+          onRetry={() => window.location.reload()}
+        />
+      </DashboardLayout>
+    );
+  }
+  
   // Fetch data
   const { data: issuesData, isLoading, error, refetch } = useIssues(apiFilters);
   const issues = issuesData?.results || [];

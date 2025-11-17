@@ -25,11 +25,24 @@ class PermissionCheckMixin:
         if instance and hasattr(instance, 'organization'):
             return instance.organization
         
-        if hasattr(request.user, 'current_organization') and request.user.current_organization:
-            return request.user.current_organization
+        # Try to get from user's active profile
+        from crmApp.models import UserProfile
+        active_profile = UserProfile.objects.filter(
+            user=request.user,
+            is_primary=True,
+            status='active'
+        ).select_related('organization').first()
         
-        if hasattr(request.user, 'active_profile') and request.user.active_profile:
-            return request.user.active_profile.organization
+        if active_profile and active_profile.organization:
+            return active_profile.organization
+        
+        # Fallback: try to get from user_organizations
+        user_org = request.user.user_organizations.filter(
+            is_active=True
+        ).select_related('organization').first()
+        
+        if user_org and user_org.organization:
+            return user_org.organization
         
         return None
     

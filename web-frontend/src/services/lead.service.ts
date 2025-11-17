@@ -64,6 +64,18 @@ class LeadService {
   }
 
   /**
+   * Convert lead to deal (creates customer first, then deal)
+   * Returns response with deal_id, customer_id and lead data
+   */
+  async convertLeadToDeal(
+    id: string | number, 
+    data: { deal_title?: string; deal_value?: number; description?: string }
+  ): Promise<{ deal_id: number; customer_id: number | null; lead: Lead; message: string }> {
+    const url = API_CONFIG.ENDPOINTS.LEADS.CONVERT_TO_DEAL(id);
+    return api.post<{ deal_id: number; customer_id: number | null; lead: Lead; message: string }>(url, data);
+  }
+
+  /**
    * Qualify lead
    */
   async qualifyLead(id: string | number): Promise<Lead> {
