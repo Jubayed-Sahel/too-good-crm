@@ -70,7 +70,6 @@ class CustomerSerializer(serializers.ModelSerializer):
             'tax_id', 'address', 'city', 'state', 'postal_code', 'zip_code',
             'country', 'source', 'tags', 'notes',
             'converted_from_lead', 'converted_at',
-            'purchase_history', 'total_purchase_value', 'last_purchase_date',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'code', 'user_profile', 'created_at', 'updated_at', 'converted_at']

@@ -26,7 +26,6 @@ interface LeadsTableProps {
   onConvert?: (lead: Lead) => void;
   onBulkDelete?: (leadIds: string[]) => void;
   onBulkExport?: (leadIds: string[]) => void;
-  onBulkConvertToDeal?: (leadIds: string[]) => void;
 }
 
 export const LeadsTable = ({ 
@@ -38,7 +37,6 @@ export const LeadsTable = ({
   onConvert,
   onBulkDelete,
   onBulkExport,
-  onBulkConvertToDeal,
 }: LeadsTableProps) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -227,16 +225,14 @@ export const LeadsTable = ({
               {selectedIds.length} lead(s) selected
             </Text>
             <HStack gap={2}>
-              {onBulkConvertToDeal && (
-                <Button
-                  size="sm"
-                  variant="solid"
-                  colorPalette="green"
-                  onClick={() => onBulkConvertToDeal(selectedIds)}
-                >
-                  Convert to Deal
-                </Button>
-              )}
+              <Button
+                size="sm"
+                variant="outline"
+                colorPalette="purple"
+                onClick={handleBulkExport}
+              >
+                Export Selected
+              </Button>
               <Button
                 size="sm"
                 variant="solid"

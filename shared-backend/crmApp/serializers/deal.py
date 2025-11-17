@@ -111,9 +111,7 @@ class DealSerializer(serializers.ModelSerializer):
             'value', 'currency', 'probability', 'expected_revenue',
             'expected_close_date', 'actual_close_date', 'status', 'priority',
             'assigned_to', 'assigned_to_name', 'is_won', 'is_lost', 'lost_reason',
-            'source', 'tags', 'notes', 'follow_up_date', 'follow_up_notes',
-            'last_contacted_at', 'next_follow_up_reminder', 'lead',
-            'created_at', 'updated_at'
+            'source', 'tags', 'notes', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'code', 'expected_revenue', 'created_at', 'updated_at']
     

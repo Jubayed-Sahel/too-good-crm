@@ -63,7 +63,6 @@ export const API_CONFIG = {
       DETAIL: (id: number | string) => `/api/leads/${id}/`,
       STATS: '/api/leads/stats/',
       CONVERT: (id: number | string) => `/api/leads/${id}/convert/`,
-      CONVERT_TO_DEAL: (id: number | string) => `/api/leads/${id}/convert_to_deal/`,
       QUALIFY: (id: number | string) => `/api/leads/${id}/qualify/`,
       DISQUALIFY: (id: number | string) => `/api/leads/${id}/disqualify/`,
       ACTIVITIES: (id: number | string) => `/api/leads/${id}/activities/`,

@@ -212,7 +212,7 @@ class DealViewSet(
         )
     
     def perform_create(self, serializer):
-        """Override perform_create to check permissions and ensure default pipeline exists"""
+        """Override perform_create to check permissions"""
         organization = self.get_organization_from_request(self.request)
         
         if not organization:
@@ -230,51 +230,6 @@ class DealViewSet(
             action='create',
             organization=organization
         )
-        
-        # Ensure default pipeline exists for the organization
-        default_pipeline = Pipeline.objects.filter(
-            organization=organization,
-            is_default=True
-        ).first()
-        
-        if not default_pipeline:
-            # Create default pipeline with standard stages
-            default_pipeline = Pipeline.objects.create(
-                organization=organization,
-                name='Default Sales Pipeline',
-                description='Default pipeline for sales deals',
-                is_default=True,
-                is_active=True
-            )
-            
-            # Create default stages
-            default_stages = [
-                {'name': 'Lead', 'order': 1, 'probability': 10, 'is_active': True},
-                {'name': 'Qualified', 'order': 2, 'probability': 25, 'is_active': True},
-                {'name': 'Proposal', 'order': 3, 'probability': 50, 'is_active': True},
-                {'name': 'Negotiation', 'order': 4, 'probability': 75, 'is_active': True},
-                {'name': 'Closed Won', 'order': 5, 'probability': 100, 'is_active': True, 'is_closed_won': True},
-                {'name': 'Closed Lost', 'order': 6, 'probability': 0, 'is_active': True, 'is_closed_lost': True},
-            ]
-            
-            for stage_data in default_stages:
-                PipelineStage.objects.create(
-                    pipeline=default_pipeline,
-                    **stage_data
-                )
-            
-            logger.info(f"Created default pipeline for organization {organization.id}")
-        
-        # If no pipeline/stage specified, use default pipeline's first stage
-        if not serializer.validated_data.get('pipeline_id') and not serializer.validated_data.get('pipeline'):
-            serializer.validated_data['pipeline_id'] = default_pipeline.id
-            
-            # Get first stage if no stage specified
-            if not serializer.validated_data.get('stage_id') and not serializer.validated_data.get('stage'):
-                first_stage = default_pipeline.stages.filter(is_active=True).order_by('order').first()
-                if first_stage:
-                    serializer.validated_data['stage_id'] = first_stage.id
-                    serializer.validated_data['probability'] = serializer.validated_data.get('probability', first_stage.probability)
         
         # Only set organization if not already in validated_data
         if 'organization' not in serializer.validated_data and 'organization_id' not in serializer.validated_data:
@@ -343,10 +298,7 @@ class DealViewSet(
     
     @action(detail=True, methods=['post'])
     def move_stage(self, request, pk=None):
-        """Move deal to another stage - requires deal:update permission. Creates customer if moving to Closed Won stage."""
-        from crmApp.models import Customer
-        from django.db import transaction
-        
+        """Move deal to another stage - requires deal:update permission"""
         deal = self.get_object()
         self.check_permission(request, 'deal', 'update', instance=deal)
         
@@ -364,81 +316,9 @@ class DealViewSet(
                 pipeline=deal.pipeline
             )
             
-            with transaction.atomic():
-                # If moving to Closed Won stage, create customer if doesn't exist
-                if stage.is_closed_won and not deal.customer:
-                    self.check_permission(request, 'customer', 'create', organization=deal.organization)
-                    
-                    # Get lead information if available
-                    if deal.lead:
-                        lead = deal.lead
-                        # Check if customer already exists with this email
-                        customer = Customer.objects.filter(
-                            organization=deal.organization,
-                            email__iexact=lead.email
-                        ).first()
-                        
-                        if not customer:
-                            # Create customer from lead
-                            customer = Customer.objects.create(
-                                organization=deal.organization,
-                                name=lead.name,
-                                company_name=lead.organization_name,
-                                email=lead.email,
-                                phone=lead.phone,
-                                customer_type='business' if lead.organization_name else 'individual',
-                                status='active',
-                                assigned_to=lead.assigned_to or deal.assigned_to,
-                                source=lead.source,
-                                address=lead.address,
-                                city=lead.city,
-                                state=lead.state,
-                                postal_code=lead.postal_code,
-                                country=lead.country,
-                                notes=lead.notes or deal.notes,
-                                converted_from_lead=lead,
-                            )
-                    else:
-                        # No lead, create customer from deal information
-                        customer_name = request.data.get('customer_name') or deal.title.split(' for ')[-1] if ' for ' in deal.title else deal.title
-                        customer_email = request.data.get('customer_email') or f"customer-{deal.id}@example.com"
-                        
-                        # Check if customer already exists
-                        customer = Customer.objects.filter(
-                            organization=deal.organization,
-                            email__iexact=customer_email
-                        ).first()
-                        
-                        if not customer:
-                            customer = Customer.objects.create(
-                                organization=deal.organization,
-                                name=customer_name,
-                                email=customer_email,
-                                customer_type='business',
-                                status='active',
-                                assigned_to=deal.assigned_to,
-                                notes=f"Created from won deal: {deal.title}",
-                            )
-                    
-                    deal.customer = customer
-                
-                # Update deal stage and status
-                deal.stage = stage
-                deal.probability = stage.probability
-                
-                # Update win/loss status based on stage
-                if stage.is_closed_won:
-                    deal.is_won = True
-                    deal.is_lost = False
-                    deal.actual_close_date = timezone.now().date()
-                    deal.status = 'closed'
-                elif stage.is_closed_lost:
-                    deal.is_won = False
-                    deal.is_lost = True
-                    deal.actual_close_date = timezone.now().date()
-                    deal.status = 'closed'
-                
-                deal.save()
+            deal.stage = stage
+            deal.probability = stage.probability
+            deal.save()
             
             return Response({
                 'message': 'Deal moved to new stage.',
@@ -452,82 +332,19 @@ class DealViewSet(
     
     @action(detail=True, methods=['post'])
     def mark_won(self, request, pk=None):
-        """Mark deal as won and create customer if doesn't exist - requires deal:update permission"""
-        from crmApp.models import Customer
-        from django.db import transaction
-        
+        """Mark deal as won - requires deal:update permission"""
         deal = self.get_object()
         self.check_permission(request, 'deal', 'update', instance=deal)
-        self.check_permission(request, 'customer', 'create', organization=deal.organization)
         
-        with transaction.atomic():
-            # Create customer if deal doesn't have one yet
-            customer = deal.customer
-            if not customer:
-                # Get lead information if available
-                if deal.lead:
-                    lead = deal.lead
-                    # Check if customer already exists with this email
-                    customer = Customer.objects.filter(
-                        organization=deal.organization,
-                        email__iexact=lead.email
-                    ).first()
-                    
-                    if not customer:
-                        # Create customer from lead
-                        customer = Customer.objects.create(
-                            organization=deal.organization,
-                            name=lead.name,
-                            company_name=lead.organization_name,
-                            email=lead.email,
-                            phone=lead.phone,
-                            customer_type='business' if lead.organization_name else 'individual',
-                            status='active',
-                            assigned_to=lead.assigned_to or deal.assigned_to,
-                            source=lead.source,
-                            address=lead.address,
-                            city=lead.city,
-                            state=lead.state,
-                            postal_code=lead.postal_code,
-                            country=lead.country,
-                            notes=lead.notes or deal.notes,
-                            converted_from_lead=lead,
-                        )
-                else:
-                    # No lead, create customer from deal information
-                    # We need at least a name/email - use deal title or create placeholder
-                    customer_name = request.data.get('customer_name') or deal.title.split(' for ')[-1] if ' for ' in deal.title else deal.title
-                    customer_email = request.data.get('customer_email') or f"customer-{deal.id}@example.com"
-                    
-                    # Check if customer already exists
-                    customer = Customer.objects.filter(
-                        organization=deal.organization,
-                        email__iexact=customer_email
-                    ).first()
-                    
-                    if not customer:
-                        customer = Customer.objects.create(
-                            organization=deal.organization,
-                            name=customer_name,
-                            email=customer_email,
-                            customer_type='business',
-                            status='active',
-                            assigned_to=deal.assigned_to,
-                            notes=f"Created from won deal: {deal.title}",
-                        )
-            
-            # Link customer to deal
-            deal.customer = customer
-            deal.is_won = True
-            deal.is_lost = False
-            deal.actual_close_date = timezone.now().date()
-            deal.status = 'closed'
-            deal.save()
+        deal.is_won = True
+        deal.is_lost = False
+        deal.actual_close_date = timezone.now()
+        deal.status = 'closed'
+        deal.save()
         
         return Response({
-            'message': 'Deal marked as won and customer created.',
-            'deal': DealSerializer(deal).data,
-            'customer_id': customer.id if customer else None
+            'message': 'Deal marked as won.',
+            'deal': DealSerializer(deal).data
         })
     
     @action(detail=True, methods=['post'])
@@ -562,59 +379,5 @@ class DealViewSet(
         
         return Response({
             'message': 'Deal reopened.',
-            'deal': DealSerializer(deal).data
-        })
-    
-    @action(detail=True, methods=['post'])
-    def schedule_followup(self, request, pk=None):
-        """Schedule a follow-up for a deal - requires deal:update permission"""
-        from django.utils import timezone
-        from datetime import timedelta
-        
-        deal = self.get_object()
-        self.check_permission(request, 'deal', 'update', instance=deal)
-        
-        follow_up_date = request.data.get('follow_up_date')
-        follow_up_notes = request.data.get('follow_up_notes', '')
-        reminder_days = request.data.get('reminder_days', 1)
-        
-        if not follow_up_date:
-            return Response(
-                {'error': 'follow_up_date is required'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        try:
-            from dateutil import parser
-            follow_up_dt = parser.parse(follow_up_date)
-            deal.follow_up_date = follow_up_dt
-            deal.follow_up_notes = follow_up_notes
-            reminder_dt = follow_up_dt - timedelta(days=int(reminder_days))
-            deal.next_follow_up_reminder = reminder_dt
-            deal.save()
-            
-            return Response({
-                'message': 'Follow-up scheduled successfully.',
-                'deal': DealSerializer(deal).data
-            })
-        except Exception as e:
-            return Response(
-                {'error': f'Invalid date format: {str(e)}'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-    
-    @action(detail=True, methods=['post'])
-    def mark_contacted(self, request, pk=None):
-        """Mark deal as contacted - updates last_contacted_at"""
-        from django.utils import timezone
-        
-        deal = self.get_object()
-        self.check_permission(request, 'deal', 'update', instance=deal)
-        
-        deal.last_contacted_at = timezone.now()
-        deal.save()
-        
-        return Response({
-            'message': 'Deal marked as contacted.',
             'deal': DealSerializer(deal).data
         })

@@ -33,38 +33,21 @@ class OrganizationFilterMixin:
         Returns:
             Filtered queryset
         """
-        try:
-            # Filter by accessible organizations
-            accessible_org_ids = self.get_accessible_organization_ids(request.user)
-            
-            if not accessible_org_ids:
-                return queryset.model.objects.none()
-            
-            if hasattr(queryset.model, 'organization'):
-                queryset = queryset.filter(organization_id__in=accessible_org_ids)
-            
-            # Filter by organization query parameter
-            org_id = request.query_params.get('organization')
-            if org_id:
-                try:
-                    org_id = int(org_id)  # Convert to integer
-                    # Only filter if the requested org is in accessible orgs
-                    if org_id in accessible_org_ids:
-                        queryset = queryset.filter(organization_id=org_id)
-                    else:
-                        # Requested org is not accessible, return empty queryset
-                        return queryset.model.objects.none()
-                except (ValueError, TypeError):
-                    # Invalid org_id format, ignore it
-                    pass
-            
-            return queryset
-        except Exception as e:
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.error(f"Error in filter_by_organization: {str(e)}", exc_info=True)
-            # Return empty queryset on error to prevent 500
+        # Filter by accessible organizations
+        accessible_org_ids = self.get_accessible_organization_ids(request.user)
+        
+        if not accessible_org_ids:
             return queryset.model.objects.none()
+        
+        if hasattr(queryset.model, 'organization'):
+            queryset = queryset.filter(organization_id__in=accessible_org_ids)
+        
+        # Filter by organization query parameter
+        org_id = request.query_params.get('organization')
+        if org_id:
+            queryset = queryset.filter(organization_id=org_id)
+        
+        return queryset
     
     def filter_customer_profile(self, queryset, request):
         """

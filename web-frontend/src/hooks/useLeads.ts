@@ -77,26 +77,70 @@ export function useLeadStats() {
   });
 }
 
-// Note: Mutations are exported from useLeadMutations.ts to avoid conflicts
-
 /**
- * Convert lead to deal mutation
+ * Create lead mutation
  */
-export function useConvertLeadToDeal() {
+export function useCreateLead() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string | number; data?: { deal_title?: string; deal_value?: number; description?: string } }) =>
-      leadService.convertLeadToDeal(id, data || {}),
+    mutationFn: (data: CreateLeadData) => leadService.createLead(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
+    },
+  });
+}
+
+/**
+ * Update lead mutation
+ */
+export function useUpdateLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string | number; data: UpdateLeadData }) =>
+      leadService.updateLead(id, data),
+    onSuccess: (updatedLead) => {
+      queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: leadKeys.detail(updatedLead.id) });
+      queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
+    },
+  });
+}
+
+/**
+ * Delete lead mutation
+ */
+export function useDeleteLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string | number) => leadService.deleteLead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
+    },
+  });
+}
+
+/**
+ * Convert lead mutation
+ */
+export function useConvertLead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string | number; data: ConvertLeadData }) =>
+      leadService.convertLead(id, data),
     onSuccess: (response) => {
-      // Response structure: { deal_id, customer_id, lead, message }
+      // Response structure: { customer_id, lead, message }
       queryClient.invalidateQueries({ queryKey: leadKeys.lists() });
       if (response.lead?.id) {
         queryClient.invalidateQueries({ queryKey: leadKeys.detail(response.lead.id) });
       }
       queryClient.invalidateQueries({ queryKey: leadKeys.stats() });
-      queryClient.invalidateQueries({ queryKey: ['customers'] }); // Invalidate customers
-      queryClient.invalidateQueries({ queryKey: ['deals'] }); // Invalidate deals
+      queryClient.invalidateQueries({ queryKey: ['customers'] }); // Invalidate customers too
     },
   });
 }

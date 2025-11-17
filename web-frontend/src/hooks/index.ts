@@ -8,16 +8,7 @@ export { useCustomers } from './useCustomers';
 export { useDeals } from './useDeals';
 export { useDashboardStats } from './useDashboardStats';
 export { useEmployees } from './useEmployees';
-// Export query hooks only from useLeads, mutations are in useLeadMutations
-export { 
-  useLeads, 
-  useLead, 
-  useLeadActivities, 
-  useLeadStats,
-  leadKeys,
-  useConvertLeadToDeal,
-  useAddLeadActivity,
-} from './useLeads';
+export * from './useLeads';
 export * from './useAnalytics';
 export * from './useSalesPage';
 

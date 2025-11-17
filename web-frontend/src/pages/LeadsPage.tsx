@@ -18,7 +18,6 @@ import {
   useCreateLead, 
   useDeleteLead,
   useConvertLead,
-  useConvertLeadToDeal,
 } from '../hooks';
 import type { LeadFilters as LeadFiltersType, CreateLeadData, Lead } from '../types';
 import { toaster } from '../components/ui/toaster';
@@ -45,25 +44,11 @@ export const LeadsPage = () => {
   const { data, isLoading: leadsLoading, error } = useLeads(filters);
   const leads = data?.results ?? [];
   const { data: stats } = useLeadStats();
-  
-  // Check if organization is missing
-  if (!activeOrganizationId) {
-    return (
-      <DashboardLayout title="Leads">
-        <ErrorState
-          title="Organization Required"
-          error={new Error("Please select an active profile with an organization to view leads.")}
-          onRetry={() => window.location.reload()}
-        />
-      </DashboardLayout>
-    );
-  }
 
   // Mutations
   const createLead = useCreateLead();
   const deleteLead = useDeleteLead();
   const convertLead = useConvertLead();
-  const convertLeadToDeal = useConvertLeadToDeal();
 
   const handleCreateLead = (data: CreateLeadData) => {
     console.log('🚀 Creating lead with data:', data);
@@ -225,80 +210,40 @@ export const LeadsPage = () => {
     setLeadsToBulkDelete([]);
   };
 
-  const handleBulkConvertToDeal = async (leadIds: string[]) => {
+  const handleBulkExport = (leadIds: string[]) => {
     if (leadIds.length === 0) return;
 
     const selectedLeads = leads.filter(lead => leadIds.includes(lead.id.toString()));
 
     if (selectedLeads.length === 0) {
       toaster.create({
-        title: 'Conversion unavailable',
-        description: 'No matching leads found. Please refresh and try again.',
+        title: 'Export unavailable',
+        description: 'No matching leads found for export. Please refresh and try again.',
         type: 'warning',
       });
       return;
     }
 
-    // Filter out already converted leads
-    const unconvertedLeads = selectedLeads.filter(lead => !lead.is_converted);
-    
-    if (unconvertedLeads.length === 0) {
-      toaster.create({
-        title: 'No leads to convert',
-        description: 'All selected leads have already been converted.',
-        type: 'warning',
-      });
-      return;
-    }
+    const exportableRows = selectedLeads.map((lead) => ({
+      ID: lead.id,
+      Name: lead.name,
+      Email: lead.email,
+      Phone: lead.phone || '',
+      Organization: lead.organization_name || '',
+      Status: lead.qualification_status,
+      Score: lead.lead_score,
+      Source: lead.source,
+      'Estimated Value': lead.estimated_value ?? '',
+      'Created At': lead.created_at,
+    }));
 
-    if (unconvertedLeads.length < selectedLeads.length) {
-      toaster.create({
-        title: 'Some leads already converted',
-        description: `Converting ${unconvertedLeads.length} of ${selectedLeads.length} selected leads.`,
-        type: 'info',
-      });
-    }
+    exportData(exportableRows, 'leads', 'csv');
 
-    try {
-      // Convert leads to deals in parallel
-      const results = await Promise.allSettled(
-        unconvertedLeads.map(lead =>
-          convertLeadToDeal.mutateAsync({
-            id: lead.id,
-            data: {
-              deal_title: `Deal for ${lead.name}`,
-              deal_value: lead.estimated_value,
-              description: lead.notes,
-            },
-          })
-        )
-      );
-
-      const successful = results.filter(r => r.status === 'fulfilled').length;
-      const failed = results.filter(r => r.status === 'rejected').length;
-
-      if (successful > 0) {
-        toaster.create({
-          title: 'Leads converted successfully',
-          description: `${successful} lead(s) converted to deals${failed > 0 ? `, ${failed} failed` : ''}.`,
-          type: 'success',
-        });
-      }
-
-      if (failed > 0) {
-        toaster.create({
-          title: 'Some conversions failed',
-          description: `${failed} lead(s) could not be converted. Please try again.`,
-          type: 'error',
-        });
-      }
-    } catch (error) {
-      toaster.create({
-        title: 'Conversion failed',
-        description: 'Failed to convert leads to deals. Please try again.',
-        type: 'error',
-      });
-    }
+    toaster.create({
+      title: 'Export complete',
+      description: `${selectedLeads.length} lead(s) exported successfully.`,
+      type: 'success',
+    });
   };
 
   if (error) {
@@ -364,7 +309,7 @@ export const LeadsPage = () => {
                 onDelete={handleDeleteLead}
                 onConvert={handleConvertLead}
                 onBulkDelete={handleBulkDelete}
-                onBulkConvertToDeal={handleBulkConvertToDeal}
+                onBulkExport={handleBulkExport}
               />
             ) : (
               <Box
