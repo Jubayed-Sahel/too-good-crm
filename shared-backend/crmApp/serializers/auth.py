@@ -37,7 +37,11 @@ class UserSerializer(serializers.ModelSerializer):
     def get_profiles(self, obj):
         """Get all active user profiles"""
         try:
-            profiles = obj.user_profiles.filter(status='active').select_related('organization')
+            from crmApp.models import UserOrganization
+            # Prefetch organization and user organizations for efficient lookups
+            profiles = obj.user_profiles.filter(status='active').select_related('organization').prefetch_related(
+                'user__user_organizations__organization'
+            )
             return UserProfileSerializer(profiles, many=True).data
         except Exception as e:
             import logging
@@ -73,7 +77,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profiles (multi-tenancy)"""
     profile_type_display = serializers.CharField(source='get_profile_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    organization_name = serializers.CharField(source='organization.name', read_only=True)
+    organization_name = serializers.SerializerMethodField()
     user_email = serializers.CharField(source='user.email', read_only=True)
     roles = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
@@ -88,9 +92,85 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
     
+    def get_organization_name(self, obj):
+        """Get organization name for the profile"""
+        from crmApp.models import UserOrganization
+        
+        # Customer profiles always show "Independent Customer" (they don't belong to a specific org)
+        if obj.profile_type == 'customer':
+            return "Independent Customer"
+        
+        # For vendor profiles: Show the organization they OWN
+        if obj.profile_type == 'vendor':
+            # First check UserOrganization where user is owner (source of truth for ownership)
+            user_org = UserOrganization.objects.filter(
+                user=obj.user,
+                is_owner=True,
+                is_active=True
+            ).select_related('organization').first()
+            
+            if user_org and user_org.organization:
+                return user_org.organization.name
+            
+            # Fallback to profile.organization if set
+            if obj.organization:
+                return obj.organization.name
+        
+        # For employee profiles: Show the organization they WORK FOR
+        if obj.profile_type == 'employee':
+            from crmApp.models import Employee
+            # Employee record is the source of truth for which organization they work for
+            try:
+                employee = Employee.objects.filter(
+                    user=obj.user,
+                    status='active'
+                ).select_related('organization').first()
+                
+                if employee and employee.organization:
+                    return employee.organization.name
+            except Employee.DoesNotExist:
+                pass
+            
+            # Fallback to profile.organization if set
+            if obj.organization:
+                return obj.organization.name
+        
+        # For other profile types without organization, return None
+        return None
+    
     def get_roles(self, obj):
         """Get user's roles for this organization"""
-        from crmApp.models import UserRole, Employee
+        from crmApp.models import UserRole, Employee, UserOrganization
+        
+        # Get the organization for this profile
+        organization = obj.organization
+        
+        # For vendor profiles, get organization from UserOrganization if not set on profile
+        if obj.profile_type == 'vendor' and not organization:
+            user_org = UserOrganization.objects.filter(
+                user=obj.user,
+                is_owner=True,
+                is_active=True
+            ).select_related('organization').first()
+            
+            if user_org:
+                organization = user_org.organization
+        
+        # For employee profiles, get organization from Employee record if not set on profile
+        if obj.profile_type == 'employee' and not organization:
+            try:
+                employee = Employee.objects.filter(
+                    user=obj.user,
+                    status='active'
+                ).select_related('organization').first()
+                
+                if employee:
+                    organization = employee.organization
+            except Employee.DoesNotExist:
+                pass
+        
+        if not organization:
+            return []
         
         roles = []
         
@@ -99,7 +179,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             try:
                 employee = Employee.objects.get(
                     user=obj.user,
-                    organization=obj.organization,
+                    organization=organization,
                     status='active'
                 )
                 if employee.role:
@@ -115,7 +195,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         # Get additional UserRole assignments
         user_roles = UserRole.objects.filter(
             user=obj.user,
-            organization=obj.organization,
+            organization=organization,
             is_active=True
         ).select_related('role')
         
@@ -133,9 +213,26 @@ class UserProfileSerializer(serializers.ModelSerializer):
         """Check if user is owner of this organization"""
         from crmApp.models import UserOrganization
         
+        # Get the organization for this profile
+        organization = obj.organization
+        
+        # For vendor profiles, get organization from UserOrganization if not set on profile
+        if obj.profile_type == 'vendor' and not organization:
+            user_org = UserOrganization.objects.filter(
+                user=obj.user,
+                is_owner=True,
+                is_active=True
+            ).select_related('organization').first()
+            
+            if user_org:
+                organization = user_org.organization
+        
+        if not organization:
+            return False
+        
         return UserOrganization.objects.filter(
             user=obj.user,
-            organization=obj.organization,
+            organization=organization,
             is_owner=True,
             is_active=True
         ).exists()
