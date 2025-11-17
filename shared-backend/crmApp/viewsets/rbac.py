@@ -232,7 +232,7 @@ class RoleViewSet(viewsets.ModelViewSet):
         return RoleSerializer
     
     def get_queryset(self):
-        """Filter roles by organization"""
+        """Filter roles by organization and query parameters"""
         try:
             user_orgs = self.request.user.user_organizations.filter(
                 is_active=True
@@ -240,11 +240,48 @@ class RoleViewSet(viewsets.ModelViewSet):
             
             # If user has no organizations, return empty queryset
             if not user_orgs:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"User {self.request.user.email} has no active organizations")
                 return Role.objects.none()
             
-            return Role.objects.filter(
+            queryset = Role.objects.filter(
                 organization_id__in=user_orgs
             ).prefetch_related('role_permissions__permission')
+            
+            # Filter by is_active if provided in query params
+            is_active_param = self.request.query_params.get('is_active')
+            if is_active_param is not None:
+                is_active = is_active_param.lower() in ('true', '1', 'yes')
+                queryset = queryset.filter(is_active=is_active)
+            
+            # Filter by organization if provided in query params (for specific org filtering)
+            org_param = self.request.query_params.get('organization')
+            if org_param:
+                try:
+                    org_id = int(org_param)
+                    # Only filter if the org_id is in user's accessible orgs
+                    if org_id in user_orgs:
+                        queryset = queryset.filter(organization_id=org_id)
+                except (ValueError, TypeError):
+                    pass  # Ignore invalid org_id
+            
+            # Search filter if provided
+            search_param = self.request.query_params.get('search')
+            if search_param:
+                queryset = queryset.filter(
+                    name__icontains=search_param
+                ) | queryset.filter(
+                    description__icontains=search_param
+                )
+            
+            # Debug logging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.debug(f"User {self.request.user.email} has access to organizations: {list(user_orgs)}")
+            logger.debug(f"Found {queryset.count()} roles for user")
+            
+            return queryset
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
@@ -262,7 +299,6 @@ class RoleViewSet(viewsets.ModelViewSet):
         
         # Auto-generate slug from name
         from django.utils.text import slugify
-        import uuid
         name = serializer.validated_data.get('name')
         base_slug = slugify(name)
         slug = base_slug
@@ -276,26 +312,43 @@ class RoleViewSet(viewsets.ModelViewSet):
             slug = f"{base_slug}-{counter}"
             counter += 1
         
-        serializer.save(
-            organization=user_org.organization,
-            slug=slug
-        )
+        # Add organization and slug to validated_data so they're available in create()
+        serializer.validated_data['organization'] = user_org.organization
+        serializer.validated_data['slug'] = slug
+        
+        serializer.save()
     
     def create(self, request, *args, **kwargs):
         """Override create to return full role object"""
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        
-        # Return full role using RoleSerializer
-        role = serializer.instance
-        response_serializer = RoleSerializer(role)
-        headers = self.get_success_headers(response_serializer.data)
-        return Response(
-            response_serializer.data,
-            status=status.HTTP_201_CREATED,
-            headers=headers
-        )
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            
+            # Return full role using RoleSerializer
+            role = serializer.instance
+            response_serializer = RoleSerializer(role)
+            headers = self.get_success_headers(response_serializer.data)
+            return Response(
+                response_serializer.data,
+                status=status.HTTP_201_CREATED,
+                headers=headers
+            )
+        except ValueError as e:
+            # Handle organization-related errors
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            # Handle any other unexpected errors
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error creating role: {str(e)}", exc_info=True)
+            return Response(
+                {'error': f'Failed to create role: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
     @action(detail=True, methods=['post'])
     def assign_permission(self, request, pk=None):
@@ -359,7 +412,41 @@ class RoleViewSet(viewsets.ModelViewSet):
         Update all permissions for a role at once.
         Replaces existing permissions with new set.
         """
-        role = self.get_object()
+        try:
+            role = self.get_object()
+        except Exception as e:
+            # If get_object fails, provide more helpful error message
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error getting role {pk} for update_permissions: {str(e)}")
+            
+            # Check if role exists at all
+            try:
+                role_exists = Role.objects.filter(id=pk).exists()
+                if role_exists:
+                    # Role exists but user doesn't have access
+                    user_orgs = self.request.user.user_organizations.filter(
+                        is_active=True
+                    ).values_list('organization_id', flat=True)
+                    role_org = Role.objects.filter(id=pk).values_list('organization_id', flat=True).first()
+                    
+                    return Response(
+                        {
+                            'error': 'Role not found or you do not have access to it',
+                            'detail': f'The role exists but does not belong to your organization(s): {list(user_orgs)}. Role belongs to organization: {role_org}'
+                        },
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            except Exception:
+                pass
+            
+            return Response(
+                {
+                    'error': 'Role not found',
+                    'detail': 'The role does not exist or you do not have access to it.'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
         permission_ids = request.data.get('permission_ids', [])
         
         if not isinstance(permission_ids, list):
@@ -368,22 +455,52 @@ class RoleViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Validate that all permission IDs are valid integers
+        try:
+            permission_ids = [int(pid) for pid in permission_ids if pid is not None]
+        except (ValueError, TypeError) as e:
+            return Response(
+                {'error': f'Invalid permission_ids format: {str(e)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if all permission IDs belong to the role's organization
+        if permission_ids:
+            valid_permissions = Permission.objects.filter(
+                id__in=permission_ids,
+                organization=role.organization
+            )
+            valid_permission_ids = set(valid_permissions.values_list('id', flat=True))
+            invalid_ids = set(permission_ids) - valid_permission_ids
+            
+            if invalid_ids:
+                return Response(
+                    {
+                        'error': f'Some permission IDs do not belong to this organization: {list(invalid_ids)}',
+                        'invalid_ids': list(invalid_ids)
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
         # Remove all existing permissions
         RolePermission.objects.filter(role=role).delete()
         
         # Add new permissions
-        permissions = Permission.objects.filter(
-            id__in=permission_ids,
-            organization=role.organization
-        )
-        
-        created_count = 0
-        for permission in permissions:
-            RolePermission.objects.create(
-                role=role,
-                permission=permission
+        if permission_ids:
+            permissions = Permission.objects.filter(
+                id__in=permission_ids,
+                organization=role.organization
             )
-            created_count += 1
+            
+            created_count = 0
+            for permission in permissions:
+                RolePermission.objects.create(
+                    role=role,
+                    permission=permission
+                )
+                created_count += 1
+        else:
+            created_count = 0
         
         return Response({
             'message': f'Updated {created_count} permissions for role.',
@@ -393,7 +510,41 @@ class RoleViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def permissions(self, request, pk=None):
         """Get all permissions for this role"""
-        role = self.get_object()
+        try:
+            role = self.get_object()
+        except Exception as e:
+            # If get_object fails, provide more helpful error message
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error getting role {pk} for permissions: {str(e)}")
+            
+            # Check if role exists at all
+            try:
+                role_exists = Role.objects.filter(id=pk).exists()
+                if role_exists:
+                    # Role exists but user doesn't have access
+                    user_orgs = self.request.user.user_organizations.filter(
+                        is_active=True
+                    ).values_list('organization_id', flat=True)
+                    role_org = Role.objects.filter(id=pk).values_list('organization_id', flat=True).first()
+                    
+                    return Response(
+                        {
+                            'error': 'Role not found or you do not have access to it',
+                            'detail': f'The role exists but does not belong to your organization(s): {list(user_orgs)}. Role belongs to organization: {role_org}'
+                        },
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            except Exception:
+                pass
+            
+            return Response(
+                {
+                    'error': 'Role not found',
+                    'detail': 'The role does not exist or you do not have access to it.'
+                },
+                status=status.HTTP_404_NOT_FOUND
+            )
         permissions = Permission.objects.filter(
             role_permissions__role=role
         )

@@ -22,18 +22,24 @@ class RoleSerializer(serializers.ModelSerializer):
     """Full role serializer with permissions"""
     permissions = PermissionSerializer(many=True, read_only=True, source='role_permissions.permission')
     permission_count = serializers.SerializerMethodField()
+    user_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Role
         fields = [
             'id', 'organization', 'name', 'slug', 'description',
             'is_system_role', 'is_active', 'created_at', 'updated_at',
-            'permissions', 'permission_count'
+            'permissions', 'permission_count', 'user_count'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
     
     def get_permission_count(self, obj):
         return obj.role_permissions.count()
+    
+    def get_user_count(self, obj):
+        """Count employees assigned to this role"""
+        from crmApp.models import Employee
+        return Employee.objects.filter(role=obj, status='active').count()
 
 
 class RoleCreateSerializer(serializers.ModelSerializer):
@@ -53,7 +59,7 @@ class RoleCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         permission_ids = validated_data.pop('permission_ids', [])
         
-        # organization and slug are passed from perform_create via serializer.save()
+        # organization and slug are added to validated_data in perform_create
         role = Role.objects.create(**validated_data)
         
         # Assign permissions

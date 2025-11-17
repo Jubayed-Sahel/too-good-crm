@@ -3,7 +3,7 @@ Employee related serializers
 """
 
 from rest_framework import serializers
-from crmApp.models import Employee, UserProfile
+from crmApp.models import Employee, UserProfile, Role
 from .auth import UserSerializer, UserProfileSerializer
 
 
@@ -34,11 +34,65 @@ class EmployeeSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     user_profile = UserProfileSerializer(read_only=True)
     manager = EmployeeListSerializer(read_only=True)
+    # Define role field with default queryset - will be refined in __init__ for write operations
+    role = serializers.PrimaryKeyRelatedField(
+        queryset=Role.objects.all(),  # Default queryset, refined in __init__ for write operations
+        required=False,
+        allow_null=True
+    )
     role_name = serializers.CharField(source='role.name', read_only=True)
     full_name = serializers.SerializerMethodField()
     employment_type_display = serializers.CharField(source='get_employment_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)  # Alias for frontend compatibility
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Now refine the queryset for write operations only
+        if 'role' not in self.fields:
+            return
+        
+        # Check if this is a write operation (has data in kwargs or first arg is dict)
+        has_data = 'data' in kwargs or (args and len(args) > 0 and isinstance(args[0], dict))
+        
+        # Only modify queryset for write operations
+        # For read operations, the default queryset is fine
+        if not has_data:
+            # This is a read operation - default queryset is sufficient
+            return
+        
+        try:
+            if self.instance:
+                # For updates, filter by employee's organization
+                if hasattr(self.instance, 'organization') and self.instance.organization:
+                    self.fields['role'].queryset = Role.objects.filter(
+                        organization=self.instance.organization
+                    )
+            else:
+                # For creates, try to get organization from context
+                organization = None
+                try:
+                    if hasattr(self, 'context') and self.context and isinstance(self.context, dict) and 'request' in self.context:
+                        request = self.context.get('request')
+                        if request and hasattr(request, 'user'):
+                            # Try to get organization from request user's active profile
+                            if hasattr(request.user, 'current_organization') and request.user.current_organization:
+                                organization = request.user.current_organization
+                            elif hasattr(request.user, 'active_profile') and request.user.active_profile:
+                                organization = request.user.active_profile.organization
+                except (AttributeError, KeyError, TypeError):
+                    # If any error occurs accessing context, just use fallback
+                    pass
+                
+                if organization:
+                    self.fields['role'].queryset = Role.objects.filter(organization=organization)
+        except Exception as e:
+            # If anything goes wrong, log it but don't break
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error setting role queryset in EmployeeSerializer: {str(e)}")
+            # Keep default queryset
     
     class Meta:
         model = Employee

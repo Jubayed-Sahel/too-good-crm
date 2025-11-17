@@ -118,9 +118,36 @@ export const ManagePermissionsDialog = ({
       onClose();
     } catch (error: any) {
       console.error('Error updating permissions:', error);
+      
+      // Extract error message from various possible error formats
+      let errorMessage = 'An error occurred while updating permissions';
+      
+      // Check for APIError format (from apiClient interceptor)
+      if (error?.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      } else if (error?.response?.data) {
+        // Axios error with response
+        const errorData = error.response.data;
+        errorMessage = errorData.error || errorData.message || errorData.details || errorMessage;
+      } else if (error?.message) {
+        // Standard error object
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        // String error
+        errorMessage = error;
+      }
+      
+      // If error has details/errors object, try to extract more specific info
+      if (error?.errors && typeof error.errors === 'object') {
+        const errorDetails = Object.values(error.errors).flat().join(', ');
+        if (errorDetails) {
+          errorMessage = `${errorMessage}: ${errorDetails}`;
+        }
+      }
+      
       toaster.create({
         title: 'Failed to Update Permissions',
-        description: error.message || 'An error occurred',
+        description: errorMessage,
         type: 'error',
       });
     } finally {

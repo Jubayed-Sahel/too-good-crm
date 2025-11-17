@@ -269,7 +269,7 @@ export const RolesTab = () => {
                   <HStack gap={1}>
                     <FiUsers size={14} color="#718096" />
                     <Text fontSize="xs" color="gray.600">
-                      0 members
+                      {role.user_count || 0} {role.user_count === 1 ? 'member' : 'members'}
                     </Text>
                   </HStack>
                   <StandardButton

@@ -3,6 +3,7 @@
  * Handles organization API calls
  */
 import api from '@/lib/apiClient';
+import { API_CONFIG } from '@/config/api.config';
 
 export interface Organization {
   id: number;
@@ -66,20 +67,18 @@ export interface CreateOrganizationData {
 }
 
 class OrganizationService {
-  private readonly baseUrl = '/organizations';
-
   /**
    * Get all organizations for current user
    */
   async getOrganizations(): Promise<Organization[]> {
-    return api.get<Organization[]>(this.baseUrl);
+    return api.get<Organization[]>(API_CONFIG.ENDPOINTS.ORGANIZATIONS.LIST);
   }
 
   /**
    * Get user's organizations
    */
   async getMyOrganizations(): Promise<Organization[]> {
-    return api.get<Organization[]>(`${this.baseUrl}/my_organizations/`);
+    return api.get<Organization[]>(API_CONFIG.ENDPOINTS.ORGANIZATIONS.MY_ORGANIZATIONS);
   }
 
   /**
@@ -97,24 +96,21 @@ class OrganizationService {
    * Get single organization
    */
   async getOrganization(id: number | string): Promise<Organization> {
-    const organizationId = typeof id === 'string' ? parseInt(id, 10) : id;
-    return api.get<Organization>(`${this.baseUrl}/${organizationId}/`);
+    return api.get<Organization>(API_CONFIG.ENDPOINTS.ORGANIZATIONS.DETAIL(id));
   }
 
   /**
    * Update organization
    */
   async updateOrganization(id: number | string, data: UpdateOrganizationData): Promise<Organization> {
-    const organizationId = typeof id === 'string' ? parseInt(id, 10) : id;
-    return api.patch<Organization>(`${this.baseUrl}/${organizationId}/`, data);
+    return api.patch<Organization>(API_CONFIG.ENDPOINTS.ORGANIZATIONS.DETAIL(id), data);
   }
 
   /**
    * Get organization members
    */
   async getMembers(organizationId: number | string): Promise<any[]> {
-    const orgId = typeof organizationId === 'string' ? parseInt(organizationId, 10) : organizationId;
-    return api.get<any[]>(`${this.baseUrl}/${orgId}/members/`);
+    return api.get<any[]>(API_CONFIG.ENDPOINTS.ORGANIZATIONS.MEMBERS(organizationId));
   }
 
   /**
@@ -135,7 +131,7 @@ class OrganizationService {
    * Create new organization
    */
   async createOrganization(data: CreateOrganizationData): Promise<Organization> {
-    return api.post<Organization>(`${this.baseUrl}/`, data);
+    return api.post<Organization>(API_CONFIG.ENDPOINTS.ORGANIZATIONS.LIST, data);
   }
 
   /**
@@ -150,8 +146,7 @@ class OrganizationService {
    * Invite user to organization
    */
   async inviteUser(organizationId: number | string, data: { email: string; role?: string }): Promise<any> {
-    const orgId = typeof organizationId === 'string' ? parseInt(organizationId, 10) : organizationId;
-    return api.post<any>(`${this.baseUrl}/${orgId}/add_member/`, data);
+    return api.post<any>(API_CONFIG.ENDPOINTS.ORGANIZATIONS.ADD_MEMBER(organizationId), data);
   }
 }
 
