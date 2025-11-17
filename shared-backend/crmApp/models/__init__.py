@@ -45,7 +45,7 @@ from .call import Call
 # from .jitsi_call import JitsiCallSession, UserPresence
 
 # Lead model
-from .lead import Lead
+from .lead import Lead, LeadStageHistory
 
 # Deal models
 from .deal import (
@@ -101,6 +101,7 @@ __all__ = [
     # 'JitsiCallSession',
     # 'UserPresence',
     'Lead',
+    'LeadStageHistory',
     'Deal',
     'Pipeline',
     'PipelineStage',

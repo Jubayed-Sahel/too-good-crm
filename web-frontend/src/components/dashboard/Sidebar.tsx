@@ -105,8 +105,6 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiHome, label: 'Dashboard', path: '/dashboard', alwaysShow: true },
     { icon: FiUsers, label: 'Customers', path: '/customers', resource: CRM_RESOURCES.CUSTOMERS, action: 'read' },
     { icon: FiTrendingUp, label: 'Sales', path: '/sales', resource: CRM_RESOURCES.DEALS, action: 'read' },
-    { icon: FiFileText, label: 'Deals', path: '/deals', resource: CRM_RESOURCES.DEALS, action: 'read' },
-    { icon: FiUserPlus, label: 'Leads', path: '/leads', resource: CRM_RESOURCES.LEADS, action: 'read' },
     { icon: FiActivity, label: 'Activities', path: '/activities', resource: CRM_RESOURCES.ACTIVITIES, action: 'read' },
     { icon: FiAlertCircle, label: 'Issues', path: '/issues', resource: CRM_RESOURCES.ISSUES, action: 'read' },
     { icon: FiBarChart2, label: 'Analytics', path: '/analytics', resource: CRM_RESOURCES.ANALYTICS, action: 'read' },

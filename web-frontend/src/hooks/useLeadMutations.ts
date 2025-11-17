@@ -159,6 +159,41 @@ export function useConvertLead() {
 }
 
 /**
+ * Convert Lead to Deal Mutation
+ * Converts lead to deal and moves to a specific stage
+ */
+export function useConvertLeadToDeal() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, stageKey, stageId }: { id: string | number; stageKey: string; stageId?: number }) =>
+      leadService.convertLeadToDeal(id, stageKey, stageId),
+    onSuccess: (response) => {
+      const lead = response.lead;
+      toaster.create({
+        title: 'Lead converted to deal',
+        description: response.message || `Lead "${lead.name || lead.organization_name}" has been converted to a deal.`,
+        type: 'success',
+      });
+      
+      // Invalidate leads, deals, and customers
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['leadStats'] });
+    },
+    onError: (error: any) => {
+      toaster.create({
+        title: 'Error converting lead to deal',
+        description: error.response?.data?.error || error.response?.data?.detail || 'Failed to convert lead to deal.',
+        type: 'error',
+      });
+    },
+  });
+}
+
+/**
  * Qualify Lead Mutation
  * Marks lead as qualified
  */

@@ -14,6 +14,7 @@ class PermissionCheckMixin:
     def get_organization_from_request(self, request, instance=None):
         """
         Get organization from request user's active profile or instance.
+        Queries database directly to ensure organization is loaded.
         
         Args:
             request: The request object
@@ -25,6 +26,30 @@ class PermissionCheckMixin:
         if instance and hasattr(instance, 'organization'):
             return instance.organization
         
+        # Query database directly for active profile to ensure organization is loaded
+        from crmApp.models import UserProfile
+        try:
+            active_profile = UserProfile.objects.filter(
+                user=request.user,
+                status='active',
+                is_primary=True
+            ).select_related('organization').first()
+            
+            if not active_profile:
+                # Try any active profile if no primary
+                active_profile = UserProfile.objects.filter(
+                    user=request.user,
+                    status='active'
+                ).select_related('organization').first()
+            
+            if active_profile and active_profile.organization:
+                return active_profile.organization
+        except Exception:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error getting organization from request for user {request.user.id}", exc_info=True)
+        
+        # Fallback to request.user attributes if available
         if hasattr(request.user, 'current_organization') and request.user.current_organization:
             return request.user.current_organization
         

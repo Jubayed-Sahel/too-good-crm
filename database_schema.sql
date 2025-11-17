@@ -429,6 +429,7 @@ CREATE TABLE leads (
     country VARCHAR(100),
     postal_code VARCHAR(20),
     assigned_employee_id INT,
+    stage_id INT,
     converted_to_customer_id INT,
     converted_at TIMESTAMP NULL,
     notes TEXT,
@@ -436,8 +437,31 @@ CREATE TABLE leads (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
     FOREIGN KEY (assigned_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
+    FOREIGN KEY (stage_id) REFERENCES pipeline_stages(id) ON DELETE SET NULL,
     FOREIGN KEY (converted_to_customer_id) REFERENCES customers(id) ON DELETE SET NULL,
     UNIQUE KEY unique_org_lead_code (organization_id, lead_code)
+);
+
+-- Lead Stage History Table
+-- Tracks which vendor/organization the lead belongs to and stage transitions
+CREATE TABLE lead_stage_history (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    lead_id INT NOT NULL,
+    organization_id INT NOT NULL,
+    stage_id INT,
+    previous_stage_id INT,
+    changed_by_employee_id INT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (lead_id) REFERENCES leads(id) ON DELETE CASCADE,
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+    FOREIGN KEY (stage_id) REFERENCES pipeline_stages(id) ON DELETE SET NULL,
+    FOREIGN KEY (previous_stage_id) REFERENCES pipeline_stages(id) ON DELETE SET NULL,
+    FOREIGN KEY (changed_by_employee_id) REFERENCES employees(id) ON DELETE SET NULL,
+    INDEX idx_lead_created (lead_id, created_at DESC),
+    INDEX idx_org_stage (organization_id, stage_id),
+    INDEX idx_org_created (organization_id, created_at DESC)
 );
 
 -- Accounts Table
@@ -838,6 +862,8 @@ CREATE INDEX idx_leads_org ON leads(organization_id);
 CREATE INDEX idx_leads_email ON leads(email);
 CREATE INDEX idx_leads_status ON leads(status);
 CREATE INDEX idx_leads_assigned ON leads(assigned_employee_id);
+CREATE INDEX idx_leads_org_stage ON leads(organization_id, stage_id);
+CREATE INDEX idx_leads_stage_org ON leads(stage_id, organization_id);
 
 CREATE INDEX idx_accounts_org ON accounts(organization_id);
 CREATE INDEX idx_accounts_type ON accounts(account_type);
