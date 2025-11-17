@@ -2,11 +2,12 @@
  * Employee Welcome Banner
  * Tailored welcome message for employees with permission-aware actions
  */
-import { Box, Heading, Text, Flex, VStack, HStack, Button } from '@chakra-ui/react';
+import { Box, Heading, Text, Flex, VStack, HStack, Button, Badge } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { FiPlus, FiTrendingUp, FiUsers, FiFileText, FiUserPlus } from 'react-icons/fi';
+import { FiPlus, FiTrendingUp, FiUsers, FiFileText, FiUserPlus, FiBriefcase } from 'react-icons/fi';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { usePermissionActions } from '@/hooks/usePermissionActions';
+import { useProfile } from '@/contexts/ProfileContext';
 
 // CSS keyframes as strings
 const gradientShiftKeyframes = `
@@ -47,12 +48,16 @@ if (typeof document !== 'undefined') {
 export const EmployeeWelcomeBanner = () => {
   const navigate = useNavigate();
   const { canAccess } = usePermissions();
+  const { activeProfile } = useProfile();
   const dealsPermissions = usePermissionActions('deals');
   const leadsPermissions = usePermissionActions('leads');
   const customersPermissions = usePermissionActions('customers');
   
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 18 ? 'Good Afternoon' : 'Good Evening';
+  
+  // Get organization name from active profile
+  const organizationName = activeProfile?.organization_name || 'Your Organization';
 
   const quickActions = [
     {
@@ -134,7 +139,26 @@ export const EmployeeWelcomeBanner = () => {
           <Heading size={{ base: 'xl', md: '2xl' }} fontWeight="bold">
             Welcome to Your Workspace
           </Heading>
-          <Text fontSize={{ base: 'md', md: 'lg' }} opacity={0.95} maxW="600px">
+          {/* Organization/Vendor Name Display */}
+          {organizationName && (
+            <HStack gap={2} mt={1}>
+              <Box color="whiteAlpha.800">
+                <FiBriefcase size={18} />
+              </Box>
+              <Badge 
+                colorPalette="whiteAlpha" 
+                variant="solid"
+                px={3}
+                py={1}
+                borderRadius="md"
+                fontSize="sm"
+                fontWeight="semibold"
+              >
+                {organizationName}
+              </Badge>
+            </HStack>
+          )}
+          <Text fontSize={{ base: 'md', md: 'lg' }} opacity={0.95} maxW="600px" mt={organizationName ? 1 : 0}>
             Manage your assigned work, track your progress, and collaborate with your team
           </Text>
         </VStack>

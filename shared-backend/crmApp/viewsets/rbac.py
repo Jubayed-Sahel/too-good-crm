@@ -507,6 +507,80 @@ class RoleViewSet(viewsets.ModelViewSet):
             'permission_count': created_count
         })
     
+    @action(detail=False, methods=['post'])
+    @transaction.atomic
+    def ensure_all_roles_have_permissions(self, request):
+        """
+        Ensure all roles in the user's organization have at least basic permissions.
+        This is a bulk operation to assign default permissions to roles without any.
+        """
+        user_orgs = request.user.user_organizations.filter(
+            is_active=True
+        ).values_list('organization_id', flat=True)
+
+        if not user_orgs:
+            return Response(
+                {'error': 'User must belong to an organization'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        roles = Role.objects.filter(
+            organization_id__in=user_orgs,
+            is_active=True
+        ).prefetch_related('role_permissions')
+
+        roles_without_permissions = [
+            role for role in roles 
+            if role.role_permissions.count() == 0
+        ]
+
+        if not roles_without_permissions:
+            return Response({
+                'message': 'All roles already have permissions assigned',
+                'roles_updated': 0
+            })
+
+        # Default basic permissions
+        basic_resources = ['customers', 'deals', 'leads', 'activities']
+        basic_actions = ['read', 'create', 'update']
+
+        total_permissions_assigned = 0
+        roles_updated = []
+
+        for role in roles_without_permissions:
+            org = role.organization
+            permissions_assigned = 0
+
+            for resource in basic_resources:
+                for action in basic_actions:
+                    permission = Permission.objects.filter(
+                        organization=org,
+                        resource=resource,
+                        action=action
+                    ).first()
+
+                    if permission:
+                        role_perm, created = RolePermission.objects.get_or_create(
+                            role=role,
+                            permission=permission
+                        )
+                        if created:
+                            permissions_assigned += 1
+
+            total_permissions_assigned += permissions_assigned
+            roles_updated.append({
+                'role_id': role.id,
+                'role_name': role.name,
+                'permissions_assigned': permissions_assigned
+            })
+
+        return Response({
+            'message': f'Assigned permissions to {len(roles_without_permissions)} role(s)',
+            'roles_updated': len(roles_without_permissions),
+            'total_permissions_assigned': total_permissions_assigned,
+            'details': roles_updated
+        })
+
     @action(detail=True, methods=['get'])
     def permissions(self, request, pk=None):
         """Get all permissions for this role"""
@@ -853,3 +927,61 @@ class UserRoleViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(roles, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def user_permissions(self, request):
+        """
+        Get all permissions for a user in an organization.
+        Uses RBACService.get_user_permissions for proper permission calculation.
+        
+        Query params:
+            - user_id (required): User ID
+            - organization_id (required): Organization ID
+        
+        Returns:
+            {
+                "permissions": [
+                    {"id": 1, "resource": "customers", "action": "read", "description": "..."},
+                    ...
+                ],
+                "roles": [...]
+            }
+        """
+        user_id = request.query_params.get('user_id')
+        organization_id = request.query_params.get('organization_id')
+        
+        if not user_id or not organization_id:
+            return Response(
+                {'error': 'user_id and organization_id query parameters are required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from crmApp.models import Organization, User
+            user = User.objects.get(id=user_id)
+            organization = Organization.objects.get(id=organization_id)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Organization.DoesNotExist:
+            return Response(
+                {'error': 'Organization not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get permissions using RBACService
+        permissions = RBACService.get_user_permissions(user, organization)
+        
+        # Get roles for the user
+        roles = RBACService.get_user_roles(user, organization)
+        
+        # Serialize roles
+        from crmApp.serializers import RoleSerializer
+        roles_data = RoleSerializer(roles, many=True).data
+        
+        return Response({
+            'permissions': permissions,
+            'roles': roles_data,
+        })

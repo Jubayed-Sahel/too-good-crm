@@ -9,3 +9,13 @@ export { default as StatCard } from './StatCard';
 export { default as StatsGrid } from './StatsGrid';
 export { default as InfoCard } from './InfoCard';
 export { default as InfoCardsGrid } from './InfoCardsGrid';
+export {
+  LeadsWidget,
+  DealsWidget,
+  CustomersWidget,
+  ActivitiesWidget,
+  TasksWidget,
+  PipelinesWidget,
+  AnalyticsWidget,
+  DashboardWidgetsGrid,
+} from './DashboardWidgets';

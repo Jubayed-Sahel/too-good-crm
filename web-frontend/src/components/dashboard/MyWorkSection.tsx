@@ -32,7 +32,7 @@ export const MyWorkSection = () => {
       subtitle: '$50,000 • Negotiation',
       status: 'active',
       date: '2 days ago',
-      path: '/employee/deals/1',
+      path: '/deals/1',
     }] : []),
     ...(canAccess('leads') ? [{
       id: '2',
@@ -41,7 +41,7 @@ export const MyWorkSection = () => {
       subtitle: 'Qualified • High Priority',
       status: 'new',
       date: '1 day ago',
-      path: '/employee/leads/2',
+      path: '/leads/2',
     }] : []),
     ...(canAccess('customers') ? [{
       id: '3',
@@ -50,7 +50,7 @@ export const MyWorkSection = () => {
       subtitle: 'Needs attention',
       status: 'pending',
       date: '3 days ago',
-      path: '/employee/customers/3',
+      path: '/customers/3',
     }] : []),
     ...(canAccess('activities') ? [{
       id: '4',
@@ -59,7 +59,7 @@ export const MyWorkSection = () => {
       subtitle: 'Tomorrow at 2:00 PM',
       status: 'scheduled',
       date: 'Today',
-      path: '/employee/activities/4',
+      path: '/activities/4',
     }] : []),
   ];
 
@@ -108,7 +108,7 @@ export const MyWorkSection = () => {
           <StandardButton
             variant="ghost"
             size="xs"
-            onClick={() => navigate('/employee/tasks')}
+            onClick={() => navigate('/tasks')}
           >
             View All
             <FiArrowRight style={{ marginLeft: '4px' }} />

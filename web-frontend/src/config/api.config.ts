@@ -117,6 +117,7 @@ export const API_CONFIG = {
       ASSIGN_PERMISSION: (id: number | string) => `/api/roles/${id}/assign_permission/`,
       REMOVE_PERMISSION: (id: number | string) => `/api/roles/${id}/remove_permission/`,
       UPDATE_PERMISSIONS: (id: number | string) => `/api/roles/${id}/update_permissions/`,
+      ENSURE_ALL_HAVE_PERMISSIONS: '/api/roles/ensure_all_roles_have_permissions/',
     },
 
     // RBAC - Permissions
@@ -130,6 +131,7 @@ export const API_CONFIG = {
 
     // RBAC - User Roles
     USER_ROLES: {
+      BASE: '/api/user-roles',
       LIST: '/api/user-roles/',
       DETAIL: (id: number | string) => `/api/user-roles/${id}/`,
       MY_ROLES: '/api/user-roles/my_roles/',
@@ -138,6 +140,7 @@ export const API_CONFIG = {
       BULK_ASSIGN: '/api/user-roles/bulk_assign/',
       BULK_REMOVE: '/api/user-roles/bulk_remove/',
       TOGGLE_ACTIVE: '/api/user-roles/toggle_active/',
+      USER_PERMISSIONS: '/api/user-roles/user_permissions/',
     },
 
     // Activities

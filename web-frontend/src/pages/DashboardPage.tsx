@@ -1,15 +1,23 @@
-import { VStack, Spinner, Box, Text, Heading, Container } from '@chakra-ui/react';
+import { VStack, Spinner, Box, Text, Heading, Container, SimpleGrid } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
   WelcomeBanner,
   StatsGrid,
   InfoCardsGrid,
 } from '../components/dashboard';
+import { DashboardWidgetsGrid } from '../components/dashboard/DashboardWidgets';
+import { EmployeeWelcomeBanner } from '../components/dashboard/EmployeeWelcomeBanner';
+import { MyWorkSection } from '../components/dashboard/MyWorkSection';
 import { StandardButton } from '../components/common';
 import { useDashboardStats } from '@/hooks';
+import { usePermissions } from '@/contexts/PermissionContext';
+import { useProfile } from '@/contexts/ProfileContext';
 
 const DashboardPage = () => {
   const { stats, isLoading, error } = useDashboardStats();
+  const { canAccess } = usePermissions();
+  const { activeProfile } = useProfile();
+  const isEmployee = activeProfile?.profile_type === 'employee';
 
   if (error) {
     return (
@@ -56,6 +64,73 @@ const DashboardPage = () => {
     );
   }
 
+  // For employees, show employee-specific dashboard with permission checks
+  if (isEmployee) {
+    const { isLoading: permissionsLoading } = usePermissions();
+    const hasAnyResourceAccess = canAccess('deals') || canAccess('leads') || canAccess('customers') || canAccess('activities') || canAccess('analytics');
+
+    // Wait for permissions to load before showing content
+    if (permissionsLoading) {
+      return (
+        <DashboardLayout title="Dashboard">
+          <Box display="flex" alignItems="center" justifyContent="center" minH="400px">
+            <VStack gap={4}>
+              <Spinner size="xl" color="purple.500" />
+              <Text color="gray.600">Loading permissions...</Text>
+            </VStack>
+          </Box>
+        </DashboardLayout>
+      );
+    }
+
+    return (
+      <DashboardLayout title="Dashboard">
+        <VStack gap={5} align="stretch">
+          <EmployeeWelcomeBanner />
+          
+          {/* Stats Grid - Component handles its own permission checks */}
+          <StatsGrid stats={stats || undefined} isLoading={isLoading} />
+
+          {/* Main Content Grid */}
+          <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
+            {/* My Work Section */}
+            <MyWorkSection />
+            
+            {/* Quick Access Cards - Component handles its own permission checks */}
+            {hasAnyResourceAccess ? (
+              <InfoCardsGrid />
+            ) : (
+              <Box p={6} bg="white" borderRadius="xl" borderWidth="1px" borderColor="gray.200">
+                <VStack gap={3} align="center" py={8}>
+                  <Text fontSize="lg" fontWeight="semibold" color="gray.700">
+                    Quick Access
+                  </Text>
+                  <Text fontSize="sm" color="gray.500" textAlign="center">
+                    Your quick access options will appear here based on your assigned role permissions.
+                  </Text>
+                  <Text fontSize="xs" color="gray.400" textAlign="center" mt={2}>
+                    Contact your administrator to assign role permissions.
+                  </Text>
+                </VStack>
+              </Box>
+            )}
+          </SimpleGrid>
+
+          {/* Permission-Aware Dashboard Widgets */}
+          {hasAnyResourceAccess && (
+            <Box>
+              <Heading size="md" mb={4} color="gray.700">
+                Overview
+              </Heading>
+              <DashboardWidgetsGrid />
+            </Box>
+          )}
+        </VStack>
+      </DashboardLayout>
+    );
+  }
+
+  // For vendors, show standard dashboard
   return (
     <DashboardLayout title="Dashboard">
       <VStack gap={5} align="stretch">

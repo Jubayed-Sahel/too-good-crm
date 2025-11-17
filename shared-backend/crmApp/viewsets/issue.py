@@ -180,7 +180,7 @@ class IssueViewSet(
         return IssueSerializer
     
     def perform_create(self, serializer):
-        """Override perform_create to set organization and check permissions"""
+        """Override perform_create to set organization, check permissions, and auto-sync to Linear"""
         organization = self.get_organization_from_request(self.request)
         
         if not organization:
@@ -198,7 +198,7 @@ class IssueViewSet(
                     user=self.request.user,
                     organization=organization
                 )
-                serializer.save(
+                issue = serializer.save(
                     organization_id=organization.id,
                     is_client_issue=True,
                     raised_by_customer=customer
@@ -208,9 +208,46 @@ class IssueViewSet(
                 import logging
                 logger = logging.getLogger(__name__)
                 logger.warning(f"Customer record not found for user {self.request.user.email}")
-                serializer.save(
+                issue = serializer.save(
                     organization_id=organization.id,
                     is_client_issue=True
+                )
+            
+            # Auto-sync to Linear if Linear team ID is configured
+            linear_team_id = organization.linear_team_id
+            if linear_team_id:
+                try:
+                    logger.info(
+                        f"Attempting to auto-sync issue {issue.issue_number} to Linear "
+                        f"(team_id: {linear_team_id}, status: {issue.status})"
+                    )
+                    
+                    # Sync issue to Linear (will map status to state)
+                    success, linear_data, error = self.linear_service.sync_issue_to_linear(
+                        issue=issue,
+                        team_id=linear_team_id,
+                        update_existing=False
+                    )
+                    
+                    if success and linear_data:
+                        logger.info(
+                            f"Issue {issue.issue_number} auto-synced to Linear: {linear_data.get('url', 'N/A')} "
+                            f"(Linear State: {linear_data.get('state', 'N/A')})"
+                        )
+                    else:
+                        logger.warning(
+                            f"Linear sync failed for issue {issue.issue_number}: {error or 'Unknown error'}"
+                        )
+                    
+                except Exception as e:
+                    logger.error(
+                        f"Failed to auto-sync issue {issue.issue_number} to Linear: {str(e)}",
+                        exc_info=True
+                    )
+                    # Don't fail the request if Linear sync fails - issue is still created
+            else:
+                logger.debug(
+                    f"Linear team ID not configured for organization {organization.name} (ID: {organization.id})"
                 )
         else:
             # Vendors and employees are NOT allowed to raise issues
@@ -247,46 +284,82 @@ class IssueViewSet(
         # Refresh instance to get updated data
         instance.refresh_from_db()
         
-        # Sync all changes to Linear if issue is synced
+        # Sync all changes to Linear
         linear_synced = False
+        organization = instance.organization
+        linear_team_id = organization.linear_team_id if organization else None
+        
+        # If issue is already synced, update it
         if instance.synced_to_linear and instance.linear_issue_id:
             try:
-                # Check if any relevant fields changed
-                status_changed = instance.status != old_status
+                # Use IssueLinearService to sync status changes
+                success, error = self.linear_service.sync_issue_status_to_linear(
+                    issue=instance,
+                    old_status=old_status
+                )
+                if success:
+                    linear_synced = True
+                    logger.info(f"Issue {instance.issue_number} status change synced to Linear")
+                elif error:
+                    logger.warning(f"Linear status sync skipped: {error}")
                 
-                # Build update payload for Linear
+                # Also sync other field changes (title, description, priority) if they changed
                 linear_update_data = {}
-                
                 if 'title' in request.data:
                     linear_update_data['title'] = instance.title
                 if 'description' in request.data:
                     linear_update_data['description'] = instance.description
                 if 'priority' in request.data:
                     linear_update_data['priority'] = self.linear_service.linear_service.map_priority_to_linear(instance.priority)
-                if status_changed:
-                    # Map status to Linear state
-                    from crmApp.viewsets.mixins import LinearSyncMixin
-                    mixin = LinearSyncMixin()
-                    state_id = mixin.map_status_to_linear_state(
-                        instance.status, 
-                        self.linear_service.linear_service, 
-                        instance.linear_team_id
-                    )
-                    if state_id:
-                        linear_update_data['stateId'] = state_id
                 
-                # Update Linear if there are changes
+                # Update Linear if there are field changes (other than status)
                 if linear_update_data:
-                    self.linear_service.linear_service.update_issue(
-                        issue_id=instance.linear_issue_id,
-                        **linear_update_data
-                    )
-                    instance.last_synced_at = timezone.now()
-                    instance.save()
-                    linear_synced = True
-                    logger.info(f"Issue {instance.issue_number} changes synced to Linear")
+                    try:
+                        self.linear_service.linear_service.update_issue(
+                            issue_id=instance.linear_issue_id,
+                            **linear_update_data
+                        )
+                        instance.last_synced_at = timezone.now()
+                        instance.save(update_fields=['last_synced_at'])
+                        logger.info(f"Issue {instance.issue_number} field changes synced to Linear")
+                    except Exception as e:
+                        logger.error(f"Failed to sync field changes to Linear: {str(e)}")
+                        
             except Exception as e:
-                logger.error(f"Failed to sync issue changes to Linear: {str(e)}")
+                logger.error(f"Failed to sync issue changes to Linear: {str(e)}", exc_info=True)
+        
+        # If issue is not synced but Linear team ID is configured, sync it now
+        elif linear_team_id and not instance.synced_to_linear:
+            try:
+                logger.info(
+                    f"Attempting to auto-sync issue {instance.issue_number} to Linear "
+                    f"(team_id: {linear_team_id}, status: {instance.status})"
+                )
+                
+                # Sync issue to Linear (will map status to state)
+                success, linear_data, error = self.linear_service.sync_issue_to_linear(
+                    issue=instance,
+                    team_id=linear_team_id,
+                    update_existing=False
+                )
+                
+                if success and linear_data:
+                    linear_synced = True
+                    logger.info(
+                        f"Issue {instance.issue_number} auto-synced to Linear: {linear_data.get('url', 'N/A')} "
+                        f"(Linear State: {linear_data.get('state', 'N/A')})"
+                    )
+                else:
+                    logger.warning(
+                        f"Linear sync failed for issue {instance.issue_number}: {error or 'Unknown error'}"
+                    )
+                    
+            except Exception as e:
+                logger.error(
+                    f"Failed to auto-sync issue {instance.issue_number} to Linear: {str(e)}",
+                    exc_info=True
+                )
+                # Don't fail the request if Linear sync fails
         
         response_serializer = self.get_serializer(instance)
         response_data = response_serializer.data
