@@ -19,6 +19,8 @@ from crmApp.serializers import (
 class OrganizationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Organization management.
+    Only organization owners can update/delete organizations.
+    Employees can only view organizations they belong to.
     """
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
@@ -32,12 +34,80 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         return OrganizationSerializer
     
     def get_queryset(self):
-        """Filter organizations by user membership"""
+        """Filter organizations by user membership or ownership based on profile type"""
         user = self.request.user
+        
+        # Get active profile to determine context
+        from crmApp.models import UserProfile
+        active_profile = UserProfile.objects.filter(
+            user=user,
+            is_primary=True,
+            status='active'
+        ).first()
+        
+        # If user is in vendor profile, only show organizations they OWN
+        if active_profile and active_profile.profile_type == 'vendor':
+            return Organization.objects.filter(
+                user_organizations__user=user,
+                user_organizations__is_owner=True,
+                user_organizations__is_active=True
+            ).distinct()
+        
+        # For employee/customer profiles, show organizations they're a member of
         return Organization.objects.filter(
             user_organizations__user=user,
             user_organizations__is_active=True
         ).distinct()
+    
+    def update(self, request, *args, **kwargs):
+        """Override update to ensure only owners can update organizations"""
+        organization = self.get_object()
+        
+        # Check if user is owner of this organization
+        membership = UserOrganization.objects.filter(
+            organization=organization,
+            user=request.user,
+            is_owner=True,
+            is_active=True
+        ).first()
+        
+        if not membership:
+            return Response(
+                {
+                    'error': 'Permission denied',
+                    'detail': 'Only organization owners can update organization details. Employees can only view organizations.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().update(request, *args, **kwargs)
+    
+    def partial_update(self, request, *args, **kwargs):
+        """Override partial_update to ensure only owners can update organizations"""
+        return self.update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Override destroy to ensure only owners can delete organizations"""
+        organization = self.get_object()
+        
+        # Check if user is owner of this organization
+        membership = UserOrganization.objects.filter(
+            organization=organization,
+            user=request.user,
+            is_owner=True,
+            is_active=True
+        ).first()
+        
+        if not membership:
+            return Response(
+                {
+                    'error': 'Permission denied',
+                    'detail': 'Only organization owners can delete organizations.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        return super().destroy(request, *args, **kwargs)
     
     @action(detail=False, methods=['get'])
     def my_organizations(self, request):

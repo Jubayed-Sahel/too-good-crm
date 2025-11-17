@@ -98,7 +98,8 @@ export const ProfileSwitcher = () => {
                 {isSwitching ? 'Switching...' : profileLabels[activeProfile.profile_type]}
               </Text>
               <Text fontSize="sm" fontWeight="semibold" lineHeight="1.2">
-                {activeProfile.organization_name || 'No Organization'}
+                {activeProfile.organization_name || 
+                 (activeProfile.profile_type === 'customer' ? 'Independent Customer' : 'No Organization')}
               </Text>
             </VStack>
             <FiChevronDown size={16} />
@@ -156,7 +157,7 @@ export const ProfileSwitcher = () => {
                         <FiBriefcase size={16} />
                       </Box>
                       <VStack align="start" gap={0}>
-                        <Text fontSize="sm" fontWeight="medium">
+                        <Text fontSize="sm" fontWeight="semibold" color="gray.900">
                           {profile.organization_name || 'No Organization'}
                         </Text>
                         {profile.is_owner && (
@@ -227,7 +228,7 @@ export const ProfileSwitcher = () => {
                         <FiUsers size={16} />
                       </Box>
                       <VStack align="start" gap={0}>
-                        <Text fontSize="sm" fontWeight="medium">
+                        <Text fontSize="sm" fontWeight="semibold" color="gray.900">
                           {profile.organization_name || 'No Organization'}
                         </Text>
                         {profile.roles && profile.roles.length > 0 && (
