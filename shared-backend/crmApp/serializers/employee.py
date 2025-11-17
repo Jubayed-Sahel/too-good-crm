@@ -3,7 +3,7 @@ Employee related serializers
 """
 
 from rest_framework import serializers
-from crmApp.models import Employee, UserProfile
+from crmApp.models import Employee, UserProfile, Role
 from .auth import UserSerializer, UserProfileSerializer
 
 
@@ -34,11 +34,65 @@ class EmployeeSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     user_profile = UserProfileSerializer(read_only=True)
     manager = EmployeeListSerializer(read_only=True)
+    # Define role field with default queryset - will be refined in __init__ for write operations
+    role = serializers.PrimaryKeyRelatedField(
+        queryset=Role.objects.all(),  # Default queryset, refined in __init__ for write operations
+        required=False,
+        allow_null=True
+    )
     role_name = serializers.CharField(source='role.name', read_only=True)
     full_name = serializers.SerializerMethodField()
     employment_type_display = serializers.CharField(source='get_employment_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)  # Alias for frontend compatibility
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Now refine the queryset for write operations only
+        if 'role' not in self.fields:
+            return
+        
+        # Check if this is a write operation (has data in kwargs or first arg is dict)
+        has_data = 'data' in kwargs or (args and len(args) > 0 and isinstance(args[0], dict))
+        
+        # Only modify queryset for write operations
+        # For read operations, the default queryset is fine
+        if not has_data:
+            # This is a read operation - default queryset is sufficient
+            return
+        
+        try:
+            if self.instance:
+                # For updates, filter by employee's organization
+                if hasattr(self.instance, 'organization') and self.instance.organization:
+                    self.fields['role'].queryset = Role.objects.filter(
+                        organization=self.instance.organization
+                    )
+            else:
+                # For creates, try to get organization from context
+                organization = None
+                try:
+                    if hasattr(self, 'context') and self.context and isinstance(self.context, dict) and 'request' in self.context:
+                        request = self.context.get('request')
+                        if request and hasattr(request, 'user'):
+                            # Try to get organization from request user's active profile
+                            if hasattr(request.user, 'current_organization') and request.user.current_organization:
+                                organization = request.user.current_organization
+                            elif hasattr(request.user, 'active_profile') and request.user.active_profile:
+                                organization = request.user.active_profile.organization
+                except (AttributeError, KeyError, TypeError):
+                    # If any error occurs accessing context, just use fallback
+                    pass
+                
+                if organization:
+                    self.fields['role'].queryset = Role.objects.filter(organization=organization)
+        except Exception as e:
+            # If anything goes wrong, log it but don't break
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error setting role queryset in EmployeeSerializer: {str(e)}")
+            # Keep default queryset
     
     class Meta:
         model = Employee
@@ -65,6 +119,20 @@ class EmployeeSerializer(serializers.ModelSerializer):
         logger.info(f"📝 EmployeeSerializer.update called")
         logger.info(f"   validated_data: {validated_data}")
         logger.info(f"   initial_data: {self.initial_data}")
+        
+        # Validate organization change - prevent if user is already employee of another org
+        new_organization = validated_data.get('organization')
+        if new_organization and new_organization != instance.organization and instance.user:
+            # Check if user is already an employee of a different organization
+            existing_employee = Employee.objects.filter(
+                user=instance.user,
+                status='active'
+            ).exclude(id=instance.id).exclude(organization=new_organization).first()
+            
+            if existing_employee:
+                raise serializers.ValidationError({
+                    'organization': f"This user is already an employee of {existing_employee.organization.name}. An employee cannot belong to multiple organizations."
+                })
         
         # Handle role field - check both validated_data and initial_data
         # The role might come as an integer ID in initial_data but not be in validated_data
@@ -209,10 +277,30 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
                 'hire_date': "Hire date is required for contract employees."
             })
         
+        # Validate that user is not already an employee of another organization
+        user_id = self.initial_data.get('user_id')
+        organization = attrs.get('organization')
+        
+        if user_id and organization:
+            # Check if user is already an employee of a different organization
+            existing_employee = Employee.objects.filter(
+                user_id=user_id,
+                status='active'
+            ).exclude(organization=organization).first()
+            
+            if existing_employee:
+                raise serializers.ValidationError({
+                    'user_id': f"This user is already an employee of {existing_employee.organization.name}. An employee cannot belong to multiple organizations."
+                })
+        
         return attrs
     
     def create(self, validated_data):
-        """Create employee and auto-create user profile if user is linked"""
+        """
+        Create employee. UserProfile is NOT auto-created.
+        UserProfile should only be created when a vendor explicitly assigns
+        an employee through the proper workflow (e.g., via invite/assignment endpoint).
+        """
         user_id = validated_data.pop('user_id', None)
         manager_id = validated_data.pop('manager_id', None)
         role_id = validated_data.pop('role_id', None)
@@ -222,6 +310,18 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
         if user_id:
             from crmApp.models import User
             employee.user = User.objects.get(id=user_id)
+            
+            # Validate user is not already an active employee elsewhere
+            existing_active = Employee.objects.filter(
+                user_id=user_id,
+                status='active'
+            ).first()
+            
+            if existing_active:
+                raise serializers.ValidationError({
+                    'user_id': f"This user is already an active employee of {existing_active.organization.name}. "
+                               "An employee cannot belong to multiple organizations."
+                })
         
         if manager_id:
             employee.manager = Employee.objects.get(id=manager_id)
@@ -230,5 +330,10 @@ class EmployeeCreateSerializer(serializers.ModelSerializer):
             from crmApp.models import Role
             employee.role = Role.objects.get(id=role_id)
         
-        employee.save()  # This will auto-create UserProfile
+        employee.save()
+        
+        # Note: UserProfile is NOT auto-created here. It should be created explicitly
+        # when the vendor assigns the employee through the proper assignment workflow.
+        # This ensures employees don't have profiles until explicitly assigned.
+        
         return employee

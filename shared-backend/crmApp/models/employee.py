@@ -58,10 +58,19 @@ class Employee(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
             ('organization', 'code'),
             ('organization', 'user'),
         ]
+        constraints = [
+            # Prevent a user from being an active employee of multiple organizations
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(status='active'),
+                name='unique_active_employee_per_user'
+            ),
+        ]
         indexes = [
             models.Index(fields=['organization', 'status']),
             models.Index(fields=['organization', 'department']),
             models.Index(fields=['user', 'organization']),
+            models.Index(fields=['user', 'status']),
         ]
     
     def __str__(self):
@@ -73,18 +82,23 @@ class Employee(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
         return f"{self.first_name} {self.last_name}"
     
     def save(self, *args, **kwargs):
-        """Override save to create user profile if user is linked."""
-        is_new = self.pk is None
-        super().save(*args, **kwargs)
-        
-        # Create or get user profile for employee
-        if is_new and self.user and not self.user_profile:
-            from .auth import UserProfile
-            user_profile, created = UserProfile.objects.get_or_create(
+        """
+        Override save to validate single active employee constraint.
+        Note: UserProfile is NOT auto-created here. It should only be created
+        when a vendor explicitly assigns an employee through the proper workflow.
+        """
+        # Validate that user is not already an active employee of another organization
+        if self.user and self.status == 'active':
+            existing_active = Employee.objects.filter(
                 user=self.user,
-                organization=self.organization,
-                profile_type='employee',
-                defaults={'status': 'active'}
-            )
-            self.user_profile = user_profile
-            super().save(update_fields=['user_profile'])
+                status='active'
+            ).exclude(pk=self.pk if self.pk else None).first()
+            
+            if existing_active:
+                raise ValueError(
+                    f"User {self.user.email} is already an active employee of "
+                    f"{existing_active.organization.name}. An employee cannot belong to "
+                    "multiple organizations simultaneously."
+                )
+        
+        super().save(*args, **kwargs)

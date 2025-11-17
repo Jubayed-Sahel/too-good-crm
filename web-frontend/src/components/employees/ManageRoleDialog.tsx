@@ -45,32 +45,49 @@ export const ManageRoleDialog = ({
   const [roles, setRoles] = useState<Role[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState<string>('');
 
-  // Fetch roles when dialog opens
+  // Fetch roles and initialize selectedRoleId when dialog opens
   useEffect(() => {
     if (isOpen) {
       fetchRoles();
+      // Initialize selectedRoleId with employee's current role when dialog opens
       if (employee?.role) {
         setSelectedRoleId(employee.role.toString());
       } else {
         setSelectedRoleId('');
       }
+    } else {
+      // Reset when dialog closes
+      setSelectedRoleId('');
     }
-  }, [isOpen, employee]);
+    // Only depend on isOpen - initialize once when dialog opens
+    // Don't depend on employee to avoid resetting user's selection
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const fetchRoles = async () => {
     setIsFetchingRoles(true);
     try {
       const organizationId = activeOrganizationId;
       
-      const filters: any = { is_active: true };
+      // Fetch all active roles for the organization
+      // Don't filter by is_active here - let backend handle it
+      // This ensures we get all roles that the user can assign
+      const filters: any = {};
       if (organizationId) {
         filters.organization = organizationId;
       }
+      // Only filter by is_active if we want to exclude inactive roles
+      // For role assignment, we typically want all active roles
+      filters.is_active = true;
       
+      console.log('🔍 Fetching roles with filters:', filters);
       const fetchedRoles = await roleService.getRoles(filters);
+      console.log('✅ Fetched roles:', fetchedRoles);
+      console.log('📊 Total roles fetched:', fetchedRoles?.length || 0);
+      
       setRoles(fetchedRoles || []);
     } catch (error: any) {
-      console.error('Error fetching roles:', error);
+      console.error('❌ Error fetching roles:', error);
       toaster.create({
         title: 'Error Loading Roles',
         description: error.message || 'Failed to load roles. Please try again.',
@@ -180,6 +197,7 @@ export const ManageRoleDialog = ({
         open={isOpen} 
         onOpenChange={(e) => !e.open && handleClose()}
         size="md"
+        closeOnInteractOutside={false}
       >
         <DialogContent>
           <DialogHeader>
@@ -236,8 +254,11 @@ export const ManageRoleDialog = ({
                   <CustomSelect
                     value={selectedRoleId}
                     onChange={(val) => {
-                      console.log('Role selected:', val);
+                      console.log('[ManageRoleDialog] Role selected:', val);
+                      console.log('[ManageRoleDialog] Current selectedRoleId:', selectedRoleId);
+                      console.log('[ManageRoleDialog] Setting selectedRoleId to:', val);
                       setSelectedRoleId(val);
+                      console.log('[ManageRoleDialog] selectedRoleId after setState (will update on next render):', val);
                     }}
                     options={roleOptions}
                     placeholder={isFetchingRoles ? "Loading roles..." : "Select a role"}

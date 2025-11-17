@@ -4,6 +4,7 @@ import {
   StatsGrid,
   InfoCardsGrid,
 } from '../../components/dashboard';
+import { DashboardWidgetsGrid } from '../../components/dashboard/DashboardWidgets';
 import { EmployeeWelcomeBanner } from '../../components/dashboard/EmployeeWelcomeBanner';
 import { MyWorkSection } from '../../components/dashboard/MyWorkSection';
 import { StandardButton } from '../../components/common';
@@ -59,23 +60,24 @@ const EmployeeDashboardPage = () => {
     );
   }
 
+  // Check if employee has any relevant permissions
+  const hasAnyResourceAccess = canAccess('deals') || canAccess('leads') || canAccess('customers') || canAccess('activities') || canAccess('analytics');
+
   return (
     <DashboardLayout title="Dashboard">
       <VStack gap={5} align="stretch">
         <EmployeeWelcomeBanner />
         
-        {/* Stats Grid - Only show if employee has access to relevant resources */}
-        {(canAccess('deals') || canAccess('leads') || canAccess('customers')) && (
-          <StatsGrid stats={stats || undefined} isLoading={isLoading} />
-        )}
+        {/* Stats Grid - Component handles its own permission checks */}
+        <StatsGrid stats={stats || undefined} isLoading={isLoading} />
 
         {/* Main Content Grid */}
         <SimpleGrid columns={{ base: 1, lg: 2 }} gap={5}>
           {/* My Work Section */}
           <MyWorkSection />
           
-          {/* Quick Access Cards - Only show if employee has permissions */}
-          {canAccess('deals') || canAccess('leads') || canAccess('customers') ? (
+          {/* Quick Access Cards - Component handles its own permission checks */}
+          {hasAnyResourceAccess ? (
             <InfoCardsGrid />
           ) : (
             <Box p={6} bg="white" borderRadius="xl" borderWidth="1px" borderColor="gray.200">
@@ -84,12 +86,25 @@ const EmployeeDashboardPage = () => {
                   Quick Access
                 </Text>
                 <Text fontSize="sm" color="gray.500" textAlign="center">
-                  Your quick access options will appear here based on your permissions.
+                  Your quick access options will appear here based on your assigned role permissions.
+                </Text>
+                <Text fontSize="xs" color="gray.400" textAlign="center" mt={2}>
+                  Contact your administrator to assign role permissions.
                 </Text>
               </VStack>
             </Box>
           )}
         </SimpleGrid>
+
+        {/* Permission-Aware Dashboard Widgets */}
+        {hasAnyResourceAccess && (
+          <Box>
+            <Heading size="md" mb={4} color="gray.700">
+              Overview
+            </Heading>
+            <DashboardWidgetsGrid />
+          </Box>
+        )}
       </VStack>
     </DashboardLayout>
   );

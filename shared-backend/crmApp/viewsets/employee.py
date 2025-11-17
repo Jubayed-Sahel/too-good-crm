@@ -6,6 +6,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 
 from crmApp.models import Employee
 from crmApp.serializers import (
@@ -13,9 +14,10 @@ from crmApp.serializers import (
     EmployeeCreateSerializer,
     EmployeeListSerializer,
 )
+from crmApp.viewsets.mixins import PermissionCheckMixin
 
 
-class EmployeeViewSet(viewsets.ModelViewSet):
+class EmployeeViewSet(viewsets.ModelViewSet, PermissionCheckMixin):
     """
     ViewSet for Employee management.
     """
@@ -152,11 +154,36 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     def update(self, request, *args, **kwargs):
-        """Override update to ensure role is properly loaded"""
+        """Override update to check permissions and ensure role is properly loaded"""
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         
-        print(f"🔄 Updating employee {instance.id}: {request.data}")
+        # Check permission for updating employees
+        # Vendors can update employees in their organization
+        # Employees cannot update other employees (only their own info if needed)
+        organization = self.get_organization_from_request(request, instance=instance)
+        if organization:
+            active_profile = getattr(request.user, 'active_profile', None)
+            if active_profile:
+                if active_profile.profile_type == 'employee':
+                    # Employees can only update their own employee record
+                    if instance.user != request.user:
+                        raise PermissionDenied('You can only update your own employee information.')
+                elif active_profile.profile_type == 'vendor':
+                    # Vendors can update employees in their organization
+                    if instance.organization != organization:
+                        raise PermissionDenied('You can only update employees in your organization.')
+                # For other profile types, check explicit permission
+                else:
+                    try:
+                        self.check_permission(request, 'employee', 'update', organization=organization, instance=instance)
+                    except Exception:
+                        # If permission check fails, deny access
+                        raise PermissionDenied('You do not have permission to update employees.')
+        
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"🔄 Updating employee {instance.id}: {request.data}")
         
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
@@ -165,7 +192,7 @@ class EmployeeViewSet(viewsets.ModelViewSet):
         # Refresh from DB to get related role data with select_related
         instance = Employee.objects.select_related('role', 'user', 'manager', 'organization').get(pk=instance.pk)
         
-        print(f"✅ Employee updated. Role: {instance.role}, Role name: {instance.role.name if instance.role else None}")
+        logger.info(f"✅ Employee updated. Role: {instance.role}, Role name: {instance.role.name if instance.role else None}")
         
         response_serializer = EmployeeSerializer(instance)
         return Response(response_serializer.data)
@@ -206,11 +233,13 @@ class EmployeeViewSet(viewsets.ModelViewSet):
     def invite(self, request):
         """
         Invite a new or existing employee to join the organization.
-        - If user doesn't exist: Creates User, UserOrganization, and Employee
-        - If user exists: Links existing user to organization and creates Employee record
+        - If user doesn't exist: Creates User, UserOrganization, UserProfile, and Employee
+        - If user exists: Links existing user to organization, creates/updates UserProfile, and creates Employee record
         """
-        from crmApp.models import User, UserOrganization
+        from crmApp.models import User, UserOrganization, UserProfile
         from django.utils.crypto import get_random_string
+        from django.db import transaction
+        from django.utils import timezone
         
         # Get vendor's organization
         user_org = request.user.user_organizations.filter(
@@ -242,34 +271,94 @@ class EmployeeViewSet(viewsets.ModelViewSet):
             )
         
         try:
-            # Check if user already exists
-            existing_user = User.objects.filter(email=email).first()
-            temp_password = None
-            user_created = False
-            
-            if existing_user:
-                # User exists - check if already an employee in this organization
-                existing_employee = Employee.objects.filter(
-                    organization=organization,
-                    user=existing_user
-                ).first()
+            with transaction.atomic():
+                # Search for user by email in database
+                existing_user = User.objects.filter(email=email).first()
+                temp_password = None
+                user_created = False
                 
-                if existing_employee:
-                    return Response(
-                        {'error': f'{existing_user.full_name} is already an employee in this organization'},
-                        status=status.HTTP_400_BAD_REQUEST
+                if existing_user:
+                    # User exists - check if already an employee in this organization
+                    existing_employee = Employee.objects.filter(
+                        organization=organization,
+                        user=existing_user
+                    ).first()
+                    
+                    if existing_employee:
+                        return Response(
+                            {'error': f'{existing_user.full_name} is already an employee in this organization'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    
+                    # Use existing user
+                    user = existing_user
+                    
+                    # Check if user is already linked to this organization
+                    user_org_link = UserOrganization.objects.filter(
+                        user=user,
+                        organization=organization
+                    ).first()
+                    
+                    if not user_org_link:
+                        # Link user to organization
+                        UserOrganization.objects.create(
+                            user=user,
+                            organization=organization,
+                            is_owner=False,
+                            is_active=True
+                        )
+                    elif not user_org_link.is_active:
+                        # Reactivate existing link
+                        user_org_link.is_active = True
+                        user_org_link.save()
+                    
+                    # Create or update UserProfile for employee
+                    # Note: UserProfile has unique constraint on (user, profile_type)
+                    # So we get or create the employee profile and update organization/status
+                    user_profile, profile_created = UserProfile.objects.get_or_create(
+                        user=user,
+                        profile_type='employee',
+                        defaults={
+                            'organization': organization,
+                            'is_primary': False,
+                            'status': 'active',
+                            'activated_at': timezone.now()
+                        }
                     )
-                
-                # Use existing user
-                user = existing_user
-                
-                # Check if user is already linked to this organization
-                user_org_link = UserOrganization.objects.filter(
-                    user=user,
-                    organization=organization
-                ).first()
-                
-                if not user_org_link:
+                    
+                    # If profile already existed, update it to link to this organization
+                    if not profile_created:
+                        user_profile.organization = organization
+                        user_profile.status = 'active'
+                        if not user_profile.activated_at:
+                            user_profile.activated_at = timezone.now()
+                        user_profile.deactivated_at = None
+                        user_profile.save()
+                    
+                    message = f'Existing user {user.full_name} added as employee'
+                    
+                else:
+                    # User doesn't exist - create new user
+                    # Generate username from email
+                    username = email.split('@')[0]
+                    if User.objects.filter(username=username).exists():
+                        username = f"{username}_{get_random_string(4)}"
+                    
+                    # Generate temporary password
+                    temp_password = get_random_string(12)
+                    
+                    # Create user account
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=temp_password,
+                        first_name=first_name,
+                        last_name=last_name,
+                        phone=phone
+                    )
+                    
+                    user_created = True
+                    
                     # Link user to organization
                     UserOrganization.objects.create(
                         user=user,
@@ -277,73 +366,48 @@ class EmployeeViewSet(viewsets.ModelViewSet):
                         is_owner=False,
                         is_active=True
                     )
-                elif not user_org_link.is_active:
-                    # Reactivate existing link
-                    user_org_link.is_active = True
-                    user_org_link.save()
+                    
+                    # Create UserProfile for employee
+                    user_profile = UserProfile.objects.create(
+                        user=user,
+                        organization=organization,
+                        profile_type='employee',
+                        is_primary=False,
+                        status='active',
+                        activated_at=timezone.now()
+                    )
+                    
+                    message = f'New user created and invited as employee'
                 
-                message = f'Existing user {user.full_name} added as employee'
-                
-            else:
-                # User doesn't exist - create new user
-                # Generate username from email
-                username = email.split('@')[0]
-                if User.objects.filter(username=username).exists():
-                    username = f"{username}_{get_random_string(4)}"
-                
-                # Generate temporary password
-                temp_password = get_random_string(12)
-                
-                # Create user account
-                user = User.objects.create_user(
-                    username=username,
-                    email=email,
-                    password=temp_password,
+                # Create employee record
+                employee = Employee.objects.create(
+                    organization=organization,
+                    user=user,
+                    user_profile=user_profile,  # Explicitly link the UserProfile
                     first_name=first_name,
                     last_name=last_name,
-                    phone=phone
+                    email=email,
+                    phone=phone or user.phone,
+                    department=department,
+                    job_title=job_title,
+                    status='active',
+                    role_id=role_id
                 )
                 
-                user_created = True
+                # Build response
+                response_data = {
+                    'message': message,
+                    'employee': EmployeeSerializer(employee).data,
+                    'user_created': user_created
+                }
                 
-                # Link user to organization
-                UserOrganization.objects.create(
-                    user=user,
-                    organization=organization,
-                    is_owner=False,
-                    is_active=True
-                )
+                if temp_password:
+                    response_data['temporary_password'] = temp_password
+                    response_data['note'] = 'Send this password to the employee securely'
+                else:
+                    response_data['note'] = 'User already had an account. They can login with their existing credentials.'
                 
-                message = f'New user created and invited as employee'
-            
-            # Create employee record
-            employee = Employee.objects.create(
-                organization=organization,
-                user=user,
-                first_name=first_name,
-                last_name=last_name,
-                email=email,
-                phone=phone or user.phone,
-                department=department,
-                job_title=job_title,
-                status='active',
-                role_id=role_id
-            )
-            
-            # Build response
-            response_data = {
-                'message': message,
-                'employee': EmployeeSerializer(employee).data,
-                'user_created': user_created
-            }
-            
-            if temp_password:
-                response_data['temporary_password'] = temp_password
-                response_data['note'] = 'Send this password to the employee securely'
-            else:
-                response_data['note'] = 'User already had an account. They can login with their existing credentials.'
-            
-            return Response(response_data, status=status.HTTP_201_CREATED)
+                return Response(response_data, status=status.HTTP_201_CREATED)
             
         except Exception as e:
             import traceback

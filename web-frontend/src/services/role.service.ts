@@ -132,6 +132,18 @@ class RoleService {
   }
 
   /**
+   * Ensure all roles have at least basic permissions assigned
+   */
+  async ensureAllRolesHavePermissions(): Promise<{
+    message: string;
+    roles_updated: number;
+    total_permissions_assigned: number;
+    details: Array<{ role_id: number; role_name: string; permissions_assigned: number }>;
+  }> {
+    return api.post(API_CONFIG.ENDPOINTS.ROLES.ENSURE_ALL_HAVE_PERMISSIONS);
+  }
+
+  /**
    * Get all permissions (handles pagination automatically)
    */
   async getPermissions(): Promise<Permission[]> {

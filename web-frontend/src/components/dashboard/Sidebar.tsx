@@ -16,6 +16,10 @@ import {
   FiAlertCircle,
   FiRefreshCw,
   FiCheckSquare,
+  FiBriefcase,
+  FiGrid,
+  FiChevronDown,
+  FiChevronRight,
 } from 'react-icons/fi';
 import { HiUserGroup } from 'react-icons/hi';
 import { useAccountMode } from '@/contexts/AccountModeContext';
@@ -25,6 +29,7 @@ import { useAuth } from '@/hooks';
 import { useState, useMemo, useCallback, memo } from 'react';
 import { RoleSelectionDialog } from '../auth';
 import { toaster } from '../ui/toaster';
+import { CRM_RESOURCES } from '@/utils/permissions';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -33,11 +38,12 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   const { isClientMode } = useAccountMode();
-  const { canAccess, isVendor, isLoading: permissionsLoading } = usePermissions();
+  const { hasPermission, isVendor, isLoading: permissionsLoading, isEmployee, isOwner } = usePermissions();
   const { logout, switchRole } = useAuth();
   const { profiles, activeProfile } = useProfile();
   const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
 
   // Memoize current profile to prevent unnecessary recalculations
   const currentProfile = useMemo(() => 
@@ -81,29 +87,31 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     }
   }, [switchRole, profiles]);
 
-  // Vendor menu items (full access)
-  const vendorMenuItems = [
-    { icon: FiHome, label: 'Dashboard', path: '/dashboard', resource: 'dashboard' },
-    { icon: FiUsers, label: 'Customers', path: '/customers', resource: 'customers' },
-    { icon: FiTrendingUp, label: 'Sales', path: '/sales', resource: 'deals' },
-    { icon: FiFileText, label: 'Deals', path: '/deals', resource: 'deals' },
-    { icon: FiUserPlus, label: 'Leads', path: '/leads', resource: 'leads' },
-    { icon: FiActivity, label: 'Activities', path: '/activities', resource: 'activities' },
-    { icon: FiAlertCircle, label: 'Issues', path: '/issues', resource: 'issues' },
-    { icon: FiBarChart2, label: 'Analytics', path: '/analytics', resource: 'analytics' },
-    { icon: HiUserGroup, label: 'Team', path: '/team', resource: 'employees' },
-    { icon: FiSettings, label: 'Settings', path: '/settings', resource: 'settings' },
-  ];
+  // Define all CRM menu items with their permissions
+  // This structure supports nested menus (children)
+  interface MenuItem {
+    icon: React.ComponentType;
+    label: string;
+    path: string;
+    resource?: string;
+    action?: string;
+    children?: MenuItem[];
+    alwaysShow?: boolean; // For dashboard, settings, etc.
+  }
 
-  // Employee menu items
-  const employeeMenuItems = [
-    { icon: FiHome, label: 'Dashboard', path: '/employee/dashboard', resource: 'dashboard' },
-    { icon: FiCheckSquare, label: 'My Tasks', path: '/employee/tasks', resource: 'tasks' },
-    { icon: FiUsers, label: 'Customers', path: '/employee/customers', resource: 'customers' },
-    { icon: FiFileText, label: 'Deals', path: '/employee/deals', resource: 'deals' },
-    { icon: FiUserPlus, label: 'Leads', path: '/employee/leads', resource: 'leads' },
-    { icon: FiActivity, label: 'Activities', path: '/employee/activities', resource: 'activities' },
-    { icon: FiSettings, label: 'Settings', path: '/employee/settings', resource: 'settings' },
+  // Vendor menu items - same structure for both vendors and employees
+  // Employees will see filtered items based on their permissions
+  const vendorMenuItems: MenuItem[] = [
+    { icon: FiHome, label: 'Dashboard', path: '/dashboard', alwaysShow: true },
+    { icon: FiUsers, label: 'Customers', path: '/customers', resource: CRM_RESOURCES.CUSTOMERS, action: 'read' },
+    { icon: FiTrendingUp, label: 'Sales', path: '/sales', resource: CRM_RESOURCES.DEALS, action: 'read' },
+    { icon: FiFileText, label: 'Deals', path: '/deals', resource: CRM_RESOURCES.DEALS, action: 'read' },
+    { icon: FiUserPlus, label: 'Leads', path: '/leads', resource: CRM_RESOURCES.LEADS, action: 'read' },
+    { icon: FiActivity, label: 'Activities', path: '/activities', resource: CRM_RESOURCES.ACTIVITIES, action: 'read' },
+    { icon: FiAlertCircle, label: 'Issues', path: '/issues', resource: CRM_RESOURCES.ISSUES, action: 'read' },
+    { icon: FiBarChart2, label: 'Analytics', path: '/analytics', resource: CRM_RESOURCES.ANALYTICS, action: 'read' },
+    { icon: HiUserGroup, label: 'Team', path: '/team', resource: CRM_RESOURCES.EMPLOYEES, action: 'read' },
+    { icon: FiSettings, label: 'Settings', path: '/settings', alwaysShow: true },
   ];
 
   // Client menu items
@@ -117,92 +125,114 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiSettings, label: 'Settings', path: '/client/settings', resource: 'settings' },
   ];
 
-  // Get menu items - employees only see items they have permission for
+  /**
+   * Check if a menu item should be shown based on permissions
+   */
+  const shouldShowMenuItem = useCallback((item: MenuItem): boolean => {
+    // Always show items marked as alwaysShow
+    if (item.alwaysShow) {
+      return true;
+    }
+
+    // Vendors and owners see everything
+    if (isVendor || isOwner) {
+      return true;
+    }
+
+    // If no resource specified, show it
+    if (!item.resource) {
+      return true;
+    }
+
+    // Check permission using hasPermission helper
+    const result = hasPermission(item.resource, item.action || 'read');
+    return result.hasPermission;
+  }, [hasPermission, isVendor, isOwner]);
+
+  /**
+   * Check if a parent menu should be shown (if at least one child is allowed)
+   */
+  const shouldShowParentMenu = useCallback((item: MenuItem): boolean => {
+    // If no children, check the item itself
+    if (!item.children || item.children.length === 0) {
+      return shouldShowMenuItem(item);
+    }
+
+    // Check if at least one child is allowed
+    return item.children.some(child => shouldShowMenuItem(child));
+  }, [shouldShowMenuItem]);
+
+  /**
+   * Toggle expanded state for nested menus
+   */
+  const toggleMenu = useCallback((path: string) => {
+    setExpandedMenus(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) {
+        next.delete(path);
+      } else {
+        next.add(path);
+      }
+      return next;
+    });
+  }, []);
+
+  // Get menu items - employees see same menu as vendors but filtered by permissions
   const menuItems = useMemo(() => {
     // Determine which menu to use based on profile type
-    // Priority: currentProfile.profile_type > isClientMode
-    let items;
-    
     const profileType = currentProfile?.profile_type;
     
     if (profileType === 'customer' || isClientMode) {
       // Customer/Client mode - show client menu
-      items = clientMenuItems;
+      return clientMenuItems;
     } else if (profileType === 'employee') {
-      // Employee mode - use employee-specific menu items, filtered by permissions
-      // Map vendor menu items to employee paths and filter by permissions
-      items = vendorMenuItems
-        .map(item => {
-          // Map to employee-specific paths
-          const employeePathMap: Record<string, string> = {
-            '/dashboard': '/employee/dashboard',
-            '/customers': '/employee/customers',
-            '/sales': '/employee/deals', // Sales uses deals
-            '/deals': '/employee/deals',
-            '/leads': '/employee/leads',
-            '/activities': '/employee/activities',
-            '/issues': '/issues', // Keep same path
-            '/analytics': '/analytics', // Keep same path
-            '/team': '/team', // Keep same path (but will be filtered out)
-            '/settings': '/employee/settings',
-          };
-          
-          return {
-            ...item,
-            path: employeePathMap[item.path] || item.path,
-          };
-        })
-        .filter((item, index, self) => {
-          // Always show these items regardless of permissions
-          if (item.resource === 'dashboard' || item.resource === 'settings' || item.resource === 'customers') {
-            return true;
-          }
-          // Hide team page for employees (vendor only)
-          if (item.resource === 'employees') {
-            return false;
-          }
-          // Remove "Sales" for employees since it maps to the same path as "Deals"
-          // Check if another item with the same path exists (Deals)
-          const duplicatePath = self.findIndex((otherItem, otherIndex) => 
-            otherIndex !== index && otherItem.path === item.path
-          );
-          if (duplicatePath >= 0 && item.label === 'Sales') {
-            return false; // Remove Sales, keep Deals
-          }
-          // For other items, check if employee has permission
-          return canAccess(item.resource);
-        });
-      
-      // Add "My Tasks" as first item after Dashboard for employees
-      const tasksItem = { 
-        icon: FiCheckSquare, 
-        label: 'My Tasks', 
-        path: '/employee/tasks', 
-        resource: 'tasks' 
-      };
-      // Insert after dashboard
-      const dashboardIndex = items.findIndex(item => item.resource === 'dashboard');
-      if (dashboardIndex >= 0) {
-        items.splice(dashboardIndex + 1, 0, tasksItem);
-      } else {
-        items.unshift(tasksItem);
+      // Employee mode - use vendor menu structure but filter by permissions
+      if (permissionsLoading) {
+        return []; // Don't show anything while loading
       }
+
+      // Filter and process vendor menu items based on employee permissions
+      return vendorMenuItems
+        .map(item => {
+          // Check if parent should be shown
+          if (!shouldShowParentMenu(item)) {
+            return null;
+          }
+
+          // If item has children, filter them
+          if (item.children && item.children.length > 0) {
+            const visibleChildren = item.children.filter(child =>
+              shouldShowMenuItem(child)
+            );
+
+            // Only show parent if at least one child is visible
+            if (visibleChildren.length === 0) {
+              return null;
+            }
+
+            return {
+              ...item,
+              children: visibleChildren,
+            };
+          }
+
+          // Regular menu item
+          return item;
+        })
+        .filter((item): item is MenuItem => item !== null);
     } else {
-      // Vendor mode (default) - show vendor menu (full access)
-      items = vendorMenuItems;
+      // Vendor mode (default) - show vendor menu (full access, no filtering)
+      return vendorMenuItems;
     }
-    
-    // If permissions are still loading, return empty array to avoid flicker
-    if (permissionsLoading) {
-      return [];
-    }
-    
-    // All items in the list are accessible (already filtered for employees)
-    return items.map(item => ({
-      ...item,
-      hasAccess: true, // All items shown are accessible
-    }));
-  }, [isClientMode, currentProfile, isVendor, canAccess, permissionsLoading]);
+  }, [
+    isClientMode, 
+    currentProfile, 
+    isVendor, 
+    permissionsLoading, 
+    isEmployee,
+    shouldShowMenuItem,
+    shouldShowParentMenu,
+  ]);
 
   // Check if user has multiple profiles (memoized)
   const hasMultipleProfiles = useMemo(() => 
@@ -317,45 +347,137 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
           </Box>
 
           {/* Navigation Menu */}
-          <VStack align="stretch" flex={1} p={4} gap={1}>
-            {menuItems.map((item) => {
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  style={{ textDecoration: 'none' }}
-                >
-                  {({ isActive }) => (
-                    <Flex
-                      align="center"
-                      gap={3}
-                      px={4}
-                      py={3}
-                      borderRadius="lg"
-                      bg={isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'transparent'}
-                      color={
-                        isActive 
-                          ? (isClientMode ? 'blue.600' : 'purple.600') 
-                          : 'gray.700'
-                      }
-                      fontWeight={isActive ? 'semibold' : 'medium'}
-                      _hover={{
-                        bg: isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'gray.50',
-                        color: isActive 
-                          ? (isClientMode ? 'blue.600' : 'purple.600') 
-                          : 'gray.900',
-                      }}
-                      cursor="pointer"
-                      transition="all 0.2s"
-                      position="relative"
-                    >
-                      <Box as={item.icon} fontSize="lg" />
-                      <Text flex={1}>{item.label}</Text>
-                    </Flex>
-                  )}
-                </NavLink>
-              );
-            })}
+          <VStack align="stretch" flex={1} p={4} gap={1} overflowY="auto">
+            {permissionsLoading && isEmployee ? (
+              <Box p={4} textAlign="center">
+                <Text fontSize="sm" color="gray.500">Loading permissions...</Text>
+              </Box>
+            ) : menuItems.length === 0 ? (
+              <Box p={4} textAlign="center">
+                <Text fontSize="sm" color="gray.500">
+                  No menu items available based on your permissions.
+                </Text>
+              </Box>
+            ) : (
+              menuItems.map((item) => {
+                const hasChildren = item.children && item.children.length > 0;
+                const isExpanded = expandedMenus.has(item.path);
+
+                // Render nested menu (with children)
+                if (hasChildren) {
+                  return (
+                    <Box key={item.path}>
+                      <Box
+                        as="button"
+                        w="full"
+                        px={4}
+                        py={3}
+                        borderRadius="lg"
+                        bg="transparent"
+                        color="gray.700"
+                        fontWeight="medium"
+                        _hover={{
+                          bg: 'gray.50',
+                          color: 'gray.900',
+                        }}
+                        cursor="pointer"
+                        transition="all 0.2s"
+                        textAlign="left"
+                        onClick={() => toggleMenu(item.path)}
+                      >
+                        <Flex align="center" gap={3}>
+                          <Box as={item.icon} fontSize="lg" />
+                          <Text flex={1}>{item.label}</Text>
+                          <Box 
+                            as={isExpanded ? FiChevronDown : FiChevronRight} 
+                            fontSize="sm" 
+                          />
+                        </Flex>
+                      </Box>
+                      {isExpanded && item.children && (
+                        <VStack align="stretch" pl={8} gap={1} mt={1}>
+                          {item.children.map((child) => (
+                            <NavLink
+                              key={child.path}
+                              to={child.path}
+                              style={{ textDecoration: 'none' }}
+                              onClick={onClose}
+                            >
+                              {({ isActive }) => (
+                                <Flex
+                                  align="center"
+                                  gap={3}
+                                  px={4}
+                                  py={3}
+                                  borderRadius="lg"
+                                  bg={isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'transparent'}
+                                  color={
+                                    isActive 
+                                      ? (isClientMode ? 'blue.600' : 'purple.600') 
+                                      : 'gray.700'
+                                  }
+                                  fontWeight={isActive ? 'semibold' : 'medium'}
+                                  _hover={{
+                                    bg: isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'gray.50',
+                                    color: isActive 
+                                      ? (isClientMode ? 'blue.600' : 'purple.600') 
+                                      : 'gray.900',
+                                  }}
+                                  cursor="pointer"
+                                  transition="all 0.2s"
+                                >
+                                  <Box as={child.icon} fontSize="lg" />
+                                  <Text flex={1}>{child.label}</Text>
+                                </Flex>
+                              )}
+                            </NavLink>
+                          ))}
+                        </VStack>
+                      )}
+                    </Box>
+                  );
+                }
+
+                // Render regular menu item (no children)
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    style={{ textDecoration: 'none' }}
+                    onClick={onClose}
+                  >
+                    {({ isActive }) => (
+                      <Flex
+                        align="center"
+                        gap={3}
+                        px={4}
+                        py={3}
+                        borderRadius="lg"
+                        bg={isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'transparent'}
+                        color={
+                          isActive 
+                            ? (isClientMode ? 'blue.600' : 'purple.600') 
+                            : 'gray.700'
+                        }
+                        fontWeight={isActive ? 'semibold' : 'medium'}
+                        _hover={{
+                          bg: isActive ? (isClientMode ? 'blue.50' : 'purple.50') : 'gray.50',
+                          color: isActive 
+                            ? (isClientMode ? 'blue.600' : 'purple.600') 
+                            : 'gray.900',
+                        }}
+                        cursor="pointer"
+                        transition="all 0.2s"
+                        position="relative"
+                      >
+                        <Box as={item.icon} fontSize="lg" />
+                        <Text flex={1}>{item.label}</Text>
+                      </Flex>
+                    )}
+                  </NavLink>
+                );
+              })
+            )}
           </VStack>
 
           {/* Sign Out Button */}

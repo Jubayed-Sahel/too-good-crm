@@ -90,6 +90,31 @@ export const RolesTab = () => {
     }
   };
 
+  const handleEnsureAllRolesHavePermissions = async () => {
+    try {
+      setIsLoading(true);
+      const result = await roleService.ensureAllRolesHavePermissions();
+      
+      toaster.create({
+        title: 'Permissions Assigned',
+        description: `Assigned permissions to ${result.roles_updated} role(s). ${result.total_permissions_assigned} permissions were assigned.`,
+        type: 'success',
+        duration: 5000,
+      });
+      
+      fetchRoles();
+    } catch (error: any) {
+      console.error('Error ensuring role permissions:', error);
+      toaster.create({
+        title: 'Failed to Assign Permissions',
+        description: error.message || 'An error occurred while assigning permissions',
+        type: 'error',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filteredRoles = roles.filter((role) =>
     !searchQuery ||
     role.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -113,7 +138,7 @@ export const RolesTab = () => {
 
   return (
     <VStack gap={5} align="stretch">
-      {/* Action Button */}
+      {/* Action Buttons */}
       <HStack justify="space-between">
         <Box position="relative" flex="1" maxW="400px">
           <Box
@@ -135,13 +160,25 @@ export const RolesTab = () => {
             borderRadius="lg"
           />
         </Box>
-        <StandardButton
-          variant="primary"
-          leftIcon={<FiPlus />}
-          onClick={() => setIsCreateDialogOpen(true)}
-        >
-          Create Role
-        </StandardButton>
+        <HStack gap={2}>
+          {roles.some(role => (role.permission_count || 0) === 0) && (
+            <StandardButton
+              variant="outline"
+              colorPalette="orange"
+              onClick={handleEnsureAllRolesHavePermissions}
+              disabled={isLoading}
+            >
+              Assign Permissions to All Roles
+            </StandardButton>
+          )}
+          <StandardButton
+            variant="primary"
+            leftIcon={<FiPlus />}
+            onClick={() => setIsCreateDialogOpen(true)}
+          >
+            Create Role
+          </StandardButton>
+        </HStack>
       </HStack>
 
       {/* Stats Cards */}
@@ -269,15 +306,24 @@ export const RolesTab = () => {
                   <HStack gap={1}>
                     <FiUsers size={14} color="#718096" />
                     <Text fontSize="xs" color="gray.600">
-                      0 members
+                      {role.user_count || 0} {role.user_count === 1 ? 'member' : 'members'}
                     </Text>
+                    {role.permission_count !== undefined && (
+                      <>
+                        <Text fontSize="xs" color="gray.400">•</Text>
+                        <Text fontSize="xs" color={role.permission_count === 0 ? 'orange.600' : 'gray.600'}>
+                          {role.permission_count || 0} {role.permission_count === 1 ? 'permission' : 'permissions'}
+                        </Text>
+                      </>
+                    )}
                   </HStack>
                   <StandardButton
                     variant="outline"
                     size="xs"
                     onClick={() => handleManagePermissions(role)}
+                    colorPalette={role.permission_count === 0 ? 'orange' : 'purple'}
                   >
-                    Manage Permissions
+                    {role.permission_count === 0 ? 'Assign Permissions' : 'Manage Permissions'}
                   </StandardButton>
                 </HStack>
               </VStack>

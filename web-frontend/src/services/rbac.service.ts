@@ -336,70 +336,46 @@ class RBACService {
 
   /**
    * Get user permissions (for useRBAC hook)
+   * Uses backend API endpoint for proper permission calculation
    */
   async getUserPermissions(userId: number, organizationId?: number): Promise<UserPermissions> {
-    const roleIds = new Set<number>();
-    const roles: Role[] = [];
+    console.log('[rbacService] getUserPermissions called:', { userId, organizationId });
     
-    // 1. Get Employee.role (primary role from Employee model)
-    if (organizationId) {
-      try {
-        const employees = await employeeService.getEmployees({ 
-          organization: organizationId 
-        });
-        const employee = employees.find(emp => emp.user === userId && emp.status === 'active');
-        if (employee?.role) {
-          roleIds.add(employee.role);
-          // Fetch role details
-          const role = await this.getRole(employee.role);
-          if (role) {
-            roles.push(role);
-          }
+    if (!organizationId) {
+      console.warn('[rbacService] No organizationId provided, returning empty permissions');
+      return {
+        permissions: [],
+        roles: [],
+      };
+    }
+    
+    try {
+      // Use backend API endpoint that uses RBACService.get_user_permissions
+      const response = await api.get<UserPermissions>(
+        API_CONFIG.ENDPOINTS.USER_ROLES.USER_PERMISSIONS,
+        {
+          params: {
+            user_id: userId,
+            organization_id: organizationId,
+          },
         }
-      } catch (error) {
-        console.warn('[rbacService] Could not fetch employee record:', error);
-      }
+      );
+      
+      console.log('[rbacService] Received permissions from backend:', {
+        permissionCount: response.permissions.length,
+        roleCount: response.roles.length,
+        permissions: response.permissions.map((p: Permission) => `${p.resource}:${p.action}`),
+      });
+      
+      return response;
+    } catch (error: any) {
+      console.error('[rbacService] Error fetching user permissions from backend:', error);
+      // Return empty permissions on error
+      return {
+        permissions: [],
+        roles: [],
+      };
     }
-    
-    // 2. Get UserRole assignments (additional roles)
-    const userRoles = await this.getUserRoles({ user_id: userId });
-    const filteredRoles = organizationId 
-      ? userRoles.filter(ur => ur.organization === organizationId)
-      : userRoles;
-    
-    for (const ur of filteredRoles) {
-      const roleId = typeof ur.role === 'object' ? ur.role.id : ur.role;
-      if (!roleIds.has(roleId)) {
-        roleIds.add(roleId);
-        const role = typeof ur.role === 'object' ? ur.role : await this.getRole(roleId);
-        if (role) {
-          roles.push(role);
-        }
-      }
-    }
-    
-    // Get all permissions from those roles
-    const permissions: Permission[] = [];
-    for (const roleId of roleIds) {
-      try {
-        const rolePerms = await this.getRolePermissions(roleId);
-        permissions.push(...rolePerms);
-      } catch (error) {
-        console.warn(`[rbacService] Could not fetch permissions for role ${roleId}:`, error);
-      }
-    }
-    
-    // Remove duplicates
-    const uniquePermissions = permissions.filter((perm, index, self) =>
-      index === self.findIndex((p) => p.id === perm.id)
-    );
-    
-    console.log('[rbacService] Final unique permissions:', uniquePermissions);
-    
-    return {
-      permissions: uniquePermissions,
-      roles: roles,
-    };
   }
 
   /**
