@@ -50,6 +50,7 @@ export {
   useUpdateLead,
   useDeleteLead,
   useConvertLead,
+  useConvertLeadToDeal,
   useQualifyLead,
   useDisqualifyLead,
   useAssignLead,

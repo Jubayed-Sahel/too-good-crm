@@ -10,6 +10,8 @@ from .employee import EmployeeListSerializer
 class LeadListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for lead lists"""
     assigned_to_name = serializers.SerializerMethodField()
+    stage_id = serializers.IntegerField(source='stage.id', read_only=True)
+    stage_name = serializers.CharField(source='stage.name', read_only=True)
     
     class Meta:
         model = Lead
@@ -17,7 +19,7 @@ class LeadListSerializer(serializers.ModelSerializer):
             'id', 'code', 'name', 'email', 'phone', 'organization_name',
             'job_title', 'status', 'source', 'qualification_status',
             'lead_score', 'estimated_value', 'assigned_to_name',
-            'is_converted', 'created_at'
+            'is_converted', 'stage_id', 'stage_name', 'created_at'
         ]
     
     def get_assigned_to_name(self, obj):
@@ -30,6 +32,8 @@ class LeadSerializer(serializers.ModelSerializer):
     """Full lead serializer"""
     assigned_to = EmployeeListSerializer(read_only=True)
     converted_by_name = serializers.SerializerMethodField()
+    stage_id = serializers.IntegerField(source='stage.id', read_only=True)
+    stage_name = serializers.CharField(source='stage.name', read_only=True)
     
     class Meta:
         model = Lead
@@ -40,9 +44,10 @@ class LeadSerializer(serializers.ModelSerializer):
             'estimated_value', 'is_converted', 'converted_at',
             'converted_by', 'converted_by_name', 'tags', 'notes',
             'campaign', 'referrer', 'address', 'city', 'state',
-            'postal_code', 'country', 'created_at', 'updated_at'
+            'postal_code', 'country', 'stage', 'stage_id', 'stage_name',
+            'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'code', 'created_at', 'updated_at', 'converted_at']
+        read_only_fields = ['id', 'code', 'created_at', 'updated_at', 'converted_at', 'stage']
     
     def get_converted_by_name(self, obj):
         if obj.converted_by:
@@ -66,9 +71,57 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         ]
     
     def create(self, validated_data):
-        """Custom create to handle assigned_to_id"""
+        """Custom create to handle assigned_to_id, ensure Decimal conversion, and set default stage"""
+        from decimal import Decimal
+        import logging
+        logger = logging.getLogger(__name__)
+        
         assigned_to_id = validated_data.pop('assigned_to_id', None)
-        lead = Lead.objects.create(**validated_data)
+        
+        # Ensure estimated_value is Decimal if provided
+        if 'estimated_value' in validated_data and validated_data['estimated_value'] is not None:
+            try:
+                if not isinstance(validated_data['estimated_value'], Decimal):
+                    validated_data['estimated_value'] = Decimal(str(validated_data['estimated_value']))
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Error converting estimated_value to Decimal: {e}")
+                # Remove invalid estimated_value
+                validated_data.pop('estimated_value', None)
+        
+        # Set default stage to "Lead" stage if not provided
+        organization = validated_data.get('organization')
+        if organization and 'stage' not in validated_data:
+            try:
+                from crmApp.models import Pipeline, PipelineStage
+                # Get or create default pipeline
+                pipeline = Pipeline.objects.filter(
+                    organization=organization,
+                    is_active=True
+                ).order_by('-is_default', '-created_at').first()
+                
+                if pipeline:
+                    # Find "Lead" stage (case-insensitive match)
+                    lead_stage = PipelineStage.objects.filter(
+                        pipeline=pipeline,
+                        name__icontains='lead'
+                    ).order_by('order').first()
+                    
+                    # If no "Lead" stage found, get first stage
+                    if not lead_stage:
+                        lead_stage = PipelineStage.objects.filter(
+                            pipeline=pipeline
+                        ).order_by('order').first()
+                    
+                    if lead_stage:
+                        validated_data['stage'] = lead_stage
+            except Exception as e:
+                logger.warning(f"Error setting default stage for lead: {e}")
+        
+        try:
+            lead = Lead.objects.create(**validated_data)
+        except Exception as e:
+            logger.error(f"Error creating lead: {str(e)}", exc_info=True)
+            raise
         
         if assigned_to_id:
             from crmApp.models import Employee
@@ -107,17 +160,18 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         
         # Remove common separators
         cleaned = value.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+        digits_only = cleaned.replace('+', '')
         
         # Check if it's mostly digits
-        if not cleaned.replace('+', '').isdigit():
+        if not digits_only.isdigit():
             raise serializers.ValidationError(
-                "Phone number should only contain digits, spaces, hyphens, and parentheses."
+                "Phone number should only contain digits, spaces, hyphens, parentheses, and a leading +."
             )
         
-        # Check minimum length
-        if len(cleaned) < 10:
+        # Check minimum length (relaxed to 3 digits for international formats)
+        if len(digits_only) < 3:
             raise serializers.ValidationError(
-                "Phone number must be at least 10 digits."
+                "Phone number must be at least 3 digits."
             )
         
         return value
@@ -132,12 +186,28 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         return value
     
     def validate_estimated_value(self, value):
-        """Validate estimated value is positive"""
-        if value is not None and value < 0:
+        """Validate estimated value is positive and convert to Decimal"""
+        from decimal import Decimal, InvalidOperation
+        
+        if value is None:
+            return None
+            
+        if value < 0:
             raise serializers.ValidationError(
                 "Estimated value cannot be negative."
             )
-        return value
+        
+        # Convert to Decimal if it's not already
+        try:
+            if isinstance(value, str):
+                return Decimal(value)
+            elif isinstance(value, (int, float)):
+                return Decimal(str(value))
+            return value
+        except (InvalidOperation, ValueError, TypeError) as e:
+            raise serializers.ValidationError(
+                f"Invalid estimated value format: {str(e)}"
+            )
     
     def validate(self, attrs):
         """Object-level validation"""
@@ -159,16 +229,87 @@ class LeadCreateSerializer(serializers.ModelSerializer):
 class LeadUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating leads"""
     assigned_to_id = serializers.IntegerField(required=False, allow_null=True)
+    stage_id = serializers.IntegerField(required=False, allow_null=True, write_only=True)
     
     class Meta:
         model = Lead
         fields = [
             'name', 'organization_name', 'job_title', 'email', 'phone',
             'status', 'source', 'qualification_status',
-            'assigned_to_id', 'lead_score', 'estimated_value',
+            'assigned_to_id', 'stage_id', 'lead_score', 'estimated_value',
             'tags', 'notes', 'campaign', 'referrer',
             'address', 'city', 'state', 'postal_code', 'country'
         ]
+    
+    def update(self, instance, validated_data):
+        """Custom update to handle stage_id"""
+        stage_id = validated_data.pop('stage_id', None)
+        previous_stage = instance.stage
+        
+        # Update stage if provided
+        if stage_id is not None:
+            from crmApp.models import PipelineStage, Pipeline, LeadStageHistory
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            stage = None
+            # Try to get stage by ID first (most direct approach)
+            try:
+                stage = PipelineStage.objects.get(id=stage_id)
+                logger.info(f"Found stage {stage_id} directly: {stage.name}")
+            except PipelineStage.DoesNotExist:
+                # If stage doesn't exist by ID alone, try to find it by pipeline
+                logger.warning(f"Stage {stage_id} not found directly, trying to find by pipeline...")
+                pipeline = Pipeline.objects.filter(
+                    organization=instance.organization,
+                    is_active=True
+                ).order_by('-is_default', '-created_at').first()
+                
+                if pipeline:
+                    try:
+                        stage = PipelineStage.objects.get(id=stage_id, pipeline=pipeline)
+                        logger.info(f"Found stage {stage_id} in pipeline {pipeline.id}: {stage.name}")
+                    except PipelineStage.DoesNotExist:
+                        logger.warning(f"Stage {stage_id} not found in pipeline {pipeline.id}")
+                else:
+                    logger.warning(f"No active pipeline found for organization {instance.organization.id}, but trying to use stage {stage_id} anyway")
+                    # Even without a pipeline, try to get the stage - it might be valid
+                    try:
+                        stage = PipelineStage.objects.get(id=stage_id)
+                        logger.info(f"Found stage {stage_id} without pipeline check: {stage.name}")
+                    except PipelineStage.DoesNotExist:
+                        logger.error(f"Stage {stage_id} does not exist at all")
+            
+            # Update stage if found
+            if stage:
+                instance.stage = stage
+                
+                # Track stage change in history if stage actually changed
+                if previous_stage != stage:
+                    try:
+                        # Get current user's employee profile if available
+                        employee = None
+                        request = self.context.get('request')
+                        if request and request.user and hasattr(request.user, 'employee_profiles'):
+                            employee = request.user.employee_profiles.filter(
+                                organization=instance.organization
+                            ).first()
+                        
+                        LeadStageHistory.objects.create(
+                            lead=instance,
+                            organization=instance.organization,
+                            stage=stage,
+                            previous_stage=previous_stage,
+                            changed_by=employee,
+                        )
+                        logger.info(f"Created stage history for lead {instance.id}: {previous_stage} -> {stage}")
+                    except Exception as e:
+                        logger.warning(f"Failed to create stage history: {str(e)}")
+            else:
+                logger.error(f"Cannot update lead {instance.id} to stage {stage_id}: stage not found")
+        
+        # Update other fields
+        return super().update(instance, validated_data)
 
 
 class ConvertLeadSerializer(serializers.Serializer):
