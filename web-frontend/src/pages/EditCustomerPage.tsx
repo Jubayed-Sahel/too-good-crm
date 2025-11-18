@@ -16,7 +16,8 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import CustomSelect from '../components/ui/CustomSelect';
 import { Card, StandardButton } from '../components/common';
 import { toaster } from '../components/ui/toaster';
-import { useCustomers } from '@/hooks';
+import { useCustomer } from '@/hooks';
+import { useUpdateCustomer } from '@/hooks/useCustomerMutations';
 import type { CustomerStatus } from '@/types';
 
 const statusOptions = [
@@ -29,11 +30,14 @@ export const EditCustomerPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  const { customers, isLoading: loadingCustomer, error, updateCustomer } = useCustomers();
+  // Use useCustomer hook to fetch single customer by ID
+  const customerId = id ? parseInt(id) : 0;
+  const { data: customerData, isLoading: loadingCustomer, error } = useCustomer(customerId);
+  const updateCustomerMutation = useUpdateCustomer();
   const [isSaving, setIsSaving] = useState(false);
 
-  // Find customer from list
-  const customer = customers?.find((c) => c.id.toString() === id);
+  // Use customerData directly instead of finding from list
+  const customer = customerData;
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -41,7 +45,7 @@ export const EditCustomerPage = () => {
     last_name: '',
     email: '',
     phone: '',
-    organization: '',
+    company_name: '',
     job_title: '',
     website: '',
     status: 'active' as CustomerStatus,
@@ -57,20 +61,20 @@ export const EditCustomerPage = () => {
   useEffect(() => {
     if (customer) {
       setFormData({
-        full_name: customer.full_name || '',
+        full_name: customer.full_name || customer.name || '',
         first_name: customer.first_name || '',
         last_name: customer.last_name || '',
         email: customer.email || '',
         phone: customer.phone || '',
-        organization: customer.organization || '',
+        company_name: customer.company_name || (typeof customer.organization === 'string' ? customer.organization : '') || '',
         job_title: customer.job_title || '',
         website: customer.website || '',
-        status: customer.status || 'active',
+        status: (customer.status || 'active') as CustomerStatus,
         address: customer.address || '',
         city: customer.city || '',
         state: customer.state || '',
         country: customer.country || '',
-        postal_code: customer.postal_code || '',
+        postal_code: customer.postal_code || customer.zip_code || '',
         notes: customer.notes || '',
       });
     }
@@ -91,17 +95,48 @@ export const EditCustomerPage = () => {
 
     try {
       setIsSaving(true);
-      await updateCustomer(customer.id, formData);
       
-      toaster.create({
-        title: 'Customer updated successfully',
-        type: 'success',
+      // Build name from first_name and last_name
+      const name = `${formData.first_name} ${formData.last_name}`.trim() || customer.name || 'Customer';
+      
+      // Simple payload with only the fields we need
+      const updateData = {
+        name,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        company_name: formData.company_name || undefined,
+        website: formData.website || undefined,
+        status: formData.status,
+        address: formData.address || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        country: formData.country || undefined,
+        postal_code: formData.postal_code || undefined,
+        notes: formData.notes || undefined,
+      };
+      
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key as keyof typeof updateData] === undefined) {
+          delete updateData[key as keyof typeof updateData];
+        }
       });
+      
+      await updateCustomerMutation.mutateAsync({ 
+        id: customer.id, 
+        data: updateData 
+      });
+      
+      // Success toast is handled by the mutation hook
       navigate('/customers');
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Error updating customer:', err);
+      const errorMessage = err?.response?.data?.detail || err?.response?.data?.error || err?.message || 'Please try again';
       toaster.create({
         title: 'Failed to update customer',
-        description: 'Please try again',
+        description: errorMessage,
         type: 'error',
       });
     } finally {
@@ -242,8 +277,8 @@ export const EditCustomerPage = () => {
                   </Text>
                   <Input
                     placeholder="Acme Corporation"
-                    value={formData.organization}
-                    onChange={(e) => setFormData({ ...formData, organization: e.target.value })}
+                    value={formData.company_name}
+                    onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                     size="md"
                   />
                 </VStack>

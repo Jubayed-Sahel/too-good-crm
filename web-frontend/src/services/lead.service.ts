@@ -130,9 +130,16 @@ class LeadService {
   /**
    * Move lead to a different stage
    */
-  async moveLeadStage(id: string | number, stageId: number): Promise<Lead> {
+  async moveLeadStage(id: string | number, stageId: number, stageKey?: string, stageName?: string): Promise<Lead> {
     const url = API_CONFIG.ENDPOINTS.LEADS.MOVE_STAGE(id);
-    return api.post<Lead>(url, { stage_id: stageId });
+    const payload: any = { stage_id: stageId };
+    if (stageKey) {
+      payload.stage_key = stageKey;
+    }
+    if (stageName) {
+      payload.stage_name = stageName;
+    }
+    return api.post<Lead>(url, payload);
   }
 }
 

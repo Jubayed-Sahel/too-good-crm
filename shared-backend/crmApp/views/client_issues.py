@@ -207,10 +207,13 @@ class ClientRaiseIssueView(APIView):
             # Refresh organization to get latest linear_team_id
             organization.refresh_from_db()
             
-            # Get Linear team ID (outside transaction)
-            linear_team_id = organization.linear_team_id
+            # Get Linear team ID (outside transaction) - try multiple sources
+            from crmApp.services.issue_linear_service import IssueLinearService
+            linear_sync_service = IssueLinearService()
+            linear_team_id = linear_sync_service.get_team_id(request, organization, issue)
             
             # Linear sync outside of transaction to avoid transaction conflicts
+            # Always attempt auto-sync
             linear_data = None
             if linear_team_id:
                 try:
@@ -218,10 +221,6 @@ class ClientRaiseIssueView(APIView):
                         f"Attempting to sync issue {issue.issue_number} to Linear "
                         f"(team_id: {linear_team_id}, status: {issue.status})"
                     )
-                    
-                    # Use IssueLinearService for proper status mapping
-                    from crmApp.services.issue_linear_service import IssueLinearService
-                    linear_sync_service = IssueLinearService()
                     
                     # Sync issue to Linear (will map status to state)
                     success, linear_data, error = linear_sync_service.sync_issue_to_linear(
@@ -249,8 +248,9 @@ class ClientRaiseIssueView(APIView):
                     # Don't fail the request if Linear sync fails - issue is still created
                     linear_data = None
             else:
-                logger.info(
-                    f"Linear team ID not configured for organization {organization.name} (ID: {organization.id})"
+                logger.warning(
+                    f"Linear team ID not found for organization {organization.name} (ID: {organization.id}). "
+                    f"Issue {issue.issue_number} will not be synced to Linear. Please configure linear_team_id for the organization."
                 )
             
             # Serialize issue data for response

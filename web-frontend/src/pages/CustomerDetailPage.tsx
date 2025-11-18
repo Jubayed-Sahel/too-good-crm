@@ -67,8 +67,8 @@ const CustomerDetailPage = () => {
       source: '',
       notes: customerData.notes || '',
       tags: customerData.tags || [],
-      totalValue: 0,
-      lifetimeValue: 0,
+      totalValue: customerData.total_value || 0,
+      lifetimeValue: customerData.total_value || 0,
       lastContact: customerData.updated_at || customerData.created_at,
       created_at: customerData.created_at,
     };

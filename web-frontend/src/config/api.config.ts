@@ -41,6 +41,7 @@ export const API_CONFIG = {
       LIST: '/api/organizations/',
       DETAIL: (id: number | string) => `/api/organizations/${id}/`,
       MY_ORGANIZATIONS: '/api/organizations/my_organizations/',
+      ALL_ORGANIZATIONS: '/api/organizations/all_organizations/',
       MEMBERS: (id: number | string) => `/api/organizations/${id}/members/`,
       ADD_MEMBER: (id: number | string) => `/api/organizations/${id}/add_member/`,
     },

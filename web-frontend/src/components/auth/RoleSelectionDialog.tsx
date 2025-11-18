@@ -27,6 +27,14 @@ const RoleSelectionDialog = ({
 }: RoleSelectionDialogProps) => {
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  
+  // Filter out employee profiles that don't have an organization (not assigned by vendor)
+  const validProfiles = profiles.filter(profile => {
+    if (profile.profile_type === 'employee') {
+      return !!profile.organization; // Only show employee profiles with an organization
+    }
+    return true; // Show all vendor and customer profiles
+  });
 
   // Debug: Log profiles when dialog opens
   if (open && profiles.length > 0) {
@@ -133,13 +141,13 @@ const RoleSelectionDialog = ({
               Select Your Profile
             </Heading>
             <Text color="gray.600" fontSize="md">
-              You have {profiles.length} profile{profiles.length > 1 ? 's' : ''}. Choose how you want to continue.
+              You have {validProfiles.length} profile{validProfiles.length > 1 ? 's' : ''}. Choose how you want to continue.
             </Text>
           </Box>
 
           <Box w="full">
             <VStack gap={3} align="stretch">
-              {profiles.map((profile) => {
+              {validProfiles.map((profile) => {
                 const IconComponent = getProfileIcon(profile.profile_type);
                 const isSelected = selectedProfileId === profile.id;
                 const isCurrentProfile = profile.is_primary;

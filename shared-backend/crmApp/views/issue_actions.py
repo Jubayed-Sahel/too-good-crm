@@ -90,13 +90,13 @@ class RaiseIssueView(APIView):
                 
                 # Get team_id from request, organization model, or organization settings
                 organization = request.user.current_organization
-                team_id = (
-                    request.data.get('linear_team_id') or 
-                    getattr(organization, 'linear_team_id', None) or
-                    organization.settings.get('linear_team_id') if hasattr(organization, 'settings') else None
-                )
+                # Use IssueLinearService to get team_id from multiple sources
+                from crmApp.services.issue_linear_service import IssueLinearService
+                linear_sync_service = IssueLinearService()
+                team_id = linear_sync_service.get_team_id(request, organization, issue)
                 
-                if auto_sync and team_id:
+                # Always attempt auto-sync (auto_sync defaults to True if not specified)
+                if team_id:
                     try:
                         linear_service = LinearService()
                         linear_data = linear_service.create_issue(

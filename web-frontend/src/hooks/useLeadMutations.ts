@@ -109,10 +109,12 @@ export function useDeleteLead() {
         type: 'success',
       });
       
-      // Invalidate list and remove from cache
+      // Invalidate all lead queries (list, detail, stats)
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.removeQueries({ queryKey: ['lead', id] });
       queryClient.invalidateQueries({ queryKey: ['leadStats'] });
+      // Force refetch all lead queries to ensure UI updates immediately
+      queryClient.refetchQueries({ queryKey: ['leads'], exact: false });
     },
     onError: (error: any) => {
       toaster.create({

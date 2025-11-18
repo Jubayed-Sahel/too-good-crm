@@ -38,13 +38,33 @@ class CustomerListSerializer(serializers.ModelSerializer):
         return obj.name
     
     def get_total_value(self, obj):
-        """Calculate total value from related deals"""
+        """Calculate total value from won deals linked to customer or converted lead"""
+        from django.db.models import Sum, Q
         from crmApp.models import Deal
-        total = Deal.objects.filter(
-            customer=obj,
-            is_won=True
-        ).aggregate(total=serializers.models.Sum('value'))['total']
-        return float(total) if total else 0.0
+        
+        # Build query to find all won deals for this customer
+        # Deals can be linked directly to customer OR to the lead that was converted to this customer
+        query = Q(is_won=True)
+        
+        # Add customer filter
+        customer_filter = Q(customer=obj)
+        
+        # Add lead filter if customer was converted from a lead
+        if obj.converted_from_lead:
+            lead_filter = Q(lead=obj.converted_from_lead)
+            query = query & (customer_filter | lead_filter)
+        else:
+            query = query & customer_filter
+        
+        # Sum values from all matching deals
+        total = Deal.objects.filter(query).aggregate(total=Sum('value'))['total']
+        deal_total = float(total) if total else 0.0
+        
+        # If no deals found and customer was converted from a lead, use lead's estimated_value
+        if deal_total == 0.0 and obj.converted_from_lead and obj.converted_from_lead.estimated_value:
+            return float(obj.converted_from_lead.estimated_value)
+        
+        return deal_total
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -54,9 +74,11 @@ class CustomerSerializer(serializers.ModelSerializer):
     assigned_to = EmployeeListSerializer(read_only=True)
     converted_from_lead = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
+    total_value = serializers.SerializerMethodField()
     customer_type_display = serializers.CharField(source='get_customer_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)  # Alias for frontend compatibility
+    organization = serializers.IntegerField(source='organization_id', read_only=True)  # Organization should not be changed via API
     
     class Meta:
         model = Customer
@@ -70,18 +92,54 @@ class CustomerSerializer(serializers.ModelSerializer):
             'tax_id', 'address', 'city', 'state', 'postal_code', 'zip_code',
             'country', 'source', 'tags', 'notes',
             'converted_from_lead', 'converted_at',
-            'created_at', 'updated_at'
+            'total_value', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'code', 'user_profile', 'created_at', 'updated_at', 'converted_at']
+        extra_kwargs = {
+            'email': {'required': False},  # Allow email to be optional for updates
+            'organization': {'read_only': True},  # Organization is read-only via explicit field definition
+        }
     
     def get_full_name(self, obj):
         return obj.full_name
     
+    def get_total_value(self, obj):
+        """Calculate total value from won deals linked to customer or converted lead"""
+        from django.db.models import Sum, Q
+        from crmApp.models import Deal
+        
+        # Build query to find all won deals for this customer
+        # Deals can be linked directly to customer OR to the lead that was converted to this customer
+        query = Q(is_won=True)
+        
+        # Add customer filter
+        customer_filter = Q(customer=obj)
+        
+        # Add lead filter if customer was converted from a lead
+        if obj.converted_from_lead:
+            lead_filter = Q(lead=obj.converted_from_lead)
+            query = query & (customer_filter | lead_filter)
+        else:
+            query = query & customer_filter
+        
+        # Sum values from all matching deals
+        total = Deal.objects.filter(query).aggregate(total=Sum('value'))['total']
+        deal_total = float(total) if total else 0.0
+        
+        # If no deals found and customer was converted from a lead, use lead's estimated_value
+        if deal_total == 0.0 and obj.converted_from_lead and obj.converted_from_lead.estimated_value:
+            return float(obj.converted_from_lead.estimated_value)
+        
+        return deal_total
+    
     def get_converted_from_lead(self, obj):
         if obj.converted_from_lead:
+            lead = obj.converted_from_lead
+            # Lead model uses 'name' field, not 'first_name' and 'last_name'
+            lead_name = lead.name or 'Unknown Lead'
             return {
-                'id': obj.converted_from_lead.id,
-                'name': f"{obj.converted_from_lead.first_name} {obj.converted_from_lead.last_name}".strip()
+                'id': lead.id,
+                'name': lead_name
             }
         return None
 

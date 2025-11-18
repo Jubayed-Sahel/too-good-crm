@@ -127,6 +127,31 @@ class OrganizationViewSet(viewsets.ModelViewSet):
         serializer = UserOrganizationSerializer(memberships, many=True)
         return Response(serializer.data)
     
+    @action(detail=False, methods=['get'])
+    def all_organizations(self, request):
+        """
+        Get all organizations in the database.
+        This is useful for customers raising issues - they should be able to see all organizations.
+        """
+        # For customers, return all organizations
+        # For other profile types, return filtered organizations (same as list)
+        from crmApp.models import UserProfile
+        active_profile = UserProfile.objects.filter(
+            user=request.user,
+            is_primary=True,
+            status='active'
+        ).first()
+        
+        if active_profile and active_profile.profile_type == 'customer':
+            # Customers can see all organizations when raising issues
+            organizations = Organization.objects.all().order_by('name')
+        else:
+            # For other profile types, use the same filtering as list
+            organizations = self.get_queryset()
+        
+        serializer = self.get_serializer(organizations, many=True)
+        return Response(serializer.data)
+    
     @action(detail=True, methods=['post'])
     def add_member(self, request, pk=None):
         """Add a member to an organization"""

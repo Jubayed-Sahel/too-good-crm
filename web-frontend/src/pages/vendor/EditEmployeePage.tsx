@@ -36,7 +36,7 @@ const statusOptions = [
 const EditEmployeePage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { employees, isLoading } = useEmployees();
+  const { employees, isLoading, refetch } = useEmployees();
 
   const employee = employees.find(emp => emp.id === Number(id));
 
@@ -57,6 +57,7 @@ const EditEmployeePage = () => {
     emergency_contact: '',
     hire_date: '',
   });
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (employee) {
@@ -89,24 +90,94 @@ const EditEmployeePage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    console.log('Form submitted', { id, formData });
+    
+    if (!id) {
+      toaster.create({
+        title: 'Error',
+        description: 'Employee ID is missing.',
+        type: 'error',
+      });
+      return;
+    }
+    
+    // Validate required fields
+    if (!formData.first_name.trim() || !formData.last_name.trim() || !formData.email.trim()) {
+      toaster.create({
+        title: 'Validation Error',
+        description: 'Please fill in all required fields (First Name, Last Name, Email).',
+        type: 'error',
+      });
+      return;
+    }
+    
+    setIsSaving(true);
     
     try {
-      await employeeService.updateEmployee(parseInt(id!), formData);
+      // Prepare data - convert empty strings to null for optional fields
+      const updateData: any = {
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone?.trim() || null,
+        job_title: formData.job_title?.trim() || null,
+        department: formData.department?.trim() || null,
+        employment_type: formData.employment_type,
+        status: formData.status,
+        address: formData.address?.trim() || null,
+        city: formData.city?.trim() || null,
+        state: formData.state?.trim() || null,
+        zip_code: formData.zip_code?.trim() || null,
+        country: formData.country?.trim() || null,
+        emergency_contact: formData.emergency_contact?.trim() || null,
+        hire_date: formData.hire_date || null,
+      };
       
+      console.log('🚀 Updating employee with data:', { id: parseInt(id), data: updateData });
+      
+      const updatedEmployee = await employeeService.updateEmployee(parseInt(id), updateData);
+      
+      console.log('✅ Employee updated successfully:', updatedEmployee);
+      
+      // Show success message
       toaster.create({
         title: 'Employee updated successfully',
         description: `${formData.first_name} ${formData.last_name}'s information has been updated.`,
         type: 'success',
+        duration: 3000,
       });
       
-      navigate(`/employees/${id}`);
+      // Navigate to team page - the TeamMembersTab will refetch automatically
+      console.log('🔄 Navigating to /team');
+      navigate('/team', { replace: false });
     } catch (error: any) {
-      console.error('Error updating employee:', error);
+      console.error('❌ Error updating employee:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+      });
+      
+      const errorMessage = error?.response?.data?.detail 
+        || error?.response?.data?.error
+        || error?.response?.data?.message
+        || (error?.response?.data && typeof error.response.data === 'object' 
+          ? JSON.stringify(error.response.data) 
+          : null)
+        || error?.message 
+        || 'Failed to update employee. Please try again.';
+      
       toaster.create({
         title: 'Failed to update employee',
-        description: error.message || 'Please try again.',
+        description: errorMessage,
         type: 'error',
+        duration: 5000,
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -396,9 +467,11 @@ const EditEmployeePage = () => {
                 <Button
                   type="submit"
                   colorPalette="purple"
+                  loading={isSaving}
+                  disabled={isSaving}
                 >
                   <FiSave />
-                  Save Changes
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </HStack>
             </Card>

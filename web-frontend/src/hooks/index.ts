@@ -4,7 +4,7 @@
 
 // Core hooks
 export { useAuth } from './useAuth';
-export { useCustomers } from './useCustomers';
+export { useCustomers, useCustomer } from './useCustomers';
 export { useDeals } from './useDeals';
 export { useDashboardStats } from './useDashboardStats';
 export { useEmployees } from './useEmployees';

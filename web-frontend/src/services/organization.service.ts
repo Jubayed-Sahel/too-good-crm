@@ -114,6 +114,14 @@ class OrganizationService {
   }
 
   /**
+   * Get all organizations in the database
+   * Useful for customers raising issues - they should see all organizations
+   */
+  async getAllOrganizations(): Promise<Organization[]> {
+    return api.get<Organization[]>(API_CONFIG.ENDPOINTS.ORGANIZATIONS.ALL_ORGANIZATIONS);
+  }
+
+  /**
    * Get user's organizations (alias for getMyOrganizations)
    */
   async getUserOrganizations(): Promise<Organization[]> {

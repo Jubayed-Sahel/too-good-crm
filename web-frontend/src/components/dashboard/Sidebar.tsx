@@ -233,9 +233,19 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   ]);
 
   // Check if user has multiple profiles (memoized)
+  // Filter profiles to only include employee profiles with organizations (assigned by vendor)
+  const validProfiles = useMemo(() => {
+    return profiles?.filter(profile => {
+      if (profile.profile_type === 'employee') {
+        return !!profile.organization; // Only show employee profiles with an organization
+      }
+      return true; // Show all vendor and customer profiles
+    }) || [];
+  }, [profiles]);
+
   const hasMultipleProfiles = useMemo(() => 
-    profiles && profiles.length > 1,
-    [profiles]
+    validProfiles && validProfiles.length > 1,
+    [validProfiles]
   );
 
   return (
@@ -336,7 +346,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                       w="full"
                     >
                       <FiRefreshCw size={14} />
-                      <Text ml={1}>Switch Profile ({profiles?.length})</Text>
+                      <Text ml={1}>Switch Profile ({validProfiles?.length})</Text>
                     </Button>
                   )}
                 </VStack>
@@ -499,10 +509,10 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       </Box>
 
       {/* Role Switcher Dialog - Only render when needed */}
-      {showRoleSwitcher && profiles && profiles.length > 0 && (
+      {showRoleSwitcher && validProfiles && validProfiles.length > 0 && (
         <RoleSelectionDialog
           open={showRoleSwitcher}
-          profiles={profiles}
+          profiles={validProfiles}
           onSelectRole={handleSwitchRole}
           isLoading={isSwitching}
         />

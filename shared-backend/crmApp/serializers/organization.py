@@ -41,6 +41,10 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
         # The slug will be auto-generated in the model's save method
         organization = Organization.objects.create(**validated_data)
         
+        # Automatically assign Linear team ID when organization is created
+        # This ensures every organization has Linear integration ready
+        self._assign_linear_team_id(organization)
+        
         # Add the creator as owner
         user = self.context['request'].user
         UserOrganization.objects.create(
@@ -56,7 +60,73 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
         # Create default permissions for the organization
         self._create_default_permissions(organization)
         
+        # Create default pipeline for the organization
+        self._create_default_pipeline(organization)
+        
         return organization
+    
+    def _assign_linear_team_id(self, organization):
+        """
+        Assign Linear team ID to the organization.
+        Tries multiple sources:
+        1. Default LINEAR_TEAM_ID from settings
+        2. First available team from Linear API
+        """
+        from django.conf import settings
+        import os
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        
+        # Try default from settings first
+        linear_team_id = getattr(settings, 'LINEAR_TEAM_ID', None)
+        
+        if not linear_team_id:
+            # Try to fetch from Linear API
+            linear_api_key = getattr(settings, 'LINEAR_API_KEY', None) or os.getenv('LINEAR_API_KEY', '')
+            
+            if linear_api_key:
+                try:
+                    from crmApp.services.linear_service import LinearService
+                    linear_service = LinearService(api_key=linear_api_key)
+                    teams = linear_service.get_teams()
+                    
+                    if teams and len(teams) > 0:
+                        # Use the first team as default
+                        linear_team_id = teams[0]['id']
+                        logger.info(
+                            f"Assigned first available Linear team '{teams[0].get('name', 'N/A')}' "
+                            f"(ID: {linear_team_id}) to organization {organization.name}"
+                        )
+                    else:
+                        logger.warning(
+                            f"No Linear teams found. Organization {organization.name} will not have Linear team ID."
+                        )
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to fetch Linear teams for organization {organization.name}: {str(e)}"
+                    )
+            else:
+                logger.warning(
+                    f"LINEAR_API_KEY not configured. Organization {organization.name} will not have Linear team ID."
+                )
+        else:
+            logger.info(
+                f"Assigned default Linear team ID {linear_team_id} to organization {organization.name}"
+            )
+        
+        # Save the Linear team ID to the organization
+        if linear_team_id:
+            organization.linear_team_id = linear_team_id
+            organization.save(update_fields=['linear_team_id'])
+            logger.info(
+                f"[OK] Organization {organization.name} (ID: {organization.id}) created with Linear team ID: {linear_team_id}"
+            )
+        else:
+            logger.warning(
+                f"[WARNING] Organization {organization.name} (ID: {organization.id}) created without Linear team ID. "
+                f"Please configure LINEAR_TEAM_ID in settings or LINEAR_API_KEY to enable Linear integration."
+            )
     
     def _create_vendor_profile(self, user, organization):
         """Create vendor profile and vendor record for the user"""
@@ -186,6 +256,39 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
             )
         
         Permission.objects.bulk_create(permissions_to_create, ignore_conflicts=True)
+    
+    def _create_default_pipeline(self, organization):
+        """Create default pipeline with stages for a new organization"""
+        from crmApp.models import Pipeline, PipelineStage
+        
+        # Check if pipeline already exists
+        if Pipeline.objects.filter(organization=organization, is_default=True).exists():
+            return
+        
+        # Create default pipeline
+        pipeline = Pipeline.objects.create(
+            organization=organization,
+            name='Sales Pipeline',
+            code='SALES',
+            is_active=True,
+            is_default=True
+        )
+        
+        # Create default pipeline stages
+        default_stages = [
+            {'name': 'Lead', 'order': 1, 'probability': 10.00, 'description': 'Initial contact and research'},
+            {'name': 'Qualified', 'order': 2, 'probability': 25.00, 'description': 'Qualifying the opportunity'},
+            {'name': 'Proposal', 'order': 3, 'probability': 50.00, 'description': 'Proposal submitted'},
+            {'name': 'Negotiation', 'order': 4, 'probability': 75.00, 'description': 'Contract negotiation'},
+            {'name': 'Closed Won', 'order': 5, 'probability': 100.00, 'is_closed_won': True, 'description': 'Deal won'},
+            {'name': 'Closed Lost', 'order': 6, 'probability': 0.00, 'is_closed_lost': True, 'description': 'Deal lost'},
+        ]
+        
+        for stage_data in default_stages:
+            PipelineStage.objects.create(
+                pipeline=pipeline,
+                **stage_data
+            )
 
 
 class OrganizationUpdateSerializer(serializers.ModelSerializer):
