@@ -28,12 +28,17 @@ const RoleSelectionDialog = ({
   const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
   
-  // Filter out employee profiles that don't have an organization (not assigned by vendor)
+  // Filter profiles:
+  // - Vendor profiles: Always show (new users can sign up as vendors)
+  // - Customer profiles: Always show (new users can sign up as customers)
+  // - Employee profiles: Only show if assigned by vendor (has organization)
   const validProfiles = profiles.filter(profile => {
     if (profile.profile_type === 'employee') {
-      return !!profile.organization; // Only show employee profiles with an organization
+      // Employee profiles: Only show if they have an organization (assigned by vendor)
+      return !!profile.organization;
     }
-    return true; // Show all vendor and customer profiles
+    // Vendor and customer profiles: Always show
+    return true;
   });
 
   // Debug: Log profiles when dialog opens

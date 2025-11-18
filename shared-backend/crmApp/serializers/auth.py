@@ -48,13 +48,22 @@ class UserSerializer(serializers.ModelSerializer):
                 'user__user_organizations__organization'
             )
             
-            # Filter out employee profiles that don't have an active organization link
-            # or don't have an active Employee record
+            # Filter profiles based on type:
+            # - Vendor profiles: Always show (new users can sign up as vendors)
+            # - Customer profiles: Always show (new users can sign up as customers)
+            # - Employee profiles: Only show if assigned by vendor (has organization + active employee record)
             from crmApp.models import Employee
             valid_profiles = []
             for profile in profiles:
-                # For employee profiles, ensure they have an active Employee record
                 if profile.profile_type == 'employee':
+                    # Employee profiles: Only show if user has been assigned by a vendor
+                    # This means they must have:
+                    # 1. An organization (assigned by vendor)
+                    # 2. An active Employee record
+                    # 3. An active UserOrganization link
+                    if not profile.organization:
+                        continue  # Skip employee profiles without organization
+                    
                     # Check if user has an active Employee record for this organization
                     has_active_employee = Employee.objects.filter(
                         user=obj,
@@ -70,11 +79,17 @@ class UserSerializer(serializers.ModelSerializer):
                     ).exists()
                     
                     # Only include if both conditions are met
-                    if has_active_employee and has_active_org_link and profile.organization:
+                    if has_active_employee and has_active_org_link:
                         valid_profiles.append(profile)
+                elif profile.profile_type == 'vendor':
+                    # Vendor profiles: Always show (even without organization for new signups)
+                    valid_profiles.append(profile)
+                elif profile.profile_type == 'customer':
+                    # Customer profiles: Always show
+                    valid_profiles.append(profile)
                 else:
-                    # For other profile types, include if they have an organization or are customer type
-                    if profile.profile_type == 'customer' or profile.organization:
+                    # For any other profile types, include if they have an organization
+                    if profile.organization:
                         valid_profiles.append(profile)
             
             return UserProfileSerializer(valid_profiles, many=True).data

@@ -178,7 +178,7 @@ export const ProfileSwitcher = () => {
           </>
         )}
 
-        {/* Employee Profiles - Only show if user has an active employee assignment (has organization) */}
+        {/* Employee Profiles - Only show if user has been assigned as employee by a vendor (has organization) */}
         {profiles.filter(p => p.profile_type === 'employee' && p.organization).length > 0 && (
           <>
             <MenuSeparator />
