@@ -95,7 +95,7 @@ function SortableDealCard({ deal, stageColor, formatCurrency, formatDate, onClic
     opacity: isDragging ? 0.85 : 1, // Less opacity change so buttons remain visible during drag
   };
 
-  const dealValue = typeof deal.value === 'string' ? parseFloat(deal.value) : deal.value;
+  const dealValue = typeof deal.value === 'string' ? parseFloat(deal.value) : (deal.value || 0);
 
   return (
     <Box
@@ -251,9 +251,10 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
     opacity: isDragging ? 0.85 : 1, // Less opacity change so buttons remain visible during drag
   };
 
-  const estimatedValue = typeof lead.estimated_value === 'string' 
-    ? parseFloat(lead.estimated_value) 
-    : lead.estimated_value || 0;
+  // Parse estimated_value - handle string, number, or null/undefined
+  const estimatedValue = lead.estimated_value !== null && lead.estimated_value !== undefined
+    ? (typeof lead.estimated_value === 'string' ? parseFloat(lead.estimated_value) : lead.estimated_value)
+    : 0;
 
   // Determine stage color based on lead's current stage
   const getStageColor = () => {
@@ -313,7 +314,14 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
               </Badge>
             )}
           </VStack>
-          <HStack gap={1} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
+          <HStack 
+            gap={1} 
+            onClick={(e) => e.stopPropagation()} 
+            onPointerDown={(e) => e.stopPropagation()} 
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            style={{ pointerEvents: 'auto', zIndex: 10 }}
+          >
             {onView && (
               <Button
                 size="xs"
@@ -324,6 +332,13 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
                   e.stopPropagation();
                   console.log('View button clicked for lead:', lead.id);
                   onView(lead);
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
                 }}
                 title="View Lead"
                 style={{ pointerEvents: 'auto', zIndex: 10 }}
@@ -342,6 +357,13 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
                   console.log('Edit button clicked for lead:', lead.id);
                   onEdit(lead);
                 }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                }}
                 title="Edit Lead"
                 style={{ pointerEvents: 'auto', zIndex: 10 }}
               >
@@ -358,6 +380,13 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
                   e.stopPropagation();
                   console.log('Delete button clicked for lead:', lead.id);
                   onDelete(lead);
+                }}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
                 }}
                 title="Delete Lead"
                 style={{ pointerEvents: 'auto', zIndex: 10 }}
@@ -425,7 +454,9 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
                     borderColor="gray.100"
                     onPointerDown={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
+                    style={{ pointerEvents: 'auto', zIndex: 10 }}
                   >
                     <Text fontSize="xs" color="gray.600" fontWeight="medium">
                       Move to:
@@ -435,7 +466,9 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
                       flexWrap="wrap"
                       onPointerDown={(e) => e.stopPropagation()}
                       onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
                       onClick={(e) => e.stopPropagation()}
+                      style={{ pointerEvents: 'auto', zIndex: 10 }}
                     >
                       {availableStages
                         .filter((stage) => {
@@ -516,6 +549,11 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
                               }
                             }}
                             onPointerDown={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            onTouchStart={(e) => {
+                              e.preventDefault();
                               e.stopPropagation();
                             }}
                             title={`Move to ${stage.label}`}
@@ -577,15 +615,27 @@ function StageColumn({ stage, deals, leads, formatCurrency, formatDate, onDealCl
     id: stageDroppableId,
   });
   const StageIcon = stage.icon;
+  // Filter out any invalid leads/deals before creating items
+  const validDeals = deals.filter(d => d && d.id);
+  const validLeads = leads.filter(l => l && l.id && l.name); // Ensure lead has name too
   const allItems = [
-    ...deals.map(d => ({ type: 'deal' as const, id: `deal-${d.id}`, data: d })),
-    ...leads.map(l => ({ type: 'lead' as const, id: `lead-${l.id}`, data: l })),
+    ...validDeals.map(d => ({ type: 'deal' as const, id: `deal-${d.id}`, data: d })),
+    ...validLeads.map(l => ({ type: 'lead' as const, id: `lead-${l.id}`, data: l })),
   ];
 
-  const stageValue = deals.reduce((sum, deal) => {
+  // Calculate stage value from both deals and leads (only valid ones)
+  const stageValue = [
+    ...validDeals.map(deal => {
     const value = typeof deal.value === 'string' ? parseFloat(deal.value) : deal.value;
-    return sum + (value || 0);
-  }, 0);
+      return value || 0;
+    }),
+    ...validLeads.map(lead => {
+      const estimatedValue = lead.estimated_value !== null && lead.estimated_value !== undefined
+        ? (typeof lead.estimated_value === 'string' ? parseFloat(lead.estimated_value) : lead.estimated_value)
+        : 0;
+      return estimatedValue || 0;
+    })
+  ].reduce((sum, value) => sum + value, 0);
 
   return (
     <VStack
@@ -743,13 +793,52 @@ const SalesPage = () => {
   const { data: leadsData, isLoading: leadsLoading, refetch: refetchLeads } = useLeads({});
   const allLeads = leadsData?.results || [];
   
-  // Force refetch leads on mount and clear cache to remove stale data
+  // Get all deals from useSalesPage (already filtered)
+  const allDeals = deals || [];
+  
+  // Force refetch leads and deals on mount and clear cache to remove stale data
   useEffect(() => {
-    // Clear all lead-related queries from cache
+    // Clear all lead-related queries from cache to remove any stale/deleted leads
     queryClient.removeQueries({ queryKey: ['leads'] });
+    // Clear all deal-related queries from cache to remove any stale/deleted deals
+    queryClient.removeQueries({ queryKey: ['deals'] });
+    // Invalidate and refetch to ensure fresh data
+    queryClient.invalidateQueries({ queryKey: ['leads'] });
+    queryClient.invalidateQueries({ queryKey: ['deals'] });
     // Then refetch fresh data
     refetchLeads();
+    queryClient.refetchQueries({ queryKey: ['deals'] });
   }, [refetchLeads, queryClient]);
+
+  // Filter out any invalid/deleted deals (defensive check)
+  const validDeals = useMemo(() => {
+    return allDeals.filter((deal: any) => {
+      // Must have id and title/name
+      if (!deal || !deal.id || (!deal.title && !deal.name)) {
+        return false;
+      }
+      // Additional check: ensure deal has valid data (not a stale/empty object)
+      if (deal.title === '' && deal.name === '') {
+        return false;
+      }
+      return true;
+    });
+  }, [allDeals]);
+  
+  // Filter out any invalid/deleted leads (defensive check)
+  const validLeads = useMemo(() => {
+    return allLeads.filter(lead => {
+      // Must have id
+      if (!lead || !lead.id) {
+        return false;
+      }
+      // Additional check: ensure lead has valid name (not a stale/empty object)
+      if (!lead.name && !lead.organization_name) {
+        return false;
+      }
+      return true;
+    });
+  }, [allLeads]);
 
   const moveDealMutation = useMoveDealToStage();
   const convertLeadMutation = useConvertLead();
@@ -792,13 +881,18 @@ const SalesPage = () => {
     if (confirmed) {
       console.log('Deleting lead with ID:', lead.id);
       deleteLead.mutate(lead.id, {
-        onSuccess: (data) => {
+        onSuccess: async (data) => {
           console.log('Lead deleted successfully:', data);
           toaster.create({
             title: 'Lead deleted successfully',
             type: 'success',
           });
           setLeadToDelete(null);
+          // Force refetch leads to update the UI immediately
+          await refetchLeads();
+          // Also invalidate and refetch to ensure all queries are updated
+          queryClient.invalidateQueries({ queryKey: ['leads'] });
+          queryClient.refetchQueries({ queryKey: ['leads'], exact: false });
         },
         onError: (err: any) => {
           console.error('Error deleting lead:', err);
@@ -909,22 +1003,17 @@ const SalesPage = () => {
       }
     }
     
-    // If still no ID found, show detailed error
+    // If still no ID found, we'll still try to move - backend will create pipeline if needed
     if (!finalStageId || finalStageId === undefined) {
-      console.error('❌ Stage ID lookup failed!');
-      console.error('Details:', {
+      console.warn('⚠️ Stage ID lookup failed, but will attempt move with stage_key - backend will create pipeline if needed');
+      console.warn('Details:', {
         stageKey,
         providedStageId: stageId,
         mappedStages: mappedStages.map(s => ({ key: s.key, id: s.id, name: s.name })),
         pipelineStages: pipelineStages?.map(ps => ({ id: ps.id, name: ps.name })),
       });
-      
-      toaster.create({
-        title: 'Error',
-        description: `Cannot find stage ID for "${stageKey}". Please ensure pipeline stages are configured in your organization settings.`,
-        type: 'error',
-      });
-      return;
+      // Don't return - let backend handle pipeline creation
+      finalStageId = 0; // Use 0 as placeholder - backend will find/create by name
     }
     
     console.log('Moving lead to stage:', { leadId: lead.id, stageId: finalStageId });
@@ -937,7 +1026,14 @@ const SalesPage = () => {
       let useFallback = false;
       
       try {
-        result = await leadService.moveLeadStage(lead.id, finalStageId);
+        // Send stage_key and stage_name to help backend find/create stages
+        const targetStage = mappedStages.find(s => s.key === stageKey);
+        result = await leadService.moveLeadStage(
+          lead.id, 
+          finalStageId || 0, // Send 0 if no ID found - backend will create pipeline and find by name
+          stageKey,
+          targetStage?.name
+        );
         console.log('Lead moved successfully via move_stage endpoint:', result);
       } catch (moveError: any) {
         console.log('move_stage endpoint error:', moveError);
@@ -1015,7 +1111,11 @@ const SalesPage = () => {
   const [draggedItem, setDraggedItem] = useState<{ type: 'deal' | 'lead'; data: Deal | Lead } | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Require 8px of movement before drag starts (allows button clicks)
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -1105,7 +1205,7 @@ const SalesPage = () => {
 
   // Filter deals and leads based on search and filters
   const filteredDeals = useMemo(() => {
-    return deals.filter(deal => {
+    return validDeals.filter(deal => {
       const matchesSearch = searchQuery === '' || 
         deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (deal.customer_name && deal.customer_name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -1115,10 +1215,10 @@ const SalesPage = () => {
 
       return matchesSearch && matchesOwner && matchesStage;
     });
-  }, [deals, searchQuery, ownerFilter, stageFilter]);
+  }, [validDeals, searchQuery, ownerFilter, stageFilter]);
 
   const filteredLeads = useMemo(() => {
-    return allLeads.filter(lead => {
+    return validLeads.filter(lead => {
       const matchesSearch = searchQuery === '' || 
         (lead.name && lead.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (lead.organization_name && lead.organization_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -1128,12 +1228,16 @@ const SalesPage = () => {
 
       return matchesSearch && matchesOwner;
     });
-  }, [allLeads, searchQuery, ownerFilter]);
+  }, [validLeads, searchQuery, ownerFilter]);
 
   // Get items for each stage
   const getStageItems = (stageKey: string) => {
-    // Find deals in this stage
-    const stageDeals = filteredDeals.filter(deal => {
+    // Find deals in this stage (only valid deals)
+    const stageDeals = filteredDeals.filter((deal: any) => {
+      // Additional validation: ensure deal has required fields
+      if (!deal || !deal.id || (!deal.title && !deal.name)) {
+        return false;
+      }
       // Match by stage key or stage name
       const dealStage = deal.stage || deal.stage_name?.toLowerCase() || '';
       const stageKeyLower = stageKey.toLowerCase();
@@ -1313,13 +1417,13 @@ const SalesPage = () => {
       }
       
       if (!targetStageKey) {
-        console.warn('Unknown drop target:', overId);
+      console.warn('Unknown drop target:', overId);
         toaster.create({
           title: 'Drop failed',
           description: 'Invalid drop location. Please drop the item on a stage column.',
           type: 'error',
         });
-        return;
+      return;
       }
     }
 
@@ -1399,31 +1503,53 @@ const SalesPage = () => {
       console.error('Error moving item:', error);
       // Only show error if it wasn't already shown by handleMoveLeadToStage
       if (!error.response || error.response.status !== 404) {
-        toaster.create({
-          title: 'Error',
-          description: error.response?.data?.error || error.response?.data?.detail || 'Failed to move item. Please try again.',
-          type: 'error',
-        });
+      toaster.create({
+        title: 'Error',
+        description: error.response?.data?.error || error.response?.data?.detail || 'Failed to move item. Please try again.',
+        type: 'error',
+      });
       }
     }
   };
 
-  // Calculate stats
+  // Calculate stats - include both deals and leads
   const pipelineValue = useMemo(() => {
-    return filteredDeals.reduce((sum, deal) => {
+    const dealsValue = filteredDeals.reduce((sum, deal) => {
       const value = typeof deal.value === 'string' ? parseFloat(deal.value) : deal.value;
       return sum + (value || 0);
     }, 0);
-  }, [filteredDeals]);
+    
+    const leadsValue = filteredLeads.reduce((sum, lead) => {
+      const estimatedValue = lead.estimated_value !== null && lead.estimated_value !== undefined
+        ? (typeof lead.estimated_value === 'string' ? parseFloat(lead.estimated_value) : lead.estimated_value)
+        : 0;
+      return sum + (estimatedValue || 0);
+    }, 0);
+    
+    return dealsValue + leadsValue;
+  }, [filteredDeals, filteredLeads]);
 
   const openDeals = filteredDeals.filter(d => d.stage !== 'closed-won' && d.stage !== 'closed-lost').length;
   const wonDeals = filteredDeals.filter(d => d.stage === 'closed-won').length;
-  const wonValue = filteredDeals
+  const wonValue = useMemo(() => {
+    const wonDealsValue = filteredDeals
     .filter(d => d.stage === 'closed-won')
     .reduce((sum, deal) => {
       const value = typeof deal.value === 'string' ? parseFloat(deal.value) : deal.value;
       return sum + (value || 0);
     }, 0);
+    
+    const wonLeadsValue = filteredLeads
+      .filter(l => l.stage_name?.toLowerCase().includes('won') || l.stage_name?.toLowerCase().includes('closed-won'))
+      .reduce((sum, lead) => {
+        const estimatedValue = lead.estimated_value !== null && lead.estimated_value !== undefined
+          ? (typeof lead.estimated_value === 'string' ? parseFloat(lead.estimated_value) : lead.estimated_value)
+          : 0;
+        return sum + (estimatedValue || 0);
+      }, 0);
+    
+    return wonDealsValue + wonLeadsValue;
+  }, [filteredDeals, filteredLeads]);
 
   if (isLoading || leadsLoading) {
     return (

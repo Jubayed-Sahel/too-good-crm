@@ -16,7 +16,8 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import CustomSelect from '../components/ui/CustomSelect';
 import { Card, StandardButton } from '../components/common';
 import { toaster } from '../components/ui/toaster';
-import { useCustomer, useUpdateCustomer } from '@/hooks';
+import { useCustomer } from '@/hooks';
+import { useUpdateCustomer } from '@/hooks/useCustomerMutations';
 import type { CustomerStatus } from '@/types';
 
 const statusOptions = [
@@ -94,17 +95,48 @@ export const EditCustomerPage = () => {
 
     try {
       setIsSaving(true);
-      await updateCustomerMutation.mutateAsync({ id: customer.id, ...formData });
       
-      toaster.create({
-        title: 'Customer updated successfully',
-        type: 'success',
+      // Build name from first_name and last_name
+      const name = `${formData.first_name} ${formData.last_name}`.trim() || customer.name || 'Customer';
+      
+      // Simple payload with only the fields we need
+      const updateData = {
+        name,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email,
+        phone: formData.phone || undefined,
+        company_name: formData.company_name || undefined,
+        website: formData.website || undefined,
+        status: formData.status,
+        address: formData.address || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        country: formData.country || undefined,
+        postal_code: formData.postal_code || undefined,
+        notes: formData.notes || undefined,
+      };
+      
+      // Remove undefined values
+      Object.keys(updateData).forEach(key => {
+        if (updateData[key as keyof typeof updateData] === undefined) {
+          delete updateData[key as keyof typeof updateData];
+        }
       });
+      
+      await updateCustomerMutation.mutateAsync({ 
+        id: customer.id, 
+        data: updateData 
+      });
+      
+      // Success toast is handled by the mutation hook
       navigate('/customers');
-    } catch (err) {
+    } catch (err: any) {
+      console.error('Error updating customer:', err);
+      const errorMessage = err?.response?.data?.detail || err?.response?.data?.error || err?.message || 'Please try again';
       toaster.create({
         title: 'Failed to update customer',
-        description: 'Please try again',
+        description: errorMessage,
         type: 'error',
       });
     } finally {

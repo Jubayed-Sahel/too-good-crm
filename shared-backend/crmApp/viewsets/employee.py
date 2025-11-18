@@ -37,21 +37,44 @@ class EmployeeViewSet(viewsets.ModelViewSet, PermissionCheckMixin):
         Filter employees by user's organizations.
         Returns employees in organizations where user is a member,
         PLUS the user's own employee records in any organization.
+        Only shows employees from organizations where the user has an active link.
         """
         try:
             user_orgs = self.request.user.user_organizations.filter(
                 is_active=True
             ).values_list('organization_id', flat=True)
             
-            # Get employees in user's organizations OR where the user is the employee
+            # Get employees in user's active organizations OR where the user is the employee
+            # BUT only if the user still has an active link to that organization
             from django.db.models import Q
+            from crmApp.models import UserOrganization
+            
             if user_orgs:
+                # Only show employee records where:
+                # 1. The employee is in one of the user's active organizations, OR
+                # 2. The employee IS the user AND they still have an active link to that organization
+                active_user_org_ids = list(user_orgs)
                 queryset = Employee.objects.filter(
-                    Q(organization_id__in=user_orgs) | Q(user=self.request.user)
+                    Q(organization_id__in=active_user_org_ids) | 
+                    Q(
+                        user=self.request.user,
+                        organization_id__in=UserOrganization.objects.filter(
+                            user=self.request.user,
+                            is_active=True
+                        ).values_list('organization_id', flat=True)
+                    )
                 )
             else:
-                # If user has no organizations, only show their own employee records
-                queryset = Employee.objects.filter(user=self.request.user)
+                # If user has no active organizations, only show their own employee records
+                # where they still have an active organization link
+                active_org_ids = UserOrganization.objects.filter(
+                    user=self.request.user,
+                    is_active=True
+                ).values_list('organization_id', flat=True)
+                queryset = Employee.objects.filter(
+                    user=self.request.user,
+                    organization_id__in=active_org_ids
+                )
             
             # Filter by organization if provided
             org_id = self.request.query_params.get('organization')
@@ -79,12 +102,45 @@ class EmployeeViewSet(viewsets.ModelViewSet, PermissionCheckMixin):
                     email__icontains=search
                 )
             
-            return queryset.select_related('user', 'manager', 'organization', 'role').order_by('-created_at', 'first_name', 'last_name').distinct()
+            return queryset.select_related('user', 'manager', 'organization', 'role', 'user_profile').order_by('-created_at', 'first_name', 'last_name').distinct()
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)
             logger.error(f"Error in EmployeeViewSet.get_queryset: {str(e)}", exc_info=True)
             return Employee.objects.none()
+    
+    def retrieve(self, request, *args, **kwargs):
+        """
+        Override retrieve to ensure proper error handling and data loading
+        """
+        try:
+            instance = self.get_object()
+            
+            # Ensure related objects are loaded to avoid N+1 queries and None errors
+            instance = Employee.objects.select_related(
+                'user', 'user_profile', 'manager', 'organization', 'role'
+            ).prefetch_related(
+                'user__user_profiles',
+                'user__user_organizations__organization'
+            ).get(pk=instance.pk)
+            
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data)
+        except Employee.DoesNotExist:
+            return Response(
+                {'error': 'Employee not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error retrieving employee: {str(e)}", exc_info=True)
+            logger.error(traceback.format_exc())
+            return Response(
+                {'error': f'Failed to retrieve employee: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['get'])
     def issues(self, request, pk=None):
@@ -201,6 +257,95 @@ class EmployeeViewSet(viewsets.ModelViewSet, PermissionCheckMixin):
         """Override partial_update to ensure role is properly loaded"""
         kwargs['partial'] = True
         return self.update(request, *args, **kwargs)
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Delete an employee and clean up all related data.
+        - Deletes Employee record
+        - Deactivates UserOrganization link for that organization
+        - Deactivates UserProfile (employee type) for that organization
+        - Ensures user cannot access the organization's data
+        """
+        from crmApp.models import UserOrganization, UserProfile
+        from django.db import transaction
+        from django.utils import timezone
+        
+        instance = self.get_object()
+        employee_user = instance.user
+        employee_organization = instance.organization
+        
+        # Check permissions - only organization owners/admins can delete employees
+        request_organization = self.get_organization_from_request(request, instance=instance)
+        if not request_organization:
+            raise PermissionDenied('You must belong to an organization to delete employees.')
+        
+        active_profile = getattr(request.user, 'active_profile', None)
+        if active_profile:
+            if active_profile.profile_type == 'employee':
+                # Employees cannot delete other employees
+                raise PermissionDenied('You do not have permission to delete employees.')
+            elif active_profile.profile_type == 'vendor':
+                # Vendors can only delete employees in their organization
+                if instance.organization != request_organization:
+                    raise PermissionDenied('You can only delete employees in your organization.')
+            else:
+                # For other profile types, check explicit permission
+                try:
+                    self.check_permission(request, 'employee', 'delete', organization=request_organization, instance=instance)
+                except Exception:
+                    raise PermissionDenied('You do not have permission to delete employees.')
+        
+        try:
+            with transaction.atomic():
+                # Store data before deletion for response
+                employee_id = instance.id
+                employee_name = f"{instance.first_name} {instance.last_name}"
+                
+                # 1. Delete the Employee record
+                instance.delete()
+                
+                # 2. Deactivate UserOrganization link for this organization
+                if employee_user:
+                    user_org_link = UserOrganization.objects.filter(
+                        user=employee_user,
+                        organization=employee_organization
+                    ).first()
+                    
+                    if user_org_link:
+                        user_org_link.is_active = False
+                        user_org_link.left_at = timezone.now()
+                        user_org_link.save()
+                    
+                    # 3. Deactivate UserProfile (employee type) for this organization
+                    # Note: UserProfile has unique constraint on (user, profile_type)
+                    # So there's only one employee profile per user, but it can be linked to different orgs
+                    employee_profile = UserProfile.objects.filter(
+                        user=employee_user,
+                        profile_type='employee',
+                        organization=employee_organization
+                    ).first()
+                    
+                    if employee_profile:
+                        # Deactivate the profile
+                        employee_profile.deactivate()
+                        # Clear the organization link so they can't access it
+                        employee_profile.organization = None
+                        employee_profile.save()
+                
+                return Response({
+                    'message': f'Employee {employee_name} has been deleted and removed from the organization.',
+                    'deleted_employee_id': employee_id
+                }, status=status.HTTP_200_OK)
+                
+        except Exception as e:
+            import logging
+            import traceback
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error deleting employee: {str(e)}", exc_info=True)
+            return Response(
+                {'error': f'Failed to delete employee: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False, methods=['get'])
     def departments(self, request):

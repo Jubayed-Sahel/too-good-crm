@@ -131,7 +131,7 @@ export const useUpdateCustomer = () => {
   
   return useMutation({
     mutationFn: async ({ id, ...customer }: Partial<Customer> & { id: number }) => {
-      const data = await api.put<Customer>(`/api/customers/${id}/`, customer)
+      const data = await api.patch<Customer>(`/api/customers/${id}/`, customer)
       return data
     },
     onSuccess: (_, variables) => {

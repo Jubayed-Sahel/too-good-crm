@@ -3,7 +3,7 @@ Lead related serializers
 """
 
 from rest_framework import serializers
-from crmApp.models import Lead, Customer
+from crmApp.models import Lead, Customer, LeadStageHistory
 from .employee import EmployeeListSerializer
 
 
@@ -28,12 +28,33 @@ class LeadListSerializer(serializers.ModelSerializer):
         return None
 
 
+class LeadStageHistorySerializer(serializers.ModelSerializer):
+    """Serializer for lead stage history"""
+    stage_name = serializers.CharField(source='stage.name', read_only=True)
+    previous_stage_name = serializers.CharField(source='previous_stage.name', read_only=True)
+    changed_by_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = LeadStageHistory
+        fields = [
+            'id', 'stage', 'stage_name', 'previous_stage', 'previous_stage_name',
+            'changed_by', 'changed_by_name', 'notes', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+    
+    def get_changed_by_name(self, obj):
+        if obj.changed_by:
+            return obj.changed_by.full_name
+        return None
+
+
 class LeadSerializer(serializers.ModelSerializer):
     """Full lead serializer"""
     assigned_to = EmployeeListSerializer(read_only=True)
     converted_by_name = serializers.SerializerMethodField()
     stage_id = serializers.IntegerField(source='stage.id', read_only=True)
     stage_name = serializers.CharField(source='stage.name', read_only=True)
+    stage_history = serializers.SerializerMethodField()
     
     class Meta:
         model = Lead
@@ -45,7 +66,7 @@ class LeadSerializer(serializers.ModelSerializer):
             'converted_by', 'converted_by_name', 'tags', 'notes',
             'campaign', 'referrer', 'address', 'city', 'state',
             'postal_code', 'country', 'stage', 'stage_id', 'stage_name',
-            'created_at', 'updated_at'
+            'stage_history', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'code', 'created_at', 'updated_at', 'converted_at', 'stage']
     
@@ -53,6 +74,12 @@ class LeadSerializer(serializers.ModelSerializer):
         if obj.converted_by:
             return obj.converted_by.full_name
         return None
+    
+    def get_stage_history(self, obj):
+        """Get stage history for the lead"""
+        from crmApp.models import LeadStageHistory
+        history = LeadStageHistory.objects.filter(lead=obj).order_by('-created_at')[:20]  # Last 20 entries
+        return LeadStageHistorySerializer(history, many=True).data
 
 
 class LeadCreateSerializer(serializers.ModelSerializer):

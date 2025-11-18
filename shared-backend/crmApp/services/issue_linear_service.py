@@ -31,8 +31,12 @@ class IssueLinearService:
         Returns:
             Linear team ID or None
         """
-        # Try request data first
-        team_id = request.data.get('team_id') if hasattr(request, 'data') else None
+        from django.conf import settings
+        
+        # Try request data first (if request has data attribute)
+        team_id = None
+        if request and hasattr(request, 'data') and request.data:
+            team_id = request.data.get('team_id')
         
         # Try organization
         if not team_id and organization:
@@ -43,6 +47,30 @@ class IssueLinearService:
         # Try issue
         if not team_id and issue:
             team_id = getattr(issue, 'linear_team_id', None)
+        
+        # Try default from settings (fallback)
+        if not team_id:
+            team_id = getattr(settings, 'LINEAR_TEAM_ID', None)
+            if team_id:
+                logger.info(f"Using default LINEAR_TEAM_ID from settings: {team_id}")
+        
+        # If still no team_id, try to get first available team from Linear
+        if not team_id:
+            try:
+                linear_api_key = getattr(settings, 'LINEAR_API_KEY', None)
+                if linear_api_key:
+                    teams = self.linear_service.get_teams()
+                    if teams and len(teams) > 0:
+                        # Use the first team as default
+                        team_id = teams[0]['id']
+                        logger.info(f"Using first available Linear team as default: {team_id} ({teams[0].get('name', 'N/A')})")
+                        # Optionally save it to the organization for future use
+                        if organization:
+                            organization.linear_team_id = team_id
+                            organization.save(update_fields=['linear_team_id'])
+                            logger.info(f"Saved default Linear team ID to organization {organization.name}")
+            except Exception as e:
+                logger.warning(f"Failed to fetch Linear teams for default team ID: {str(e)}")
         
         return team_id
     
@@ -140,6 +168,21 @@ class IssueLinearService:
         Returns:
             Tuple of (success: bool, linear_data: dict or None, error: str or None)
         """
+        if not team_id:
+            error_msg = "Linear team ID is required for syncing"
+            logger.error(f"Cannot sync issue {issue.issue_number}: {error_msg}")
+            return False, None, error_msg
+        
+        # Verify Linear API key is configured
+        from django.conf import settings
+        linear_api_key = getattr(settings, 'LINEAR_API_KEY', None)
+        if not linear_api_key:
+            error_msg = "LINEAR_API_KEY not configured in settings"
+            logger.error(f"Cannot sync issue {issue.issue_number}: {error_msg}")
+            return False, None, error_msg
+        
+        logger.info(f"Starting Linear sync for issue {issue.issue_number} with team_id: {team_id}")
+        
         try:
             with transaction.atomic():
                 if update_existing and issue.synced_to_linear and issue.linear_issue_id:
