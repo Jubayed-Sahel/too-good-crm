@@ -421,12 +421,27 @@ class LeadViewSet(
                 
                 # Create or update customer from lead
                 # Use email if available, otherwise use name as lookup
+                # Parse lead name into first_name and last_name if possible
+                lead_name = lead.name or ''
+                first_name = ''
+                last_name = ''
+                if lead_name:
+                    name_parts = lead_name.strip().split(maxsplit=1)
+                    if len(name_parts) >= 2:
+                        first_name = name_parts[0]
+                        last_name = name_parts[1]
+                    else:
+                        first_name = name_parts[0]
+                        last_name = ''
+                
                 if lead.email:
                     customer, created = Customer.objects.get_or_create(
                         organization=lead.organization,
                         email=lead.email,
                         defaults={
                             'name': lead.name or lead.organization_name or 'Customer',
+                            'first_name': first_name or lead.organization_name or '',
+                            'last_name': last_name,
                             'company_name': lead.organization_name,
                             'phone': lead.phone,
                             'customer_type': 'business' if lead.organization_name else 'individual',
@@ -448,6 +463,8 @@ class LeadViewSet(
                         organization=lead.organization,
                         name=customer_name,
                         defaults={
+                            'first_name': first_name or lead.organization_name or '',
+                            'last_name': last_name,
                             'email': f"{customer_name.lower().replace(' ', '.')}@example.com",
                             'company_name': lead.organization_name,
                             'phone': lead.phone,

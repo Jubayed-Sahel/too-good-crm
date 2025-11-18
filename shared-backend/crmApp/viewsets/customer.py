@@ -84,19 +84,26 @@ class CustomerViewSet(
         # Filter by organization
         org_id = self.request.query_params.get('organization')
         if org_id:
-            queryset = queryset.filter(organization_id=org_id)
+            try:
+                queryset = queryset.filter(organization_id=int(org_id))
+            except (ValueError, TypeError):
+                pass  # Invalid org_id, skip this filter
         
-        # Filter by status - default to active if not specified
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            if status_filter.lower() == 'all':
-                # Show all customers if explicitly requested
-                pass
+        # Only apply status filter for list action, not for retrieve/update/delete
+        # This allows viewing/editing customers regardless of status
+        # Note: action may be None when get_object() is called
+        if getattr(self, 'action', None) == 'list':
+            # Filter by status - default to active if not specified
+            status_filter = self.request.query_params.get('status')
+            if status_filter:
+                if status_filter.lower() == 'all':
+                    # Show all customers if explicitly requested
+                    pass
+                else:
+                    queryset = queryset.filter(status=status_filter)
             else:
-                queryset = queryset.filter(status=status_filter)
-        else:
-            # Default: only show active customers
-            queryset = queryset.filter(status='active')
+                # Default: only show active customers
+                queryset = queryset.filter(status='active')
         
         # Filter by customer type
         customer_type = self.request.query_params.get('customer_type')
@@ -104,6 +111,58 @@ class CustomerViewSet(
             queryset = queryset.filter(customer_type=customer_type)
         
         return queryset.select_related('organization', 'assigned_to')
+    
+    def get_object(self):
+        """Override get_object to ensure we can retrieve customers regardless of status"""
+        # Get the queryset without status filtering for retrieve/update/delete
+        user_orgs = self.request.user.user_profiles.filter(
+            status='active'
+        ).values_list('organization_id', flat=True)
+        
+        queryset = Customer.objects.filter(organization_id__in=user_orgs)
+        
+        # Filter by organization if specified
+        org_id = self.request.query_params.get('organization')
+        if org_id:
+            try:
+                queryset = queryset.filter(organization_id=int(org_id))
+            except (ValueError, TypeError):
+                pass  # Invalid org_id, skip this filter
+        
+        # Don't apply status filter for get_object - allow viewing any customer
+        queryset = queryset.select_related('organization', 'assigned_to')
+        
+        # Use the standard DRF get_object logic
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        lookup_value = self.kwargs[lookup_url_kwarg]
+        
+        # Convert lookup_value to int for pk/id lookups
+        lookup_field = self.lookup_field
+        if lookup_field in ('pk', 'id'):
+            try:
+                lookup_value = int(lookup_value)
+            except (ValueError, TypeError):
+                from rest_framework.exceptions import NotFound
+                raise NotFound(f"Invalid customer ID: {lookup_value}")
+        
+        filter_kwargs = {lookup_field: lookup_value}
+        
+        try:
+            obj = queryset.get(**filter_kwargs)
+        except Customer.DoesNotExist:
+            from rest_framework.exceptions import NotFound
+            raise NotFound(f"Customer with ID {lookup_value} not found")
+        
+        # Check object-level permissions
+        self.check_object_permissions(self.request, obj)
+        return obj
+    
+    def retrieve(self, request, *args, **kwargs):
+        """Override retrieve to check permissions"""
+        instance = self.get_object()
+        self.check_permission(request, 'customer', 'read', instance=instance)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
     
     def update(self, request, *args, **kwargs):
         """Override update to check permissions"""

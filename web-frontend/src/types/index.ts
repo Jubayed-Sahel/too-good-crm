@@ -37,14 +37,18 @@ export interface Customer {
   full_name: string;
   first_name: string;
   last_name: string;
+  name?: string;
   email: string;
   phone?: string;
   organization?: string;
+  company_name?: string;
+  company?: string;
   job_title?: string;
   status: CustomerStatus;
   assigned_to?: number | null;
   assigned_to_name?: string;
   user_id?: number | null;  // For Jitsi video calls
+  total_value?: number;  // Total value from won deals
   address?: string;
   city?: string;
   state?: string;

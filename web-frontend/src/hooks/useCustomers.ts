@@ -95,7 +95,7 @@ export const useCustomersQuery = (filters?: Record<string, string>) => {
   return useQuery({
     queryKey: ['customers', filters],
     queryFn: async () => {
-      const data = await api.get<Customer[]>('/customers/', { params: filters })
+      const data = await api.get<Customer[]>('/api/customers/', { params: filters })
       return data
     },
   })
@@ -105,7 +105,7 @@ export const useCustomer = (id: number) => {
   return useQuery({
     queryKey: ['customer', id],
     queryFn: async () => {
-      const data = await api.get<Customer>(`/customers/${id}/`)
+      const data = await api.get<Customer>(`/api/customers/${id}/`)
       return data
     },
     enabled: !!id,
@@ -117,7 +117,7 @@ export const useCreateCustomer = () => {
   
   return useMutation({
     mutationFn: async (customer: Partial<Customer>) => {
-      const data = await api.post<Customer>('/customers/', customer)
+      const data = await api.post<Customer>('/api/customers/', customer)
       return data
     },
     onSuccess: () => {
@@ -131,7 +131,7 @@ export const useUpdateCustomer = () => {
   
   return useMutation({
     mutationFn: async ({ id, ...customer }: Partial<Customer> & { id: number }) => {
-      const data = await api.put<Customer>(`/customers/${id}/`, customer)
+      const data = await api.put<Customer>(`/api/customers/${id}/`, customer)
       return data
     },
     onSuccess: (_, variables) => {
@@ -146,7 +146,7 @@ export const useDeleteCustomer = () => {
   
   return useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/customers/${id}/`)
+      await api.delete(`/api/customers/${id}/`)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] })
@@ -158,7 +158,7 @@ export const useCustomerStats = () => {
   return useQuery({
     queryKey: ['customer-stats'],
     queryFn: async () => {
-      const data = await api.get<Statistics>('/customers/statistics/')
+      const data = await api.get<Statistics>('/api/customers/stats/')
       return data
     },
   })

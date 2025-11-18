@@ -40,10 +40,11 @@ class CustomerListSerializer(serializers.ModelSerializer):
     def get_total_value(self, obj):
         """Calculate total value from related deals"""
         from crmApp.models import Deal
+        from django.db.models import Sum
         total = Deal.objects.filter(
             customer=obj,
             is_won=True
-        ).aggregate(total=serializers.models.Sum('value'))['total']
+        ).aggregate(total=Sum('value'))['total']
         return float(total) if total else 0.0
 
 
@@ -54,9 +55,11 @@ class CustomerSerializer(serializers.ModelSerializer):
     assigned_to = EmployeeListSerializer(read_only=True)
     converted_from_lead = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
+    total_value = serializers.SerializerMethodField()
     customer_type_display = serializers.CharField(source='get_customer_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)  # Alias for frontend compatibility
+    organization = serializers.IntegerField(source='organization_id', read_only=True)  # Organization should not be changed via API
     
     class Meta:
         model = Customer
@@ -70,18 +73,44 @@ class CustomerSerializer(serializers.ModelSerializer):
             'tax_id', 'address', 'city', 'state', 'postal_code', 'zip_code',
             'country', 'source', 'tags', 'notes',
             'converted_from_lead', 'converted_at',
-            'created_at', 'updated_at'
+            'total_value', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'code', 'user_profile', 'created_at', 'updated_at', 'converted_at']
+        extra_kwargs = {
+            'email': {'required': False},  # Allow email to be optional for updates
+            'organization': {'read_only': True},  # Organization is read-only via explicit field definition
+        }
     
     def get_full_name(self, obj):
         return obj.full_name
     
+    def get_total_value(self, obj):
+        """Calculate total value from won deals linked to customer or converted lead"""
+        from django.db.models import Sum
+        from crmApp.models import Deal
+        # Get deals directly linked to customer
+        customer_deal_ids = list(obj.deals.filter(is_won=True).values_list('id', flat=True))
+        # Get deals linked to the lead that was converted to this customer
+        lead_deal_ids = []
+        if obj.converted_from_lead:
+            lead_deal_ids = list(obj.converted_from_lead.deals.filter(is_won=True).values_list('id', flat=True))
+        # Combine all deal IDs (remove duplicates)
+        all_deal_ids = list(set(customer_deal_ids + lead_deal_ids))
+        # Sum values from all deals
+        if all_deal_ids:
+            total = Deal.objects.filter(id__in=all_deal_ids, is_won=True).aggregate(total=Sum('value'))['total']
+        else:
+            total = None
+        return float(total) if total else 0.0
+    
     def get_converted_from_lead(self, obj):
         if obj.converted_from_lead:
+            lead = obj.converted_from_lead
+            # Lead model uses 'name' field, not 'first_name' and 'last_name'
+            lead_name = lead.name or 'Unknown Lead'
             return {
-                'id': obj.converted_from_lead.id,
-                'name': f"{obj.converted_from_lead.first_name} {obj.converted_from_lead.last_name}".strip()
+                'id': lead.id,
+                'name': lead_name
             }
         return None
 
