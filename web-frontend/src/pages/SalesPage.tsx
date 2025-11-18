@@ -55,6 +55,8 @@ import { useConvertLead, useConvertLeadToDeal } from '@/hooks/useLeadMutations';
 import { toaster } from '@/components/ui/toaster';
 import { CreateLeadDialog } from '@/components/leads';
 import { useProfile } from '@/contexts/ProfileContext';
+import { usePermissions } from '@/contexts/PermissionContext';
+import { usePermissionActions } from '@/hooks/usePermissionActions';
 import { transformLeadFormData, cleanFormData } from '@/utils/formTransformers';
 import type { Deal } from '@/types';
 import type { Lead } from '@/types/lead.types';
@@ -768,7 +770,13 @@ function StageColumn({ stage, deals, leads, formatCurrency, formatDate, onDealCl
 
 const SalesPage = () => {
   const navigate = useNavigate();
-  const { activeOrganizationId } = useProfile();
+  const { activeOrganizationId, activeProfile } = useProfile();
+  const { isVendor, isLoading: permissionsLoading } = usePermissions();
+  const leadsPermissions = usePermissionActions('leads');
+  
+  // For vendors, always allow creating leads (even if permissions are still loading)
+  // This ensures the button is visible immediately for vendors
+  const canCreateLead = isVendor || leadsPermissions.canCreate;
   const {
     deals,
     stats,
@@ -1762,14 +1770,38 @@ const SalesPage = () => {
                 <Box ml={2}>More Filters</Box>
               </Button>
 
-              <Button
-                colorPalette="purple"
-                h="40px"
-                onClick={handleOpenDialog}
-              >
-                <FiPlus />
-                <Box ml={2}>New Lead</Box>
-              </Button>
+              {/* Show New Lead button - vendors always have access, employees need permission */}
+              {canCreateLead && (
+                <Button
+                  colorPalette="purple"
+                  h="40px"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    handleOpenDialog();
+                  }}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    // Prevent drag from starting
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                  }}
+                  onPointerUp={(e) => {
+                    e.stopPropagation();
+                    e.currentTarget.releasePointerCapture(e.pointerId);
+                  }}
+                  disabled={permissionsLoading && !isVendor}
+                  style={{ 
+                    pointerEvents: 'auto', 
+                    zIndex: 10, 
+                    position: 'relative',
+                    cursor: 'pointer',
+                  }}
+                  data-no-dnd="true"
+                >
+                  <FiPlus />
+                  <Box ml={2}>New Lead</Box>
+                </Button>
+              )}
             </HStack>
           </Stack>
 
@@ -1930,17 +1962,15 @@ const SalesPage = () => {
         isOpen={isCreateDialogOpen}
         onClose={handleCloseDialog}
               onSubmit={(data: CreateLeadData) => {
+                // Use activeOrganizationId from profile context (most reliable)
+                // Fall back to data.organization only if activeOrganizationId is not available
+                // Note: Backend will get organization from request context if not provided
                 const organizationId = activeOrganizationId || data.organization;
                 
-                if (!organizationId) {
-                  toaster.create({
-                    title: 'Unable to create lead',
-                    description: 'Organization information not found. Please select a profile.',
-                    type: 'error',
-                  });
-                  return;
-                }
+                // Log for debugging
+                console.log('🏢 Organization ID:', organizationId, 'from activeOrganizationId:', activeOrganizationId, 'from data:', data.organization);
                 
+                // Transform data - organization is optional, backend will get it from request context
                 const transformedData = transformLeadFormData(data, organizationId);
                 const backendData = cleanFormData(transformedData);
                 
@@ -1960,19 +1990,59 @@ const SalesPage = () => {
                   },
                   onError: (err: any) => {
                     console.error('❌ Failed to create lead:', err);
+                    console.error('❌ Full error object:', JSON.stringify(err, null, 2));
                     console.error('❌ Error response:', err.response?.data);
+                    console.error('❌ Error errors:', err.errors);
+                    console.error('❌ Error message:', err.message);
+                    console.error('❌ Error status:', err.status);
                     
-                    // Extract error messages from various possible locations
-                    const errorData = err.response?.data || {};
-                    const errorMessage = 
-                      errorData.email?.[0] ||
-                      errorData.name?.[0] ||
-                      errorData.organization_name?.[0] ||
-                      errorData.phone?.[0] ||
-                      errorData.non_field_errors?.[0] ||
-                      errorData.detail ||
-                      JSON.stringify(errorData) ||
-                      'Failed to create lead. Please try again.';
+                    // Handle both transformed error format (from apiClient) and original axios error format
+                    // The apiClient transforms errors to { message, status, errors }
+                    // But we also need to check the original response data
+                    const originalErrorData = err.response?.data || {};
+                    const transformedErrors = err.errors || {};
+                    const errorData = { ...originalErrorData, ...transformedErrors };
+                    
+                    // Extract error message from various possible formats
+                    // Priority: detail field (DRF ValidationError) > transformed message > field errors > message > error
+                    let errorMessage = 'Failed to create lead. Please try again.';
+                    
+                    // First check the transformed message (from apiClient)
+                    if (err.message && err.message !== 'An error occurred') {
+                      errorMessage = err.message;
+                    }
+                    
+                    // Check for detail field (common in DRF ValidationError, including PermissionDenied wrapped as ValidationError)
+                    if (errorData.detail) {
+                      errorMessage = typeof errorData.detail === 'string' 
+                        ? errorData.detail 
+                        : (Array.isArray(errorData.detail) ? errorData.detail[0] : String(errorData.detail));
+                    } else if (errorData && typeof errorData === 'object') {
+                      // Check for field-specific errors (array format)
+                      const fieldErrors = [
+                        errorData.organization?.[0], // Check organization errors first
+                        errorData.email?.[0],
+                        errorData.phone?.[0],
+                        errorData.name?.[0],
+                        errorData.organization_name?.[0],
+                        errorData.lead_score?.[0],
+                        errorData.estimated_value?.[0],
+                        errorData.non_field_errors?.[0],
+                      ].filter(Boolean);
+                      
+                      if (fieldErrors.length > 0) {
+                        errorMessage = fieldErrors[0];
+                      } else if (errorData.message && errorData.message !== 'An error occurred') {
+                        errorMessage = errorData.message;
+                      } else if (errorData.error) {
+                        errorMessage = errorData.error;
+                      }
+                    }
+                    
+                    // Check if it's a permission error and provide helpful message
+                    if (errorMessage.includes('Permission denied') || errorMessage.includes('lead:create') || errorMessage.includes('Failed to create lead: Permission denied')) {
+                      errorMessage = 'You do not have permission to create leads. Please contact your administrator to grant you the "lead:create" permission.';
+                    }
                     
                     toaster.create({
                       title: 'Failed to create lead',
