@@ -115,6 +115,8 @@ function SortableDealCard({ deal, stageColor, formatCurrency, formatDate, onClic
       transition="all 0.2s ease"
       cursor="grab"
       position="relative"
+      id={`deal-${deal.id}`}
+      data-id={`deal-${deal.id}`}
       {...attributes}
       {...listeners}
       onClick={onClick}
@@ -271,12 +273,15 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
       transition="all 0.2s ease"
       cursor="grab"
       position="relative"
+      id={`lead-${lead.id}`}
+      data-id={`lead-${lead.id}`}
       {...attributes}
+      {...listeners}
     >
       <VStack align="stretch" gap={3}>
         {/* Header with Badge and Action Buttons */}
         <HStack justify="space-between" align="start">
-          <Box {...listeners} style={{ cursor: 'grab', flex: 1 }}>
+          <Box style={{ flex: 1 }}>
             <Badge colorPalette="blue" size="sm" w="fit-content">
               Lead
             </Badge>
@@ -1195,13 +1200,19 @@ const SalesPage = () => {
     setActiveId(null);
     setDraggedItem(null);
 
-    if (!over) return;
+    if (!over) {
+      console.log('Drag ended with no drop target');
+      return;
+    }
 
     const itemId = active.id as string;
     const overId = over.id as string;
     
+    console.log('Drag end:', { itemId, overId, over });
+    
     // If dropped on the same item, do nothing
     if (itemId === overId) {
+      console.log('Dropped on same item, ignoring');
       return;
     }
     
@@ -1214,10 +1225,12 @@ const SalesPage = () => {
     // Check if dropped directly on a stage column (droppable)
     const isStageKey = mappedStages.some(s => s.key === overId);
     if (isStageKey) {
+      console.log('Dropped directly on stage column:', overId);
       targetStageKey = overId;
     } else if (overId.startsWith('lead-') || overId.startsWith('deal-')) {
       // Dropped on another item - find the parent stage column
       // Use DOM to find which stage column contains this item
+      console.log('Dropped on another item, finding parent stage:', overId);
       const allStageKeys = mappedStages.map(s => s.key);
       
       for (const stageKey of allStageKeys) {
@@ -1225,29 +1238,68 @@ const SalesPage = () => {
         if (stageColumn) {
           // Check if the item is inside this stage column
           // Items have IDs like 'lead-15' or 'deal-16'
-          const itemElement = stageColumn.querySelector(`[id="${overId}"], button[id*="${overId}"]`);
+          const itemElement = stageColumn.querySelector(`[id="${overId}"], [data-id="${overId}"]`);
           if (itemElement) {
+            console.log('Found parent stage:', stageKey);
             targetStageKey = stageKey;
             break;
           }
         }
       }
       
+      // If still not found, try to find by checking if the item's closest parent has data-stage-key
+      if (!targetStageKey) {
+        const itemElement = document.querySelector(`[id="${overId}"], [data-id="${overId}"]`);
+        if (itemElement) {
+          const parentStage = itemElement.closest('[data-stage-key]');
+          if (parentStage) {
+            targetStageKey = parentStage.getAttribute('data-stage-key');
+            console.log('Found parent stage via closest:', targetStageKey);
+          }
+        }
+      }
+      
       // If still not found, ignore the drop
       if (!targetStageKey) {
-        console.warn('Could not determine target stage. Item may have been dropped in invalid location.');
+        console.warn('Could not determine target stage. Item may have been dropped in invalid location.', {
+          overId,
+          itemId,
+          availableStages: mappedStages.map(s => s.key)
+        });
+        toaster.create({
+          title: 'Drop failed',
+          description: 'Could not determine target stage. Please drop the item directly on a stage column.',
+          type: 'error',
+        });
         return;
       }
     } else {
-      // Unknown drop target, ignore
-      console.warn('Unknown drop target:', overId);
-      return;
+      // Unknown drop target - try to find by DOM traversal
+      console.log('Unknown drop target, trying DOM traversal:', overId);
+      const element = document.querySelector(`[id="${overId}"], [data-id="${overId}"]`);
+      if (element) {
+        const parentStage = element.closest('[data-stage-key]');
+        if (parentStage) {
+          targetStageKey = parentStage.getAttribute('data-stage-key');
+          console.log('Found stage via DOM traversal:', targetStageKey);
+        }
+      }
+      
+      if (!targetStageKey) {
+        console.warn('Unknown drop target:', overId);
+        toaster.create({
+          title: 'Drop failed',
+          description: 'Invalid drop location. Please drop the item on a stage column.',
+          type: 'error',
+        });
+        return;
+      }
     }
 
     // Find target stage by key
     const targetStage = mappedStages.find(s => s.key === targetStageKey);
 
-    if (!targetStage || !targetStage.id) {
+    if (!targetStage) {
       toaster.create({
         title: 'Error',
         description: 'Target stage not found. Please drop the item directly on a stage column.',
@@ -1259,8 +1311,30 @@ const SalesPage = () => {
     try {
       if (itemId.startsWith('deal-')) {
         // Move deal to new stage
+        // For deals, we still need the stage ID, so try to resolve it
+        let dealStageId = targetStage.id;
+        
+        // If no stage ID, try to find it
+        if (!dealStageId) {
+          const { findStageIdByName } = await import('@/utils/formTransformers');
+          if (pipelineStages && pipelineStages.length > 0) {
+            const stagesForLookup = pipelineStages.map(ps => ({ id: ps.id, name: ps.name }));
+            dealStageId = findStageIdByName(targetStageKey, stagesForLookup) || 
+                         findStageIdByName(targetStage.name, stagesForLookup);
+          }
+        }
+        
+        if (!dealStageId) {
+          toaster.create({
+            title: 'Error',
+            description: 'Pipeline stage not found. Please ensure you have a pipeline configured.',
+            type: 'error',
+          });
+          return;
+        }
+        
         const dealId = parseInt(itemId.replace('deal-', ''));
-        await moveDealMutation.mutateAsync({ id: dealId, stageId: targetStage.id });
+        await moveDealMutation.mutateAsync({ id: dealId, stageId: dealStageId });
         
         // Show success message
         if (targetStage.key === 'closed-won') {
@@ -1278,6 +1352,7 @@ const SalesPage = () => {
         }
       } else if (itemId.startsWith('lead-')) {
         // Move lead to new stage (no conversion to deal)
+        // Use the same handler that has all the stage ID resolution logic
         const leadId = parseInt(itemId.replace('lead-', ''));
         const lead = allLeads.find(l => l.id === leadId);
         
@@ -1290,35 +1365,19 @@ const SalesPage = () => {
           return;
         }
 
-        if (!targetStage.id) {
-          toaster.create({
-            title: 'Error',
-            description: 'Pipeline stage not found. Please ensure you have a pipeline configured.',
-            type: 'error',
-          });
-          return;
-        }
-
-        // Move lead to new stage using the move_stage endpoint
-        const { leadService } = await import('@/services');
-        await leadService.moveLeadStage(leadId, targetStage.id);
-        
-        // Invalidate React Query cache to refresh the data
-        queryClient.invalidateQueries({ queryKey: ['leads'] });
-        
-        toaster.create({
-          title: 'Lead moved',
-          description: `Lead moved to ${targetStage.name || targetStage.key} stage.`,
-          type: 'success',
-        });
+        // Use handleMoveLeadToStage which has all the stage ID resolution and error handling
+        await handleMoveLeadToStage(lead, targetStageKey, targetStage.id);
       }
     } catch (error: any) {
       console.error('Error moving item:', error);
-      toaster.create({
-        title: 'Error',
-        description: error.response?.data?.error || error.response?.data?.detail || 'Failed to move item. Please try again.',
-        type: 'error',
-      });
+      // Only show error if it wasn't already shown by handleMoveLeadToStage
+      if (!error.response || error.response.status !== 404) {
+        toaster.create({
+          title: 'Error',
+          description: error.response?.data?.error || error.response?.data?.detail || 'Failed to move item. Please try again.',
+          type: 'error',
+        });
+      }
     }
   };
 
