@@ -405,7 +405,103 @@ class LeadViewSet(
             
             # Track stage change in history
             previous_stage = lead.stage
+            was_in_closed_won = previous_stage and previous_stage.is_closed_won if previous_stage else False
+            
             lead.stage = stage
+            
+            # Handle closed-won stage - create/update customer
+            if stage.is_closed_won:
+                from crmApp.models import Customer
+                from django.utils import timezone
+                
+                # Mark lead as converted
+                lead.is_converted = True
+                if not lead.converted_at:
+                    lead.converted_at = timezone.now()
+                
+                # Create or update customer from lead
+                # Use email if available, otherwise use name as lookup
+                if lead.email:
+                    customer, created = Customer.objects.get_or_create(
+                        organization=lead.organization,
+                        email=lead.email,
+                        defaults={
+                            'name': lead.name or lead.organization_name or 'Customer',
+                            'company_name': lead.organization_name,
+                            'phone': lead.phone,
+                            'customer_type': 'business' if lead.organization_name else 'individual',
+                            'status': 'active',
+                            'source': lead.source or 'lead',
+                            'address': lead.address,
+                            'city': lead.city,
+                            'state': lead.state,
+                            'postal_code': lead.postal_code,
+                            'country': lead.country,
+                            'converted_from_lead': lead,
+                            'converted_at': timezone.now(),
+                        }
+                    )
+                else:
+                    # No email, use name as lookup
+                    customer_name = lead.name or lead.organization_name or 'Customer'
+                    customer, created = Customer.objects.get_or_create(
+                        organization=lead.organization,
+                        name=customer_name,
+                        defaults={
+                            'email': f"{customer_name.lower().replace(' ', '.')}@example.com",
+                            'company_name': lead.organization_name,
+                            'phone': lead.phone,
+                            'customer_type': 'business' if lead.organization_name else 'individual',
+                            'status': 'active',
+                            'source': lead.source or 'lead',
+                            'address': lead.address,
+                            'city': lead.city,
+                            'state': lead.state,
+                            'postal_code': lead.postal_code,
+                            'country': lead.country,
+                            'converted_from_lead': lead,
+                            'converted_at': timezone.now(),
+                        }
+                    )
+                
+                if created:
+                    logger.info(f"Created customer {customer.id} from lead {lead.id} moved to closed-won")
+                else:
+                    # Update existing customer to active
+                    customer.status = 'active'
+                    if not customer.converted_from_lead:
+                        customer.converted_from_lead = lead
+                    if not customer.converted_at:
+                        customer.converted_at = timezone.now()
+                    customer.save(update_fields=['status', 'converted_from_lead', 'converted_at'])
+                    logger.info(f"Updated customer {customer.id} to active from lead {lead.id}")
+            
+            # Handle moving away from closed-won - mark customer as inactive if no won deals
+            elif was_in_closed_won and not stage.is_closed_won:
+                from crmApp.models import Customer, Deal
+                
+                # Find customer created from this lead
+                customer = Customer.objects.filter(
+                    organization=lead.organization,
+                    converted_from_lead=lead
+                ).first()
+                
+                if customer:
+                    # Check if customer has any won deals
+                    won_deals = Deal.objects.filter(
+                        customer=customer,
+                        organization=lead.organization,
+                        is_won=True
+                    )
+                    
+                    if not won_deals.exists():
+                        # No won deals, mark customer as inactive
+                        customer.status = 'inactive'
+                        customer.save(update_fields=['status'])
+                        logger.info(f"Customer {customer.id} set to inactive (lead {lead.id} moved away from closed-won, no won deals)")
+                    else:
+                        logger.info(f"Customer {customer.id} remains active (has {won_deals.count()} won deals)")
+            
             lead.save()
             
             # Create history entry

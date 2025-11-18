@@ -255,6 +255,21 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
     ? parseFloat(lead.estimated_value) 
     : lead.estimated_value || 0;
 
+  // Determine stage color based on lead's current stage
+  const getStageColor = () => {
+    if (!lead.stage_name) return 'gray';
+    const stageNameLower = lead.stage_name.toLowerCase();
+    if (stageNameLower.includes('lead') || stageNameLower === 'new') return 'blue';
+    if (stageNameLower.includes('qualified')) return 'cyan';
+    if (stageNameLower.includes('proposal')) return 'purple';
+    if (stageNameLower.includes('negotiation')) return 'orange';
+    if (stageNameLower.includes('won') || stageNameLower.includes('closed-won')) return 'green';
+    if (stageNameLower.includes('lost') || stageNameLower.includes('closed-lost')) return 'red';
+    return 'gray';
+  };
+
+  const currentStageColor = getStageColor();
+
   return (
     <Box
       ref={setNodeRef}
@@ -281,11 +296,23 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
       <VStack align="stretch" gap={3}>
         {/* Header with Badge and Action Buttons */}
         <HStack justify="space-between" align="start">
-          <Box style={{ flex: 1 }}>
+          <VStack align="start" gap={1} style={{ flex: 1 }}>
             <Badge colorPalette="blue" size="sm" w="fit-content">
               Lead
             </Badge>
-          </Box>
+            {/* Current Stage Display */}
+            {lead.stage_name && (
+              <Badge
+                colorPalette={currentStageColor}
+                size="sm"
+                variant="solid"
+                w="fit-content"
+                fontWeight="bold"
+              >
+                {lead.stage_name}
+              </Badge>
+            )}
+          </VStack>
           <HStack gap={1} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
             {onView && (
               <Button
@@ -343,7 +370,7 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
         
         {/* Lead Name */}
         <Text
-          fontWeight="semibold"
+          fontWeight="bold"
           fontSize="sm"
           color="gray.900"
           lineHeight="1.4"
