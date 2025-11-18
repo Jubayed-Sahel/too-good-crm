@@ -38,6 +38,9 @@ from crmApp.viewsets import (
     PaymentViewSet,
     ActivityViewSet,
     NotificationPreferencesViewSet,
+    # Messages
+    MessageViewSet,
+    ConversationViewSet,
     # Analytics
     AnalyticsViewSet,
     # Jitsi Calls
@@ -49,6 +52,7 @@ from crmApp.viewsets import (
 from crmApp.views.issue_actions import RaiseIssueView, ResolveIssueView
 from crmApp.views.linear_webhook import LinearWebhookView
 from crmApp.views.client_issues import ClientRaiseIssueView, ClientIssueDetailView, ClientIssueCommentView
+from crmApp.views.pusher_auth import pusher_auth
 
 # Create router
 router = DefaultRouter()
@@ -90,6 +94,8 @@ router.register(r'orders', OrderViewSet, basename='order')
 router.register(r'payments', PaymentViewSet, basename='payment')
 router.register(r'activities', ActivityViewSet, basename='activity')
 router.register(r'notification-preferences', NotificationPreferencesViewSet, basename='notification-preferences')
+router.register(r'messages', MessageViewSet, basename='message')
+router.register(r'conversations', ConversationViewSet, basename='conversation')
 
 # Analytics endpoints
 router.register(r'analytics', AnalyticsViewSet, basename='analytics')
@@ -111,6 +117,10 @@ urlpatterns = [
     
     # Linear webhook endpoint
     path('api/webhooks/linear/', LinearWebhookView.as_view(), name='linear-webhook'),
+    
+    # Pusher authentication endpoint
+    path('api/pusher/auth/', pusher_auth, name='pusher-auth'),
+    
     # Router URLs (catch-all, must be last)
     path('api/', include(router.urls)),
 ]

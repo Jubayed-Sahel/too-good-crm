@@ -146,6 +146,12 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Pusher Configuration for Real-Time Messaging
+PUSHER_APP_ID = os.getenv('PUSHER_APP_ID', '2079466')
+PUSHER_KEY = os.getenv('PUSHER_KEY', '5ea9fef4e6e142b94ac4')
+PUSHER_SECRET = os.getenv('PUSHER_SECRET', '4e0299e5aa14e5a4cf75')
+PUSHER_CLUSTER = os.getenv('PUSHER_CLUSTER', 'ap2')
+
 # REST Framework Configuration
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
