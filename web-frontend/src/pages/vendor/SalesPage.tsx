@@ -47,13 +47,15 @@ import {
 } from 'react-icons/fi';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import CustomSelect from '../../components/ui/CustomSelect';
+import { CreateLeadDialog } from '../../components/leads/CreateLeadDialog';
 import { useSalesPage } from '@/hooks/useSalesPage';
 import { useLeads } from '@/hooks';
 import { useMoveDealToStage } from '@/hooks/useDealMutations';
-import { useConvertLead } from '@/hooks/useLeadMutations';
+import { useConvertLead, useCreateLead } from '@/hooks/useLeadMutations';
 import { toaster } from '@/components/ui/toaster';
-import type { Deal } from '@/types';
-import type { Lead } from '@/types/lead.types';
+import { transformLeadFormData, cleanFormData } from '@/utils/formTransformers';
+import { useProfile } from '@/contexts/ProfileContext';
+import type { Deal, Lead, CreateLeadData } from '@/types';
 
 // Sortable Deal Card Component
 interface SortableDealCardProps {
@@ -482,6 +484,10 @@ function StageColumn({ stage, deals, leads, formatCurrency, formatDate, onDealCl
 
 const SalesPage = () => {
   const navigate = useNavigate();
+  const { activeOrganizationId, activeProfile } = useProfile();
+  // Note: This is the vendor SalesPage, so vendors always have permission to create leads
+  // The button should be clickable even if activeOrganizationId is temporarily null
+  // (e.g., right after creating an organization)
   const {
     deals,
     stats,
@@ -506,12 +512,19 @@ const SalesPage = () => {
 
   const moveDealMutation = useMoveDealToStage();
   const convertLeadMutation = useConvertLead();
+  const createLead = useCreateLead();
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draggedItem, setDraggedItem] = useState<{ type: 'deal' | 'lead'; data: Deal | Lead } | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      // Only activate drag after moving 5px - prevents accidental drags on clicks
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -778,6 +791,96 @@ const SalesPage = () => {
       return sum + (value || 0);
     }, 0);
 
+  const handleCreateLead = (data: CreateLeadData) => {
+    console.log('🚀 Creating lead with data:', data);
+    
+    // Get organization ID from active profile
+    // Note: Backend will get organization from request context if not provided
+    const organizationId = activeOrganizationId || data.organization;
+    
+    console.log('📊 Organization ID:', organizationId, 'from activeOrganizationId:', activeOrganizationId);
+    
+    // Transform form data to backend format
+    // Organization is optional - backend will get it from request context
+    const transformedData = transformLeadFormData(data, organizationId);
+    console.log('🔄 Transformed data:', transformedData);
+    
+    const backendData = cleanFormData(transformedData);
+    console.log('✅ Final backend data:', backendData);
+    
+    createLead.mutate(backendData as CreateLeadData, {
+      onSuccess: (createdLead) => {
+        console.log('✅ Lead created successfully:', createdLead);
+        toaster.create({
+          title: 'Lead created successfully',
+          type: 'success',
+        });
+        setIsCreateDialogOpen(false);
+      },
+      onError: (err: any) => {
+        console.error('❌ Failed to create lead:', err);
+        console.error('❌ Full error object:', JSON.stringify(err, null, 2));
+        console.error('❌ Error response:', err.response?.data);
+        console.error('❌ Error errors:', err.errors);
+        console.error('❌ Error message:', err.message);
+        console.error('❌ Error status:', err.status);
+        
+        // Handle both transformed error format (from apiClient) and original axios error format
+        // The apiClient transforms errors to { message, status, errors }
+        // But we also need to check the original response data
+        const originalErrorData = err.response?.data || {};
+        const transformedErrors = err.errors || {};
+        const errorData = { ...originalErrorData, ...transformedErrors };
+        
+        // Extract error message from various possible formats
+        // Priority: detail field (DRF ValidationError) > transformed message > field errors > message > error
+        let errorMessage = 'Failed to create lead. Please try again.';
+        
+        // First check the transformed message (from apiClient)
+        if (err.message && err.message !== 'An error occurred') {
+          errorMessage = err.message;
+        }
+        
+        // Check for detail field (common in DRF ValidationError, including PermissionDenied wrapped as ValidationError)
+        if (errorData.detail) {
+          errorMessage = typeof errorData.detail === 'string' 
+            ? errorData.detail 
+            : (Array.isArray(errorData.detail) ? errorData.detail[0] : String(errorData.detail));
+        } else if (errorData && typeof errorData === 'object') {
+          // Check for field-specific errors (array format)
+          const fieldErrors = [
+            errorData.email?.[0],
+            errorData.phone?.[0],
+            errorData.name?.[0],
+            errorData.organization_name?.[0],
+            errorData.lead_score?.[0],
+            errorData.estimated_value?.[0],
+            errorData.non_field_errors?.[0],
+          ].filter(Boolean);
+          
+          if (fieldErrors.length > 0) {
+            errorMessage = fieldErrors[0];
+          } else if (errorData.message && errorData.message !== 'An error occurred') {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        }
+        
+        // Check if it's a permission error and provide helpful message
+        if (errorMessage.includes('Permission denied') || errorMessage.includes('lead:create') || errorMessage.includes('Failed to create lead: Permission denied')) {
+          errorMessage = 'You do not have permission to create leads. Please contact your administrator to grant you the "lead:create" permission.';
+        }
+        
+        toaster.create({
+          title: 'Failed to create lead',
+          description: errorMessage,
+          type: 'error',
+        });
+      },
+    });
+  };
+
   if (isLoading || leadsLoading) {
     return (
       <DashboardLayout title="Sales Pipeline">
@@ -795,28 +898,22 @@ const SalesPage = () => {
 
   return (
     <DashboardLayout title="Sales Pipeline">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <VStack align="stretch" gap={5}>
-          {/* Page Header */}
-          <Box>
-            <Heading size="2xl" mb={2}>
-              Sales Pipeline
-            </Heading>
-            <Text color="gray.600" fontSize="sm">
-              Manage deals and leads through every stage of your sales process. Drag and drop to move items between stages.
-            </Text>
-          </Box>
+      <VStack align="stretch" gap={5}>
+        {/* Page Header */}
+        <Box>
+          <Heading size="2xl" mb={2}>
+            Sales Pipeline
+          </Heading>
+          <Text color="gray.600" fontSize="sm">
+            Manage deals and leads through every stage of your sales process. Drag and drop to move items between stages.
+          </Text>
+        </Box>
 
-          {/* Stats Overview */}
-          <Grid
-            templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }}
-            gap={5}
-          >
+        {/* Stats Overview */}
+        <Grid
+          templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }}
+          gap={5}
+        >
             {/* Total Pipeline Value */}
             <Box
               bg="white"
@@ -992,15 +1089,25 @@ const SalesPage = () => {
               <Button
                 colorPalette="purple"
                 h="40px"
-                onClick={() => navigate('/leads/new')}
+                onClick={() => {
+                  // Always allow clicking - vendor always has permission
+                  // Button is now outside DndContext, so no drag interference
+                  setIsCreateDialogOpen(true);
+                }}
               >
                 <FiPlus />
                 <Box ml={2}>New Lead</Box>
               </Button>
             </HStack>
-          </Stack>
+        </Stack>
 
-          {/* Pipeline Kanban Board */}
+        {/* Pipeline Kanban Board - INSIDE DndContext for drag and drop */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
           <Box>
             <Box mb={4}>
               <Heading size="lg" color="gray.900" mb={1}>
@@ -1100,8 +1207,16 @@ const SalesPage = () => {
               )
             ) : null}
           </DragOverlay>
-        </VStack>
-      </DndContext>
+        </DndContext>
+      </VStack>
+
+      {/* Create Lead Dialog */}
+      <CreateLeadDialog
+        isOpen={isCreateDialogOpen}
+        onClose={() => setIsCreateDialogOpen(false)}
+        onSubmit={handleCreateLead}
+        isLoading={createLead.isPending}
+      />
     </DashboardLayout>
   );
 };

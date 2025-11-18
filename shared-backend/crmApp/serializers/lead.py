@@ -96,6 +96,9 @@ class LeadCreateSerializer(serializers.ModelSerializer):
             'tags', 'notes', 'campaign', 'referrer',
             'address', 'city', 'state', 'postal_code', 'zip_code', 'country'
         ]
+        extra_kwargs = {
+            'organization': {'required': False}  # Will be set from request context
+        }
     
     def create(self, validated_data):
         """Custom create to handle assigned_to_id, ensure Decimal conversion, and set default stage"""
@@ -104,6 +107,27 @@ class LeadCreateSerializer(serializers.ModelSerializer):
         logger = logging.getLogger(__name__)
         
         assigned_to_id = validated_data.pop('assigned_to_id', None)
+        
+        # Get organization from validated_data or context
+        # The organization should be set by perform_create in the viewset, but we handle it here as fallback
+        organization = validated_data.get('organization')
+        if not organization:
+            # Try to get from context (set by viewset)
+            request = self.context.get('request')
+            if request:
+                # Get organization from request context (set by middleware or viewset)
+                if hasattr(request.user, 'current_organization') and request.user.current_organization:
+                    organization = request.user.current_organization
+                elif hasattr(request.user, 'active_profile') and request.user.active_profile:
+                    organization = request.user.active_profile.organization
+        
+        if not organization:
+            raise serializers.ValidationError({
+                'organization': 'Organization is required. Please ensure you have an active profile.'
+            })
+        
+        # Set organization in validated_data
+        validated_data['organization'] = organization
         
         # Ensure estimated_value is Decimal if provided
         if 'estimated_value' in validated_data and validated_data['estimated_value'] is not None:
@@ -116,7 +140,6 @@ class LeadCreateSerializer(serializers.ModelSerializer):
                 validated_data.pop('estimated_value', None)
         
         # Set default stage to "Lead" stage if not provided
-        organization = validated_data.get('organization')
         if organization and 'stage' not in validated_data:
             try:
                 from crmApp.models import Pipeline, PipelineStage
@@ -158,6 +181,36 @@ class LeadCreateSerializer(serializers.ModelSerializer):
                 lead.save()
             except Employee.DoesNotExist:
                 pass  # Silently ignore if employee doesn't exist
+        
+        # Create initial stage history entry if stage is set
+        if lead.stage:
+            try:
+                from crmApp.models import LeadStageHistory
+                # Get current user's employee profile if available
+                request = self.context.get('request')
+                employee = None
+                if request and request.user:
+                    try:
+                        from crmApp.models import Employee
+                        employee = Employee.objects.filter(
+                            user=request.user,
+                            organization=lead.organization,
+                            status='active'
+                        ).first()
+                    except Exception:
+                        pass
+                
+                LeadStageHistory.objects.create(
+                    lead=lead,
+                    organization=lead.organization,
+                    stage=lead.stage,
+                    previous_stage=None,
+                    changed_by=employee,
+                    notes='Lead created with initial stage'
+                )
+                logger.info(f"Created initial stage history for lead {lead.id}: {lead.stage.name}")
+            except Exception as e:
+                logger.warning(f"Failed to create initial stage history for lead {lead.id}: {str(e)}", exc_info=True)
         
         return lead
     

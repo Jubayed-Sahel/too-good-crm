@@ -37,12 +37,33 @@ class RBACService:
         from crmApp.models import UserProfile
         
         # Check if user is vendor - vendors have all permissions
+        # First check with exact organization match
         vendor_profile = UserProfile.objects.filter(
             user=user,
             organization=organization,
             profile_type='vendor',
             status='active'
         ).first()
+        
+        # If not found, check if user has any active vendor profile for this organization
+        # (in case of data inconsistencies)
+        if not vendor_profile:
+            vendor_profile = UserProfile.objects.filter(
+                user=user,
+                profile_type='vendor',
+                status='active'
+            ).select_related('organization').first()
+            
+            # Only allow if the vendor profile's organization matches
+            if vendor_profile and vendor_profile.organization_id == organization.id:
+                pass  # Use this profile
+            else:
+                vendor_profile = None
+        
+        # Also check if user owns the organization (vendor indicator)
+        if not vendor_profile and hasattr(organization, 'owner') and organization.owner == user:
+            # User owns the organization, treat as vendor
+            return True
         
         if vendor_profile:
             # Vendors have all permissions in their organization
