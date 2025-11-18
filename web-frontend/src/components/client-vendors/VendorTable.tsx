@@ -65,12 +65,8 @@ const VendorTable = ({ vendors, onContact, onCall, onViewOrders, onView }: Vendo
 
   if (vendors.length === 0) {
     return (
-      <Card p={6}>
-        <VStack gap={2}>
-          <Text fontSize="lg" fontWeight="semibold" color="gray.700">No vendors found</Text>
-          <Text color="gray.600">Try adjusting your filters.</Text>
-        </VStack>
-      </Card>
+      <>
+      </>
     );
   }
 

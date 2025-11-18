@@ -90,16 +90,8 @@ export const IssuesTable = ({
 
   if (issues.length === 0) {
     return (
-      <Card>
-        <Box textAlign="center" py={12}>
-          <Text fontSize="lg" fontWeight="semibold" color="gray.600" mb={2}>
-            No issues found
-          </Text>
-          <Text color="gray.500">
-            Try adjusting your filters or create a new issue
-          </Text>
-        </Box>
-      </Card>
+      <>
+      </>
     );
   }
 
