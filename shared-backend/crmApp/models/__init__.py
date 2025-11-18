@@ -73,6 +73,9 @@ from .activity import Activity
 # Notification model
 from .notification import NotificationPreferences
 
+# Message models
+from .message import Message, Conversation
+
 # Export all models for backward compatibility
 __all__ = [
     # Authentication
@@ -116,4 +119,8 @@ __all__ = [
     
     # Notifications
     'NotificationPreferences',
+    
+    # Messages
+    'Message',
+    'Conversation',
 ]

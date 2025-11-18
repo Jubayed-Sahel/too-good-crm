@@ -56,6 +56,9 @@ from .activity import ActivityViewSet
 # Settings & Preferences
 from .notification import NotificationPreferencesViewSet
 
+# Messaging
+from .message import MessageViewSet, ConversationViewSet
+
 # Analytics & Reporting
 from .analytics import AnalyticsViewSet
 
@@ -103,6 +106,10 @@ __all__ = [
     
     # Settings
     'NotificationPreferencesViewSet',
+    
+    # Messaging
+    'MessageViewSet',
+    'ConversationViewSet',
     
     # Analytics
     'AnalyticsViewSet',

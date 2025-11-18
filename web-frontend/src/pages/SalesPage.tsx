@@ -1772,9 +1772,9 @@ const SalesPage = () => {
 
               {/* Show New Lead button - vendors always have access, employees need permission */}
               {canCreateLead && (
-                <Button
-                  colorPalette="purple"
-                  h="40px"
+              <Button
+                colorPalette="purple"
+                h="40px"
                   onClick={(e) => {
                     e.stopPropagation();
                     e.preventDefault();
@@ -1797,10 +1797,10 @@ const SalesPage = () => {
                     cursor: 'pointer',
                   }}
                   data-no-dnd="true"
-                >
-                  <FiPlus />
-                  <Box ml={2}>New Lead</Box>
-                </Button>
+              >
+                <FiPlus />
+                <Box ml={2}>New Lead</Box>
+              </Button>
               )}
             </HStack>
           </Stack>

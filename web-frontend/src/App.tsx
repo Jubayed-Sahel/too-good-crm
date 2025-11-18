@@ -40,6 +40,7 @@ import PermissionDebugPage from './pages/PermissionDebugPage'
 import EmployeeDashboardPage from './pages/employee/EmployeeDashboardPage'
 import EmployeeTasksPage from './pages/employee/EmployeeTasksPage'
 import EmployeeSettingsPage from './pages/employee/EmployeeSettingsPage'
+import MessagesPage from './pages/MessagesPage'
 import './App.css'
 
 /**
@@ -269,6 +270,14 @@ function App() {
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
                 <SettingsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/messages"
+            element={
+              <ProtectedRoute allowedProfiles={['vendor', 'employee', 'customer']}>
+                <MessagesPage />
               </ProtectedRoute>
             }
           />

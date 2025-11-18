@@ -898,22 +898,22 @@ const SalesPage = () => {
 
   return (
     <DashboardLayout title="Sales Pipeline">
-      <VStack align="stretch" gap={5}>
-        {/* Page Header */}
-        <Box>
-          <Heading size="2xl" mb={2}>
-            Sales Pipeline
-          </Heading>
-          <Text color="gray.600" fontSize="sm">
-            Manage deals and leads through every stage of your sales process. Drag and drop to move items between stages.
-          </Text>
-        </Box>
+        <VStack align="stretch" gap={5}>
+          {/* Page Header */}
+          <Box>
+            <Heading size="2xl" mb={2}>
+              Sales Pipeline
+            </Heading>
+            <Text color="gray.600" fontSize="sm">
+              Manage deals and leads through every stage of your sales process. Drag and drop to move items between stages.
+            </Text>
+          </Box>
 
-        {/* Stats Overview */}
-        <Grid
-          templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }}
-          gap={5}
-        >
+          {/* Stats Overview */}
+          <Grid
+            templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }}
+            gap={5}
+          >
             {/* Total Pipeline Value */}
             <Box
               bg="white"
@@ -1099,7 +1099,7 @@ const SalesPage = () => {
                 <Box ml={2}>New Lead</Box>
               </Button>
             </HStack>
-        </Stack>
+          </Stack>
 
         {/* Pipeline Kanban Board - INSIDE DndContext for drag and drop */}
         <DndContext
@@ -1207,7 +1207,7 @@ const SalesPage = () => {
               )
             ) : null}
           </DragOverlay>
-        </DndContext>
+      </DndContext>
       </VStack>
 
       {/* Create Lead Dialog */}
