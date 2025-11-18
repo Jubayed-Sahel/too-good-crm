@@ -31,22 +31,30 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        """Filter calls by user's organizations"""
+        """Filter calls by user's organizations or user involvement"""
+        from django.db.models import Q
+        
+        # Get user's organizations
         user_orgs = self.request.user.user_profiles.filter(
             status='active'
         ).values_list('organization_id', flat=True)
         
-        queryset = JitsiCallSession.objects.filter(organization_id__in=user_orgs)
+        # Allow access to calls in user's orgs OR where user is involved
+        queryset = JitsiCallSession.objects.filter(
+            Q(organization_id__in=user_orgs) |
+            Q(initiator=self.request.user) |
+            Q(recipient=self.request.user) |
+            Q(participants__contains=[self.request.user.id])
+        )
         
         # Filter by status
         status_filter = self.request.query_params.get('status')
         if status_filter:
             queryset = queryset.filter(status=status_filter)
         
-        # Filter by user involvement
+        # Filter by user involvement only
         user_filter = self.request.query_params.get('my_calls')
         if user_filter:
-            from django.db.models import Q
             queryset = queryset.filter(
                 Q(initiator=self.request.user) |
                 Q(recipient=self.request.user) |
@@ -287,6 +295,10 @@ class UserPresenceViewSet(viewsets.ModelViewSet):
                 user=request.user,
                 defaults={'status': 'online', 'available_for_calls': True}
             )
+            
+            # Update status to online if not already
+            if presence.status != 'online':
+                presence.status = 'online'
             
             # Heartbeat automatically updates last_seen due to auto_now
             presence.save()

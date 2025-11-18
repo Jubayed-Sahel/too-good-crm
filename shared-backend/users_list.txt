@@ -1,0 +1,258 @@
+================================================================================
+TOO GOOD CRM - USER CREDENTIALS LIST
+================================================================================
+
+Default Password for all users: password123
+
+--------------------------------------------------------------------------------
+
+Name: David Williams
+Email: david.williams0@example.com
+Username: david.williams0
+
+--------------------------------------------------------------------------------
+
+Name: Nancy White
+Email: nancy.white1@example.com
+Username: nancy.white1
+Employee Code: EMP-2-0001
+Job Title: Sales Director
+Department: Marketing
+Organization: TechVentures Inc
+Organizations: TechVentures Inc (Owner)
+
+--------------------------------------------------------------------------------
+
+Name: Michael Sanchez
+Email: michael.sanchez2@example.com
+Username: michael.sanchez2
+
+--------------------------------------------------------------------------------
+
+Name: William Wilson
+Email: william.wilson3@example.com
+Username: william.wilson3
+Employee Code: EMP-2-0002
+Job Title: Customer Success Manager
+Department: Engineering
+Organization: TechVentures Inc
+Organizations: TechVentures Inc (Member)
+
+--------------------------------------------------------------------------------
+
+Name: William Thomas
+Email: william.thomas4@example.com
+Username: william.thomas4
+Employee Code: EMP-3-0002
+Job Title: Sales Executive
+Department: Sales
+Organization: Global Solutions Ltd
+Organizations: Global Solutions Ltd (Member)
+
+--------------------------------------------------------------------------------
+
+Name: James Thompson
+Email: james.thompson5@example.com
+Username: james.thompson5
+Employee Code: EMP-3-0005
+Job Title: Business Development Manager
+Department: Sales
+Organization: Global Solutions Ltd
+Organizations: Global Solutions Ltd (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Jane Scott
+Email: jane.scott6@example.com
+Username: jane.scott6
+
+--------------------------------------------------------------------------------
+
+Name: Jane Torres
+Email: jane.torres7@example.com
+Username: jane.torres7
+Employee Code: EMP-3-0001
+Job Title: Team Lead
+Department: Product
+Organization: Global Solutions Ltd
+Organizations: Global Solutions Ltd (Owner)
+
+--------------------------------------------------------------------------------
+
+Name: Jennifer Thompson
+Email: jennifer.thompson8@example.com
+Username: jennifer.thompson8
+Employee Code: EMP-1-0002
+Job Title: Team Lead
+Department: Marketing
+Organization: Acme Corporation
+Organizations: Acme Corporation (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Sarah Miller
+Email: sarah.miller9@example.com
+Username: sarah.miller9
+Employee Code: EMP-1-0005
+Job Title: Sales Executive
+Department: HR
+Organization: Acme Corporation
+Organizations: Acme Corporation (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Jessica Lopez
+Email: jessica.lopez10@example.com
+Username: jessica.lopez10
+Employee Code: EMP-1-0004
+Job Title: Customer Success Manager
+Department: Finance
+Organization: Acme Corporation
+Organizations: Acme Corporation (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Charles Perez
+Email: charles.perez11@example.com
+Username: charles.perez11
+Employee Code: EMP-1-0003
+Job Title: Marketing Manager
+Department: IT
+Organization: Acme Corporation
+Organizations: Acme Corporation (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Sandra King
+Email: sandra.king12@example.com
+Username: sandra.king12
+Employee Code: EMP-2-0004
+Job Title: Business Development Manager
+Department: HR
+Organization: TechVentures Inc
+Organizations: TechVentures Inc (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Sarah Hill
+Email: sarah.hill13@example.com
+Username: sarah.hill13
+Employee Code: EMP-3-0003
+Job Title: Financial Analyst
+Department: Product
+Organization: Global Solutions Ltd
+Organizations: Global Solutions Ltd (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Kimberly Allen
+Email: kimberly.allen14@example.com
+Username: kimberly.allen14
+Employee Code: EMP-3-0007
+Job Title: Product Manager
+Department: Finance
+Organization: Global Solutions Ltd
+Organizations: Global Solutions Ltd (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Andrew Johnson
+Email: andrew.johnson15@example.com
+Username: andrew.johnson15
+Employee Code: EMP-1-0001
+Job Title: HR Manager
+Department: Product
+Organization: Acme Corporation
+Organizations: Acme Corporation (Owner)
+
+--------------------------------------------------------------------------------
+
+Name: Jane Lopez
+Email: jane.lopez16@example.com
+Username: jane.lopez16
+Employee Code: EMP-1-0007
+Job Title: Sales Director
+Department: HR
+Organization: Acme Corporation
+Organizations: Acme Corporation (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Patricia Thomas
+Email: patricia.thomas17@example.com
+Username: patricia.thomas17
+Employee Code: EMP-3-0004
+Job Title: Team Lead
+Department: Customer Support
+Organization: Global Solutions Ltd
+Organizations: Global Solutions Ltd (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Emily Hill
+Email: emily.hill18@example.com
+Username: emily.hill18
+Employee Code: EMP-3-0006
+Job Title: Sales Executive
+Department: Legal
+Organization: Global Solutions Ltd
+Organizations: Global Solutions Ltd (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Nancy Jones
+Email: nancy.jones19@example.com
+Username: nancy.jones19
+
+--------------------------------------------------------------------------------
+
+Name: Michael Brown
+Email: michael.brown20@example.com
+Username: michael.brown20
+Employee Code: EMP-1-0006
+Job Title: Team Lead
+Department: Sales
+Organization: Acme Corporation
+Organizations: Acme Corporation (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Daniel Hernandez
+Email: daniel.hernandez21@example.com
+Username: daniel.hernandez21
+Employee Code: EMP-2-0003
+Job Title: Team Lead
+Department: Product
+Organization: TechVentures Inc
+Organizations: TechVentures Inc (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Jane Perez
+Email: jane.perez22@example.com
+Username: jane.perez22
+Employee Code: EMP-2-0005
+Job Title: Product Manager
+Department: Customer Support
+Organization: TechVentures Inc
+Organizations: TechVentures Inc (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Kimberly Moore
+Email: kimberly.moore23@example.com
+Username: kimberly.moore23
+Employee Code: EMP-3-0008
+Job Title: Team Lead
+Department: Sales
+Organization: Global Solutions Ltd
+Organizations: Global Solutions Ltd (Member)
+
+--------------------------------------------------------------------------------
+
+Name: Matthew Lee
+Email: matthew.lee24@example.com
+Username: matthew.lee24
+
+--------------------------------------------------------------------------------
+

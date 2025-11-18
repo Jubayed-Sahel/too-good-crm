@@ -1,0 +1,567 @@
+[
+  {
+    "id": 1,
+    "email": "david.williams0@example.com",
+    "username": "david.williams0",
+    "first_name": "David",
+    "last_name": "Williams",
+    "full_name": "David Williams",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [],
+    "employee": null,
+    "default_password": "password123"
+  },
+  {
+    "id": 2,
+    "email": "nancy.white1@example.com",
+    "username": "nancy.white1",
+    "first_name": "Nancy",
+    "last_name": "White",
+    "full_name": "Nancy White",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "TechVentures Inc",
+        "is_owner": true,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-2-0001",
+      "job_title": "Sales Director",
+      "department": "Marketing",
+      "organization": "TechVentures Inc",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 3,
+    "email": "michael.sanchez2@example.com",
+    "username": "michael.sanchez2",
+    "first_name": "Michael",
+    "last_name": "Sanchez",
+    "full_name": "Michael Sanchez",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [],
+    "employee": null,
+    "default_password": "password123"
+  },
+  {
+    "id": 4,
+    "email": "william.wilson3@example.com",
+    "username": "william.wilson3",
+    "first_name": "William",
+    "last_name": "Wilson",
+    "full_name": "William Wilson",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "TechVentures Inc",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-2-0002",
+      "job_title": "Customer Success Manager",
+      "department": "Engineering",
+      "organization": "TechVentures Inc",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 5,
+    "email": "william.thomas4@example.com",
+    "username": "william.thomas4",
+    "first_name": "William",
+    "last_name": "Thomas",
+    "full_name": "William Thomas",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Global Solutions Ltd",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-3-0002",
+      "job_title": "Sales Executive",
+      "department": "Sales",
+      "organization": "Global Solutions Ltd",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 6,
+    "email": "james.thompson5@example.com",
+    "username": "james.thompson5",
+    "first_name": "James",
+    "last_name": "Thompson",
+    "full_name": "James Thompson",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Global Solutions Ltd",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-3-0005",
+      "job_title": "Business Development Manager",
+      "department": "Sales",
+      "organization": "Global Solutions Ltd",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 7,
+    "email": "jane.scott6@example.com",
+    "username": "jane.scott6",
+    "first_name": "Jane",
+    "last_name": "Scott",
+    "full_name": "Jane Scott",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [],
+    "employee": null,
+    "default_password": "password123"
+  },
+  {
+    "id": 8,
+    "email": "jane.torres7@example.com",
+    "username": "jane.torres7",
+    "first_name": "Jane",
+    "last_name": "Torres",
+    "full_name": "Jane Torres",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Global Solutions Ltd",
+        "is_owner": true,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-3-0001",
+      "job_title": "Team Lead",
+      "department": "Product",
+      "organization": "Global Solutions Ltd",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 9,
+    "email": "jennifer.thompson8@example.com",
+    "username": "jennifer.thompson8",
+    "first_name": "Jennifer",
+    "last_name": "Thompson",
+    "full_name": "Jennifer Thompson",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Acme Corporation",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-1-0002",
+      "job_title": "Team Lead",
+      "department": "Marketing",
+      "organization": "Acme Corporation",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 10,
+    "email": "sarah.miller9@example.com",
+    "username": "sarah.miller9",
+    "first_name": "Sarah",
+    "last_name": "Miller",
+    "full_name": "Sarah Miller",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Acme Corporation",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-1-0005",
+      "job_title": "Sales Executive",
+      "department": "HR",
+      "organization": "Acme Corporation",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 11,
+    "email": "jessica.lopez10@example.com",
+    "username": "jessica.lopez10",
+    "first_name": "Jessica",
+    "last_name": "Lopez",
+    "full_name": "Jessica Lopez",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Acme Corporation",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-1-0004",
+      "job_title": "Customer Success Manager",
+      "department": "Finance",
+      "organization": "Acme Corporation",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 12,
+    "email": "charles.perez11@example.com",
+    "username": "charles.perez11",
+    "first_name": "Charles",
+    "last_name": "Perez",
+    "full_name": "Charles Perez",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Acme Corporation",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-1-0003",
+      "job_title": "Marketing Manager",
+      "department": "IT",
+      "organization": "Acme Corporation",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 13,
+    "email": "sandra.king12@example.com",
+    "username": "sandra.king12",
+    "first_name": "Sandra",
+    "last_name": "King",
+    "full_name": "Sandra King",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "TechVentures Inc",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-2-0004",
+      "job_title": "Business Development Manager",
+      "department": "HR",
+      "organization": "TechVentures Inc",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 14,
+    "email": "sarah.hill13@example.com",
+    "username": "sarah.hill13",
+    "first_name": "Sarah",
+    "last_name": "Hill",
+    "full_name": "Sarah Hill",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Global Solutions Ltd",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-3-0003",
+      "job_title": "Financial Analyst",
+      "department": "Product",
+      "organization": "Global Solutions Ltd",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 15,
+    "email": "kimberly.allen14@example.com",
+    "username": "kimberly.allen14",
+    "first_name": "Kimberly",
+    "last_name": "Allen",
+    "full_name": "Kimberly Allen",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Global Solutions Ltd",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-3-0007",
+      "job_title": "Product Manager",
+      "department": "Finance",
+      "organization": "Global Solutions Ltd",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 16,
+    "email": "andrew.johnson15@example.com",
+    "username": "andrew.johnson15",
+    "first_name": "Andrew",
+    "last_name": "Johnson",
+    "full_name": "Andrew Johnson",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Acme Corporation",
+        "is_owner": true,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-1-0001",
+      "job_title": "HR Manager",
+      "department": "Product",
+      "organization": "Acme Corporation",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 17,
+    "email": "jane.lopez16@example.com",
+    "username": "jane.lopez16",
+    "first_name": "Jane",
+    "last_name": "Lopez",
+    "full_name": "Jane Lopez",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Acme Corporation",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-1-0007",
+      "job_title": "Sales Director",
+      "department": "HR",
+      "organization": "Acme Corporation",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 18,
+    "email": "patricia.thomas17@example.com",
+    "username": "patricia.thomas17",
+    "first_name": "Patricia",
+    "last_name": "Thomas",
+    "full_name": "Patricia Thomas",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Global Solutions Ltd",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-3-0004",
+      "job_title": "Team Lead",
+      "department": "Customer Support",
+      "organization": "Global Solutions Ltd",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 19,
+    "email": "emily.hill18@example.com",
+    "username": "emily.hill18",
+    "first_name": "Emily",
+    "last_name": "Hill",
+    "full_name": "Emily Hill",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Global Solutions Ltd",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-3-0006",
+      "job_title": "Sales Executive",
+      "department": "Legal",
+      "organization": "Global Solutions Ltd",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 20,
+    "email": "nancy.jones19@example.com",
+    "username": "nancy.jones19",
+    "first_name": "Nancy",
+    "last_name": "Jones",
+    "full_name": "Nancy Jones",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [],
+    "employee": null,
+    "default_password": "password123"
+  },
+  {
+    "id": 21,
+    "email": "michael.brown20@example.com",
+    "username": "michael.brown20",
+    "first_name": "Michael",
+    "last_name": "Brown",
+    "full_name": "Michael Brown",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Acme Corporation",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-1-0006",
+      "job_title": "Team Lead",
+      "department": "Sales",
+      "organization": "Acme Corporation",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 22,
+    "email": "daniel.hernandez21@example.com",
+    "username": "daniel.hernandez21",
+    "first_name": "Daniel",
+    "last_name": "Hernandez",
+    "full_name": "Daniel Hernandez",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "TechVentures Inc",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-2-0003",
+      "job_title": "Team Lead",
+      "department": "Product",
+      "organization": "TechVentures Inc",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 23,
+    "email": "jane.perez22@example.com",
+    "username": "jane.perez22",
+    "first_name": "Jane",
+    "last_name": "Perez",
+    "full_name": "Jane Perez",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "TechVentures Inc",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-2-0005",
+      "job_title": "Product Manager",
+      "department": "Customer Support",
+      "organization": "TechVentures Inc",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 24,
+    "email": "kimberly.moore23@example.com",
+    "username": "kimberly.moore23",
+    "first_name": "Kimberly",
+    "last_name": "Moore",
+    "full_name": "Kimberly Moore",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [
+      {
+        "name": "Global Solutions Ltd",
+        "is_owner": false,
+        "is_active": true
+      }
+    ],
+    "employee": {
+      "code": "EMP-3-0008",
+      "job_title": "Team Lead",
+      "department": "Sales",
+      "organization": "Global Solutions Ltd",
+      "status": "active"
+    },
+    "default_password": "password123"
+  },
+  {
+    "id": 25,
+    "email": "matthew.lee24@example.com",
+    "username": "matthew.lee24",
+    "first_name": "Matthew",
+    "last_name": "Lee",
+    "full_name": "Matthew Lee",
+    "is_staff": false,
+    "is_superuser": false,
+    "organizations": [],
+    "employee": null,
+    "default_password": "password123"
+  }
+]

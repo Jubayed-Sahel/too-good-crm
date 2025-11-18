@@ -7,6 +7,7 @@ export * from './analytics.types';
 export * from './issue.types';
 export * from './order.types';
 export * from './payment.types';
+export * from './jitsi.types';
 
 // Export activity types first (used by Customer interface below)
 export * from './activity.types';

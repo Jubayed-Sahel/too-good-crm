@@ -19,7 +19,7 @@ class JitsiService:
     """
     
     def __init__(self):
-        # Use custom Jitsi server or default to meet.jit.si
+        # Use custom Jitsi server or default to meet.jit.si (public server - no login)
         self.jitsi_server = getattr(settings, 'JITSI_SERVER', 'meet.jit.si')
         self.jitsi_domain = getattr(settings, 'JITSI_DOMAIN', 'meet.jit.si')
     
