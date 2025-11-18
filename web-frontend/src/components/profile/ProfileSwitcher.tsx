@@ -178,8 +178,8 @@ export const ProfileSwitcher = () => {
           </>
         )}
 
-        {/* Employee Profiles */}
-        {profiles.filter(p => p.profile_type === 'employee').length > 0 && (
+        {/* Employee Profiles - Only show if user has been assigned as employee by a vendor (has organization) */}
+        {profiles.filter(p => p.profile_type === 'employee' && p.organization).length > 0 && (
           <>
             <MenuSeparator />
             <Box px={3} py={2}>
@@ -188,7 +188,7 @@ export const ProfileSwitcher = () => {
               </Text>
             </Box>
             {profiles
-              .filter(p => p.profile_type === 'employee')
+              .filter(p => p.profile_type === 'employee' && p.organization)
               .map(profile => (
                 <MenuItem
                   key={profile.id}

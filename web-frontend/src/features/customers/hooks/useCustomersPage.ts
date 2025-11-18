@@ -129,12 +129,12 @@ export const useCustomersPage = (customers: Customer[] | undefined): UseCustomer
     
     return filteredCustomers.map((customer) => ({
       id: customer.id.toString(),
-      name: customer.full_name,
+      name: customer.full_name || customer.name || 'Unknown',
       email: customer.email,
       phone: customer.phone || '',
-      company: customer.company || '',
+      company: customer.company || customer.company_name || '',
       status: (customer.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'pending',
-      totalValue: 0, // Backend doesn't provide this yet
+      totalValue: (customer as any).total_value || 0,
       lastContact: customer.updated_at || customer.created_at,
     }));
   }, [customers, filteredCustomers]);

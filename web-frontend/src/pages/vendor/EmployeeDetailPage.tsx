@@ -1,16 +1,56 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Box, Heading, Text, VStack, HStack, Badge, Spinner } from '@chakra-ui/react';
 import { FiArrowLeft, FiEdit, FiMail, FiPhone, FiMapPin, FiCalendar, FiUser } from 'react-icons/fi';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { Card, StandardButton } from '../../components/common';
-import { useEmployees } from '../../hooks/useEmployees';
+import { employeeService, type Employee } from '@/services';
+import { toaster } from '@/components/ui/toaster';
 
 const EmployeeDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { employees, isLoading } = useEmployees();
-
-  const employee = employees.find(emp => emp.id === Number(id));
+  const [employee, setEmployee] = useState<Employee | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  // Fetch employee directly from database
+  // Always fetch when component mounts or id changes to ensure fresh data from database
+  useEffect(() => {
+    const fetchEmployee = async () => {
+      if (!id) {
+        setError(new Error('Employee ID is missing'));
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        setIsLoading(true);
+        setError(null);
+        console.log('📥 Fetching employee from database:', id);
+        const employeeData = await employeeService.getEmployee(parseInt(id));
+        console.log('✅ Employee fetched from database:', employeeData);
+        setEmployee(employeeData);
+      } catch (err: any) {
+        console.error('❌ Error fetching employee:', err);
+        const errorMessage = err?.response?.data?.detail 
+          || err?.response?.data?.error
+          || err?.message 
+          || 'Failed to fetch employee';
+        setError(new Error(errorMessage));
+        toaster.create({
+          title: 'Error Loading Employee',
+          description: errorMessage,
+          type: 'error',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    // Always fetch from database when component mounts or id changes
+    // This ensures we get the latest data, not cached data
+    fetchEmployee();
+  }, [id]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -37,7 +77,7 @@ const EmployeeDetailPage = () => {
     );
   }
 
-  if (!employee) {
+  if (error || (!isLoading && !employee)) {
     return (
       <DashboardLayout title="Employee Details">
         <Card p={8} textAlign="center">
@@ -45,7 +85,7 @@ const EmployeeDetailPage = () => {
             Employee Not Found
           </Heading>
           <Text color="gray.500" mb={4}>
-            The employee you're looking for doesn't exist.
+            {error?.message || "The employee you're looking for doesn't exist."}
           </Text>
           <StandardButton
             variant="primary"
@@ -57,6 +97,10 @@ const EmployeeDetailPage = () => {
         </Card>
       </DashboardLayout>
     );
+  }
+  
+  if (!employee) {
+    return null;
   }
 
   return (
@@ -200,6 +244,22 @@ const EmployeeDetailPage = () => {
                   </Text>
                 </Box>
               </HStack>
+
+              {employee.job_title && (
+                <HStack gap={3}>
+                  <Box color="purple.500">
+                    <FiUser size={20} />
+                  </Box>
+                  <Box flex={1}>
+                    <Text fontSize="sm" color="gray.600" fontWeight="medium">
+                      Job Title
+                    </Text>
+                    <Text fontSize="md" color="gray.900">
+                      {employee.job_title}
+                    </Text>
+                  </Box>
+                </HStack>
+              )}
 
               {employee.role_name && (
                 <HStack gap={3}>

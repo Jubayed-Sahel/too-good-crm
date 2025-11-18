@@ -111,10 +111,18 @@ apiClient.interceptors.response.use(
     }
 
     // Transform error to APIError format
+    // Check for detail field first (common in DRF ValidationError)
+    const errorMessage = 
+      error.response?.data?.detail || 
+      error.response?.data?.error || 
+      error.response?.data?.message || 
+      error.message || 
+      'An error occurred';
+    
     const apiError: APIError = {
-      message: error.response?.data?.error || error.response?.data?.message || error.message || 'An error occurred',
+      message: errorMessage,
       status: error.response?.status || 0,
-      errors: error.response?.data?.errors || error.response?.data?.details,
+      errors: error.response?.data?.errors || error.response?.data?.details || (error.response?.data?.detail ? { detail: [error.response.data.detail] } : {}),
     };
 
     return Promise.reject(apiError);

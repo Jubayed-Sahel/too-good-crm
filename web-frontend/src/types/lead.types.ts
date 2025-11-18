@@ -31,6 +31,8 @@ export interface Lead {
   converted_at?: string;
   converted_by?: number;
   converted_by_name?: string;
+  stage_id?: number; // Pipeline stage ID
+  stage_name?: string; // Pipeline stage name
   tags?: string[];
   notes?: string;
   campaign?: string;

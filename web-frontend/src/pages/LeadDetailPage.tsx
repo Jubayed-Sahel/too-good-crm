@@ -109,7 +109,7 @@ const LeadDetailPage = () => {
     deleteLead.mutate(id, {
       onSuccess: () => {
         setIsDeleteDialogOpen(false);
-        navigate('/leads');
+        navigate('/sales');
       },
     });
   };
@@ -180,10 +180,10 @@ const LeadDetailPage = () => {
           </Text>
           <Button
             colorPalette="purple"
-            onClick={() => navigate('/leads')}
+            onClick={() => navigate('/sales')}
           >
             <FiArrowLeft />
-            <Text ml={2}>Back to Leads</Text>
+            <Text ml={2}>Back to Sales</Text>
           </Button>
         </Box>
       </DashboardLayout>
@@ -197,10 +197,10 @@ const LeadDetailPage = () => {
         <HStack justify="space-between" align="center">
           <StandardButton
             variant="ghost"
-            onClick={() => navigate('/leads')}
+            onClick={() => navigate('/sales')}
             leftIcon={<FiArrowLeft />}
           >
-            Back to Leads
+            Back to Sales
           </StandardButton>
           <HStack gap={2}>
             <StandardButton

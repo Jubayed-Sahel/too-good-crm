@@ -198,7 +198,7 @@ const ClientVendorsPage = () => {
                   No vendors found
                 </Heading>
                 <Text color="gray.500" fontSize="md">
-                  {searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
+                  {vendors.length==0 || searchQuery || categoryFilter !== 'all' || statusFilter !== 'all'
                     ? 'Try adjusting your filters'
                     : 'Get started by adding your first vendor'}
                 </Text>

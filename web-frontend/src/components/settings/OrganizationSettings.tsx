@@ -6,6 +6,8 @@ import CustomSelect from '../ui/CustomSelect';
 import { FiGlobe, FiMail, FiPhone, FiPlus, FiBriefcase } from 'react-icons/fi';
 import { organizationService, type Organization } from '@/services/organization.service';
 import { toaster } from '../ui/toaster';
+import { useProfile } from '@/contexts/ProfileContext';
+import { useAuth } from '@/hooks/useAuth';
 import {
   DialogRoot,
   DialogContent,
@@ -18,6 +20,8 @@ import {
 } from '../ui/dialog';
 
 const OrganizationSettings = () => {
+  const { refreshProfiles } = useProfile();
+  const { refreshUser } = useAuth();
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [formData, setFormData] = useState({
     organizationName: '',
@@ -212,6 +216,20 @@ const OrganizationSettings = () => {
       
       // Reload organization data
       await loadOrganization();
+      
+      // Refresh user profiles to get the newly created vendor profile
+      // This ensures the activeOrganizationId is updated immediately
+      try {
+        if (refreshUser) {
+          await refreshUser();
+        }
+        if (refreshProfiles) {
+          await refreshProfiles();
+        }
+      } catch (refreshError) {
+        console.warn('Failed to refresh profiles after organization creation:', refreshError);
+        // Non-critical error - profiles will refresh on next page load
+      }
     } catch (error: any) {
       console.error('Failed to create organization:', error);
       

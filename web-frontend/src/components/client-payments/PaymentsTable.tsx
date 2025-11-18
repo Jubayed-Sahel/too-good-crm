@@ -76,12 +76,8 @@ const PaymentsTable = ({ payments, onPayNow, onDownloadReceipt }: PaymentsTableP
 
   if (payments.length === 0) {
     return (
-      <Card p={6}>
-        <VStack gap={2}>
-          <Text fontSize="lg" fontWeight="semibold" color="gray.700">No payments found</Text>
-          <Text color="gray.600">Try adjusting your filters.</Text>
-        </VStack>
-      </Card>
+    <>
+    </>
     );
   }
 

@@ -92,7 +92,7 @@ export const EditLeadPage = () => {
             title: 'Lead updated successfully',
             type: 'success',
           });
-          navigate('/leads');
+          navigate('/sales');
         },
         onError: () => {
           toaster.create({
@@ -106,7 +106,7 @@ export const EditLeadPage = () => {
   };
 
   const handleCancel = () => {
-    navigate('/leads');
+    navigate('/sales');
   };
 
   const isFormValid = formData.name && formData.email;
@@ -134,8 +134,8 @@ export const EditLeadPage = () => {
           <Text color="gray.500" mb={4}>
             The lead you're looking for doesn't exist or has been deleted.
           </Text>
-          <StandardButton variant="primary" onClick={() => navigate('/leads')} leftIcon={<FiArrowLeft />}>
-            Back to Leads
+          <StandardButton variant="primary" onClick={() => navigate('/sales')} leftIcon={<FiArrowLeft />}>
+            Back to Sales
           </StandardButton>
         </Box>
       </DashboardLayout>
@@ -150,7 +150,7 @@ export const EditLeadPage = () => {
           <StandardButton
             size="sm"
             variant="ghost"
-            onClick={() => navigate('/leads')}
+            onClick={() => navigate('/sales')}
             mb={3}
             ml={-2}
             leftIcon={<FiArrowLeft />}

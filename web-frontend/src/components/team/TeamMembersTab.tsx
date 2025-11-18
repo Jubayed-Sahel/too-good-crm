@@ -1,8 +1,8 @@
 /**
  * Team Members Tab - Manages team members/employees
  */
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Box, VStack, HStack, SimpleGrid, Text, Stack, Input } from '@chakra-ui/react';
 import { FiUserPlus, FiSearch } from 'react-icons/fi';
 import { StandardButton, StandardCard } from '@/components/common';
@@ -18,6 +18,7 @@ import { exportData } from '@/utils';
 
 export const TeamMembersTab = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
@@ -32,16 +33,37 @@ export const TeamMembersTab = () => {
 
   // Data fetching
   const { employees, isLoading, error, refetch } = useEmployees();
+  const hasRefetchedRef = useRef(false);
+  
+  // Refetch employees when navigating back to team page (only once per navigation)
+  useEffect(() => {
+    // Only refetch when navigating TO /team (not when already on it)
+    // This ensures the employee list is up-to-date when returning from edit page
+    if (location.pathname === '/team' && !hasRefetchedRef.current) {
+      // Small delay to ensure navigation is complete
+      const timer = setTimeout(() => {
+        console.log('🔄 Refetching employees in TeamMembersTab');
+        refetch();
+        hasRefetchedRef.current = true;
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+    
+    // Reset refetch flag when navigating away from /team
+    if (location.pathname !== '/team') {
+      hasRefetchedRef.current = false;
+    }
+  }, [location.pathname]); // Removed refetch from dependencies to prevent infinite loop
 
   // Filter employees based on search and status
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
       const matchesSearch = 
         !searchQuery ||
-        emp.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.department?.toLowerCase().includes(searchQuery.toLowerCase());
+        (emp.first_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (emp.last_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (emp.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (emp.department?.toLowerCase() || '').includes(searchQuery.toLowerCase());
       
       const matchesStatus = 
         statusFilter === 'all' || emp.status === statusFilter;

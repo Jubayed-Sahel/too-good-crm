@@ -60,7 +60,8 @@ export interface DealCreateData {
   title: string;
   value: number;
   currency?: string;
-  customer: number;
+  customer?: number;  // Optional - can create deal from lead without customer
+  lead?: number;  // Lead ID - when provided, customer is not required
   stage: number;  // Pipeline stage ID
   pipeline?: number;
   probability?: number;

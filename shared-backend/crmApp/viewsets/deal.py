@@ -299,6 +299,11 @@ class DealViewSet(
     @action(detail=True, methods=['post'])
     def move_stage(self, request, pk=None):
         """Move deal to another stage - requires deal:update permission"""
+        from crmApp.models import Customer
+        from django.utils import timezone
+        import logging
+        logger = logging.getLogger(__name__)
+        
         deal = self.get_object()
         self.check_permission(request, 'deal', 'update', instance=deal)
         
@@ -316,8 +321,116 @@ class DealViewSet(
                 pipeline=deal.pipeline
             )
             
+            previous_stage = deal.stage
+            was_won = deal.is_won
+            
             deal.stage = stage
             deal.probability = stage.probability
+            
+            # Handle closed-won stage
+            if stage.is_closed_won:
+                deal.is_won = True
+                deal.is_lost = False
+                deal.actual_close_date = timezone.now().date()
+                deal.status = 'closed'
+                
+                # Create or update customer from deal
+                if not deal.customer:
+                    # Try to get customer from lead if deal came from a lead
+                    customer = None
+                    if deal.lead:
+                        # Check if customer already exists from lead conversion
+                        customer = Customer.objects.filter(
+                            organization=deal.organization,
+                            email=deal.lead.email
+                        ).first()
+                    
+                    # If no customer exists, create one from deal data
+                    if not customer:
+                        # Get customer data from deal or lead
+                        customer_name = None
+                        customer_email = None
+                        customer_phone = None
+                        company_name = None
+                        
+                        if deal.lead:
+                            customer_name = deal.lead.name or deal.lead.organization_name
+                            customer_email = deal.lead.email
+                            customer_phone = deal.lead.phone
+                            company_name = deal.lead.organization_name
+                        elif deal.title:
+                            # Fallback: use deal title as customer name
+                            customer_name = deal.title
+                            # Try to extract email from deal notes or other fields
+                            customer_email = None
+                        
+                        if customer_name and (customer_email or customer_name):
+                            # Use email as lookup if available, otherwise use name
+                            if customer_email:
+                                customer, created = Customer.objects.get_or_create(
+                                    organization=deal.organization,
+                                    email=customer_email,
+                                    defaults={
+                                        'name': customer_name,
+                                        'company_name': company_name,
+                                        'phone': customer_phone,
+                                        'customer_type': 'business' if company_name else 'individual',
+                                        'status': 'active',
+                                        'source': deal.source or 'deal',
+                                    }
+                                )
+                            else:
+                                # No email, use name as lookup
+                                customer, created = Customer.objects.get_or_create(
+                                    organization=deal.organization,
+                                    name=customer_name,
+                                    defaults={
+                                        'email': f"{customer_name.lower().replace(' ', '.')}@example.com",
+                                        'company_name': company_name,
+                                        'phone': customer_phone,
+                                        'customer_type': 'business' if company_name else 'individual',
+                                        'status': 'active',
+                                        'source': deal.source or 'deal',
+                                    }
+                                )
+                            
+                            if created:
+                                logger.info(f"Created customer {customer.id} from deal {deal.id}")
+                            else:
+                                # Update existing customer to active
+                                customer.status = 'active'
+                                customer.save(update_fields=['status'])
+                                logger.info(f"Updated customer {customer.id} to active from deal {deal.id}")
+                    
+                    if customer:
+                        deal.customer = customer
+                else:
+                    # Customer exists, ensure it's active
+                    deal.customer.status = 'active'
+                    deal.customer.save(update_fields=['status'])
+                    logger.info(f"Customer {deal.customer.id} set to active from deal {deal.id}")
+            
+            # Handle moving away from closed-won
+            elif was_won and not stage.is_closed_won:
+                deal.is_won = False
+                deal.is_lost = False
+                deal.actual_close_date = None
+                deal.status = 'open'
+                
+                # If customer exists and has no other won deals, mark as inactive
+                if deal.customer:
+                    # Check if customer has other won deals
+                    other_won_deals = Deal.objects.filter(
+                        customer=deal.customer,
+                        organization=deal.organization,
+                        is_won=True
+                    ).exclude(id=deal.id)
+                    
+                    if not other_won_deals.exists():
+                        deal.customer.status = 'inactive'
+                        deal.customer.save(update_fields=['status'])
+                        logger.info(f"Customer {deal.customer.id} set to inactive (no won deals)")
+            
             deal.save()
             
             return Response({

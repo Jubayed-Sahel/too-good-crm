@@ -74,12 +74,8 @@ const OrdersTable = ({ orders, onView }: OrdersTableProps) => {
 
   if (orders.length === 0) {
     return (
-      <Card p={6}>
-        <VStack gap={2}>
-          <Text fontSize="lg" fontWeight="semibold" color="gray.700">No orders found</Text>
-          <Text color="gray.600">Try adjusting your filters.</Text>
-        </VStack>
-      </Card>
+      <>
+      </>
     );
   }
 

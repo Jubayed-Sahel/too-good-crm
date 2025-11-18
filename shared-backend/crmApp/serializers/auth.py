@@ -35,14 +35,64 @@ class UserSerializer(serializers.ModelSerializer):
         return obj.full_name
     
     def get_profiles(self, obj):
-        """Get all active user profiles"""
+        """Get all active user profiles with valid organization links"""
         try:
             from crmApp.models import UserOrganization
+            from django.db.models import Q
             # Prefetch organization and user organizations for efficient lookups
-            profiles = obj.user_profiles.filter(status='active').select_related('organization').prefetch_related(
+            # Only return active profiles that have valid organization links
+            # For employee profiles, also ensure they have an active Employee record
+            profiles = obj.user_profiles.filter(
+                status='active'
+            ).select_related('organization').prefetch_related(
                 'user__user_organizations__organization'
             )
-            return UserProfileSerializer(profiles, many=True).data
+            
+            # Filter profiles based on type:
+            # - Vendor profiles: Always show (new users can sign up as vendors)
+            # - Customer profiles: Always show (new users can sign up as customers)
+            # - Employee profiles: Only show if assigned by vendor (has organization + active employee record)
+            from crmApp.models import Employee
+            valid_profiles = []
+            for profile in profiles:
+                if profile.profile_type == 'employee':
+                    # Employee profiles: Only show if user has been assigned by a vendor
+                    # This means they must have:
+                    # 1. An organization (assigned by vendor)
+                    # 2. An active Employee record
+                    # 3. An active UserOrganization link
+                    if not profile.organization:
+                        continue  # Skip employee profiles without organization
+                    
+                    # Check if user has an active Employee record for this organization
+                    has_active_employee = Employee.objects.filter(
+                        user=obj,
+                        organization=profile.organization,
+                        status='active'
+                    ).exists()
+                    
+                    # Also check if user has an active UserOrganization link
+                    has_active_org_link = UserOrganization.objects.filter(
+                        user=obj,
+                        organization=profile.organization,
+                        is_active=True
+                    ).exists()
+                    
+                    # Only include if both conditions are met
+                    if has_active_employee and has_active_org_link:
+                        valid_profiles.append(profile)
+                elif profile.profile_type == 'vendor':
+                    # Vendor profiles: Always show (even without organization for new signups)
+                    valid_profiles.append(profile)
+                elif profile.profile_type == 'customer':
+                    # Customer profiles: Always show
+                    valid_profiles.append(profile)
+                else:
+                    # For any other profile types, include if they have an organization
+                    if profile.organization:
+                        valid_profiles.append(profile)
+            
+            return UserProfileSerializer(valid_profiles, many=True).data
         except Exception as e:
             import logging
             logger = logging.getLogger(__name__)

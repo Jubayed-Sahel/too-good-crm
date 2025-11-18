@@ -2,7 +2,8 @@
  * Team Page with Tabs for Team Members, Roles, and Permissions
  * Complete team management solution for vendors
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Box, VStack, HStack, Text, Tabs } from '@chakra-ui/react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import { PageHeader } from '@/components/common';
@@ -13,6 +14,14 @@ import { PermissionsTab } from '../../components/team/PermissionsTab';
 
 const TeamPage = () => {
   const [activeTab, setActiveTab] = useState('members');
+  const location = useLocation();
+  
+  // Reset to members tab when navigating to team page (e.g., after editing)
+  useEffect(() => {
+    if (location.pathname === '/team') {
+      setActiveTab('members');
+    }
+  }, [location.pathname]);
 
   const tabs = [
     { id: 'members', label: 'Team Members', icon: FiUsers },

@@ -14,6 +14,7 @@ class PermissionCheckMixin:
     def get_organization_from_request(self, request, instance=None):
         """
         Get organization from request user's active profile or instance.
+        Queries database directly to ensure organization is loaded.
         
         Args:
             request: The request object
@@ -25,6 +26,30 @@ class PermissionCheckMixin:
         if instance and hasattr(instance, 'organization'):
             return instance.organization
         
+        # Query database directly for active profile to ensure organization is loaded
+        from crmApp.models import UserProfile
+        try:
+            active_profile = UserProfile.objects.filter(
+                user=request.user,
+                status='active',
+                is_primary=True
+            ).select_related('organization').first()
+            
+            if not active_profile:
+                # Try any active profile if no primary
+                active_profile = UserProfile.objects.filter(
+                    user=request.user,
+                    status='active'
+                ).select_related('organization').first()
+            
+            if active_profile and active_profile.organization:
+                return active_profile.organization
+        except Exception:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error getting organization from request for user {request.user.id}", exc_info=True)
+        
+        # Fallback to request.user attributes if available
         if hasattr(request.user, 'current_organization') and request.user.current_organization:
             return request.user.current_organization
         
@@ -56,10 +81,31 @@ class PermissionCheckMixin:
         if not organization:
             raise PermissionDenied('Organization is required. Please ensure you have an active profile.')
         
-        # Check if user is a customer (special handling)
+        # Check if user is a vendor - vendors have all permissions in their organization
+        from crmApp.models import UserProfile
+        
+        # First check the active_profile set by middleware (most reliable)
         active_profile = getattr(request.user, 'active_profile', None)
-        if active_profile and active_profile.profile_type == 'customer':
-            # Customers have special permissions - handled by specific viewsets
+        if active_profile:
+            if active_profile.profile_type == 'vendor':
+                # Verify the active profile's organization matches
+                if active_profile.organization_id == organization.id:
+                    # Vendors have all permissions in their organization
+                    return True
+            elif active_profile.profile_type == 'customer':
+                # Customers have special permissions - handled by specific viewsets
+                return True
+        
+        # Fallback: Query database directly for vendor profile
+        vendor_profile = UserProfile.objects.filter(
+            user=request.user,
+            organization=organization,
+            profile_type='vendor',
+            status='active'
+        ).first()
+        
+        if vendor_profile:
+            # Vendors have all permissions in their organization
             return True
         
         # Check RBAC permission

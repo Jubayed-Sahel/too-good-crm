@@ -20,6 +20,7 @@ import {
   FiGrid,
   FiChevronDown,
   FiChevronRight,
+  FiMessageSquare,
 } from 'react-icons/fi';
 import { HiUserGroup } from 'react-icons/hi';
 import { useAccountMode } from '@/contexts/AccountModeContext';
@@ -105,9 +106,8 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiHome, label: 'Dashboard', path: '/dashboard', alwaysShow: true },
     { icon: FiUsers, label: 'Customers', path: '/customers', resource: CRM_RESOURCES.CUSTOMERS, action: 'read' },
     { icon: FiTrendingUp, label: 'Sales', path: '/sales', resource: CRM_RESOURCES.DEALS, action: 'read' },
-    { icon: FiFileText, label: 'Deals', path: '/deals', resource: CRM_RESOURCES.DEALS, action: 'read' },
-    { icon: FiUserPlus, label: 'Leads', path: '/leads', resource: CRM_RESOURCES.LEADS, action: 'read' },
     { icon: FiActivity, label: 'Activities', path: '/activities', resource: CRM_RESOURCES.ACTIVITIES, action: 'read' },
+    { icon: FiMessageSquare, label: 'Messages', path: '/messages', alwaysShow: true },
     { icon: FiAlertCircle, label: 'Issues', path: '/issues', resource: CRM_RESOURCES.ISSUES, action: 'read' },
     { icon: FiBarChart2, label: 'Analytics', path: '/analytics', resource: CRM_RESOURCES.ANALYTICS, action: 'read' },
     { icon: HiUserGroup, label: 'Team', path: '/team', resource: CRM_RESOURCES.EMPLOYEES, action: 'read' },
@@ -120,6 +120,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiShoppingBag, label: 'My Vendors', path: '/client/vendors', resource: 'vendors' },
     { icon: FiPackage, label: 'My Orders', path: '/client/orders', resource: 'orders' },
     { icon: FiCreditCard, label: 'Payments', path: '/client/payments', resource: 'payments' },
+    { icon: FiMessageSquare, label: 'Messages', path: '/messages', alwaysShow: true },
     { icon: FiActivity, label: 'Activities', path: '/client/activities', resource: 'activities' },
     { icon: FiAlertCircle, label: 'Issues', path: '/client/issues', resource: 'issues' },
     { icon: FiSettings, label: 'Settings', path: '/client/settings', resource: 'settings' },
@@ -235,9 +236,24 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   ]);
 
   // Check if user has multiple profiles (memoized)
+  // Filter profiles:
+  // - Vendor profiles: Always show (new users can sign up as vendors)
+  // - Customer profiles: Always show (new users can sign up as customers)
+  // - Employee profiles: Only show if assigned by vendor (has organization)
+  const validProfiles = useMemo(() => {
+    return profiles?.filter(profile => {
+      if (profile.profile_type === 'employee') {
+        // Employee profiles: Only show if they have an organization (assigned by vendor)
+        return !!profile.organization;
+      }
+      // Vendor and customer profiles: Always show
+      return true;
+    }) || [];
+  }, [profiles]);
+
   const hasMultipleProfiles = useMemo(() => 
-    profiles && profiles.length > 1,
-    [profiles]
+    validProfiles && validProfiles.length > 1,
+    [validProfiles]
   );
 
   return (
@@ -338,7 +354,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
                       w="full"
                     >
                       <FiRefreshCw size={14} />
-                      <Text ml={1}>Switch Profile ({profiles?.length})</Text>
+                      <Text ml={1}>Switch Profile ({validProfiles?.length})</Text>
                     </Button>
                   )}
                 </VStack>
@@ -501,10 +517,10 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       </Box>
 
       {/* Role Switcher Dialog - Only render when needed */}
-      {showRoleSwitcher && profiles && profiles.length > 0 && (
+      {showRoleSwitcher && validProfiles && validProfiles.length > 0 && (
         <RoleSelectionDialog
           open={showRoleSwitcher}
-          profiles={profiles}
+          profiles={validProfiles}
           onSelectRole={handleSwitchRole}
           isLoading={isSwitching}
         />

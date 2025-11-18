@@ -64,6 +64,15 @@ class LeadService {
   }
 
   /**
+   * Convert lead to deal and move to a specific stage
+   * Returns response with deal and lead data
+   */
+  async convertLeadToDeal(id: string | number, stageKey: string, stageId?: number): Promise<{ deal: any; lead: Lead; message: string }> {
+    const url = API_CONFIG.ENDPOINTS.LEADS.CONVERT_TO_DEAL(id);
+    return api.post<{ deal: any; lead: Lead; message: string }>(url, { stage_key: stageKey, stage_id: stageId });
+  }
+
+  /**
    * Qualify lead
    */
   async qualifyLead(id: string | number): Promise<Lead> {
@@ -116,6 +125,21 @@ class LeadService {
   async assignLead(id: string | number, userId: string | number): Promise<Lead> {
     const url = API_CONFIG.ENDPOINTS.LEADS.ASSIGN(id);
     return api.post<Lead>(url, { assigned_to: userId });
+  }
+
+  /**
+   * Move lead to a different stage
+   */
+  async moveLeadStage(id: string | number, stageId: number, stageKey?: string, stageName?: string): Promise<Lead> {
+    const url = API_CONFIG.ENDPOINTS.LEADS.MOVE_STAGE(id);
+    const payload: any = { stage_id: stageId };
+    if (stageKey) {
+      payload.stage_key = stageKey;
+    }
+    if (stageName) {
+      payload.stage_name = stageName;
+    }
+    return api.post<Lead>(url, payload);
   }
 }
 

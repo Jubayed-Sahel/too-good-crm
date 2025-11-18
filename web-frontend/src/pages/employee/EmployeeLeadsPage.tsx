@@ -51,21 +51,13 @@ const EmployeeLeadsPage = () => {
     console.log('🚀 Creating lead with data:', data);
     
     // Get organization ID from active profile
+    // Note: Backend will get organization from request context if not provided
     const organizationId = activeOrganizationId || data.organization;
     
-    if (!organizationId) {
-      console.error('❌ No organization ID found');
-      toaster.create({
-        title: 'Unable to create lead',
-        description: 'Organization information not found. Please select a profile.',
-        type: 'error',
-      });
-      return;
-    }
-    
-    console.log('📊 Organization ID:', organizationId);
+    console.log('📊 Organization ID:', organizationId, 'from activeOrganizationId:', activeOrganizationId);
     
     // Transform form data to backend format
+    // Organization is optional - backend will get it from request context
     const transformedData = transformLeadFormData(data, organizationId);
     console.log('🔄 Transformed data:', transformedData);
     
@@ -83,15 +75,58 @@ const EmployeeLeadsPage = () => {
       },
       onError: (err: any) => {
         console.error('❌ Failed to create lead:', err);
+        console.error('❌ Full error object:', JSON.stringify(err, null, 2));
         console.error('❌ Error response:', err.response?.data);
+        console.error('❌ Error errors:', err.errors);
+        console.error('❌ Error message:', err.message);
+        console.error('❌ Error status:', err.status);
         
-        const errorMessage = 
-          err.response?.data?.email?.[0] ||
-          err.response?.data?.name?.[0] ||
-          err.response?.data?.organization_name?.[0] ||
-          err.response?.data?.non_field_errors?.[0] ||
-          err.response?.data?.detail ||
-          'Failed to create lead. Please try again.';
+        // Handle both transformed error format (from apiClient) and original axios error format
+        // The apiClient transforms errors to { message, status, errors }
+        // But we also need to check the original response data
+        const originalErrorData = err.response?.data || {};
+        const transformedErrors = err.errors || {};
+        const errorData = { ...originalErrorData, ...transformedErrors };
+        
+        // Extract error message from various possible formats
+        // Priority: detail field (DRF ValidationError) > transformed message > field errors > message > error
+        let errorMessage = 'Failed to create lead. Please try again.';
+        
+        // First check the transformed message (from apiClient)
+        if (err.message && err.message !== 'An error occurred') {
+          errorMessage = err.message;
+        }
+        
+        // Check for detail field (common in DRF ValidationError, including PermissionDenied wrapped as ValidationError)
+        if (errorData.detail) {
+          errorMessage = typeof errorData.detail === 'string' 
+            ? errorData.detail 
+            : (Array.isArray(errorData.detail) ? errorData.detail[0] : String(errorData.detail));
+        } else if (errorData && typeof errorData === 'object') {
+          // Check for field-specific errors (array format)
+          const fieldErrors = [
+            errorData.email?.[0],
+            errorData.phone?.[0],
+            errorData.name?.[0],
+            errorData.organization_name?.[0],
+            errorData.lead_score?.[0],
+            errorData.estimated_value?.[0],
+            errorData.non_field_errors?.[0],
+          ].filter(Boolean);
+          
+          if (fieldErrors.length > 0) {
+            errorMessage = fieldErrors[0];
+          } else if (errorData.message && errorData.message !== 'An error occurred') {
+            errorMessage = errorData.message;
+          } else if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        }
+        
+        // Check if it's a permission error and provide helpful message
+        if (errorMessage.includes('Permission denied') || errorMessage.includes('lead:create') || errorMessage.includes('Failed to create lead: Permission denied')) {
+          errorMessage = 'You do not have permission to create leads. Please contact your administrator to grant you the "lead:create" permission.';
+        }
         
         toaster.create({
           title: 'Failed to create lead',

@@ -107,10 +107,12 @@ export function useDeleteDeal() {
         type: 'success',
       });
       
-      // Invalidate list and remove from cache
+      // Invalidate list and remove from cache, then refetch
       queryClient.invalidateQueries({ queryKey: ['deals'] });
       queryClient.removeQueries({ queryKey: ['deal', id] });
       queryClient.invalidateQueries({ queryKey: ['dealStats'] });
+      // Force refetch all deal queries to ensure UI updates immediately
+      queryClient.refetchQueries({ queryKey: ['deals'], exact: false });
     },
     onError: (error: any) => {
       toaster.create({

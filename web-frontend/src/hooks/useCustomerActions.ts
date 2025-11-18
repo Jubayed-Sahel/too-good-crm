@@ -139,7 +139,14 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
    * Navigate to edit customer page
    */
   const handleEdit = (customer: MappedCustomer) => {
-    console.log('Edit customer:', customer);
+    if (!customer || !customer.id) {
+      toaster.create({
+        title: 'Error',
+        description: 'Invalid customer data. Cannot edit customer.',
+        type: 'error',
+      });
+      return;
+    }
     navigate(`/customers/${customer.id}/edit`);
   };
 
@@ -147,6 +154,14 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
    * Open delete confirmation dialog
    */
   const handleDelete = (customer: MappedCustomer) => {
+    if (!customer || !customer.id) {
+      toaster.create({
+        title: 'Error',
+        description: 'Invalid customer data. Cannot delete customer.',
+        type: 'error',
+      });
+      return;
+    }
     setCustomerToDelete(customer);
     setDeleteDialogOpen(true);
   };
@@ -254,7 +269,14 @@ export const useCustomerActions = ({ onSuccess }: UseCustomerActionsProps = {}):
    * Navigate to customer detail page
    */
   const handleView = (customer: MappedCustomer) => {
-    console.log('View customer:', customer);
+    if (!customer || !customer.id) {
+      toaster.create({
+        title: 'Error',
+        description: 'Invalid customer data. Cannot view customer.',
+        type: 'error',
+      });
+      return;
+    }
     navigate(`/customers/${customer.id}`);
   };
 

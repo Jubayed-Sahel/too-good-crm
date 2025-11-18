@@ -31,16 +31,16 @@ class EmployeeListSerializer(serializers.ModelSerializer):
 
 class EmployeeSerializer(serializers.ModelSerializer):
     """Full employee serializer"""
-    user = UserSerializer(read_only=True)
-    user_profile = UserProfileSerializer(read_only=True)
-    manager = EmployeeListSerializer(read_only=True)
+    user = UserSerializer(read_only=True, allow_null=True)
+    user_profile = UserProfileSerializer(read_only=True, allow_null=True)
+    manager = EmployeeListSerializer(read_only=True, allow_null=True)
     # Define role field with default queryset - will be refined in __init__ for write operations
     role = serializers.PrimaryKeyRelatedField(
         queryset=Role.objects.all(),  # Default queryset, refined in __init__ for write operations
         required=False,
         allow_null=True
     )
-    role_name = serializers.CharField(source='role.name', read_only=True)
+    role_name = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
     employment_type_display = serializers.CharField(source='get_employment_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -111,6 +111,10 @@ class EmployeeSerializer(serializers.ModelSerializer):
     def get_full_name(self, obj):
         return obj.full_name
     
+    def get_role_name(self, obj):
+        """Safely get role name, handling None role"""
+        return obj.role.name if obj.role else None
+    
     def update(self, instance, validated_data):
         """Override update to handle role assignment properly"""
         import logging
@@ -145,8 +149,15 @@ class EmployeeSerializer(serializers.ModelSerializer):
         
         logger.info(f"🎯 Role ID: {role_id} (type: {type(role_id)})")
         
+        # Handle zip_code -> postal_code mapping explicitly
+        if 'zip_code' in validated_data:
+            instance.postal_code = validated_data.pop('zip_code')
+        
         # Update other fields
         for attr, value in validated_data.items():
+            # Skip fields that shouldn't be set directly
+            if attr in ['user', 'user_profile', 'code', 'created_at', 'updated_at']:
+                continue
             setattr(instance, attr, value)
         
         # Set role if provided

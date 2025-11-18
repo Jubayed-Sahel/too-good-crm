@@ -49,7 +49,7 @@ export const CreateLeadDialog = ({
 }: CreateLeadDialogProps) => {
   const { activeOrganizationId } = useProfile();
   const [formData, setFormData] = useState<CreateLeadData>({
-    organization: activeOrganizationId || 1,
+    organization: activeOrganizationId || undefined,
     name: '',
     email: '',
     phone: '',
@@ -64,6 +64,9 @@ export const CreateLeadDialog = ({
   useEffect(() => {
     if (activeOrganizationId) {
       setFormData(prev => ({ ...prev, organization: activeOrganizationId }));
+    } else {
+      // Clear organization if no active profile
+      setFormData(prev => ({ ...prev, organization: undefined }));
     }
   }, [activeOrganizationId]);
 
@@ -75,7 +78,7 @@ export const CreateLeadDialog = ({
 
   const handleClose = () => {
     setFormData({
-      organization: activeOrganizationId || 1,
+      organization: activeOrganizationId || undefined,
       name: '',
       email: '',
       phone: '',
@@ -88,7 +91,7 @@ export const CreateLeadDialog = ({
     onClose();
   };
 
-  const isFormValid = formData.name && formData.company && formData.email;
+  const isFormValid = formData.name && formData.company && formData.email && formData.organization;
 
   return (
     <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size={{ base: 'full', md: 'lg' }}>

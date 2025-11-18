@@ -23,6 +23,7 @@ import { Field } from '@/components/ui/field';
 import type { ClientRaiseIssueData, IssuePriority, IssueCategory } from '@/types';
 import { vendorService } from '@/services/vendor.service';
 import { orderService } from '@/services/order.service';
+import { organizationService } from '@/services/organization.service';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ClientRaiseIssueModalProps {
@@ -59,52 +60,45 @@ const ClientRaiseIssueModal = ({
 
   const [errors, setErrors] = useState<Partial<Record<keyof ClientRaiseIssueData, string>>>({});
 
-  // Fetch all organizations the user can raise issues about
-  // This includes: 
-  // 1. User's own organization (from their customer profile)
-  // 2. Any organizations they have customer profiles for
+  // Fetch all organizations from the database
+  // Customers should see all organizations when raising issues
   useEffect(() => {
     if (isOpen && user) {
       setLoadingOrgs(true);
-      console.log('📋 Fetching organizations for user:', user.email);
-      console.log('👤 User profiles:', user.profiles);
+      console.log('📋 Fetching all organizations from database for user:', user.email);
       
-      // Get all unique organizations from user's profiles
-      const orgSet = new Set<number>();
-      const orgMap = new Map<number, string>();
-      
-      // Add organizations from all profiles (vendor, employee, customer)
-      user.profiles?.forEach((profile: any) => {
-        if (profile.organization) {
-          orgSet.add(profile.organization);
-          orgMap.set(profile.organization, profile.organization_name || `Organization #${profile.organization}`);
-        }
-      });
-      
-      // Convert to array
-      const orgList = Array.from(orgSet).map(id => ({
-        id,
-        name: orgMap.get(id) || `Organization #${id}`
-      }));
-      
-      console.log('✅ Found organizations:', orgList);
-      setOrganizations(orgList);
-      
-      // Auto-select user's primary organization if available
-      if (userOrganizationId && orgList.some(org => org.id === userOrganizationId)) {
-        setFormData(prev => ({
-          ...prev,
-          organization: userOrganizationId
-        }));
-      } else if (orgList.length > 0) {
-        // If user's primary org not in list, select first available
-        setFormData(prev => ({
-          ...prev,
-          organization: orgList[0].id
-        }));
-      }
-      
-      setLoadingOrgs(false);
+      // Fetch all organizations from the API
+      organizationService.getAllOrganizations()
+        .then((orgs) => {
+          console.log('✅ Fetched all organizations:', orgs);
+          const orgList = orgs.map(org => ({
+            id: org.id,
+            name: org.name || `Organization #${org.id}`
+          }));
+          setOrganizations(orgList);
+          
+          // Auto-select user's primary organization if available
+          if (userOrganizationId && orgList.some(org => org.id === userOrganizationId)) {
+            setFormData(prev => ({
+              ...prev,
+              organization: userOrganizationId
+            }));
+          } else if (orgList.length > 0) {
+            // If user's primary org not in list, select first available
+            setFormData(prev => ({
+              ...prev,
+              organization: orgList[0].id
+            }));
+          }
+          
+          setLoadingOrgs(false);
+        })
+        .catch((error) => {
+          console.error('❌ Error fetching organizations:', error);
+          setLoadingOrgs(false);
+          // Fallback to empty list or user's organizations
+          setOrganizations([]);
+        });
     }
   }, [isOpen, user, userOrganizationId]);
 

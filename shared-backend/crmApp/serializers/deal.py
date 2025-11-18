@@ -150,6 +150,8 @@ class DealCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating deals"""
     customer_id = serializers.IntegerField(required=False, allow_null=True)
     customer = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    lead_id = serializers.IntegerField(required=False, allow_null=True)
+    lead = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     pipeline_id = serializers.IntegerField(required=False, allow_null=True)
     pipeline = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     stage_id = serializers.IntegerField(required=False, allow_null=True)
@@ -160,7 +162,7 @@ class DealCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Deal
         fields = [
-            'organization', 'customer', 'customer_id', 'pipeline', 'pipeline_id',
+            'organization', 'customer', 'customer_id', 'lead', 'lead_id', 'pipeline', 'pipeline_id',
             'stage', 'stage_id', 'title', 'description', 'value', 'currency',
             'probability', 'expected_close_date', 'priority',
             'assigned_to', 'assigned_to_id', 'source', 'tags', 'notes'
@@ -202,9 +204,11 @@ class DealCreateSerializer(serializers.ModelSerializer):
         return value
     
     def validate(self, attrs):
-        # Handle backward compatibility for customer/customer_id
+        # Handle backward compatibility for customer/customer_id, lead/lead_id
         if 'customer' in attrs:
             attrs['customer_id'] = attrs.pop('customer')
+        if 'lead' in attrs:
+            attrs['lead_id'] = attrs.pop('lead')
         if 'pipeline' in attrs:
             attrs['pipeline_id'] = attrs.pop('pipeline')
         if 'stage' in attrs:
@@ -212,10 +216,11 @@ class DealCreateSerializer(serializers.ModelSerializer):
         if 'assigned_to' in attrs:
             attrs['assigned_to_id'] = attrs.pop('assigned_to')
         
-        # Ensure customer is provided (check both customer and customer_id)
-        if not attrs.get('customer_id'):
+        # Allow creating deal from lead without customer (customer will be created when deal is won)
+        # OR require customer if no lead is provided
+        if not attrs.get('customer_id') and not attrs.get('lead_id'):
             raise serializers.ValidationError({
-                'customer': "Customer is required for creating a deal."
+                'customer': "Either customer or lead is required for creating a deal."
             })
         
         # Ensure title is provided and meets minimum length

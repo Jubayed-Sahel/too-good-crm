@@ -213,8 +213,10 @@ class IssueViewSet(
                     is_client_issue=True
                 )
             
-            # Auto-sync to Linear if Linear team ID is configured
-            linear_team_id = organization.linear_team_id
+            # Auto-sync to Linear - always attempt sync
+            # Try to get team_id from multiple sources
+            linear_team_id = self.linear_service.get_team_id(self.request, organization, issue)
+            
             if linear_team_id:
                 try:
                     logger.info(
@@ -246,9 +248,22 @@ class IssueViewSet(
                     )
                     # Don't fail the request if Linear sync fails - issue is still created
             else:
-                logger.debug(
-                    f"Linear team ID not configured for organization {organization.name} (ID: {organization.id})"
-                )
+                # Check if Linear API key is configured
+                from django.conf import settings
+                import os
+                linear_api_key = getattr(settings, 'LINEAR_API_KEY', None) or os.getenv('LINEAR_API_KEY', '')
+                
+                if not linear_api_key:
+                    logger.warning(
+                        f"Linear API key not configured. Issue {issue.issue_number} will not be synced to Linear. "
+                        f"Please set LINEAR_API_KEY in your .env file."
+                    )
+                else:
+                    logger.warning(
+                        f"Linear team ID not found for organization {organization.name} (ID: {organization.id}). "
+                        f"Issue {issue.issue_number} will not be synced to Linear. "
+                        f"Please configure linear_team_id for the organization or set LINEAR_TEAM_ID in settings."
+                    )
         else:
             # Vendors and employees are NOT allowed to raise issues
             from rest_framework.exceptions import PermissionDenied
@@ -328,38 +343,43 @@ class IssueViewSet(
             except Exception as e:
                 logger.error(f"Failed to sync issue changes to Linear: {str(e)}", exc_info=True)
         
-        # If issue is not synced but Linear team ID is configured, sync it now
-        elif linear_team_id and not instance.synced_to_linear:
-            try:
-                logger.info(
-                    f"Attempting to auto-sync issue {instance.issue_number} to Linear "
-                    f"(team_id: {linear_team_id}, status: {instance.status})"
-                )
-                
-                # Sync issue to Linear (will map status to state)
-                success, linear_data, error = self.linear_service.sync_issue_to_linear(
-                    issue=instance,
-                    team_id=linear_team_id,
-                    update_existing=False
-                )
-                
-                if success and linear_data:
-                    linear_synced = True
+        # If issue is not synced, try to sync it now (always attempt auto-sync)
+        if not instance.synced_to_linear:
+            # Try to get team_id from multiple sources if not already found
+            if not linear_team_id:
+                linear_team_id = self.linear_service.get_team_id(request, organization, instance)
+            
+            if linear_team_id:
+                try:
                     logger.info(
-                        f"Issue {instance.issue_number} auto-synced to Linear: {linear_data.get('url', 'N/A')} "
-                        f"(Linear State: {linear_data.get('state', 'N/A')})"
-                    )
-                else:
-                    logger.warning(
-                        f"Linear sync failed for issue {instance.issue_number}: {error or 'Unknown error'}"
+                        f"Attempting to auto-sync issue {instance.issue_number} to Linear "
+                        f"(team_id: {linear_team_id}, status: {instance.status})"
                     )
                     
-            except Exception as e:
-                logger.error(
-                    f"Failed to auto-sync issue {instance.issue_number} to Linear: {str(e)}",
-                    exc_info=True
-                )
-                # Don't fail the request if Linear sync fails
+                    # Sync issue to Linear (will map status to state)
+                    success, linear_data, error = self.linear_service.sync_issue_to_linear(
+                        issue=instance,
+                        team_id=linear_team_id,
+                        update_existing=False
+                    )
+                    
+                    if success and linear_data:
+                        linear_synced = True
+                        logger.info(
+                            f"Issue {instance.issue_number} auto-synced to Linear: {linear_data.get('url', 'N/A')} "
+                            f"(Linear State: {linear_data.get('state', 'N/A')})"
+                        )
+                    else:
+                        logger.warning(
+                            f"Linear sync failed for issue {instance.issue_number}: {error or 'Unknown error'}"
+                        )
+                        
+                except Exception as e:
+                    logger.error(
+                        f"Failed to auto-sync issue {instance.issue_number} to Linear: {str(e)}",
+                        exc_info=True
+                    )
+                    # Don't fail the request if Linear sync fails
         
         response_serializer = self.get_serializer(instance)
         response_data = response_serializer.data

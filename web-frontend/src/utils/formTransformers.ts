@@ -95,9 +95,8 @@ export function transformDealFormData(data: any, organizationId: number, stageId
 /**
  * Transform lead form data to backend format
  */
-export function transformLeadFormData(data: any, organizationId: number) {
-  return {
-    organization: organizationId,
+export function transformLeadFormData(data: any, organizationId?: number | null) {
+  const transformed: any = {
     name: data.name?.trim() || `${data.first_name || ''} ${data.last_name || ''}`.trim() || data.email || 'Lead',
     first_name: data.first_name?.trim() || undefined,
     last_name: data.last_name?.trim() || undefined,
@@ -120,6 +119,14 @@ export function transformLeadFormData(data: any, organizationId: number) {
     referrer: data.referrer?.trim() || undefined,
     tags: data.tags || undefined,
   };
+  
+  // Only include organization if it's a valid number
+  // The backend will get it from request context if not provided
+  if (organizationId && typeof organizationId === 'number' && organizationId > 0) {
+    transformed.organization = organizationId;
+  }
+  
+  return transformed;
 }
 
 /**

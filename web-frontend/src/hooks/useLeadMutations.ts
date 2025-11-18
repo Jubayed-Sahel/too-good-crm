@@ -109,10 +109,12 @@ export function useDeleteLead() {
         type: 'success',
       });
       
-      // Invalidate list and remove from cache
+      // Invalidate all lead queries (list, detail, stats)
       queryClient.invalidateQueries({ queryKey: ['leads'] });
       queryClient.removeQueries({ queryKey: ['lead', id] });
       queryClient.invalidateQueries({ queryKey: ['leadStats'] });
+      // Force refetch all lead queries to ensure UI updates immediately
+      queryClient.refetchQueries({ queryKey: ['leads'], exact: false });
     },
     onError: (error: any) => {
       toaster.create({
@@ -152,6 +154,41 @@ export function useConvertLead() {
       toaster.create({
         title: 'Error converting lead',
         description: error.response?.data?.detail || error.response?.data?.non_field_errors?.[0] || 'Failed to convert lead.',
+        type: 'error',
+      });
+    },
+  });
+}
+
+/**
+ * Convert Lead to Deal Mutation
+ * Converts lead to deal and moves to a specific stage
+ */
+export function useConvertLeadToDeal() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, stageKey, stageId }: { id: string | number; stageKey: string; stageId?: number }) =>
+      leadService.convertLeadToDeal(id, stageKey, stageId),
+    onSuccess: (response) => {
+      const lead = response.lead;
+      toaster.create({
+        title: 'Lead converted to deal',
+        description: response.message || `Lead "${lead.name || lead.organization_name}" has been converted to a deal.`,
+        type: 'success',
+      });
+      
+      // Invalidate leads, deals, and customers
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['lead', lead.id] });
+      queryClient.invalidateQueries({ queryKey: ['deals'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['leadStats'] });
+    },
+    onError: (error: any) => {
+      toaster.create({
+        title: 'Error converting lead to deal',
+        description: error.response?.data?.error || error.response?.data?.detail || 'Failed to convert lead to deal.',
         type: 'error',
       });
     },

@@ -45,7 +45,7 @@ from .call import Call
 from .jitsi_call import JitsiCallSession, UserPresence
 
 # Lead model
-from .lead import Lead
+from .lead import Lead, LeadStageHistory
 
 # Deal models
 from .deal import (
@@ -72,6 +72,9 @@ from .activity import Activity
 
 # Notification model
 from .notification import NotificationPreferences
+
+# Message models
+from .message import Message, Conversation
 
 # Export all models for backward compatibility
 __all__ = [
@@ -101,6 +104,7 @@ __all__ = [
     'JitsiCallSession',
     'UserPresence',
     'Lead',
+    'LeadStageHistory',
     'Deal',
     'Pipeline',
     'PipelineStage',
@@ -115,4 +119,8 @@ __all__ = [
     
     # Notifications
     'NotificationPreferences',
+    
+    # Messages
+    'Message',
+    'Conversation',
 ]

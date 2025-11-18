@@ -41,10 +41,10 @@ const EmployeeEmployeesPage = () => {
     return employees.filter((emp) => {
       const matchesSearch = 
         !searchQuery ||
-        emp.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        emp.department?.toLowerCase().includes(searchQuery.toLowerCase());
+        (emp.first_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (emp.last_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (emp.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+        (emp.department?.toLowerCase() || '').includes(searchQuery.toLowerCase());
       
       const matchesStatus = 
         statusFilter === 'all' || emp.status === statusFilter;

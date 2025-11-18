@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 
-from crmApp.models import Lead, Employee
+from crmApp.models import Lead, LeadStageHistory, Employee
 from crmApp.serializers import (
     LeadSerializer,
     LeadCreateSerializer,
@@ -76,20 +76,29 @@ class LeadViewSet(
     
     def perform_create(self, serializer):
         """Override perform_create to check permissions"""
-        organization = self.get_organization_from_request(self.request)
+        import logging
+        logger = logging.getLogger(__name__)
         
-        if not organization:
-            raise ValueError('Organization is required. Please ensure you have an active profile.')
-        
-        # Check permission for creating leads
-        self.check_permission(
-            self.request,
-            resource='lead',
-            action='create',
-            organization=organization
-        )
-        
-        serializer.save(organization_id=organization.id)
+        try:
+            organization = self.get_organization_from_request(self.request)
+            
+            if not organization:
+                raise ValueError('Organization is required. Please ensure you have an active profile.')
+            
+            # Check permission for creating leads
+            self.check_permission(
+                self.request,
+                resource='lead',
+                action='create',
+                organization=organization
+            )
+            
+            # Pass organization object directly to serializer
+            serializer.save(organization=organization)
+        except Exception as e:
+            logger.error(f"Error in perform_create: {str(e)}", exc_info=True)
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': f'Failed to create lead: {str(e)}'})
     
     def update(self, request, *args, **kwargs):
         """Override update to check permissions"""
@@ -312,3 +321,570 @@ class LeadViewSet(
             'message': 'Lead assigned successfully.',
             'lead': LeadSerializer(lead).data
         })
+    
+    @action(detail=True, methods=['post'])
+    def move_stage(self, request, pk=None):
+        """
+        Move lead to a different stage.
+        Requires lead:update permission.
+        """
+        lead = self.get_object()
+        self.check_permission(request, 'lead', 'update', instance=lead)
+        
+        stage_id = request.data.get('stage_id')
+        stage_key = request.data.get('stage_key', '').lower()
+        stage_name = request.data.get('stage_name', '')
+        
+        # If stage_id is 0 or missing, we'll try to find/create by name
+        if not stage_id or stage_id == 0:
+            stage_id = None
+        
+        try:
+            from crmApp.models import PipelineStage, Pipeline
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            stage = None
+            
+            # First, try to get stage directly by ID (works even without pipeline) - only if stage_id is provided
+            if stage_id:
+                try:
+                    stage = PipelineStage.objects.get(id=stage_id)
+                    logger.info(f"Found stage {stage_id} directly: {stage.name}")
+                except PipelineStage.DoesNotExist:
+                    logger.warning(f"Stage {stage_id} not found directly, trying to find by pipeline...")
+            else:
+                logger.info(f"No stage_id provided, will find/create by name/key")
+            
+            # If stage not found yet, try to find/create pipeline and stage
+            if not stage:
+                # Get or create default pipeline for organization
+                pipeline = Pipeline.objects.filter(
+                    organization=lead.organization,
+                    is_active=True
+                ).order_by('-is_default', '-created_at').first()
+                
+                if pipeline:
+                    try:
+                        stage = PipelineStage.objects.get(
+                            id=stage_id,
+                            pipeline=pipeline
+                        )
+                        logger.info(f"Found stage {stage_id} in pipeline {pipeline.id}: {stage.name}")
+                    except PipelineStage.DoesNotExist:
+                        # Try to find stage by name if ID doesn't match
+                        # This handles cases where frontend sends a stage_id that doesn't exist
+                        stage_name_map = {
+                            'lead': 'Lead',
+                            'qualified': 'Qualified',
+                            'proposal': 'Proposal',
+                            'negotiation': 'Negotiation',
+                            'closed-won': 'Closed Won',
+                            'closed_won': 'Closed Won',
+                        }
+                        # Try to get stage by name
+                        for key, name in stage_name_map.items():
+                            try:
+                                stage = PipelineStage.objects.get(
+                                    pipeline=pipeline,
+                                    name__iexact=name
+                                )
+                                logger.info(f"Found stage by name '{name}' in pipeline {pipeline.id}: {stage.name}")
+                                break
+                            except PipelineStage.DoesNotExist:
+                                continue
+                else:
+                    logger.warning(f"No active pipeline found for organization {lead.organization.id}, creating default pipeline...")
+                    # Create default pipeline if none exists
+                    from django.db import transaction
+                    with transaction.atomic():
+                        pipeline = Pipeline.objects.create(
+                            organization=lead.organization,
+                            name='Sales Pipeline',
+                            code='SALES',
+                            is_active=True,
+                            is_default=True
+                        )
+                        logger.info(f"Created default pipeline for organization {lead.organization.id}")
+                        
+                        # Create default pipeline stages
+                        default_stages = [
+                            {'name': 'Lead', 'order': 1, 'probability': 10.00, 'description': 'Initial contact and research'},
+                            {'name': 'Qualified', 'order': 2, 'probability': 25.00, 'description': 'Qualifying the opportunity'},
+                            {'name': 'Proposal', 'order': 3, 'probability': 50.00, 'description': 'Proposal submitted'},
+                            {'name': 'Negotiation', 'order': 4, 'probability': 75.00, 'description': 'Contract negotiation'},
+                            {'name': 'Closed Won', 'order': 5, 'probability': 100.00, 'is_closed_won': True, 'description': 'Deal won'},
+                            {'name': 'Closed Lost', 'order': 6, 'probability': 0.00, 'is_closed_lost': True, 'description': 'Deal lost'},
+                        ]
+                        
+                        for stage_data in default_stages:
+                            PipelineStage.objects.create(
+                                pipeline=pipeline,
+                                **stage_data
+                            )
+                        
+                        logger.info(f"Created {len(default_stages)} default pipeline stages for organization {lead.organization.id}")
+                    
+                    # Now try to find the stage by name if stage_id doesn't match
+                    stage_name_map = {
+                        'lead': 'Lead',
+                        'qualified': 'Qualified',
+                        'proposal': 'Proposal',
+                        'negotiation': 'Negotiation',
+                        'closed-won': 'Closed Won',
+                        'closed_won': 'Closed Won',
+                    }
+                    
+                    # Try to find stage by name from the request or by common stage names
+                    # First, try to get stage by ID if it was provided
+                    try:
+                        stage = PipelineStage.objects.get(id=stage_id, pipeline=pipeline)
+                        logger.info(f"Found stage {stage_id} in newly created pipeline: {stage.name}")
+                    except PipelineStage.DoesNotExist:
+                        # Try to find by name - check if request has stage_name or stage_key
+                        stage_key = request.data.get('stage_key', '').lower()
+                        stage_name = request.data.get('stage_name', '')
+                        
+                        # Map stage key to name
+                        if stage_key and stage_key in stage_name_map:
+                            stage_name = stage_name_map[stage_key]
+                        
+                        if stage_name:
+                            try:
+                                stage = PipelineStage.objects.get(
+                                    pipeline=pipeline,
+                                    name__iexact=stage_name
+                                )
+                                logger.info(f"Found stage by name '{stage_name}' in newly created pipeline: {stage.name}")
+                            except PipelineStage.DoesNotExist:
+                                # Use the first stage as fallback
+                                stage = PipelineStage.objects.filter(pipeline=pipeline).order_by('order').first()
+                                logger.warning(f"Stage not found by name '{stage_name}', using first stage as fallback: {stage.name if stage else 'None'}")
+                        else:
+                            # Use the first stage as fallback
+                            stage = PipelineStage.objects.filter(pipeline=pipeline).order_by('order').first()
+                            logger.warning(f"No stage name provided, using first stage as fallback: {stage.name if stage else 'None'}")
+            
+            if not stage:
+                return Response(
+                    {'error': f'Stage with ID {stage_id} not found and could not create default pipeline'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Track stage change in history BEFORE updating lead
+            previous_stage = lead.stage
+            was_in_closed_won = previous_stage and previous_stage.is_closed_won if previous_stage else False
+            
+            # Update stage (always update, even if same - ensures consistency)
+            lead.stage = stage
+            
+            # Handle closed-won stage - create/update customer and deal
+            if stage.is_closed_won:
+                from crmApp.models import Customer, Deal, Pipeline
+                from django.utils import timezone
+                
+                # Mark lead as converted
+                lead.is_converted = True
+                if not lead.converted_at:
+                    lead.converted_at = timezone.now()
+                
+                # Create or update customer from lead
+                # Use email if available, otherwise use name as lookup
+                # Parse lead name into first_name and last_name if possible
+                lead_name = lead.name or ''
+                first_name = ''
+                last_name = ''
+                if lead_name:
+                    name_parts = lead_name.strip().split(maxsplit=1)
+                    if len(name_parts) >= 2:
+                        first_name = name_parts[0]
+                        last_name = name_parts[1]
+                    else:
+                        first_name = name_parts[0]
+                        last_name = ''
+                
+                if lead.email:
+                    customer, created = Customer.objects.get_or_create(
+                        organization=lead.organization,
+                        email=lead.email,
+                        defaults={
+                            'name': lead.name or lead.organization_name or 'Customer',
+                            'first_name': first_name or lead.organization_name or '',
+                            'last_name': last_name,
+                            'company_name': lead.organization_name,
+                            'phone': lead.phone,
+                            'customer_type': 'business' if lead.organization_name else 'individual',
+                            'status': 'active',
+                            'source': lead.source or 'lead',
+                            'address': lead.address,
+                            'city': lead.city,
+                            'state': lead.state,
+                            'postal_code': lead.postal_code,
+                            'country': lead.country,
+                            'converted_from_lead': lead,
+                            'converted_at': timezone.now(),
+                        }
+                    )
+                else:
+                    # No email, use name as lookup
+                    customer_name = lead.name or lead.organization_name or 'Customer'
+                    customer, created = Customer.objects.get_or_create(
+                        organization=lead.organization,
+                        name=customer_name,
+                        defaults={
+                            'first_name': first_name or lead.organization_name or '',
+                            'last_name': last_name,
+                            'email': f"{customer_name.lower().replace(' ', '.')}@example.com",
+                            'company_name': lead.organization_name,
+                            'phone': lead.phone,
+                            'customer_type': 'business' if lead.organization_name else 'individual',
+                            'status': 'active',
+                            'source': lead.source or 'lead',
+                            'address': lead.address,
+                            'city': lead.city,
+                            'state': lead.state,
+                            'postal_code': lead.postal_code,
+                            'country': lead.country,
+                            'converted_from_lead': lead,
+                            'converted_at': timezone.now(),
+                        }
+                    )
+                
+                if created:
+                    logger.info(f"✅ Created customer {customer.id} (name: {customer.name}, email: {customer.email}, status: {customer.status}) from lead {lead.id} moved to closed-won")
+                else:
+                    # Update existing customer to active
+                    customer.status = 'active'
+                    if not customer.converted_from_lead:
+                        customer.converted_from_lead = lead
+                    if not customer.converted_at:
+                        customer.converted_at = timezone.now()
+                    customer.save(update_fields=['status', 'converted_from_lead', 'converted_at'])
+                    logger.info(f"✅ Updated customer {customer.id} (name: {customer.name}, email: {customer.email}, status: {customer.status}) to active from lead {lead.id}")
+                
+                # Ensure customer is saved and visible
+                customer.refresh_from_db()
+                logger.info(f"Customer {customer.id} saved in database with status: {customer.status}, is_active: {customer.status == 'active'}")
+                
+                # Get or create pipeline for the deal
+                pipeline = stage.pipeline
+                if not pipeline:
+                    # Get default pipeline for organization
+                    pipeline = Pipeline.objects.filter(
+                        organization=lead.organization,
+                        is_active=True
+                    ).order_by('-is_default', '-created_at').first()
+                    
+                    if not pipeline:
+                        # Create default pipeline if none exists
+                        pipeline = Pipeline.objects.create(
+                            organization=lead.organization,
+                            name='Default Pipeline',
+                            is_default=True,
+                            is_active=True
+                        )
+                        logger.info(f"Created default pipeline for organization {lead.organization.id}")
+                
+                # Check if a deal already exists for this lead in closed-won stage
+                existing_deal = Deal.objects.filter(
+                    lead=lead,
+                    stage=stage,
+                    is_won=True
+                ).first()
+                
+                if not existing_deal:
+                    # Create a won deal from the lead
+                    # Use estimated_value if available, otherwise default to 0
+                    deal_value = lead.estimated_value if lead.estimated_value is not None else 0
+                    deal_title = f"{lead.name or lead.organization_name or 'Deal'}"
+                    
+                    deal = Deal.objects.create(
+                        organization=lead.organization,
+                        customer=customer,
+                        lead=lead,
+                        pipeline=pipeline,
+                        stage=stage,
+                        title=deal_title,
+                        description=lead.notes or '',
+                        value=deal_value,
+                        probability=stage.probability,
+                        assigned_to=lead.assigned_to,
+                        source=lead.source,
+                        tags=lead.tags or [],
+                        notes=f"Converted from lead: {lead.code}\n{lead.notes or ''}",
+                        is_won=True,
+                        is_lost=False,
+                        actual_close_date=timezone.now().date(),
+                        status='closed'
+                    )
+                    logger.info(f"Created won deal {deal.id} from lead {lead.id} moved to closed-won")
+                else:
+                    # Update existing deal to ensure it's marked as won and linked to customer
+                    existing_deal.customer = customer
+                    existing_deal.is_won = True
+                    existing_deal.is_lost = False
+                    existing_deal.actual_close_date = timezone.now().date()
+                    existing_deal.status = 'closed'
+                    existing_deal.stage = stage
+                    existing_deal.save(update_fields=['customer', 'is_won', 'is_lost', 'actual_close_date', 'status', 'stage'])
+                    logger.info(f"Updated deal {existing_deal.id} to won status from lead {lead.id}")
+            
+            # Handle moving away from closed-won - mark deal as not won and customer as inactive if no won deals
+            elif was_in_closed_won and not stage.is_closed_won:
+                from crmApp.models import Customer, Deal
+                
+                # Find customer created from this lead
+                customer = Customer.objects.filter(
+                    organization=lead.organization,
+                    converted_from_lead=lead
+                ).first()
+                
+                # Mark any deals linked to this lead as not won
+                lead_deals = Deal.objects.filter(
+                    lead=lead,
+                    organization=lead.organization,
+                    is_won=True
+                )
+                
+                for deal in lead_deals:
+                    deal.is_won = False
+                    deal.is_lost = False
+                    deal.actual_close_date = None
+                    deal.status = 'open'
+                    deal.save(update_fields=['is_won', 'is_lost', 'actual_close_date', 'status'])
+                    logger.info(f"Deal {deal.id} marked as not won (lead {lead.id} moved away from closed-won)")
+                
+                if customer:
+                    # Check if customer has any won deals (from any source)
+                    won_deals = Deal.objects.filter(
+                        customer=customer,
+                        organization=lead.organization,
+                        is_won=True
+                    )
+                    
+                    if not won_deals.exists():
+                        # No won deals, mark customer as inactive
+                        customer.status = 'inactive'
+                        customer.save(update_fields=['status'])
+                        logger.info(f"Customer {customer.id} set to inactive (lead {lead.id} moved away from closed-won, no won deals)")
+                    else:
+                        logger.info(f"Customer {customer.id} remains active (has {won_deals.count()} won deals)")
+            
+            lead.save()
+            
+            # Create history entry - always create if stage changed
+            if previous_stage != stage:
+                try:
+                    # Get current user's employee profile for the organization
+                    employee = None
+                    try:
+                        from crmApp.models import Employee
+                        employee = Employee.objects.filter(
+                            user=request.user,
+                            organization=lead.organization,
+                            status='active'
+                        ).first()
+                    except Exception:
+                        pass
+                    
+                    LeadStageHistory.objects.create(
+                        lead=lead,
+                        organization=lead.organization,
+                        stage=stage,
+                        previous_stage=previous_stage,
+                        changed_by=employee,
+                        notes=request.data.get('notes', f'Moved from {previous_stage.name if previous_stage else "None"} to {stage.name}')
+                    )
+                    logger.info(f"Created stage history for lead {lead.id}: {previous_stage.name if previous_stage else 'None'} -> {stage.name}")
+                except Exception as e:
+                    logger.warning(f"Failed to create stage history for lead {lead.id}: {str(e)}", exc_info=True)
+            
+            from crmApp.serializers import LeadSerializer
+            return Response({
+                'message': 'Lead moved to new stage.',
+                'lead': LeadSerializer(lead).data
+            })
+        except PipelineStage.DoesNotExist:
+            return Response(
+                {'error': 'Stage not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Error moving lead to stage: {str(e)}", exc_info=True)
+            return Response(
+                {'error': f'Failed to move lead: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['post'])
+    def convert_to_deal(self, request, pk=None):
+        """
+        Convert lead to deal and move to a specific stage.
+        Requires lead:update and deal:create permissions.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        lead = self.get_object()
+        self.check_permission(request, 'lead', 'update', instance=lead)
+        
+        # Get stage key or stage_id from request
+        stage_key = request.data.get('stage_key')  # e.g., 'qualified', 'proposal', 'negotiation', 'closed-won'
+        stage_id = request.data.get('stage_id')
+        
+        if not stage_key and not stage_id:
+            return Response(
+                {'error': 'Either stage_key or stage_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from crmApp.models import Deal, Pipeline, PipelineStage
+            
+            # Get or create default pipeline for organization
+            pipeline = Pipeline.objects.filter(
+                organization=lead.organization,
+                is_active=True
+            ).order_by('-is_default', '-created_at').first()
+            
+            if not pipeline:
+                # Create default pipeline
+                pipeline = Pipeline.objects.create(
+                    organization=lead.organization,
+                    name='Default Pipeline',
+                    is_default=True,
+                    is_active=True
+                )
+                logger.info(f"Created default pipeline for organization {lead.organization.id}")
+            
+            # Find the target stage
+            stage = None
+            if stage_id:
+                try:
+                    stage = PipelineStage.objects.get(id=stage_id, pipeline=pipeline)
+                except PipelineStage.DoesNotExist:
+                    pass
+            
+            if not stage and stage_key:
+                # Map stage_key to stage name
+                stage_name_map = {
+                    'qualified': 'Qualified',
+                    'proposal': 'Proposal',
+                    'negotiation': 'Negotiation',
+                    'closed-won': 'Closed Won',
+                }
+                stage_name = stage_name_map.get(stage_key.lower())
+                
+                if stage_name:
+                    stage = PipelineStage.objects.filter(
+                        pipeline=pipeline,
+                        name__icontains=stage_name
+                    ).first()
+                    
+                    # If stage doesn't exist, create it
+                    if not stage:
+                        order_map = {
+                            'qualified': 1,
+                            'proposal': 2,
+                            'negotiation': 3,
+                            'closed-won': 4,
+                        }
+                        probability_map = {
+                            'qualified': 25,
+                            'proposal': 50,
+                            'negotiation': 75,
+                            'closed-won': 100,
+                        }
+                        stage = PipelineStage.objects.create(
+                            pipeline=pipeline,
+                            name=stage_name,
+                            order=order_map.get(stage_key.lower(), 0),
+                            probability=probability_map.get(stage_key.lower(), 0),
+                            is_closed_won=(stage_key.lower() == 'closed-won')
+                        )
+                        logger.info(f"Created stage {stage_name} for pipeline {pipeline.id}")
+            
+            if not stage:
+                return Response(
+                    {'error': 'Stage not found or could not be created'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Check deal:create permission
+            self.check_permission(
+                request,
+                resource='deal',
+                action='create',
+                organization=lead.organization
+            )
+            
+            # Create deal from lead
+            # Use estimated_value if available, otherwise default to 0
+            deal_value = lead.estimated_value if lead.estimated_value is not None else 0
+            deal_title = f"{lead.name or lead.organization_name or 'Deal'}"
+            
+            deal = Deal.objects.create(
+                organization=lead.organization,
+                customer=None,  # No customer yet - will be created when deal is won
+                lead=lead,
+                pipeline=pipeline,
+                stage=stage,
+                title=deal_title,
+                description=lead.notes or '',
+                value=deal_value,
+                probability=stage.probability,
+                assigned_to=lead.assigned_to,
+                source=lead.source,
+                tags=lead.tags or [],
+                notes=f"Converted from lead: {lead.code}\n{lead.notes or ''}"
+            )
+            
+            # Mark lead as converted
+            lead.is_converted = True
+            lead.converted_at = timezone.now()
+            if lead.assigned_to:
+                lead.converted_by = lead.assigned_to
+            lead.save()
+            
+            # If stage is closed-won, create customer
+            if stage.is_closed_won:
+                from crmApp.models import Customer
+                customer, created = Customer.objects.get_or_create(
+                    organization=lead.organization,
+                    email=lead.email,
+                    defaults={
+                        'name': lead.name or lead.organization_name or 'Customer',
+                        'company_name': lead.organization_name,
+                        'phone': lead.phone,
+                        'customer_type': 'business' if lead.organization_name else 'individual',
+                        'status': 'active',
+                        'source': lead.source,
+                        'address': lead.address,
+                        'city': lead.city,
+                        'state': lead.state,
+                        'postal_code': lead.postal_code,
+                        'country': lead.country,
+                    }
+                )
+                deal.customer = customer
+                deal.is_won = True
+                deal.is_lost = False
+                deal.actual_close_date = timezone.now()
+                deal.status = 'closed'
+                deal.save()
+            
+            from crmApp.serializers import DealSerializer
+            return Response({
+                'message': f'Lead converted to deal and moved to {stage.name} stage.',
+                'deal': DealSerializer(deal).data,
+                'lead': LeadSerializer(lead).data
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Error converting lead to deal: {str(e)}", exc_info=True)
+            return Response(
+                {'error': f'Failed to convert lead to deal: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
