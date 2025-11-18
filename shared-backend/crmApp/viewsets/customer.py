@@ -86,10 +86,17 @@ class CustomerViewSet(
         if org_id:
             queryset = queryset.filter(organization_id=org_id)
         
-        # Filter by status
+        # Filter by status - default to active if not specified
         status_filter = self.request.query_params.get('status')
         if status_filter:
-            queryset = queryset.filter(status=status_filter)
+            if status_filter.lower() == 'all':
+                # Show all customers if explicitly requested
+                pass
+            else:
+                queryset = queryset.filter(status=status_filter)
+        else:
+            # Default: only show active customers
+            queryset = queryset.filter(status='active')
         
         # Filter by customer type
         customer_type = self.request.query_params.get('customer_type')
