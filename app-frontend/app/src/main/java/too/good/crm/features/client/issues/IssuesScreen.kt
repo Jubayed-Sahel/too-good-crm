@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,6 +23,7 @@ import too.good.crm.data.UserSession
 import too.good.crm.features.issues.ui.CustomerIssuesListScreen
 import too.good.crm.features.issues.ui.VendorIssuesListScreen
 import too.good.crm.features.issues.viewmodel.IssueViewModel
+import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
 
@@ -31,23 +33,73 @@ fun IssuesScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val profileViewModel = remember { ProfileViewModel(context) }
+    val profileState by profileViewModel.uiState.collectAsState()
+    
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    
+    LaunchedEffect(Unit) {
+        if (profileState.profiles.isEmpty() && !profileState.isLoading) {
+            profileViewModel.loadProfiles()
+        }
+    }
 
-    // Show different screens based on user role
-    if (activeMode == ActiveMode.CLIENT) {
-        // Customer view - can create and view their own issues
-        CustomerIssuesListScreen(
-            organizationId = UserSession.currentProfile?.organizationId ?: 0,
-            onNavigateToCreate = { /* TODO: Navigate to create issue */ },
-            onNavigateToDetail = { issueId -> /* TODO: Navigate to issue detail */ },
-            onNavigateBack = onBack
-        )
-    } else {
-        // Vendor view - can view and manage all client-raised issues
-        VendorIssuesListScreen(
-            onNavigateToDetail = { issueId -> /* TODO: Navigate to issue detail */ },
-            onNavigateBack = onBack
-        )
+    AppScaffoldWithDrawer(
+        profiles = profileState.profiles,
+        activeProfile = profileState.activeProfile,
+        isSwitchingProfile = profileState.isSwitching,
+        onProfileSelected = { profile ->
+            profileViewModel.switchProfile(
+                profileId = profile.id,
+                onSuccess = { user ->
+                    val primaryProfile = user.primaryProfile ?: profile
+                    val newMode = when (primaryProfile.profileType) {
+                        "vendor", "employee" -> ActiveMode.VENDOR
+                        else -> ActiveMode.CLIENT
+                    }
+                    UserSession.activeMode = newMode
+                    activeMode = newMode
+                    when (primaryProfile.profileType) {
+                        "customer" -> onNavigate("client-dashboard")
+                        else -> onNavigate("dashboard")
+                    }
+                },
+                onError = { }
+            )
+        },
+        title = "Issues",
+        activeMode = activeMode,
+        onModeChanged = { newMode ->
+            activeMode = newMode
+            UserSession.activeMode = newMode
+            if (newMode == ActiveMode.CLIENT) {
+                onNavigate("client-dashboard")
+            } else {
+                onNavigate("dashboard")
+            }
+        },
+        onNavigate = onNavigate,
+        onLogout = onBack
+    ) { paddingValues ->
+        // Show different screens based on user role
+        Box(modifier = Modifier.padding(paddingValues)) {
+            if (activeMode == ActiveMode.CLIENT) {
+                // Customer view - can create and view their own issues
+                CustomerIssuesListScreen(
+                    organizationId = UserSession.currentProfile?.organizationId ?: 0,
+                    onNavigateToCreate = { /* TODO: Navigate to create issue */ },
+                    onNavigateToDetail = { issueId -> /* TODO: Navigate to issue detail */ },
+                    onNavigateBack = onBack
+                )
+            } else {
+                // Vendor view - can view and manage all client-raised issues
+                VendorIssuesListScreen(
+                    onNavigateToDetail = { issueId -> /* TODO: Navigate to issue detail */ },
+                    onNavigateBack = onBack
+                )
+            }
+        }
     }
 }
 

@@ -12,18 +12,31 @@ import java.util.concurrent.TimeUnit
  */
 object ApiClient {
 
-    // TODO: Update this with your backend URL
-    // For local testing on Android Emulator, use:
-//    private const val BASE_URL = "http://10.0.2.2:8000/api/"
-
-    // For physical device on same network, use:
-    // Step 1: Find your computer's IP address:
-    //   Windows: Open CMD and type: ipconfig (look for IPv4 Address)
-    //   Mac/Linux: Open Terminal and type: ifconfig or ip addr
-    // Step 2: Replace the IP below with your actual IP (e.g., "http://192.168.1.100:8000/api/")
-     private const val BASE_URL = "http://192.168.0.218:8000/api/"
-
-    // For production/ngrok:
+    // ⚠️ IMPORTANT: Configure the correct BASE_URL based on your setup
+    //
+    // OPTION 1: Android Emulator (Currently Active)
+    //   Use: "http://10.0.2.2:8000/api/"
+    //   This is a special IP that Android emulator uses to access localhost
+    //   ✅ CURRENT SETTING - Use this when running on Android Emulator
+    //
+    // OPTION 2: Physical Device on Same Network
+    //   Step 1: Find your computer's IP address:
+    //     Windows: Open CMD and type: ipconfig (look for IPv4 Address)
+    //     Mac/Linux: Open Terminal and type: ifconfig or ip addr
+    //   Step 2: Replace the IP below with your actual IP
+    //   Example: "http://192.168.0.218:8000/api/"
+    //
+    // OPTION 3: Using ngrok (for external access)
+    //   Use: "https://your-ngrok-url.ngrok-free.dev/api/"
+    //
+    // CURRENT SETTING: Android Emulator
+    private const val BASE_URL = "http://10.0.2.2:8000/api/"
+    
+    // Uncomment one of these if you switch to a different setup:
+    // For Physical Device (replace with your computer's IP):
+    // private const val BASE_URL = "http://192.168.0.218:8000/api/"
+    
+    // For ngrok:
     // private const val BASE_URL = "https://your-ngrok-url.ngrok-free.dev/api/"
 
     private var authToken: String? = null
@@ -57,9 +70,10 @@ object ApiClient {
 
             chain.proceed(request)
         }
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
     private val retrofit = Retrofit.Builder()
@@ -70,6 +84,7 @@ object ApiClient {
 
     /**
      * Issue API Service instance
+     * NOTE: If IDE shows errors, do: File -> Invalidate Caches -> Invalidate and Restart
      */
     val issueApiService: IssueApiService by lazy {
         retrofit.create(IssueApiService::class.java)
@@ -77,6 +92,7 @@ object ApiClient {
 
     /**
      * Auth API Service instance
+     * NOTE: If IDE shows errors, do: File -> Invalidate Caches -> Invalidate and Restart
      */
     val authApiService: AuthApiService by lazy {
         retrofit.create(AuthApiService::class.java)
@@ -87,6 +103,27 @@ object ApiClient {
      */
     val customerApiService: CustomerApiService by lazy {
         retrofit.create(CustomerApiService::class.java)
+    }
+
+    /**
+     * Role Selection API Service instance
+     */
+    val roleSelectionApiService: RoleSelectionApiService by lazy {
+        retrofit.create(RoleSelectionApiService::class.java)
+    }
+
+    /**
+     * Analytics API Service instance
+     */
+    val analyticsApiService: AnalyticsApiService by lazy {
+        retrofit.create(AnalyticsApiService::class.java)
+    }
+
+    /**
+     * Employee API Service instance
+     */
+    val employeeApiService: EmployeeApiService by lazy {
+        retrofit.create(EmployeeApiService::class.java)
     }
 
     // Add other API services here as needed

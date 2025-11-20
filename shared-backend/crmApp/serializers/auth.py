@@ -128,6 +128,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     profile_type_display = serializers.CharField(source='get_profile_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     organization_name = serializers.SerializerMethodField()
+    organization = serializers.SerializerMethodField()  # Return as nested object instead of ID
     user_email = serializers.CharField(source='user.email', read_only=True)
     roles = serializers.SerializerMethodField()
     is_owner = serializers.SerializerMethodField()
@@ -141,6 +142,26 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'roles', 'is_owner', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_organization(self, obj):
+        """Return organization as nested object for mobile app compatibility"""
+        if obj.organization:
+            return {
+                'id': obj.organization.id,
+                'name': obj.organization.name,
+                'slug': obj.organization.slug,
+                'description': obj.organization.description,
+                'website': obj.organization.website,
+                'phone': obj.organization.phone,
+                'email': obj.organization.email,
+                'address': obj.organization.address,
+                'city': obj.organization.city,
+                'state': obj.organization.state,
+                'country': obj.organization.country,
+                'postal_code': obj.organization.postal_code,
+                'is_active': obj.organization.is_active,
+            }
+        return None
     
     def get_organization_name(self, obj):
         """Get organization name for the profile"""

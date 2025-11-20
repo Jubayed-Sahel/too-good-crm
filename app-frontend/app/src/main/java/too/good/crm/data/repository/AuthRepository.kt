@@ -36,10 +36,77 @@ class AuthRepository(context: Context) {
 
                 Result.success(loginResponse)
             } else {
-                Result.failure(Exception(response.message() ?: "Login failed"))
+                val errorMessage = when (response.code()) {
+                    401 -> "Invalid username or password"
+                    403 -> "Access denied"
+                    404 -> "Server endpoint not found"
+                    500 -> "Server error. Please try again later"
+                    else -> response.message() ?: "Login failed"
+                }
+                Result.failure(Exception(errorMessage))
             }
+        } catch (e: java.net.ConnectException) {
+            Result.failure(Exception(
+                "Cannot connect to server. Please verify:\n\n" +
+                "1. Backend is running: python manage.py runserver 0.0.0.0:8000\n" +
+                "2. For Emulator: Use 10.0.2.2:8000 (currently set)\n" +
+                "3. For Physical Device: Check IP in ApiClient.kt\n" +
+                "4. Firewall allows port 8000\n\n" +
+                "Error: ${e.message}"
+            ))
+        } catch (e: java.net.SocketTimeoutException) {
+            Result.failure(Exception(
+                "Connection timeout after 60 seconds.\n\n" +
+                "Possible causes:\n" +
+                "1. Server is not responding (check if backend is running)\n" +
+                "2. Network is very slow or unstable\n" +
+                "3. Server is overloaded\n" +
+                "4. Firewall blocking connection\n\n" +
+                "Troubleshooting:\n" +
+                "• Test backend: curl http://10.0.2.2:8000/api/\n" +
+                "• Check server logs for errors\n" +
+                "• Verify network connectivity\n" +
+                "• Try restarting the backend server"
+            ))
+        } catch (e: java.net.UnknownHostException) {
+            Result.failure(Exception(
+                "Cannot resolve server address.\n\n" +
+                "Please verify:\n" +
+                "1. IP address in ApiClient.kt is correct\n" +
+                "2. For Emulator: Use 10.0.2.2:8000\n" +
+                "3. For Device: Use your PC's IP (e.g., 192.168.x.x:8000)\n" +
+                "4. Internet/WiFi connection is active\n\n" +
+                "Error: ${e.message}"
+            ))
+        } catch (e: javax.net.ssl.SSLException) {
+            Result.failure(Exception(
+                "SSL/Security error. If using HTTPS:\n" +
+                "• Ensure certificate is valid\n" +
+                "• Try using HTTP for local development\n\n" +
+                "Error: ${e.message}"
+            ))
         } catch (e: Exception) {
-            Result.failure(e)
+            val errorMessage = when {
+                e.message?.contains("Failed to connect", ignoreCase = true) == true -> {
+                    "Connection failed. Backend server not reachable.\n\n" +
+                    "Start backend: python manage.py runserver 0.0.0.0:8000\n" +
+                    "Then retry login.\n\n" +
+                    "Error: ${e.message}"
+                }
+                e.message?.contains("timeout", ignoreCase = true) == true -> {
+                    "Request timed out. Server may be slow or offline.\n\n" +
+                    "• Check backend is running\n" +
+                    "• Verify network connection\n" +
+                    "• Try again in a moment"
+                }
+                e.message?.contains("ECONNREFUSED", ignoreCase = true) == true -> {
+                    "Connection refused. Server not accepting connections.\n\n" +
+                    "Make sure backend is running on port 8000:\n" +
+                    "python manage.py runserver 0.0.0.0:8000"
+                }
+                else -> "Login failed: ${e.message ?: e.javaClass.simpleName}"
+            }
+            Result.failure(Exception(errorMessage))
         }
     }
 
@@ -69,8 +136,12 @@ class AuthRepository(context: Context) {
             } else {
                 Result.failure(Exception(response.message() ?: "Registration failed"))
             }
+        } catch (e: java.net.SocketTimeoutException) {
+            Result.failure(Exception("Connection timeout. Please check your network and try again."))
+        } catch (e: java.net.ConnectException) {
+            Result.failure(Exception("Cannot connect to server. Please ensure backend is running."))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.message ?: "Registration failed"))
         }
     }
 
@@ -97,12 +168,42 @@ class AuthRepository(context: Context) {
         return try {
             val response = apiService.getCurrentUser()
             if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+                val userResponse = response.body()!!
+                // Update saved user info
+                saveUserInfo(userResponse.user)
+                Result.success(userResponse)
             } else {
                 Result.failure(Exception(response.message() ?: "Failed to get user"))
             }
+        } catch (e: java.net.SocketTimeoutException) {
+            Result.failure(Exception("Connection timeout. Unable to fetch user data."))
+        } catch (e: java.net.ConnectException) {
+            Result.failure(Exception("Cannot connect to server. Please check connection."))
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception(e.message ?: "Failed to get user data"))
+        }
+    }
+
+    /**
+     * Refresh user data from backend (same as getCurrentUser but with explicit naming)
+     */
+    suspend fun refreshUser(): Result<User> {
+        return try {
+            val response = apiService.getCurrentUser()
+            if (response.isSuccessful && response.body() != null) {
+                val userResponse = response.body()!!
+                // Update saved user info
+                saveUserInfo(userResponse.user)
+                Result.success(userResponse.user)
+            } else {
+                Result.failure(Exception(response.message() ?: "Failed to refresh user"))
+            }
+        } catch (e: java.net.SocketTimeoutException) {
+            Result.failure(Exception("Timeout refreshing user data. Using cached data."))
+        } catch (e: java.net.ConnectException) {
+            Result.failure(Exception("Cannot connect to server. Using cached data."))
+        } catch (e: Exception) {
+            Result.failure(Exception(e.message ?: "Failed to refresh user data"))
         }
     }
 

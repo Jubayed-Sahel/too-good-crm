@@ -39,6 +39,16 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       
       // Use profiles from auth user
       const userProfiles = user.profiles;
+      
+      // Debug logging
+      if (import.meta.env.DEV) {
+        console.log('[ProfileContext] Fetching profiles:', {
+          totalProfiles: userProfiles.length,
+          profileTypes: userProfiles.map(p => `${p.profile_type} (id: ${p.id})`),
+          primaryProfileId: userProfiles.find(p => p.is_primary)?.id
+        });
+      }
+      
       setProfiles(userProfiles);
       
       // PRIORITY 1: Use primary profile from user data (updated after role switch)
