@@ -42,14 +42,15 @@
         <item name="colorOutline">@color/outline</item>
         <item name="colorOutlineVariant">@color/outline_variant</item>
         
-        <!-- Status Bar & Navigation Bar -->
+        <!-- Status Bar & Navigation Bar (Matching Web App) -->
         <item name="android:statusBarColor">@color/surface</item>
         <item name="android:navigationBarColor">@color/surface</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">true</item>
         
-        <!-- Window Background -->
+        <!-- Window Background (Matching Web App) -->
         <item name="android:windowBackground">@color/background</item>
+        <item name="android:colorBackground">@color/background</item>
         
         <!-- Material Shape Appearance (Rounded corners) -->
         <item name="shapeAppearanceSmallComponent">@style/ShapeAppearance.TooGoodCrm.SmallComponent</item>

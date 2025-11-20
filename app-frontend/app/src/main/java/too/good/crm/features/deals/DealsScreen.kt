@@ -14,11 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.*
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.*
@@ -31,10 +33,20 @@ fun DealsScreen(
     onNavigate: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
+    val profileViewModel = remember { ProfileViewModel(context) }
+    val profileState by profileViewModel.uiState.collectAsState()
+    
     var searchQuery by remember { mutableStateOf("") }
     var filterStage by remember { mutableStateOf<DealStage?>(null) }
     val deals = remember { DealSampleData.getDeals() }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    
+    LaunchedEffect(Unit) {
+        if (profileState.profiles.isEmpty() && !profileState.isLoading) {
+            profileViewModel.loadProfiles()
+        }
+    }
 
     val filteredDeals = deals.filter { deal ->
         val matchesSearch = searchQuery.isEmpty() ||
@@ -45,6 +57,28 @@ fun DealsScreen(
     }
 
     AppScaffoldWithDrawer(
+        profiles = profileState.profiles,
+        activeProfile = profileState.activeProfile,
+        isSwitchingProfile = profileState.isSwitching,
+        onProfileSelected = { profile ->
+            profileViewModel.switchProfile(
+                profileId = profile.id,
+                onSuccess = { user ->
+                    val primaryProfile = user.primaryProfile ?: profile
+                    val newMode = when (primaryProfile.profileType) {
+                        "vendor", "employee" -> ActiveMode.VENDOR
+                        else -> ActiveMode.CLIENT
+                    }
+                    UserSession.activeMode = newMode
+                    activeMode = newMode
+                    when (primaryProfile.profileType) {
+                        "customer" -> onNavigate("client-dashboard")
+                        else -> onNavigate("dashboard")
+                    }
+                },
+                onError = { }
+            )
+        },
         title = "Deals",
         activeMode = activeMode,
         onModeChanged = { newMode ->

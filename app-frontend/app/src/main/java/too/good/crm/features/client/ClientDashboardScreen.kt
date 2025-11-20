@@ -11,10 +11,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
 
@@ -24,11 +26,79 @@ fun ClientDashboardScreen(
     onLogoutClicked: () -> Unit,
     onNavigate: (route: String) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val profileViewModel = remember { too.good.crm.features.profile.ProfileViewModel(context) }
+    val profileState by profileViewModel.uiState.collectAsState()
+    
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    
+    // Load profiles on initial load if not already loaded
+    LaunchedEffect(Unit) {
+        if (profileState.profiles.isEmpty() && !profileState.isLoading) {
+            profileViewModel.loadProfiles()
+        }
+    }
 
     AppScaffoldWithDrawer(
         title = "Client Dashboard",
         activeMode = activeMode,
+        profiles = profileState.profiles,
+        activeProfile = profileState.activeProfile,
+        isSwitchingProfile = profileState.isSwitching,
+        onProfileSelected = { profile ->
+            profileViewModel.switchProfile(
+                profileId = profile.id,
+                onSuccess = { user ->
+                    // Update user session with new profile data
+                    val profiles = user.profiles ?: emptyList()
+                    val primaryProfile = user.primaryProfile ?: profile
+                    
+                    val hasCustomerProfile = profiles.any { it.profileType == "customer" }
+                    val hasVendorProfile = profiles.any {
+                        it.profileType == "employee" || it.profileType == "vendor"
+                    }
+                    
+                    val userRole = when {
+                        hasCustomerProfile && hasVendorProfile -> too.good.crm.data.UserRole.BOTH
+                        hasCustomerProfile -> too.good.crm.data.UserRole.CLIENT
+                        hasVendorProfile -> too.good.crm.data.UserRole.VENDOR
+                        else -> too.good.crm.data.UserRole.CLIENT
+                    }
+                    
+                    // Update active mode based on new profile type
+                    val newMode = when (primaryProfile.profileType) {
+                        "vendor", "employee" -> ActiveMode.VENDOR
+                        "customer" -> ActiveMode.CLIENT
+                        else -> ActiveMode.VENDOR
+                    }
+                    
+                    // Update UserSession
+                    UserSession.currentProfile = too.good.crm.data.AppUserProfile(
+                        id = user.id,
+                        name = "${user.firstName} ${user.lastName}",
+                        email = user.email,
+                        role = userRole,
+                        organizationId = primaryProfile.organizationId ?: 0,
+                        organizationName = primaryProfile.organizationName 
+                            ?: primaryProfile.organization?.name 
+                            ?: "Unknown",
+                        activeMode = newMode
+                    )
+                    UserSession.activeMode = newMode
+                    activeMode = newMode
+                    
+                    // Navigate based on profile type
+                    when (primaryProfile.profileType) {
+                        "customer" -> onNavigate("client-dashboard")
+                        "employee", "vendor" -> onNavigate("dashboard")
+                        else -> onNavigate("dashboard")
+                    }
+                },
+                onError = { error ->
+                    // Error is already handled in ProfileViewModel
+                }
+            )
+        },
         onModeChanged = { newMode ->
             activeMode = newMode
             UserSession.activeMode = newMode

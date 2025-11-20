@@ -9,6 +9,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
@@ -44,6 +46,11 @@ import too.good.crm.ui.theme.DesignTokens
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize API client session (load saved token if exists)
+        val authRepository = too.good.crm.data.repository.AuthRepository(this)
+        authRepository.initializeSession()
+        
         // Removed enableEdgeToEdge() as it can interfere with keyboard input
         setContent {
             MaterialTheme(
@@ -189,6 +196,16 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        composable("messages") {
+                            too.good.crm.features.messages.MessagesScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
                         composable("settings") {
                             SettingsScreen(
                                 onNavigate = { route ->
@@ -201,6 +218,40 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("team") {
                             TeamScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("employees") {
+                            too.good.crm.features.employees.EmployeesScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("employee-detail/{employeeId}") { backStackEntry ->
+                            val employeeId = backStackEntry.arguments?.getString("employeeId") ?: "0"
+                            too.good.crm.features.employees.EmployeeDetailScreen(
+                                employeeId = employeeId,
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("employee-edit/{employeeId}") { backStackEntry ->
+                            val employeeId = backStackEntry.arguments?.getString("employeeId") ?: "0"
+                            too.good.crm.features.employees.EmployeeEditScreen(
+                                employeeId = employeeId,
                                 onNavigate = { route ->
                                     navController.navigate(route)
                                 },
@@ -316,6 +367,24 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen(navController: NavController) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val authRepository = remember { too.good.crm.data.repository.AuthRepository(context) }
+    
+    // Check if user is already logged in
+    LaunchedEffect(Unit) {
+        if (authRepository.isLoggedIn()) {
+            // User is logged in, navigate to dashboard
+            val destination = if (UserSession.activeMode == ActiveMode.CLIENT) {
+                "client-dashboard"
+            } else {
+                "dashboard"
+            }
+            navController.navigate(destination) {
+                popUpTo("main") { inclusive = true }
+            }
+        }
+    }
+    
     Column(
         modifier = Modifier
             .fillMaxSize()

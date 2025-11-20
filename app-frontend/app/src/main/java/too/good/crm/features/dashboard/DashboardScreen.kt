@@ -11,14 +11,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.data.model.UserProfile
+import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
+import too.good.crm.ui.components.ProfileSwitcher
 import too.good.crm.ui.theme.DesignTokens
+import java.text.NumberFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,11 +33,118 @@ fun DashboardScreen(
     onLogoutClicked: () -> Unit,
     onNavigate: (route: String) -> Unit
 ) {
+    val context = LocalContext.current
+    val dashboardViewModel = remember { DashboardViewModel() }
+    val profileViewModel = remember { ProfileViewModel(context) }
+    
+    val dashboardState by dashboardViewModel.uiState.collectAsState()
+    val profileState by profileViewModel.uiState.collectAsState()
+    
+    // Get active profile's organization ID
+    // For vendor/employee profiles, use organizationId from profile or organization object
+    // For customer profiles, organizationId might be null (they don't filter by org)
+    val organizationId = when (profileState.activeProfile?.profileType) {
+        "vendor", "employee" -> {
+            profileState.activeProfile?.organizationId 
+                ?: profileState.activeProfile?.organization?.id
+        }
+        "customer" -> null // Customer dashboard doesn't filter by organization
+        else -> profileState.activeProfile?.organizationId 
+            ?: profileState.activeProfile?.organization?.id
+    }
+    
+    // Load stats when profile is loaded and organization ID is determined
+    LaunchedEffect(profileState.activeProfile?.id, profileState.isLoading) {
+        if (!profileState.isLoading && profileState.activeProfile != null) {
+            dashboardViewModel.loadStats(organizationId)
+        }
+    }
+    
+    // Load profiles on initial load if not already loaded
+    LaunchedEffect(Unit) {
+        if (profileState.profiles.isEmpty() && !profileState.isLoading) {
+            profileViewModel.loadProfiles()
+        }
+    }
+    
+    // Refresh profiles when screen becomes visible (in case profile was switched elsewhere)
+    LaunchedEffect(profileState.activeProfile?.id) {
+        // Reload if we have no profiles but should have them
+        if (profileState.profiles.isEmpty() && !profileState.isLoading) {
+            profileViewModel.loadProfiles()
+        }
+    }
+    
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
 
     AppScaffoldWithDrawer(
         title = "Dashboard",
         activeMode = activeMode,
+        profiles = profileState.profiles,
+        activeProfile = profileState.activeProfile,
+        isSwitchingProfile = profileState.isSwitching,
+        onProfileSelected = { profile ->
+            profileViewModel.switchProfile(
+                profileId = profile.id,
+                onSuccess = { user ->
+                    // Update user session with new profile data
+                    val profiles = user.profiles ?: emptyList()
+                    val primaryProfile = user.primaryProfile ?: profile
+                    
+                    val hasCustomerProfile = profiles.any { it.profileType == "customer" }
+                    val hasVendorProfile = profiles.any {
+                        it.profileType == "employee" || it.profileType == "vendor"
+                    }
+                    
+                    val userRole = when {
+                        hasCustomerProfile && hasVendorProfile -> too.good.crm.data.UserRole.BOTH
+                        hasCustomerProfile -> too.good.crm.data.UserRole.CLIENT
+                        hasVendorProfile -> too.good.crm.data.UserRole.VENDOR
+                        else -> too.good.crm.data.UserRole.CLIENT
+                    }
+                    
+                    // Update active mode based on new profile type
+                    val newMode = when (primaryProfile.profileType) {
+                        "vendor", "employee" -> ActiveMode.VENDOR
+                        "customer" -> ActiveMode.CLIENT
+                        else -> ActiveMode.VENDOR
+                    }
+                    
+                    // Update UserSession
+                    UserSession.currentProfile = too.good.crm.data.AppUserProfile(
+                        id = user.id,
+                        name = "${user.firstName} ${user.lastName}",
+                        email = user.email,
+                        role = userRole,
+                        organizationId = primaryProfile.organizationId ?: 0,
+                        organizationName = primaryProfile.organizationName 
+                            ?: primaryProfile.organization?.name 
+                            ?: "Unknown",
+                        activeMode = newMode
+                    )
+                    UserSession.activeMode = newMode
+                    activeMode = newMode
+                    
+                    // Refresh dashboard stats with new organization ID
+                    val newOrgId = when (primaryProfile.profileType) {
+                        "vendor", "employee" -> primaryProfile.organizationId
+                        else -> null
+                    }
+                    dashboardViewModel.loadStats(newOrgId)
+                    
+                    // Navigate based on profile type
+                    when (primaryProfile.profileType) {
+                        "customer" -> onNavigate("client-dashboard")
+                        "employee", "vendor" -> onNavigate("dashboard")
+                        else -> onNavigate("dashboard")
+                    }
+                },
+                onError = { error ->
+                    // Error is already handled in ProfileViewModel
+                    // Could show snackbar here if needed
+                }
+            )
+        },
         onModeChanged = { newMode ->
             activeMode = newMode
             UserSession.activeMode = newMode
@@ -50,40 +164,104 @@ fun DashboardScreen(
         ) {
             WelcomeCard()
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
-            MetricCard(
-                title = "TOTAL CUSTOMERS",
-                value = "1234",
-                change = "+12%",
-                changeLabel = "vs last month",
-                icon = Icons.Default.People,
-                isPositive = true,
-                iconBackgroundColor = DesignTokens.Colors.PrimaryLight.copy(alpha = 0.2f),
-                iconTintColor = DesignTokens.Colors.Primary
-            )
-            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
-            MetricCard(
-                title = "ACTIVE DEALS",
-                value = "87",
-                change = "+8%",
-                changeLabel = "vs last month",
-                icon = Icons.Default.Description,
-                isPositive = true,
-                iconBackgroundColor = DesignTokens.Colors.InfoLight,
-                iconTintColor = DesignTokens.Colors.Info
-            )
-            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
-            MetricCard(
-                title = "REVENUE",
-                value = "$452,000",
-                change = "+23%",
-                changeLabel = "vs last month",
-                icon = Icons.Default.AttachMoney,
-                isPositive = true,
-                iconBackgroundColor = DesignTokens.Colors.SuccessLight,
-                iconTintColor = DesignTokens.Colors.Success
-            )
+            
+            // Show loading state
+            if (dashboardState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else if (dashboardState.error != null) {
+                // Show error state
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = DesignTokens.Colors.ErrorLight
+                    )
+                ) {
+                    Text(
+                        text = "Error: ${dashboardState.error}",
+                        modifier = Modifier.padding(DesignTokens.Spacing.Space4),
+                        color = DesignTokens.Colors.Error,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                // Show stats cards
+                val stats = dashboardState.stats
+                
+                // Total Customers Card
+                MetricCard(
+                    title = "TOTAL CUSTOMERS",
+                    value = stats?.totalCustomers?.toString() ?: "0",
+                    change = formatPercentage(stats?.customerGrowthPercent),
+                    changeLabel = "vs last month",
+                    icon = Icons.Default.People,
+                    isPositive = (stats?.customerGrowthPercent ?: 0.0) >= 0,
+                    iconBackgroundColor = DesignTokens.Colors.Primary100,
+                    iconTintColor = DesignTokens.Colors.Primary
+                )
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
+                
+                // Active Deals Card
+                MetricCard(
+                    title = "ACTIVE DEALS",
+                    value = stats?.totalDeals?.toString() ?: "0",
+                    change = formatPercentage(stats?.dealGrowthPercent),
+                    changeLabel = "vs last month",
+                    icon = Icons.Default.Description,
+                    isPositive = (stats?.dealGrowthPercent ?: 0.0) >= 0,
+                    iconBackgroundColor = DesignTokens.Colors.Info100,
+                    iconTintColor = DesignTokens.Colors.Info
+                )
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
+                
+                // Revenue Card
+                MetricCard(
+                    title = "REVENUE",
+                    value = formatCurrency(stats?.totalRevenue ?: 0.0),
+                    change = formatPercentage(stats?.revenueGrowthPercent),
+                    changeLabel = "vs last month",
+                    icon = Icons.Default.AttachMoney,
+                    isPositive = (stats?.revenueGrowthPercent ?: 0.0) >= 0,
+                    iconBackgroundColor = DesignTokens.Colors.Success100,
+                    iconTintColor = DesignTokens.Colors.Success
+                )
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
+                
+                // Active Leads Card
+                if (stats?.activeLeads != null) {
+                    MetricCard(
+                        title = "ACTIVE LEADS",
+                        value = stats.activeLeads.toString(),
+                        change = formatPercentage(stats.leadGrowthPercent),
+                        changeLabel = "vs last month",
+                        icon = Icons.Default.TrendingUp,
+                        isPositive = (stats.leadGrowthPercent ?: 0.0) >= 0,
+                        iconBackgroundColor = DesignTokens.Colors.Warning100,
+                        iconTintColor = DesignTokens.Colors.Warning
+                    )
+                    Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
+                }
+            }
         }
     }
+}
+
+// Helper functions for formatting
+private fun formatCurrency(amount: Double): String {
+    val formatter = NumberFormat.getCurrencyInstance(Locale.US)
+    return formatter.format(amount)
+}
+
+private fun formatPercentage(percentage: Double?): String {
+    if (percentage == null) return "0%"
+    val sign = if (percentage >= 0) "+" else ""
+    return "$sign${String.format("%.1f", percentage)}%"
 }
 
 @Composable

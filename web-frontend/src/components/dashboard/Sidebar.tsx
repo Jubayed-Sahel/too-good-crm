@@ -241,7 +241,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   // - Customer profiles: Always show (new users can sign up as customers)
   // - Employee profiles: Only show if assigned by vendor (has organization)
   const validProfiles = useMemo(() => {
-    return profiles?.filter(profile => {
+    const filtered = profiles?.filter(profile => {
       if (profile.profile_type === 'employee') {
         // Employee profiles: Only show if they have an organization (assigned by vendor)
         return !!profile.organization;
@@ -249,7 +249,19 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
       // Vendor and customer profiles: Always show
       return true;
     }) || [];
-  }, [profiles]);
+    
+    // Debug logging
+    if (import.meta.env.DEV) {
+      console.log('[Sidebar] Profile check:', {
+        totalProfiles: profiles?.length,
+        validProfiles: filtered.length,
+        profileTypes: filtered.map(p => p.profile_type),
+        currentProfile: currentProfile?.profile_type
+      });
+    }
+    
+    return filtered;
+  }, [profiles, currentProfile]);
 
   const hasMultipleProfiles = useMemo(() => 
     validProfiles && validProfiles.length > 1,

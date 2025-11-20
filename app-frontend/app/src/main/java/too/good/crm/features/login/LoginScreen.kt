@@ -36,8 +36,8 @@ fun LoginScreen(
     onSignUpClicked: () -> Unit
 ) {
     val context = LocalContext.current
-    val viewModel = remember { LoginViewModel(AuthRepository(context)) }
-    
+    val viewModel = remember { LoginViewModel(AuthRepository(context), context) }
+
     val uiState by viewModel.uiState.collectAsState()
     val username by viewModel.username.collectAsState()
     val password by viewModel.password.collectAsState()
