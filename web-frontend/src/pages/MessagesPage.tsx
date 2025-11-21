@@ -56,7 +56,10 @@ const MessagesPage = () => {
   const [selectedRecipientId, setSelectedRecipientId] = useState<string>('');
 
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
-  const { data: messages, isLoading: messagesLoading } = useMessagesWithUser(selectedUserId);
+  // Only fetch messages for real users (not AI Assistant)
+  const { data: messages, isLoading: messagesLoading } = useMessagesWithUser(
+    selectedUserId === AI_ASSISTANT_ID ? null : selectedUserId
+  );
   const { data: recipients } = useRecipients();
   const { data: unreadCount } = useUnreadCount();
   const sendMessage = useSendMessage();
@@ -70,6 +73,11 @@ const MessagesPage = () => {
   );
 
   const handleSendMessage = async () => {
+    // Don't send regular messages to AI Assistant
+    if (selectedUserId === AI_ASSISTANT_ID) {
+      return;
+    }
+    
     if (!selectedUserId || !messageContent.trim()) {
       toaster.create({
         title: 'Error',
@@ -125,9 +133,9 @@ const MessagesPage = () => {
     }
   };
 
-  // Mark messages as read when messages change and conversation is selected
+  // Mark messages as read when messages change and conversation is selected (skip for AI Assistant)
   React.useEffect(() => {
-    if (messages && selectedUserId && user) {
+    if (messages && selectedUserId && selectedUserId !== AI_ASSISTANT_ID && user) {
       messages.forEach(msg => {
         if (!msg.is_read && msg.recipient.id === user.id && msg.sender.id === selectedUserId) {
           markRead.mutate(msg.id);

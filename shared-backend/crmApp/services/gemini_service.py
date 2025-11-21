@@ -27,11 +27,10 @@ class GeminiService:
         self.model_name = "gemini-2.0-flash-exp"  # Using Gemini 2.0 Flash
         self.mcp_server_path = os.path.join(settings.BASE_DIR, 'mcp_server.py')
     
-    @sync_to_async
     def _get_user_context_sync(self, user) -> Dict[str, Any]:
         """
         Synchronous helper to build user context from database.
-        This is wrapped by get_user_context for async compatibility.
+        Can be called directly from sync contexts or wrapped for async.
         """
         # Get active user profile
         active_profile = user.user_profiles.filter(
@@ -89,7 +88,20 @@ class GeminiService:
         Returns:
             Dictionary with user context (user_id, organization_id, role, permissions)
         """
-        return await self._get_user_context_sync(user)
+        from asgiref.sync import sync_to_async
+        return await sync_to_async(self._get_user_context_sync)(user)
+    
+    def get_user_context_sync(self, user) -> Dict[str, Any]:
+        """
+        Build user context synchronously (for non-async views).
+        
+        Args:
+            user: Django user object
+        
+        Returns:
+            Dictionary with user context (user_id, organization_id, role, permissions)
+        """
+        return self._get_user_context_sync(user)
     
     def _build_system_prompt(self, user_context: Dict[str, Any]) -> str:
         """

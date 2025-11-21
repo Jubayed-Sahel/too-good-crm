@@ -151,11 +151,12 @@ class GeminiViewSet(viewsets.ViewSet):
         }
         """
         try:
-            api_key_configured = self.gemini_service.api_key is not None
+            api_key_configured = self.gemini_service.api_key is not None and len(self.gemini_service.api_key) > 0
             
             user_context = None
             try:
-                user_context = self.gemini_service.get_user_context(request.user)
+                # Call the synchronous version for this non-async view
+                user_context = self.gemini_service.get_user_context_sync(request.user)
             except Exception as e:
                 logger.warning(f"Could not get user context: {str(e)}")
             
