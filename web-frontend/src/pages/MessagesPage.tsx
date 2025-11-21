@@ -157,7 +157,7 @@ const MessagesPage = () => {
 
   return (
     <DashboardLayout title="Messages">
-      <HStack align="stretch" gap={4} h="calc(100vh - 200px)">
+      <HStack align="stretch" gap={4} h="calc(100vh - 80px)" minH="600px">
         {/* Conversations List */}
         <Box
           w="350px"

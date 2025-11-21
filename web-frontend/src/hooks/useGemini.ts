@@ -70,16 +70,17 @@ export function useGemini(): UseGeminiReturn {
     setIsStreaming(true);
 
     try {
-      // Build conversation history
-      const history = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      // Note: History disabled for now due to format compatibility
+      // TODO: Implement proper Gemini conversation history format
+      // const history = messages.map(msg => ({
+      //   role: msg.role,
+      //   content: msg.content,
+      // }));
 
       // Stream the response
       for await (const event of geminiService.streamChat({
         message: content.trim(),
-        history,
+        // history, // Disabled for now
       })) {
         if (event.type === 'message' && event.content) {
           // Append to assistant message

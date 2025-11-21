@@ -6,11 +6,11 @@ Integrates Google Gemini with MCP server for AI-powered CRM operations
 import os
 import logging
 import asyncio
-from typing import Optional, Dict, Any, AsyncIterator
+from typing import Optional, Dict, Any, AsyncIterator, Callable
 from django.conf import settings
 from asgiref.sync import sync_to_async
-from fastmcp import Client as MCPClient
 from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +24,7 @@ class GeminiService:
         if not self.api_key:
             logger.warning("GEMINI_API_KEY not configured. Gemini features will not be available.")
         
-        self.model_name = "gemini-2.0-flash-exp"  # Using Gemini 2.0 Flash
-        self.mcp_server_path = os.path.join(settings.BASE_DIR, 'mcp_server.py')
+        self.model_name = "gemini-2.5-flash"  # Using Gemini 2.5 Flash (latest, separate quota)
     
     def _get_user_context_sync(self, user) -> Dict[str, Any]:
         """
@@ -36,10 +35,25 @@ class GeminiService:
         active_profile = user.user_profiles.filter(
             is_primary=True,
             status='active'
-        ).first() or user.user_profiles.filter(status='active').first()
+        ).first()
         
         if not active_profile:
-            raise ValueError("No active profile found for user")
+            active_profile = user.user_profiles.filter(status='active').first()
+        
+        if not active_profile:
+            # Try to get any profile at all
+            active_profile = user.user_profiles.first()
+            
+        if not active_profile:
+            logger.error(f"No profile found for user {user.id}")
+            raise ValueError(f"No profile found for user {user.username}. Please create a profile first.")
+        
+        # Get organization
+        organization_id = active_profile.organization_id if active_profile.organization else None
+        
+        if not organization_id:
+            logger.error(f"No organization for profile {active_profile.id}, user {user.id}")
+            raise ValueError(f"Profile has no organization assigned. Please assign an organization to your profile.")
         
         # Get user permissions
         permissions = []
@@ -47,7 +61,7 @@ class GeminiService:
         try:
             # Get all permissions for user's role
             user_roles = user.user_roles.filter(
-                organization=active_profile.organization,
+                organization_id=organization_id,
                 is_active=True
             )
             
@@ -66,13 +80,13 @@ class GeminiService:
         
         context = {
             'user_id': user.id,
-            'organization_id': active_profile.organization_id,
+            'organization_id': organization_id,
             'role': active_profile.profile_type,
             'permissions': permissions
         }
         
         logger.info(
-            f"Built user context: user={user.id}, org={active_profile.organization_id}, "
+            f"Built user context: user={user.id}, org={organization_id}, "
             f"role={active_profile.profile_type}, perms={len(permissions)}"
         )
         
@@ -326,6 +340,343 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         return system_prompt
     
+    def _create_crm_tools(self, user_context: Dict[str, Any]) -> list:
+        """
+        Create CRM query tools with user context bound.
+        These tools allow Gemini to fetch and modify CRM data directly.
+        """
+        from crmApp.models import Customer, Lead, Deal, Issue
+        
+        org_id = user_context.get('organization_id')
+        role = user_context.get('role')
+        
+        # === CUSTOMER TOOLS ===
+        async def list_customers_tool(status: str = "active", limit: int = 10):
+            """List customers in the organization"""
+            @sync_to_async
+            def fetch():
+                if org_id:
+                    customers = Customer.objects.filter(organization_id=org_id, status=status)[:limit]
+                else:
+                    customers = Customer.objects.filter(organization_id__isnull=True, status=status)[:limit]
+                return [
+                    {
+                        "id": c.id,
+                        "name": c.name,
+                        "email": c.email,
+                        "phone": c.phone,
+                        "status": c.status,
+                        "customer_type": c.customer_type,
+                        "company_name": c.company_name,
+                    }
+                    for c in customers
+                ]
+            return await fetch()
+        
+        async def get_customer_count_tool():
+            """Get total customer count"""
+            @sync_to_async
+            def fetch():
+                if org_id:
+                    return Customer.objects.filter(organization_id=org_id).count()
+                else:
+                    return Customer.objects.filter(organization_id__isnull=True).count()
+            return await fetch()
+        
+        async def create_customer_tool(name: str, email: str, phone: str = "", customer_type: str = "individual", company_name: str = ""):
+            """Create a new customer"""
+            @sync_to_async
+            def create():
+                customer = Customer.objects.create(
+                    organization_id=org_id,
+                    name=name,
+                    email=email,
+                    phone=phone or "",
+                    customer_type=customer_type,
+                    company_name=company_name or "",
+                    status="active"
+                )
+                return {
+                    "success": True,
+                    "id": customer.id,
+                    "name": customer.name,
+                    "message": f"Customer '{name}' created successfully"
+                }
+            return await create()
+        
+        async def get_customer_tool(customer_id: int):
+            """Get detailed customer information"""
+            @sync_to_async
+            def fetch():
+                try:
+                    if org_id:
+                        customer = Customer.objects.get(id=customer_id, organization_id=org_id)
+                    else:
+                        customer = Customer.objects.get(id=customer_id, organization_id__isnull=True)
+                    return {
+                        "id": customer.id,
+                        "name": customer.name,
+                        "email": customer.email,
+                        "phone": customer.phone,
+                        "status": customer.status,
+                        "customer_type": customer.customer_type,
+                        "company_name": customer.company_name,
+                        "address": customer.address,
+                        "city": customer.city,
+                        "country": customer.country,
+                    }
+                except Customer.DoesNotExist:
+                    return {"error": "Customer not found"}
+            return await fetch()
+        
+        # === LEAD TOOLS ===
+        async def list_leads_tool(status: str = "new", limit: int = 10):
+            """List leads in the organization"""
+            @sync_to_async
+            def fetch():
+                leads = Lead.objects.filter(organization_id=org_id, status=status)[:limit]
+                return [
+                    {
+                        "id": l.id,
+                        "name": l.name,
+                        "email": l.email,
+                        "phone": l.phone,
+                        "status": l.status,
+                        "source": l.source,
+                        "score": l.score,
+                    }
+                    for l in leads
+                ]
+            return await fetch()
+        
+        async def create_lead_tool(name: str, email: str, phone: str = "", source: str = "website"):
+            """Create a new lead"""
+            @sync_to_async
+            def create():
+                lead = Lead.objects.create(
+                    organization_id=org_id,
+                    name=name,
+                    email=email,
+                    phone=phone or "",
+                    source=source,
+                    status="new",
+                    score=0
+                )
+                return {
+                    "success": True,
+                    "id": lead.id,
+                    "name": lead.name,
+                    "message": f"Lead '{name}' created successfully"
+                }
+            return await create()
+        
+        # === DEAL TOOLS ===
+        async def list_deals_tool(stage: str = "negotiation", limit: int = 10):
+            """List deals in the organization"""
+            @sync_to_async
+            def fetch():
+                deals = Deal.objects.filter(organization_id=org_id, stage=stage)[:limit]
+                return [
+                    {
+                        "id": d.id,
+                        "title": d.title,
+                        "value": float(d.value),
+                        "stage": d.stage,
+                        "status": d.status,
+                        "customer_name": d.customer.name if d.customer else None,
+                    }
+                    for d in deals
+                ]
+            return await fetch()
+        
+        async def get_deal_stats_tool():
+            """Get deal statistics"""
+            @sync_to_async
+            def fetch():
+                from django.db.models import Sum, Count
+                deals = Deal.objects.filter(organization_id=org_id)
+                return {
+                    "total_deals": deals.count(),
+                    "total_value": float(deals.aggregate(Sum('value'))['value__sum'] or 0),
+                    "won_deals": deals.filter(status='won').count(),
+                    "lost_deals": deals.filter(status='lost').count(),
+                    "active_deals": deals.filter(status='open').count(),
+                }
+            return await fetch()
+        
+        # === ISSUE TOOLS ===
+        async def list_issues_tool(status: str = "open", limit: int = 10):
+            """List issues/tickets in the organization"""
+            @sync_to_async
+            def fetch():
+                issues = Issue.objects.filter(organization_id=org_id, status=status)[:limit]
+                return [
+                    {
+                        "id": i.id,
+                        "title": i.title,
+                        "priority": i.priority,
+                        "status": i.status,
+                        "customer_name": i.customer.name if i.customer else None,
+                    }
+                    for i in issues
+                ]
+            return await fetch()
+        
+        # === ANALYTICS TOOLS ===
+        async def get_dashboard_stats_tool():
+            """Get comprehensive dashboard statistics"""
+            @sync_to_async
+            def fetch():
+                from django.db.models import Sum, Count
+                return {
+                    "customers": {
+                        "total": Customer.objects.filter(organization_id=org_id).count(),
+                        "active": Customer.objects.filter(organization_id=org_id, status='active').count(),
+                    },
+                    "leads": {
+                        "total": Lead.objects.filter(organization_id=org_id).count(),
+                        "new": Lead.objects.filter(organization_id=org_id, status='new').count(),
+                        "qualified": Lead.objects.filter(organization_id=org_id, status='qualified').count(),
+                    },
+                    "deals": {
+                        "total": Deal.objects.filter(organization_id=org_id).count(),
+                        "total_value": float(Deal.objects.filter(organization_id=org_id).aggregate(Sum('value'))['value__sum'] or 0),
+                        "won": Deal.objects.filter(organization_id=org_id, status='won').count(),
+                    },
+                    "issues": {
+                        "total": Issue.objects.filter(organization_id=org_id).count(),
+                        "open": Issue.objects.filter(organization_id=org_id, status='open').count(),
+                    }
+                }
+            return await fetch()
+        
+        # Define all function declarations
+        function_declarations = [
+            # Customer functions
+            types.FunctionDeclaration(
+                name="list_customers",
+                description="List customers in the organization. Returns customer names, emails, phones, and status.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "status": types.Schema(type=types.Type.STRING, description="Filter by status: active, inactive, prospect, vip (default: active)"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 10, max: 50)"),
+                    },
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="get_customer_count",
+                description="Get the total number of customers in the organization",
+                parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+            ),
+            types.FunctionDeclaration(
+                name="create_customer",
+                description="Create a new customer in the CRM",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "name": types.Schema(type=types.Type.STRING, description="Customer name (required)"),
+                        "email": types.Schema(type=types.Type.STRING, description="Email address (required)"),
+                        "phone": types.Schema(type=types.Type.STRING, description="Phone number (optional)"),
+                        "customer_type": types.Schema(type=types.Type.STRING, description="Type: individual or business (default: individual)"),
+                        "company_name": types.Schema(type=types.Type.STRING, description="Company name for business customers (optional)"),
+                    },
+                    required=["name", "email"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="get_customer",
+                description="Get detailed information about a specific customer",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "customer_id": types.Schema(type=types.Type.INTEGER, description="Customer ID"),
+                    },
+                    required=["customer_id"],
+                ),
+            ),
+            # Lead functions
+            types.FunctionDeclaration(
+                name="list_leads",
+                description="List leads in the organization",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "status": types.Schema(type=types.Type.STRING, description="Filter by status: new, contacted, qualified, disqualified"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 10)"),
+                    },
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="create_lead",
+                description="Create a new lead in the CRM",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "name": types.Schema(type=types.Type.STRING, description="Lead name (required)"),
+                        "email": types.Schema(type=types.Type.STRING, description="Email address (required)"),
+                        "phone": types.Schema(type=types.Type.STRING, description="Phone number (optional)"),
+                        "source": types.Schema(type=types.Type.STRING, description="Lead source: website, referral, campaign, etc (default: website)"),
+                    },
+                    required=["name", "email"],
+                ),
+            ),
+            # Deal functions
+            types.FunctionDeclaration(
+                name="list_deals",
+                description="List deals in the organization",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "stage": types.Schema(type=types.Type.STRING, description="Filter by stage: prospecting, qualification, proposal, negotiation, closed"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 10)"),
+                    },
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="get_deal_stats",
+                description="Get deal statistics including total value, won/lost counts",
+                parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+            ),
+            # Issue functions
+            types.FunctionDeclaration(
+                name="list_issues",
+                description="List issues/tickets in the organization",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "status": types.Schema(type=types.Type.STRING, description="Filter by status: open, in_progress, resolved, closed"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 10)"),
+                    },
+                ),
+            ),
+            # Analytics functions
+            types.FunctionDeclaration(
+                name="get_dashboard_stats",
+                description="Get comprehensive dashboard statistics for customers, leads, deals, and issues",
+                parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+            ),
+        ]
+        
+        # Return tools with all function declarations
+        tools = [types.Tool(function_declarations=function_declarations)]
+        
+        # Store tool handlers for execution
+        self._tool_handlers = {
+            "list_customers": list_customers_tool,
+            "get_customer_count": get_customer_count_tool,
+            "create_customer": create_customer_tool,
+            "get_customer": get_customer_tool,
+            "list_leads": list_leads_tool,
+            "create_lead": create_lead_tool,
+            "list_deals": list_deals_tool,
+            "get_deal_stats": get_deal_stats_tool,
+            "list_issues": list_issues_tool,
+            "get_dashboard_stats": get_dashboard_stats_tool,
+        }
+        
+        return tools
+    
     async def chat_stream(
         self,
         message: str,
@@ -354,37 +705,18 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             # Initialize Gemini client (sync)
             gemini_client = genai.Client(api_key=self.api_key)
             
-            # Note: For now, we'll skip MCP integration to test basic Gemini functionality
-            # MCP integration requires running the MCP server as a separate process
-            # TODO: Start MCP server as subprocess or use HTTP transport
+            # Create CRM tools with user context
+            crm_tools = self._create_crm_tools(user_context)
             
-            # For testing without MCP:
-            if False:  # Disable MCP for now
-                # Initialize MCP client with user context
-                mcp_client = MCPClient(self.mcp_server_path)
-                
-                # Set user context in MCP server
-                async with mcp_client:
-                    # Pass user context to MCP server
-                    mcp_client.context = user_context
-                
             # Build conversation contents
-            contents = []
-            
-            # Add conversation history if provided
-            if conversation_history:
-                for msg in conversation_history:
-                    contents.append(msg)
-            
-            # Add current message
-            contents.append(message)
+            contents = message
             
             # System instruction to guide Gemini
             system_instruction = self._build_system_prompt(user_context)
             
-            logger.info(f"Sending message to Gemini (user: {user_context['user_id']})")
+            logger.info(f"Sending message to Gemini with CRM tools (user: {user_context['user_id']}, org: {user_context.get('organization_id')})")
             
-            # Generate response with streaming (without MCP tools for now)
+            # Generate response with streaming and CRM tools
             response = await gemini_client.aio.models.generate_content(
                 model=self.model_name,
                 contents=contents,
@@ -393,25 +725,98 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     top_p=0.95,
                     max_output_tokens=2048,
                     system_instruction=system_instruction,
+                    tools=crm_tools,
+                    tool_config={"function_calling_config": {"mode": "AUTO"}},
                 )
             )
             
-            # Stream the response
-            if hasattr(response, 'text'):
-                # Non-streaming response
-                yield response.text
+            # Check if Gemini wants to call a function
+            if response.candidates and response.candidates[0].content.parts:
+                first_part = response.candidates[0].content.parts[0]
+                
+                # Check for function call
+                if hasattr(first_part, 'function_call') and first_part.function_call:
+                    function_call = first_part.function_call
+                    function_name = function_call.name
+                    function_args = dict(function_call.args)
+                    
+                    logger.info(f"Gemini called function: {function_name} with args: {function_args}")
+                    
+                    # Execute the tool
+                    if function_name in self._tool_handlers:
+                        try:
+                            tool_result = await self._tool_handlers[function_name](**function_args)
+                            logger.info(f"Tool result: {tool_result}")
+                            
+                            # Send function response back to Gemini
+                            function_response = types.Content(
+                                parts=[
+                                    types.Part(
+                                        function_response=types.FunctionResponse(
+                                            name=function_name,
+                                            response={"result": tool_result}
+                                        )
+                                    )
+                                ]
+                            )
+                            
+                            # Get final response from Gemini with function result
+                            final_response = await gemini_client.aio.models.generate_content(
+                                model=self.model_name,
+                                contents=[contents, response.candidates[0].content, function_response],
+                                config=genai.types.GenerateContentConfig(
+                                    temperature=0.7,
+                                    top_p=0.95,
+                                    max_output_tokens=2048,
+                                    system_instruction=system_instruction,
+                                    tools=crm_tools,
+                                ),
+                            )
+                            
+                            # Stream the final response
+                            if hasattr(final_response, 'text'):
+                                yield final_response.text
+                            else:
+                                async for chunk in final_response:
+                                    if hasattr(chunk, 'text'):
+                                        yield chunk.text
+                        
+                        except Exception as tool_error:
+                            logger.error(f"Error executing tool {function_name}: {tool_error}")
+                            yield f"Error executing {function_name}: {str(tool_error)}"
+                    else:
+                        yield f"Unknown function: {function_name}"
+                else:
+                    # No function call, stream regular response
+                    if hasattr(response, 'text'):
+                        yield response.text
+                    else:
+                        async for chunk in response:
+                            if hasattr(chunk, 'text'):
+                                yield chunk.text
             else:
-                # Streaming response
-                async for chunk in response:
-                    if hasattr(chunk, 'text'):
-                        yield chunk.text
+                # Empty response
+                yield "I'm sorry, I couldn't generate a response. Please try again."
             
             logger.info("Gemini response completed")
                 
         except Exception as e:
-            error_msg = f"Error in Gemini chat: {str(e)}"
-            logger.error(error_msg, exc_info=True)
-            yield f"\n\nError: {error_msg}"
+            # Handle different types of errors with user-friendly messages
+            error_str = str(e)
+            
+            if "validation errors" in error_str.lower():
+                error_msg = "Sorry, there was an issue with the message format. Please try again with a simple question."
+            elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                error_msg = "⏸️ Rate limit exceeded. Please wait a moment and try again."
+            elif "401" in error_str or "UNAUTHORIZED" in error_str:
+                error_msg = "⚠️ API authentication failed. Please check your Gemini API key configuration."
+            elif "404" in error_str or "NOT_FOUND" in error_str:
+                error_msg = "⚠️ The AI model is not available. Please contact support."
+            else:
+                error_msg = f"Sorry, I encountered an error: {error_str[:200]}"
+            
+            logger.error(f"Error in Gemini chat: {error_str}", exc_info=True)
+            yield error_msg
     
     async def chat(
         self,

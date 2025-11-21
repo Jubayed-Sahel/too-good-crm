@@ -3,7 +3,10 @@ Message ViewSet
 API endpoints for messaging functionality
 """
 
+import logging
 from rest_framework import viewsets, status
+
+logger = logging.getLogger(__name__)
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -205,16 +208,21 @@ class MessageViewSet(PermissionCheckMixin, OrganizationFilterMixin, viewsets.Mod
     @action(detail=False, methods=['get'])
     def unread_count(self, request):
         """Get unread message count for current user"""
-        organization = getattr(request.user, 'current_organization', None)
-        
-        # Fallback to getting organization from active profile
-        if not organization:
-            from crmApp.utils.profile_context import get_active_profile_organization
-            organization = get_active_profile_organization(request.user)
-        
-        count = MessageService.get_unread_count(request.user, organization)
-        
-        return Response({'unread_count': count})
+        try:
+            organization = getattr(request.user, 'current_organization', None)
+            
+            # Fallback to getting organization from active profile
+            if not organization:
+                from crmApp.utils.profile_context import get_active_profile_organization
+                organization = get_active_profile_organization(request.user)
+            
+            count = MessageService.get_unread_count(request.user, organization)
+            
+            return Response({'unread_count': count})
+        except Exception as e:
+            # Return 0 if there's any error (e.g., table doesn't exist yet)
+            logger.warning(f"Error getting unread count: {str(e)}")
+            return Response({'unread_count': 0})
     
     @action(detail=False, methods=['get'])
     def recipients(self, request):

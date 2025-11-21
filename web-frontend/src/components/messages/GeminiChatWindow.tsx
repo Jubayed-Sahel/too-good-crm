@@ -49,7 +49,7 @@ export const GeminiChatWindow = () => {
       borderColor="gray.200"
       display="flex"
       flexDirection="column"
-      h="calc(100vh - 200px)"
+      overflow="hidden"
     >
       {/* Header */}
       <Box p={4} borderBottomWidth="1px" borderColor="gray.200">
@@ -83,7 +83,7 @@ export const GeminiChatWindow = () => {
       </Box>
 
       {/* Messages Area */}
-      <Box flex={1} overflowY="auto" p={4}>
+      <Box flex={1} overflowY="auto" p={4} bg="white">
         {!status?.available && (
           <Box
             p={4}
@@ -166,25 +166,28 @@ export const GeminiChatWindow = () => {
           </VStack>
         )}
 
-        <VStack align="stretch" gap={4}>
+        <VStack align="stretch" gap={3}>
           {messages.map((message) => (
             <Box
               key={message.id}
               alignSelf={message.role === 'user' ? 'flex-end' : 'flex-start'}
-              maxW="80%"
+              maxW="75%"
             >
+              {message.role === 'assistant' && (
+                <HStack gap={1} mb={1} ml={1}>
+                  <Text fontSize="sm">🤖</Text>
+                  <Text fontSize="xs" fontWeight="semibold" color="purple.600">
+                    AI Assistant
+                  </Text>
+                </HStack>
+              )}
               <Box
                 p={3}
                 borderRadius="lg"
                 bg={message.role === 'user' ? 'purple.500' : 'gray.100'}
                 color={message.role === 'user' ? 'white' : 'gray.900'}
               >
-                {message.role === 'assistant' && (
-                  <Text fontSize="xs" fontWeight="semibold" mb={1} opacity={0.7}>
-                    AI Assistant
-                  </Text>
-                )}
-                <Text fontSize="sm" whiteSpace="pre-wrap">
+                <Text fontSize="sm" whiteSpace="pre-wrap" lineHeight="1.5">
                   {message.content}
                   {message.isStreaming && (
                     <Box as="span" ml={1} display="inline-block" animation="pulse 1.5s infinite">
@@ -192,7 +195,12 @@ export const GeminiChatWindow = () => {
                     </Box>
                   )}
                 </Text>
-                <Text fontSize="xs" opacity={0.7} mt={1}>
+                <Text 
+                  fontSize="xs" 
+                  opacity={0.6} 
+                  mt={1.5}
+                  color={message.role === 'user' ? 'whiteAlpha.900' : 'gray.600'}
+                >
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
               </Box>
@@ -204,33 +212,70 @@ export const GeminiChatWindow = () => {
       </Box>
 
       {/* Input Area */}
-      <Box p={4} borderTopWidth="1px" borderColor="gray.200">
+      <Box 
+        p={4} 
+        borderTopWidth="1px" 
+        borderColor="gray.200"
+        bg="white"
+      >
         <VStack align="stretch" gap={2}>
-          <HStack align="end" gap={2}>
+          <HStack align="flex-end" gap={3}>
             <Textarea
               placeholder="Ask me anything about your CRM..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyPress={handleKeyPress}
-              rows={3}
-              resize="none"
+              minH="44px"
+              maxH="120px"
+              resize="vertical"
               disabled={isLoading || !status?.available}
+              bg="white"
+              borderWidth="1px"
+              borderColor="gray.300"
+              borderRadius="lg"
+              _hover={{ borderColor: 'purple.400' }}
+              _focus={{ 
+                borderColor: 'purple.500', 
+                boxShadow: '0 0 0 1px var(--chakra-colors-purple-500)',
+                outline: 'none'
+              }}
+              _disabled={{ bg: 'gray.100', cursor: 'not-allowed' }}
+              fontSize="sm"
+              px={4}
+              py={3}
+              flex={1}
             />
             <Button
               colorPalette="purple"
               onClick={handleSend}
               disabled={!input.trim() || isLoading || !status?.available}
               loading={isLoading}
-              leftIcon={isStreaming ? <Spinner size="sm" /> : <FiSend />}
-              h="full"
+              size="md"
+              px={5}
+              h="44px"
+              minW="80px"
             >
-              Send
+              {isStreaming ? (
+                <Spinner size="sm" />
+              ) : (
+                <HStack gap={2}>
+                  <FiSend />
+                  <Text>Send</Text>
+                </HStack>
+              )}
             </Button>
           </HStack>
-          <Text fontSize="xs" color="gray.500">
-            Press Ctrl+Enter to send
-            {isStreaming && ' • AI is typing...'}
-          </Text>
+          {isStreaming && (
+            <HStack gap={2} fontSize="xs" color="purple.600" pl={1}>
+              <Spinner size="xs" />
+              <Text fontWeight="medium">AI is typing...</Text>
+            </HStack>
+          )}
+          {!isStreaming && (
+            <Text fontSize="xs" color="gray.500" pl={1}>
+              💡 Press Ctrl+Enter to send
+            </Text>
+          )}
         </VStack>
       </Box>
     </Box>

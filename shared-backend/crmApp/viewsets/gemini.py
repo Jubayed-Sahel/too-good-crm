@@ -45,17 +45,24 @@ class GeminiViewSet(viewsets.ViewSet):
         Response:
             Streaming text/event-stream with Gemini responses
         """
-        message = request.data.get('message')
-        conversation_id = request.data.get('conversation_id')
-        history = request.data.get('history', [])
-        
-        if not message:
+        try:
+            message = request.data.get('message')
+            conversation_id = request.data.get('conversation_id')
+            history = request.data.get('history', [])
+            
+            if not message:
+                return Response(
+                    {'error': 'Message is required'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            user = request.user
+        except Exception as e:
+            logger.error(f"Error parsing request: {str(e)}", exc_info=True)
             return Response(
-                {'error': 'Message is required'},
+                {'error': f'Invalid request: {str(e)}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        user = request.user
         
         logger.info(
             f"Gemini chat request from user {user.id}: "

@@ -23,7 +23,7 @@ class Customer(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
         ('vip', 'VIP'),
     ]
     
-    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='customers')
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='customers', null=True, blank=True)
     user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='customer_profiles')
     user_profile = models.ForeignKey('UserProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='customer_records')
     
