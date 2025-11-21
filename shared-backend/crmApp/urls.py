@@ -43,6 +43,8 @@ from crmApp.viewsets import (
     ConversationViewSet,
     # Analytics
     AnalyticsViewSet,
+    # Gemini AI
+    GeminiViewSet,
     # Jitsi Calls
     # JitsiCallViewSet,
     # UserPresenceViewSet,
@@ -99,6 +101,9 @@ router.register(r'conversations', ConversationViewSet, basename='conversation')
 
 # Analytics endpoints
 router.register(r'analytics', AnalyticsViewSet, basename='analytics')
+
+# Gemini AI endpoints
+router.register(r'gemini', GeminiViewSet, basename='gemini')
 
 # Jitsi call endpoints
 # router.register(r'jitsi-calls', JitsiCallViewSet, basename='jitsi-call')

@@ -300,6 +300,9 @@ LINEAR_API_KEY = os.getenv('LINEAR_API_KEY', '')
 LINEAR_WEBHOOK_SECRET = os.getenv('LINEAR_WEBHOOK_SECRET', '')
 LINEAR_TEAM_ID = os.getenv('LINEAR_TEAM_ID', 'b95250db-8430-4dbc-88f8-9fc109369df0')  # Default team for new organizations
 
+# Gemini AI Integration Settings
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
 # Security Settings (for production)
 if not DEBUG:
     SECURE_SSL_REDIRECT = True

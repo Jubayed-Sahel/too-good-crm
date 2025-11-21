@@ -28,6 +28,7 @@ import { useMessages, useConversations, useSendMessage, useRecipients, useMessag
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { toaster } from '@/components/ui/toaster';
+import { GeminiChatWindow } from '@/components/messages/GeminiChatWindow';
 
 // Simple date formatting function
 const formatTimeAgo = (date: string | Date): string => {
@@ -41,6 +42,9 @@ const formatTimeAgo = (date: string | Date): string => {
   if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
   return then.toLocaleDateString();
 };
+
+// Special ID for AI Assistant
+const AI_ASSISTANT_ID = -1;
 
 const MessagesPage = () => {
   const { user } = useAuth();
@@ -211,19 +215,51 @@ const MessagesPage = () => {
                 <Spinner size="lg" />
                 <Text color="gray.500">Loading conversations...</Text>
               </VStack>
-            ) : filteredConversations.length === 0 ? (
-              <VStack justify="center" py={12} px={4}>
-                <FiMessageSquare size={48} color="var(--gray-400)" />
-                <Text color="gray.500" textAlign="center">
-                  No conversations yet
-                </Text>
-                <Text fontSize="sm" color="gray.400" textAlign="center">
-                  Start a conversation by sending a message
-                </Text>
-              </VStack>
             ) : (
               <VStack align="stretch" gap={0}>
-                {filteredConversations.map((conversation) => {
+                {/* AI Assistant - Show for Vendors and Employees */}
+                {(isVendor || isEmployee) && (
+                  <Box
+                    p={4}
+                    cursor="pointer"
+                    bg={selectedUserId === AI_ASSISTANT_ID ? 'purple.50' : 'white'}
+                    borderLeftWidth={selectedUserId === AI_ASSISTANT_ID ? '3px' : '0'}
+                    borderLeftColor={selectedUserId === AI_ASSISTANT_ID ? 'purple.500' : 'transparent'}
+                    borderBottomWidth="1px"
+                    borderBottomColor="gray.100"
+                    _hover={{ bg: selectedUserId === AI_ASSISTANT_ID ? 'purple.50' : 'gray.50' }}
+                    onClick={() => setSelectedUserId(AI_ASSISTANT_ID)}
+                  >
+                    <HStack justify="space-between" mb={1}>
+                      <HStack>
+                        <Text fontSize="lg">🤖</Text>
+                        <Text fontWeight="semibold" fontSize="sm">
+                          AI Assistant
+                        </Text>
+                        <Badge colorPalette="purple" size="sm">
+                          NEW
+                        </Badge>
+                      </HStack>
+                    </HStack>
+                    <Text fontSize="xs" color="gray.600" noOfLines={1}>
+                      Ask me about your CRM data, analytics, and more
+                    </Text>
+                  </Box>
+                )}
+
+                {/* Regular Conversations */}
+                {filteredConversations.length === 0 && !isVendor && !isEmployee ? (
+                  <VStack justify="center" py={12} px={4}>
+                    <FiMessageSquare size={48} color="var(--gray-400)" />
+                    <Text color="gray.500" textAlign="center">
+                      No conversations yet
+                    </Text>
+                    <Text fontSize="sm" color="gray.400" textAlign="center">
+                      Start a conversation by sending a message
+                    </Text>
+                  </VStack>
+                ) : (
+                  filteredConversations.map((conversation) => {
                   const participant = conversation.other_participant;
                   const isSelected = selectedUserId === participant?.id;
                   
@@ -265,14 +301,20 @@ const MessagesPage = () => {
                       )}
                     </Box>
                   );
-                })}
+                  })
+                )}
               </VStack>
             )}
           </Box>
         </Box>
 
         {/* Chat Window */}
-        <Box
+        {selectedUserId === AI_ASSISTANT_ID ? (
+          /* AI Assistant Chat Window */
+          <GeminiChatWindow />
+        ) : (
+          /* Regular User Chat Window */
+          <Box
           flex={1}
           bg="white"
           borderRadius="xl"
@@ -393,7 +435,8 @@ const MessagesPage = () => {
               </Text>
             </VStack>
           )}
-        </Box>
+          </Box>
+        )}
       </HStack>
 
       {/* New Message Dialog */}

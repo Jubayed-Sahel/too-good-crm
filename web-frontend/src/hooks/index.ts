@@ -74,3 +74,6 @@ export * from './useRBAC';
 export * from './useUser';
 export { usePermissionActions } from './usePermissionActions';
 export type { PermissionActions } from './usePermissionActions';
+
+// AI & Automation hooks
+export { useGemini } from './useGemini';
