@@ -429,6 +429,55 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     return {"error": "Customer not found"}
             return await fetch()
         
+        async def update_customer_tool(customer_id: int, name: str = None, email: str = None, phone: str = None, status: str = None):
+            """Update an existing customer"""
+            @sync_to_async
+            def update():
+                try:
+                    if org_id:
+                        customer = Customer.objects.get(id=customer_id, organization_id=org_id)
+                    else:
+                        customer = Customer.objects.get(id=customer_id, organization_id__isnull=True)
+                    
+                    if name:
+                        customer.name = name
+                    if email:
+                        customer.email = email
+                    if phone is not None:
+                        customer.phone = phone
+                    if status:
+                        customer.status = status
+                    
+                    customer.save()
+                    return {
+                        "success": True,
+                        "id": customer.id,
+                        "name": customer.name,
+                        "message": f"Customer '{customer.name}' updated successfully"
+                    }
+                except Customer.DoesNotExist:
+                    return {"error": "Customer not found"}
+            return await update()
+        
+        async def delete_customer_tool(customer_id: int):
+            """Delete a customer"""
+            @sync_to_async
+            def delete():
+                try:
+                    if org_id:
+                        customer = Customer.objects.get(id=customer_id, organization_id=org_id)
+                    else:
+                        customer = Customer.objects.get(id=customer_id, organization_id__isnull=True)
+                    name = customer.name
+                    customer.delete()
+                    return {
+                        "success": True,
+                        "message": f"Customer '{name}' deleted successfully"
+                    }
+                except Customer.DoesNotExist:
+                    return {"error": "Customer not found"}
+            return await delete()
+        
         # === LEAD TOOLS ===
         async def list_leads_tool(status: str = "new", limit: int = 10):
             """List leads in the organization"""
@@ -470,6 +519,74 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                 }
             return await create()
         
+        async def update_lead_tool(lead_id: int, name: str = None, status: str = None, score: int = None):
+            """Update an existing lead"""
+            @sync_to_async
+            def update():
+                try:
+                    lead = Lead.objects.get(id=lead_id, organization_id=org_id)
+                    if name:
+                        lead.name = name
+                    if status:
+                        lead.status = status
+                    if score is not None:
+                        lead.score = score
+                    lead.save()
+                    return {
+                        "success": True,
+                        "id": lead.id,
+                        "name": lead.name,
+                        "message": f"Lead '{lead.name}' updated successfully"
+                    }
+                except Lead.DoesNotExist:
+                    return {"error": "Lead not found"}
+            return await update()
+        
+        async def qualify_lead_tool(lead_id: int):
+            """Mark a lead as qualified"""
+            @sync_to_async
+            def qualify():
+                try:
+                    lead = Lead.objects.get(id=lead_id, organization_id=org_id)
+                    lead.status = "qualified"
+                    lead.score = max(lead.score, 70)
+                    lead.save()
+                    return {
+                        "success": True,
+                        "id": lead.id,
+                        "name": lead.name,
+                        "message": f"Lead '{lead.name}' marked as qualified"
+                    }
+                except Lead.DoesNotExist:
+                    return {"error": "Lead not found"}
+            return await qualify()
+        
+        async def convert_lead_to_customer_tool(lead_id: int):
+            """Convert a lead to a customer"""
+            @sync_to_async
+            def convert():
+                try:
+                    lead = Lead.objects.get(id=lead_id, organization_id=org_id)
+                    customer = Customer.objects.create(
+                        organization_id=org_id,
+                        name=lead.name,
+                        email=lead.email,
+                        phone=lead.phone,
+                        status="active",
+                        customer_type="individual"
+                    )
+                    lead.status = "converted"
+                    lead.save()
+                    return {
+                        "success": True,
+                        "customer_id": customer.id,
+                        "customer_name": customer.name,
+                        "message": f"Lead '{lead.name}' converted to customer successfully"
+                    }
+                except Lead.DoesNotExist:
+                    return {"error": "Lead not found"}
+            return await convert()
+        
         # === DEAL TOOLS ===
         async def list_deals_tool(stage: str = "negotiation", limit: int = 10):
             """List deals in the organization"""
@@ -488,6 +605,93 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     for d in deals
                 ]
             return await fetch()
+        
+        async def create_deal_tool(title: str, value: float, customer_id: int = None, stage: str = "prospecting"):
+            """Create a new deal"""
+            @sync_to_async
+            def create():
+                deal = Deal.objects.create(
+                    organization_id=org_id,
+                    title=title,
+                    value=value,
+                    customer_id=customer_id,
+                    stage=stage,
+                    status="open"
+                )
+                return {
+                    "success": True,
+                    "id": deal.id,
+                    "title": deal.title,
+                    "value": float(deal.value),
+                    "message": f"Deal '{title}' created successfully"
+                }
+            return await create()
+        
+        async def update_deal_tool(deal_id: int, title: str = None, value: float = None, stage: str = None, status: str = None):
+            """Update an existing deal"""
+            @sync_to_async
+            def update():
+                try:
+                    deal = Deal.objects.get(id=deal_id, organization_id=org_id)
+                    if title:
+                        deal.title = title
+                    if value is not None:
+                        deal.value = value
+                    if stage:
+                        deal.stage = stage
+                    if status:
+                        deal.status = status
+                    deal.save()
+                    return {
+                        "success": True,
+                        "id": deal.id,
+                        "title": deal.title,
+                        "message": f"Deal '{deal.title}' updated successfully"
+                    }
+                except Deal.DoesNotExist:
+                    return {"error": "Deal not found"}
+            return await update()
+        
+        async def mark_deal_won_tool(deal_id: int):
+            """Mark a deal as won"""
+            @sync_to_async
+            def mark_won():
+                try:
+                    deal = Deal.objects.get(id=deal_id, organization_id=org_id)
+                    deal.status = "won"
+                    deal.stage = "closed"
+                    deal.save()
+                    return {
+                        "success": True,
+                        "id": deal.id,
+                        "title": deal.title,
+                        "value": float(deal.value),
+                        "message": f"Deal '{deal.title}' marked as won! 🎉"
+                    }
+                except Deal.DoesNotExist:
+                    return {"error": "Deal not found"}
+            return await mark_won()
+        
+        async def mark_deal_lost_tool(deal_id: int, reason: str = ""):
+            """Mark a deal as lost"""
+            @sync_to_async
+            def mark_lost():
+                try:
+                    deal = Deal.objects.get(id=deal_id, organization_id=org_id)
+                    deal.status = "lost"
+                    deal.stage = "closed"
+                    if reason:
+                        deal.lost_reason = reason
+                    deal.save()
+                    return {
+                        "success": True,
+                        "id": deal.id,
+                        "title": deal.title,
+                        "message": f"Deal '{deal.title}' marked as lost"
+                    }
+                except Deal.DoesNotExist:
+                    return {"error": "Deal not found"}
+            return await mark_lost()
         
         async def get_deal_stats_tool():
             """Get deal statistics"""
@@ -521,6 +725,65 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     for i in issues
                 ]
             return await fetch()
+        
+        async def create_issue_tool(title: str, description: str, priority: str = "medium", customer_id: int = None):
+            """Create a new issue/ticket"""
+            @sync_to_async
+            def create():
+                issue = Issue.objects.create(
+                    organization_id=org_id,
+                    title=title,
+                    description=description,
+                    priority=priority,
+                    customer_id=customer_id,
+                    status="open"
+                )
+                return {
+                    "success": True,
+                    "id": issue.id,
+                    "title": issue.title,
+                    "message": f"Issue '{title}' created successfully"
+                }
+            return await create()
+        
+        async def update_issue_tool(issue_id: int, status: str = None, priority: str = None):
+            """Update an existing issue"""
+            @sync_to_async
+            def update():
+                try:
+                    issue = Issue.objects.get(id=issue_id, organization_id=org_id)
+                    if status:
+                        issue.status = status
+                    if priority:
+                        issue.priority = priority
+                    issue.save()
+                    return {
+                        "success": True,
+                        "id": issue.id,
+                        "title": issue.title,
+                        "message": f"Issue '{issue.title}' updated successfully"
+                    }
+                except Issue.DoesNotExist:
+                    return {"error": "Issue not found"}
+            return await update()
+        
+        async def resolve_issue_tool(issue_id: int):
+            """Mark an issue as resolved"""
+            @sync_to_async
+            def resolve():
+                try:
+                    issue = Issue.objects.get(id=issue_id, organization_id=org_id)
+                    issue.status = "resolved"
+                    issue.save()
+                    return {
+                        "success": True,
+                        "id": issue.id,
+                        "title": issue.title,
+                        "message": f"Issue '{issue.title}' marked as resolved ✓"
+                    }
+                except Issue.DoesNotExist:
+                    return {"error": "Issue not found"}
+            return await resolve()
         
         # === ANALYTICS TOOLS ===
         async def get_dashboard_stats_tool():
@@ -595,6 +858,32 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     required=["customer_id"],
                 ),
             ),
+            types.FunctionDeclaration(
+                name="update_customer",
+                description="Update an existing customer's information",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "customer_id": types.Schema(type=types.Type.INTEGER, description="Customer ID (required)"),
+                        "name": types.Schema(type=types.Type.STRING, description="New name (optional)"),
+                        "email": types.Schema(type=types.Type.STRING, description="New email (optional)"),
+                        "phone": types.Schema(type=types.Type.STRING, description="New phone (optional)"),
+                        "status": types.Schema(type=types.Type.STRING, description="New status: active, inactive, prospect, vip (optional)"),
+                    },
+                    required=["customer_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="delete_customer",
+                description="Delete a customer from the CRM",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "customer_id": types.Schema(type=types.Type.INTEGER, description="Customer ID to delete"),
+                    },
+                    required=["customer_id"],
+                ),
+            ),
             # Lead functions
             types.FunctionDeclaration(
                 name="list_leads",
@@ -621,6 +910,42 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     required=["name", "email"],
                 ),
             ),
+            types.FunctionDeclaration(
+                name="update_lead",
+                description="Update an existing lead's information",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "lead_id": types.Schema(type=types.Type.INTEGER, description="Lead ID (required)"),
+                        "name": types.Schema(type=types.Type.STRING, description="New name (optional)"),
+                        "status": types.Schema(type=types.Type.STRING, description="New status: new, contacted, qualified, disqualified (optional)"),
+                        "score": types.Schema(type=types.Type.INTEGER, description="Lead score 0-100 (optional)"),
+                    },
+                    required=["lead_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="qualify_lead",
+                description="Mark a lead as qualified (sets status to qualified and increases score)",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "lead_id": types.Schema(type=types.Type.INTEGER, description="Lead ID to qualify"),
+                    },
+                    required=["lead_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="convert_lead_to_customer",
+                description="Convert a qualified lead into a customer",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "lead_id": types.Schema(type=types.Type.INTEGER, description="Lead ID to convert"),
+                    },
+                    required=["lead_id"],
+                ),
+            ),
             # Deal functions
             types.FunctionDeclaration(
                 name="list_deals",
@@ -631,6 +956,58 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                         "stage": types.Schema(type=types.Type.STRING, description="Filter by stage: prospecting, qualification, proposal, negotiation, closed"),
                         "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 10)"),
                     },
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="create_deal",
+                description="Create a new deal in the CRM",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "title": types.Schema(type=types.Type.STRING, description="Deal title (required)"),
+                        "value": types.Schema(type=types.Type.NUMBER, description="Deal value in dollars (required)"),
+                        "customer_id": types.Schema(type=types.Type.INTEGER, description="Associated customer ID (optional)"),
+                        "stage": types.Schema(type=types.Type.STRING, description="Deal stage: prospecting, qualification, proposal, negotiation, closed (default: prospecting)"),
+                    },
+                    required=["title", "value"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="update_deal",
+                description="Update an existing deal's information",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "deal_id": types.Schema(type=types.Type.INTEGER, description="Deal ID (required)"),
+                        "title": types.Schema(type=types.Type.STRING, description="New title (optional)"),
+                        "value": types.Schema(type=types.Type.NUMBER, description="New value (optional)"),
+                        "stage": types.Schema(type=types.Type.STRING, description="New stage (optional)"),
+                        "status": types.Schema(type=types.Type.STRING, description="New status: open, won, lost (optional)"),
+                    },
+                    required=["deal_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="mark_deal_won",
+                description="Mark a deal as won and close it",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "deal_id": types.Schema(type=types.Type.INTEGER, description="Deal ID to mark as won"),
+                    },
+                    required=["deal_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="mark_deal_lost",
+                description="Mark a deal as lost and close it",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "deal_id": types.Schema(type=types.Type.INTEGER, description="Deal ID to mark as lost"),
+                        "reason": types.Schema(type=types.Type.STRING, description="Reason for losing the deal (optional)"),
+                    },
+                    required=["deal_id"],
                 ),
             ),
             types.FunctionDeclaration(
@@ -650,6 +1027,44 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     },
                 ),
             ),
+            types.FunctionDeclaration(
+                name="create_issue",
+                description="Create a new issue/support ticket in the CRM",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "title": types.Schema(type=types.Type.STRING, description="Issue title (required)"),
+                        "description": types.Schema(type=types.Type.STRING, description="Issue description (required)"),
+                        "priority": types.Schema(type=types.Type.STRING, description="Priority: low, medium, high, urgent (default: medium)"),
+                        "customer_id": types.Schema(type=types.Type.INTEGER, description="Associated customer ID (optional)"),
+                    },
+                    required=["title", "description"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="update_issue",
+                description="Update an existing issue's status or priority",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "issue_id": types.Schema(type=types.Type.INTEGER, description="Issue ID (required)"),
+                        "status": types.Schema(type=types.Type.STRING, description="New status: open, in_progress, resolved, closed (optional)"),
+                        "priority": types.Schema(type=types.Type.STRING, description="New priority: low, medium, high, urgent (optional)"),
+                    },
+                    required=["issue_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="resolve_issue",
+                description="Mark an issue as resolved",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "issue_id": types.Schema(type=types.Type.INTEGER, description="Issue ID to resolve"),
+                    },
+                    required=["issue_id"],
+                ),
+            ),
             # Analytics functions
             types.FunctionDeclaration(
                 name="get_dashboard_stats",
@@ -663,15 +1078,32 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         # Store tool handlers for execution
         self._tool_handlers = {
+            # Customer tools
             "list_customers": list_customers_tool,
             "get_customer_count": get_customer_count_tool,
             "create_customer": create_customer_tool,
             "get_customer": get_customer_tool,
+            "update_customer": update_customer_tool,
+            "delete_customer": delete_customer_tool,
+            # Lead tools
             "list_leads": list_leads_tool,
             "create_lead": create_lead_tool,
+            "update_lead": update_lead_tool,
+            "qualify_lead": qualify_lead_tool,
+            "convert_lead_to_customer": convert_lead_to_customer_tool,
+            # Deal tools
             "list_deals": list_deals_tool,
+            "create_deal": create_deal_tool,
+            "update_deal": update_deal_tool,
+            "mark_deal_won": mark_deal_won_tool,
+            "mark_deal_lost": mark_deal_lost_tool,
             "get_deal_stats": get_deal_stats_tool,
+            # Issue tools
             "list_issues": list_issues_tool,
+            "create_issue": create_issue_tool,
+            "update_issue": update_issue_tool,
+            "resolve_issue": resolve_issue_tool,
+            # Analytics tools
             "get_dashboard_stats": get_dashboard_stats_tool,
         }
         
@@ -708,13 +1140,31 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             # Create CRM tools with user context
             crm_tools = self._create_crm_tools(user_context)
             
-            # Build conversation contents
-            contents = message
+            # Build conversation contents with history
+            contents = []
+            if conversation_history:
+                # Add conversation history (already in Gemini format from frontend)
+                for msg in conversation_history:
+                    if msg.get('role') and msg.get('content'):
+                        contents.append(
+                            types.Content(
+                                role="user" if msg['role'] == 'user' else "model",
+                                parts=[types.Part(text=msg['content'])]
+                            )
+                        )
+            
+            # Add current message
+            contents.append(
+                types.Content(
+                    role="user",
+                    parts=[types.Part(text=message)]
+                )
+            )
             
             # System instruction to guide Gemini
             system_instruction = self._build_system_prompt(user_context)
             
-            logger.info(f"Sending message to Gemini with CRM tools (user: {user_context['user_id']}, org: {user_context.get('organization_id')})")
+            logger.info(f"Sending message to Gemini with CRM tools (user: {user_context['user_id']}, org: {user_context.get('organization_id')}, history: {len(contents)-1} messages)")
             
             # Generate response with streaming and CRM tools
             response = await gemini_client.aio.models.generate_content(
@@ -750,6 +1200,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                             
                             # Send function response back to Gemini
                             function_response = types.Content(
+                                role="function",
                                 parts=[
                                     types.Part(
                                         function_response=types.FunctionResponse(
@@ -760,10 +1211,13 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                                 ]
                             )
                             
+                            # Build full conversation with function call and response
+                            full_contents = contents + [response.candidates[0].content, function_response]
+                            
                             # Get final response from Gemini with function result
                             final_response = await gemini_client.aio.models.generate_content(
                                 model=self.model_name,
-                                contents=[contents, response.candidates[0].content, function_response],
+                                contents=full_contents,
                                 config=genai.types.GenerateContentConfig(
                                     temperature=0.7,
                                     top_p=0.95,
