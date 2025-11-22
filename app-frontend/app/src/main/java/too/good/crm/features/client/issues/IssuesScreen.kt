@@ -88,14 +88,14 @@ fun IssuesScreen(
                 // Customer view - can create and view their own issues
                 CustomerIssuesListScreen(
                     organizationId = UserSession.currentProfile?.organizationId ?: 0,
-                    onNavigateToCreate = { /* TODO: Navigate to create issue */ },
-                    onNavigateToDetail = { issueId -> /* TODO: Navigate to issue detail */ },
+                    onNavigateToCreate = { onNavigate("customer-create-issue") },
+                    onNavigateToDetail = { issueId -> onNavigate("customer-issue-detail/$issueId") },
                     onNavigateBack = onBack
                 )
             } else {
                 // Vendor view - can view and manage all client-raised issues
                 VendorIssuesListScreen(
-                    onNavigateToDetail = { issueId -> /* TODO: Navigate to issue detail */ },
+                    onNavigateToDetail = { issueId -> onNavigate("vendor-issue-detail/$issueId") },
                     onNavigateBack = onBack
                 )
             }

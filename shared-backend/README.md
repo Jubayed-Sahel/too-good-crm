@@ -6,7 +6,7 @@ Django REST Framework backend for the Too Good CRM system.
 
 ```bash
 # Install dependencies
-pip install -r requirement.txt
+pip install -r requirements.txt
 
 # Run migrations
 python manage.py migrate

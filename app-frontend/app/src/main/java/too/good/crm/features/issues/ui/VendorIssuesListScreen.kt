@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,9 +17,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import too.good.crm.data.model.Issue
+import too.good.crm.data.pusher.PusherService
+import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.issues.viewmodel.IssueViewModel
 import too.good.crm.features.issues.viewmodel.IssueUiState
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.DisposableEffect
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,9 +40,48 @@ fun VendorIssuesListScreen(
     val uiState by viewModel.uiState.collectAsState()
     val statusFilter by viewModel.statusFilter.collectAsState()
     val priorityFilter by viewModel.priorityFilter.collectAsState()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val authRepository = remember { AuthRepository(context) }
 
+    // Initialize Pusher and subscribe to real-time updates
     LaunchedEffect(Unit) {
+        val userId = authRepository.getUserId()
+        if (userId > 0) {
+            PusherService.initialize(userId)
+            
+            // Subscribe to user's private channel for issue updates
+            val channelName = "private-user-$userId"
+            PusherService.subscribeToChannel(channelName) { eventName, data ->
+                when (eventName) {
+                    "issue-created", "issue-updated", "issue-status-changed" -> {
+                        // Reload issues when any issue event is received
+                        viewModel.loadAllIssues()
+                    }
+                }
+            }
+        }
+        
+        // Load issues when screen opens
         viewModel.loadAllIssues()
+    }
+    
+    // Cleanup Pusher subscription when screen is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            val userId = authRepository.getUserId()
+            if (userId > 0) {
+                PusherService.unsubscribe("private-user-$userId")
+            }
+        }
+    }
+
+    // Handle pull-to-refresh
+    suspend fun refresh() {
+        isRefreshing = true
+        viewModel.loadAllIssues()
+        delay(1000) // Show refresh indicator for at least 1 second
+        isRefreshing = false
     }
 
     Scaffold(
@@ -43,15 +92,37 @@ fun VendorIssuesListScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
                     }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            isRefreshing = true
+                            viewModel.loadAllIssues()
+                        }
+                    ) {
+                        Icon(Icons.Default.Refresh, "Refresh")
+                    }
                 }
             )
         }
     ) { padding ->
-        Column(
+        val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
+        val coroutineScope = rememberCoroutineScope()
+
+        SwipeRefresh(
+            state = swipeRefreshState,
+            onRefresh = {
+                coroutineScope.launch {
+                    refresh()
+                }
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
             // Filters
             Card(
                 modifier = Modifier
@@ -135,9 +206,7 @@ fun VendorIssuesListScreen(
 
             // Issues List
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f)
+                modifier = Modifier.fillMaxSize()
             ) {
                 when (val state = uiState) {
                     is IssueUiState.Loading -> {
@@ -171,6 +240,7 @@ fun VendorIssuesListScreen(
                         )
                     }
                 }
+            }
             }
         }
     }
@@ -309,4 +379,5 @@ fun EmptyIssuesVendorView(
         )
     }
 }
+
 

@@ -3,6 +3,7 @@ package too.good.crm.features.dashboard
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -19,6 +20,7 @@ import too.good.crm.ui.utils.responsiveSpacing
  * Updated Dashboard Screen with Responsive Components
  * Matches web-frontend's responsive design patterns
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ResponsiveDashboardScreen(
     onLogoutClicked: () -> Unit,
