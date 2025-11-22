@@ -303,6 +303,10 @@ LINEAR_TEAM_ID = os.getenv('LINEAR_TEAM_ID', 'b95250db-8430-4dbc-88f8-9fc109369d
 # Gemini AI Integration Settings
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
+# Telegram Bot Integration Settings
+TG_BOT_TOKEN = os.getenv('TG_BOT_TOKEN', '')
+TG_WEBHOOK_SECRET = os.getenv('TG_WEBHOOK_SECRET', '')
+
 # Security Settings (for production)
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
