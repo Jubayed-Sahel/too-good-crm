@@ -479,20 +479,29 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             return await delete()
         
         # === LEAD TOOLS ===
-        async def list_leads_tool(status: str = "new", limit: int = 10):
-            """List leads in the organization"""
+        async def list_leads_tool(status: str = "all", limit: int = 10):
+            """List leads in the organization. Leads are in any stage of the sales pipeline."""
             @sync_to_async
             def fetch():
-                leads = Lead.objects.filter(organization_id=org_id, status=status)[:limit]
+                # Get all active leads (status field should be 'active', not qualification_status)
+                queryset = Lead.objects.filter(organization_id=org_id, status='active')
+                
+                # Optionally filter by qualification_status
+                if status and status.lower() not in ["all", ""]:
+                    queryset = queryset.filter(qualification_status=status)
+                
+                leads = queryset.select_related('stage')[:limit]
                 return [
                     {
                         "id": l.id,
                         "name": l.name,
-                        "email": l.email,
-                        "phone": l.phone,
+                        "email": l.email or "",
+                        "phone": l.phone or "",
+                        "stage": l.stage.name if l.stage else "No stage",
+                        "qualification_status": l.qualification_status,
                         "status": l.status,
                         "source": l.source,
-                        "score": l.score,
+                        "is_converted": l.is_converted,
                     }
                     for l in leads
                 ]
@@ -887,11 +896,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             # Lead functions
             types.FunctionDeclaration(
                 name="list_leads",
-                description="List leads in the organization",
+                description="List leads in the organization. Leads are potential customers in any stage of the sales pipeline. When a lead reaches 'Closed Won' stage, they become both a lead and a customer.",
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
-                        "status": types.Schema(type=types.Type.STRING, description="Filter by status: new, contacted, qualified, disqualified"),
+                        "status": types.Schema(type=types.Type.STRING, description="Filter by qualification status: new, contacted, qualified, unqualified, converted, lost, or 'all' for all leads (default: all)"),
                         "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 10)"),
                     },
                 ),
