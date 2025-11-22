@@ -12,32 +12,24 @@ import java.util.concurrent.TimeUnit
  */
 object ApiClient {
 
-    // ⚠️ IMPORTANT: Configure the correct BASE_URL based on your setup
+    // ⚠️ BASE_URL Configuration
+    // Backend running on 0.0.0.0:8000
     //
-    // OPTION 1: Android Emulator (Currently Active)
+    // OPTION 1: Android Emulator (Default)
     //   Use: "http://10.0.2.2:8000/api/"
-    //   This is a special IP that Android emulator uses to access localhost
-    //   ✅ CURRENT SETTING - Use this when running on Android Emulator
+    //   10.0.2.2 is the special IP that emulator uses to access host machine's localhost
     //
     // OPTION 2: Physical Device on Same Network
-    //   Step 1: Find your computer's IP address:
-    //     Windows: Open CMD and type: ipconfig (look for IPv4 Address)
-    //     Mac/Linux: Open Terminal and type: ifconfig or ip addr
-    //   Step 2: Replace the IP below with your actual IP
-    //   Example: "http://192.168.0.218:8000/api/"
+    //   Find your computer's IP address:
+    //     Windows: ipconfig (look for IPv4 Address)
+    //     Mac/Linux: ifconfig or ip addr
+    //   Example: "http://192.168.1.100:8000/api/"
     //
-    // OPTION 3: Using ngrok (for external access)
+    // OPTION 3: ngrok (for external access/testing)
     //   Use: "https://your-ngrok-url.ngrok-free.dev/api/"
     //
-    // CURRENT SETTING: Android Emulator
+    // ✅ CURRENT: Android Emulator connecting to localhost:8000
     private const val BASE_URL = "http://10.0.2.2:8000/api/"
-    
-    // Uncomment one of these if you switch to a different setup:
-    // For Physical Device (replace with your computer's IP):
-    // private const val BASE_URL = "http://192.168.0.218:8000/api/"
-    
-    // For ngrok:
-    // private const val BASE_URL = "https://your-ngrok-url.ngrok-free.dev/api/"
 
     private var authToken: String? = null
 
@@ -131,6 +123,34 @@ object ApiClient {
      */
     val employeeApiService: EmployeeApiService by lazy {
         retrofit.create(EmployeeApiService::class.java)
+    }
+
+    /**
+     * Lead API Service instance
+     */
+    val leadApiService: LeadApiService by lazy {
+        retrofit.create(LeadApiService::class.java)
+    }
+
+    /**
+     * Deal API Service instance
+     */
+    val dealApiService: DealApiService by lazy {
+        retrofit.create(DealApiService::class.java)
+    }
+
+    /**
+     * Message API Service instance
+     */
+    val messageApiService: MessageApiService by lazy {
+        retrofit.create(MessageApiService::class.java)
+    }
+
+    /**
+     * Activity API Service instance
+     */
+    val activityApiService: ActivityApiService by lazy {
+        retrofit.create(ActivityApiService::class.java)
     }
 
     // Add other API services here as needed

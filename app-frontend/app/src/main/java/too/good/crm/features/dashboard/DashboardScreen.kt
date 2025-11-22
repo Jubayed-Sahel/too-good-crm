@@ -53,10 +53,10 @@ fun DashboardScreen(
             ?: profileState.activeProfile?.organization?.id
     }
     
-    // Load stats when profile is loaded and organization ID is determined
+    // Load stats when profile is loaded
     LaunchedEffect(profileState.activeProfile?.id, profileState.isLoading) {
         if (!profileState.isLoading && profileState.activeProfile != null) {
-            dashboardViewModel.loadStats(organizationId)
+            dashboardViewModel.loadStats()
         }
     }
     
@@ -125,12 +125,8 @@ fun DashboardScreen(
                     UserSession.activeMode = newMode
                     activeMode = newMode
                     
-                    // Refresh dashboard stats with new organization ID
-                    val newOrgId = when (primaryProfile.profileType) {
-                        "vendor", "employee" -> primaryProfile.organizationId
-                        else -> null
-                    }
-                    dashboardViewModel.loadStats(newOrgId)
+                    // Refresh dashboard stats
+                    dashboardViewModel.loadStats()
                     
                     // Navigate based on profile type
                     when (primaryProfile.profileType) {
@@ -194,14 +190,24 @@ fun DashboardScreen(
                 // Show stats cards
                 val stats = dashboardState.stats
                 
+                // Extract values from Map
+                val totalCustomers = (stats?.get("total_customers") as? Int) ?: 0
+                val customerGrowth = (stats?.get("customer_growth_percent") as? Double)
+                val totalDeals = (stats?.get("total_deals") as? Int) ?: 0
+                val dealGrowth = (stats?.get("deal_growth_percent") as? Double)
+                val totalRevenue = (stats?.get("total_revenue") as? Double) ?: 0.0
+                val revenueGrowth = (stats?.get("revenue_growth_percent") as? Double)
+                val activeLeads = (stats?.get("active_leads") as? Int)
+                val leadGrowth = (stats?.get("lead_growth_percent") as? Double)
+                
                 // Total Customers Card
                 MetricCard(
                     title = "TOTAL CUSTOMERS",
-                    value = stats?.totalCustomers?.toString() ?: "0",
-                    change = formatPercentage(stats?.customerGrowthPercent),
+                    value = totalCustomers.toString(),
+                    change = formatPercentage(customerGrowth),
                     changeLabel = "vs last month",
                     icon = Icons.Default.People,
-                    isPositive = (stats?.customerGrowthPercent ?: 0.0) >= 0,
+                    isPositive = (customerGrowth ?: 0.0) >= 0,
                     iconBackgroundColor = DesignTokens.Colors.Primary100,
                     iconTintColor = DesignTokens.Colors.Primary
                 )
@@ -210,11 +216,11 @@ fun DashboardScreen(
                 // Active Deals Card
                 MetricCard(
                     title = "ACTIVE DEALS",
-                    value = stats?.totalDeals?.toString() ?: "0",
-                    change = formatPercentage(stats?.dealGrowthPercent),
+                    value = totalDeals.toString(),
+                    change = formatPercentage(dealGrowth),
                     changeLabel = "vs last month",
                     icon = Icons.Default.Description,
-                    isPositive = (stats?.dealGrowthPercent ?: 0.0) >= 0,
+                    isPositive = (dealGrowth ?: 0.0) >= 0,
                     iconBackgroundColor = DesignTokens.Colors.Info100,
                     iconTintColor = DesignTokens.Colors.Info
                 )
@@ -223,25 +229,25 @@ fun DashboardScreen(
                 // Revenue Card
                 MetricCard(
                     title = "REVENUE",
-                    value = formatCurrency(stats?.totalRevenue ?: 0.0),
-                    change = formatPercentage(stats?.revenueGrowthPercent),
+                    value = formatCurrency(totalRevenue),
+                    change = formatPercentage(revenueGrowth),
                     changeLabel = "vs last month",
                     icon = Icons.Default.AttachMoney,
-                    isPositive = (stats?.revenueGrowthPercent ?: 0.0) >= 0,
+                    isPositive = (revenueGrowth ?: 0.0) >= 0,
                     iconBackgroundColor = DesignTokens.Colors.Success100,
                     iconTintColor = DesignTokens.Colors.Success
                 )
                 Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
                 
                 // Active Leads Card
-                if (stats?.activeLeads != null) {
+                if (activeLeads != null) {
                     MetricCard(
                         title = "ACTIVE LEADS",
-                        value = stats.activeLeads.toString(),
-                        change = formatPercentage(stats.leadGrowthPercent),
+                        value = activeLeads.toString(),
+                        change = formatPercentage(leadGrowth),
                         changeLabel = "vs last month",
                         icon = Icons.Default.TrendingUp,
-                        isPositive = (stats.leadGrowthPercent ?: 0.0) >= 0,
+                        isPositive = (leadGrowth ?: 0.0) >= 0,
                         iconBackgroundColor = DesignTokens.Colors.Warning100,
                         iconTintColor = DesignTokens.Colors.Warning
                     )
