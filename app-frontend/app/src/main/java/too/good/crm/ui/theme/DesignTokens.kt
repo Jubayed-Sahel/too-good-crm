@@ -7,70 +7,161 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 object DesignTokens {
-    // Colors - Material Design 3 Vendor/Admin Theme
+    // Colors - Material Design 3 Vendor/Admin Theme (Matching Web App)
     object Colors {
-        // Brand Colors (Vendor Primary)
-        val Primary = Color(0xFF667EEA) // Purple 500
-        val PrimaryVariant = Color(0xFF764BA2) // Purple 700
-        val PrimaryLight = Color(0xFF8A9DF0) // Purple 300
-        val PrimaryContainer = Color(0xFFE8EBFA) // Purple 50
+        // Brand Colors (Vendor Primary - Matching Web App)
+        val Primary = Color(0xFF8B5CF6) // Purple 500
+        val PrimaryVariant = Color(0xFF7C3AED) // Purple 600
+        val PrimaryLight = Color(0xFFA78BFA) // Purple 400
+        val PrimaryDark = Color(0xFF6D28D9) // Purple 700
+        val PrimaryContainer = Color(0xFFEDE9FE) // Purple 100
+        
+        // Primary Color Scale (Matching Web App)
+        val Primary50 = Color(0xFFF5F3FF)
+        val Primary100 = Color(0xFFEDE9FE)
+        val Primary200 = Color(0xFFDDD6FE)
+        val Primary300 = Color(0xFFC4B5FD)
+        val Primary400 = Color(0xFFA78BFA)
+        val Primary500 = Color(0xFF8B5CF6)
+        val Primary600 = Color(0xFF7C3AED)
+        val Primary700 = Color(0xFF6D28D9)
+        val Primary800 = Color(0xFF5B21B6)
+        val Primary900 = Color(0xFF4C1D95)
 
-        // Secondary Colors (Accent)
-        val Secondary = Color(0xFF5E72E4) // Indigo 500
-        val SecondaryVariant = Color(0xFF4F5FD8) // Indigo 600
-        val SecondaryContainer = Color(0xFFE5E8FB) // Indigo 50
+        // Secondary Colors (Blue - Matching Web App)
+        val Secondary = Color(0xFF3B82F6) // Blue 500
+        val SecondaryVariant = Color(0xFF2563EB) // Blue 600
+        val SecondaryLight = Color(0xFF60A5FA) // Blue 400
+        val SecondaryDark = Color(0xFF1D4ED8) // Blue 700
+        val SecondaryContainer = Color(0xFFDBEAFE) // Blue 100
+        
+        // Secondary Color Scale (Matching Web App)
+        val Secondary50 = Color(0xFFEFF6FF)
+        val Secondary100 = Color(0xFFDBEAFE)
+        val Secondary200 = Color(0xFFBFDBFE)
+        val Secondary300 = Color(0xFF93C5FD)
+        val Secondary400 = Color(0xFF60A5FA)
+        val Secondary500 = Color(0xFF3B82F6)
+        val Secondary600 = Color(0xFF2563EB)
+        val Secondary700 = Color(0xFF1D4ED8)
+        val Secondary800 = Color(0xFF1E40AF)
+        val Secondary900 = Color(0xFF1E3A8A)
 
-        // Semantic Colors
-        val Success = Color(0xFF10B981) // Green 500
-        val SuccessLight = Color(0xFFD1FAE5) // Green 100
-        val SuccessDark = Color(0xFF047857) // Green 700
+        // Semantic Colors (Matching Web App)
+        val Success = Color(0xFF22C55E) // Green 500
+        val SuccessLight = Color(0xFFDCFCE7) // Green 100
+        val SuccessDark = Color(0xFF15803D) // Green 700
+        val Success50 = Color(0xFFF0FDF4)
+        val Success100 = Color(0xFFDCFCE7)
+        val Success200 = Color(0xFFBBF7D0)
+        val Success300 = Color(0xFF86EFAC)
+        val Success400 = Color(0xFF4ADE80)
+        val Success500 = Color(0xFF22C55E)
+        val Success600 = Color(0xFF16A34A)
+        val Success700 = Color(0xFF15803D)
+        val Success800 = Color(0xFF166534)
+        val Success900 = Color(0xFF14532D)
 
         val Warning = Color(0xFFF59E0B) // Orange 500
         val WarningLight = Color(0xFFFEF3C7) // Orange 100
-        val WarningDark = Color(0xFFD97706) // Orange 600
+        val WarningDark = Color(0xFFB45309) // Orange 700
+        val Warning50 = Color(0xFFFFFBEB)
+        val Warning100 = Color(0xFFFEF3C7)
+        val Warning200 = Color(0xFFFDE68A)
+        val Warning300 = Color(0xFFFCD34D)
+        val Warning400 = Color(0xFFFBBF24)
+        val Warning500 = Color(0xFFF59E0B)
+        val Warning600 = Color(0xFFD97706)
+        val Warning700 = Color(0xFFB45309)
+        val Warning800 = Color(0xFF92400E)
+        val Warning900 = Color(0xFF78350F)
 
         val Error = Color(0xFFEF4444) // Red 500
         val ErrorLight = Color(0xFFFEE2E2) // Red 100
-        val ErrorDark = Color(0xFFDC2626) // Red 600
+        val ErrorDark = Color(0xFFB91C1C) // Red 700
+        val Error50 = Color(0xFFFEF2F2)
+        val Error100 = Color(0xFFFEE2E2)
+        val Error200 = Color(0xFFFECACA)
+        val Error300 = Color(0xFFFCA5A5)
+        val Error400 = Color(0xFFF87171)
+        val Error500 = Color(0xFFEF4444)
+        val Error600 = Color(0xFFDC2626)
+        val Error700 = Color(0xFFB91C1C)
+        val Error800 = Color(0xFF991B1B)
+        val Error900 = Color(0xFF7F1D1D)
 
-        val Info = Color(0xFF3B82F6) // Blue 500
-        val InfoLight = Color(0xFFDBEAFE) // Blue 100
-        val InfoDark = Color(0xFF1E40AF) // Blue 700
+        val Info = Color(0xFF0EA5E9) // Sky 500 (Matching Web App)
+        val InfoLight = Color(0xFFE0F2FE) // Sky 100
+        val InfoDark = Color(0xFF0369A1) // Sky 700
+        val Info50 = Color(0xFFF0F9FF)
+        val Info100 = Color(0xFFE0F2FE)
+        val Info200 = Color(0xFFBAE6FD)
+        val Info300 = Color(0xFF7DD3FC)
+        val Info400 = Color(0xFF38BDF8)
+        val Info500 = Color(0xFF0EA5E9)
+        val Info600 = Color(0xFF0284C7)
+        val Info700 = Color(0xFF0369A1)
+        val Info800 = Color(0xFF075985)
+        val Info900 = Color(0xFF0C4A6E)
 
-        // Surface Colors
+        // Surface Colors (Matching Web App)
         val Surface = Color(0xFFFFFFFF) // White
-        val SurfaceVariant = Color(0xFFF9FAFB) // Gray 50 (Chakra UI)
-        val SurfaceTint = Color(0xFF667EEA) // Primary
+        val SurfaceVariant = Color(0xFFF9FAFB) // Gray 50
+        val SurfaceTint = Color(0xFF8B5CF6) // Primary
 
-        // Background Colors
-        val Background = Color(0xFFF9FAFB) // Gray 50 (Chakra UI)
-        val BackgroundDark = Color(0xFFF3F4F6) // Gray 100 (Chakra UI)
+        // Background Colors (Matching Web App)
+        val Background = Color(0xFFF9FAFB) // Gray 50
+        val BackgroundDark = Color(0xFFF3F4F6) // Gray 100
+        val BackgroundTertiary = Color(0xFFE5E7EB) // Gray 200
 
-        // Outline & Border Colors
-        val Outline = Color(0xFFD1D5DB) // Gray 300 (Chakra UI)
-        val OutlineVariant = Color(0xFFE5E7EB) // Gray 200 (Chakra UI)
+        // Outline & Border Colors (Matching Web App)
+        val Outline = Color(0xFFD1D5DB) // Gray 300
+        val OutlineVariant = Color(0xFFE5E7EB) // Gray 200
+        val OutlineMedium = Color(0xFFD1D5DB) // Gray 300
+        val OutlineDark = Color(0xFF9CA3AF) // Gray 400
+        val OutlineFocus = Color(0xFF8B5CF6) // Primary
 
-        // Text Colors
-        val OnSurface = Color(0xFF111827) // Gray 900 (Chakra UI)
-        val OnSurfaceVariant = Color(0xFF6B7280) // Gray 500 (Chakra UI)
-        val OnSurfaceTertiary = Color(0xFF9CA3AF) // Gray 400 (Chakra UI)
+        // Text Colors (Matching Web App)
+        val OnSurface = Color(0xFF111827) // Gray 900
+        val OnSurfaceVariant = Color(0xFF6B7280) // Gray 500
+        val OnSurfaceTertiary = Color(0xFF9CA3AF) // Gray 400
         val OnPrimary = Color(0xFFFFFFFF) // White
         val OnSecondary = Color(0xFFFFFFFF) // White
+        
+        // Text Color Aliases (Matching Web App)
+        val TextPrimary = Color(0xFF111827) // Gray 900
+        val TextSecondary = Color(0xFF6B7280) // Gray 500
+        val TextTertiary = Color(0xFF9CA3AF) // Gray 400
+        val TextInverse = Color(0xFFFFFFFF) // White
+        val TextLink = Color(0xFF8B5CF6) // Primary
+        val TextLinkHover = Color(0xFF7C3AED) // Primary 600
+        
+        // Border Colors (Matching Web App)
+        val BorderLight = Color(0xFFE5E7EB) // Gray 200
+        val BorderMedium = Color(0xFFD1D5DB) // Gray 300
+        val BorderDark = Color(0xFF9CA3AF) // Gray 400
+        val BorderFocus = Color(0xFF8B5CF6) // Primary
 
-        // Status Colors (Business Operations)
+        // Status Colors (Business Operations - Matching Web App)
         val StatusOpen = Color(0xFF3B82F6) // Blue 500
         val StatusInProgress = Color(0xFFF59E0B) // Orange 500
-        val StatusCompleted = Color(0xFF10B981) // Green 500
-        val StatusClosed = Color(0xFF64748B) // Gray 500
+        val StatusCompleted = Color(0xFF22C55E) // Green 500
+        val StatusClosed = Color(0xFF6B7280) // Gray 500
         val StatusFailed = Color(0xFFEF4444) // Red 500
         val StatusPending = Color(0xFFF59E0B) // Orange 500
-        val StatusScheduled = Color(0xFF8B5CF6) // Violet 500
+        val StatusScheduled = Color(0xFF8B5CF6) // Purple 500
+        val StatusActive = Color(0xFF22C55E) // Green 500
+        val StatusInactive = Color(0xFF6B7280) // Gray 500
+        val StatusLead = Color(0xFF60A5FA) // Blue 400
+        val StatusQualified = Color(0xFF8B5CF6) // Purple 500
+        val StatusWon = Color(0xFF22C55E) // Green 500
+        val StatusLost = Color(0xFFEF4444) // Red 500
 
-        // Priority Colors
+        // Priority Colors (Matching Web App)
         val PriorityUrgent = Color(0xFFDC2626) // Red 600
         val PriorityHigh = Color(0xFFF59E0B) // Orange 500
         val PriorityMedium = Color(0xFF3B82F6) // Blue 500
-        val PriorityLow = Color(0xFF94A3B8) // Gray 400
+        val PriorityLow = Color(0xFF9CA3AF) // Gray 400
 
         // Activity Type Colors
         val ActivityCall = Color(0xFF3B82F6) // Blue 500
@@ -80,18 +171,42 @@ object DesignTokens {
         val ActivityNote = Color(0xFFEAB308) // Yellow 500
         val ActivityTask = Color(0xFF10B981) // Green 500
 
+        // Gray Scale (Matching Web App Exactly)
+        val Gray50 = Color(0xFFF9FAFB)
+        val Gray100 = Color(0xFFF3F4F6)
+        val Gray200 = Color(0xFFE5E7EB)
+        val Gray300 = Color(0xFFD1D5DB)
+        val Gray400 = Color(0xFF9CA3AF)
+        val Gray500 = Color(0xFF6B7280)
+        val Gray600 = Color(0xFF4B5563)
+        val Gray700 = Color(0xFF374151)
+        val Gray800 = Color(0xFF1F2937)
+        val Gray900 = Color(0xFF111827)
+        
+        // Neutral Colors (Matching Web App)
+        val Neutral50 = Color(0xFFFAFAFA)
+        val Neutral100 = Color(0xFFF5F5F5)
+        val Neutral200 = Color(0xFFE5E5E5)
+        val Neutral300 = Color(0xFFD4D4D4)
+        val Neutral400 = Color(0xFFA3A3A3)
+        val Neutral500 = Color(0xFF737373)
+        val Neutral600 = Color(0xFF525252)
+        val Neutral700 = Color(0xFF404040)
+        val Neutral800 = Color(0xFF262626)
+        val Neutral900 = Color(0xFF171717)
+        
         // Special Accent Colors
         val PinkAccent = Color(0xFFEC4899) // Pink 500 - for special accents
         val PinkLight = Color(0xFFFCE7F3) // Pink 100 - for pink backgrounds
         
-        // Chart & Visualization Colors (matching Chakra UI)
-        val ChartPurple = Color(0xFF805AD5) // Purple 500 for charts
-        val ChartBlue = Color(0xFF3182CE) // Blue 600 for charts
-        val ChartOrange = Color(0xFFDD6B20) // Orange 600 for charts  
-        val ChartGreen = Color(0xFF38A169) // Green 600 for charts
-        val ChartGray = Color(0xFF718096) // Gray 500 for charts
-        val ChartYellow = Color(0xFFECC94B) // Yellow 500 for badges/gold
-        val ChartSilver = Color(0xFF718096) // Gray 500 for silver badge
+        // Chart & Visualization Colors (matching Web App)
+        val ChartPurple = Color(0xFF8B5CF6) // Purple 500 for charts
+        val ChartBlue = Color(0xFF2563EB) // Blue 600 for charts
+        val ChartOrange = Color(0xFFD97706) // Orange 600 for charts  
+        val ChartGreen = Color(0xFF16A34A) // Green 600 for charts
+        val ChartGray = Color(0xFF6B7280) // Gray 500 for charts
+        val ChartYellow = Color(0xFFEAB308) // Yellow 500 for badges/gold
+        val ChartSilver = Color(0xFF6B7280) // Gray 500 for silver badge
 
         val White = Color(0xFFFFFFFF)
         val Black = Color(0xFF000000)

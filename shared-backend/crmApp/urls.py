@@ -43,6 +43,8 @@ from crmApp.viewsets import (
     ConversationViewSet,
     # Analytics
     AnalyticsViewSet,
+    # Gemini AI
+    GeminiViewSet,
     # Jitsi Calls
     JitsiCallViewSet,
     UserPresenceViewSet,
@@ -53,6 +55,14 @@ from crmApp.views.issue_actions import RaiseIssueView, ResolveIssueView
 from crmApp.views.linear_webhook import LinearWebhookView
 from crmApp.views.client_issues import ClientRaiseIssueView, ClientIssueDetailView, ClientIssueCommentView
 from crmApp.views.pusher_auth import pusher_auth
+
+# Import Telegram webhook views
+from crmApp.viewsets.telegram import (
+    telegram_webhook,
+    telegram_webhook_info,
+    telegram_set_webhook,
+    telegram_bot_info,
+)
 
 # Create router
 router = DefaultRouter()
@@ -100,6 +110,9 @@ router.register(r'conversations', ConversationViewSet, basename='conversation')
 # Analytics endpoints
 router.register(r'analytics', AnalyticsViewSet, basename='analytics')
 
+# Gemini AI endpoints
+router.register(r'gemini', GeminiViewSet, basename='gemini')
+
 # Jitsi call endpoints
 router.register(r'jitsi-calls', JitsiCallViewSet, basename='jitsi-call')
 router.register(r'user-presence', UserPresenceViewSet, basename='user-presence')
@@ -120,6 +133,12 @@ urlpatterns = [
     
     # Pusher authentication endpoint
     path('api/pusher/auth/', pusher_auth, name='pusher-auth'),
+    
+    # Telegram bot endpoints
+    path('api/telegram/webhook/', telegram_webhook, name='telegram-webhook'),
+    path('api/telegram/webhook/info/', telegram_webhook_info, name='telegram-webhook-info'),
+    path('api/telegram/webhook/set/', telegram_set_webhook, name='telegram-set-webhook'),
+    path('api/telegram/bot/info/', telegram_bot_info, name='telegram-bot-info'),
     
     # Router URLs (catch-all, must be last)
     path('api/', include(router.urls)),

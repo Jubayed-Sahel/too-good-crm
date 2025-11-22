@@ -76,6 +76,9 @@ from .notification import NotificationPreferences
 # Message models
 from .message import Message, Conversation
 
+# Telegram models
+from .telegram import TelegramUser
+
 # Export all models for backward compatibility
 __all__ = [
     # Authentication
@@ -123,4 +126,7 @@ __all__ = [
     # Messages
     'Message',
     'Conversation',
+    
+    # Telegram
+    'TelegramUser',
 ]

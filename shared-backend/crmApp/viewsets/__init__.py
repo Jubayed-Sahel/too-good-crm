@@ -62,6 +62,9 @@ from .message import MessageViewSet, ConversationViewSet
 # Analytics & Reporting
 from .analytics import AnalyticsViewSet
 
+# Gemini AI Assistant
+from .gemini import GeminiViewSet
+
 
 __all__ = [
     # Authentication & Authorization
@@ -113,4 +116,7 @@ __all__ = [
     
     # Analytics
     'AnalyticsViewSet',
+    
+    # Gemini AI
+    'GeminiViewSet',
 ]

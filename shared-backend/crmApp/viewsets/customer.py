@@ -45,41 +45,62 @@ class CustomerViewSet(
         return CustomerSerializer
     
     def perform_create(self, serializer):
-        """Auto-set organization from user's current organization based on profile"""
+        """
+        Create customer with optional organization.
+        Organization can come from:
+        1. Explicitly provided in request data
+        2. User's primary profile organization (fallback)
+        3. None (for independent customers)
+        """
         import logging
         logger = logging.getLogger(__name__)
         
-        # Get organization from request or use user's primary profile organization
+        # Get organization from request (can be None/null for independent customers)
         organization_id = self.request.data.get('organization')
         
-        if not organization_id:
-            # Fallback to user's primary profile organization
+        # If not explicitly provided, try to use user's profile organization as default
+        if organization_id is None:
+            # Try to get from user's primary profile
             primary_profile = self.request.user.user_profiles.filter(
                 is_primary=True,
                 status='active'
             ).first()
             
-            if primary_profile:
+            if primary_profile and primary_profile.organization_id:
                 organization_id = primary_profile.organization_id
             else:
                 # If no primary, get first active profile
                 first_profile = self.request.user.user_profiles.filter(status='active').first()
-                if first_profile:
+                if first_profile and first_profile.organization_id:
                     organization_id = first_profile.organization_id
         
-        logger.info(f"Creating customer for organization: {organization_id}, user: {self.request.user.username}")
-        logger.info(f"Request data organization: {self.request.data.get('organization')}")
+        logger.info(f"Creating customer - org: {organization_id}, user: {self.request.user.username}")
         
+        # Save with organization_id (can be None)
         serializer.save(organization_id=organization_id)
     
     def get_queryset(self):
-        """Filter customers by user's organizations through user_profiles"""
+        """
+        Filter customers by user's organizations through user_profiles.
+        If user has no organization, show customers without organization.
+        """
         # Get organization IDs from user's active profiles
-        user_orgs = self.request.user.user_profiles.filter(
+        user_orgs = list(self.request.user.user_profiles.filter(
             status='active'
-        ).values_list('organization_id', flat=True)
+        ).values_list('organization_id', flat=True))
         
-        queryset = Customer.objects.filter(organization_id__in=user_orgs)
+        # Filter out None values
+        user_orgs = [org_id for org_id in user_orgs if org_id is not None]
+        
+        if user_orgs:
+            # User has organizations - show customers in those orgs OR customers with no org
+            from django.db.models import Q
+            queryset = Customer.objects.filter(
+                Q(organization_id__in=user_orgs) | Q(organization_id__isnull=True)
+            )
+        else:
+            # User has no organization - show only customers without organization
+            queryset = Customer.objects.filter(organization_id__isnull=True)
         
         # Filter by organization
         org_id = self.request.query_params.get('organization')

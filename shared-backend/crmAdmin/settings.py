@@ -307,6 +307,12 @@ JITSI_8X8_KID = os.getenv('JITSI_8X8_KID', '')  # Key ID from 8x8 dashboard
 JITSI_SERVER = os.getenv('JITSI_SERVER', '8x8.vc')  # 8x8 video server domain
 JITSI_JWT_ALGORITHM = 'RS256'  # 8x8 uses RS256 for JWT signing
 JITSI_JWT_EXPIRES_IN = 3600  # JWT expiration time in seconds (1 hour)
+# Gemini AI Integration Settings
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
+# Telegram Bot Integration Settings
+TG_BOT_TOKEN = os.getenv('TG_BOT_TOKEN', '')
+TG_WEBHOOK_SECRET = os.getenv('TG_WEBHOOK_SECRET', '')
 
 # Security Settings (for production)
 if not DEBUG:

@@ -1,15 +1,13 @@
 import { SimpleGrid, Text, VStack, Button } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import InfoCard from './InfoCard';
-import { FiUsers, FiFileText, FiUserPlus, FiTrendingUp, FiActivity } from 'react-icons/fi';
+import { FiUsers, FiTrendingUp, FiActivity, FiMessageCircle, FiExternalLink } from 'react-icons/fi';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { usePermissionActions } from '@/hooks/usePermissionActions';
 
 const InfoCardsGrid = () => {
   const navigate = useNavigate();
   const { canAccess } = usePermissions();
-  const dealsPermissions = usePermissionActions('deals');
-  const leadsPermissions = usePermissionActions('leads');
   const customersPermissions = usePermissionActions('customers');
 
   const quickAccessCards = [];
@@ -27,38 +25,6 @@ const InfoCardsGrid = () => {
       actionLabel: customersPermissions.canCreate ? 'Create Customer' : 'View Customers',
       actionPath: '/customers',
       canCreate: customersPermissions.canCreate,
-    });
-  }
-
-  // Deals card - only if employee has access
-  if (canAccess('deals')) {
-    quickAccessCards.push({
-      title: 'Deals',
-      icon: <FiFileText />,
-      iconBg: 'blue.100',
-      iconColor: 'blue.600',
-      description: dealsPermissions.canCreate
-        ? 'Track your sales pipeline and create new deals.'
-        : 'View your active deals and sales pipeline.',
-      actionLabel: dealsPermissions.canCreate ? 'Create Deal' : 'View Deals',
-      actionPath: '/deals',
-      canCreate: dealsPermissions.canCreate,
-    });
-  }
-
-  // Leads card - only if employee has access
-  if (canAccess('leads')) {
-    quickAccessCards.push({
-      title: 'Leads',
-      icon: <FiUserPlus />,
-      iconBg: 'green.100',
-      iconColor: 'green.600',
-      description: leadsPermissions.canCreate
-        ? 'Manage your leads and convert them into customers.'
-        : 'View and track your leads.',
-      actionLabel: leadsPermissions.canCreate ? 'Create Lead' : 'View Leads',
-      actionPath: '/leads',
-      canCreate: leadsPermissions.canCreate,
     });
   }
 
@@ -90,7 +56,21 @@ const InfoCardsGrid = () => {
     });
   }
 
-  // If no cards to show, return null
+  // Telegram Bot card - always show for all users
+  quickAccessCards.push({
+    title: 'Telegram Bot',
+    icon: <FiMessageCircle />,
+    iconBg: 'blue.100',
+    iconColor: 'blue.600',
+    description: 'Connect with LeadGrid Bot on Telegram for quick access to your CRM, receive notifications, and manage your leads and deals on the go.',
+    actionLabel: 'Open LeadGrid Bot',
+    actionPath: 'https://t.me/LeadGrid_bot',
+    canCreate: false,
+    isExternal: true,
+  });
+
+  // Always show at least the Telegram Bot card
+  // (This check is now redundant since we always add the Telegram Bot card, but kept for safety)
   if (quickAccessCards.length === 0) {
     return null;
   }
@@ -110,11 +90,18 @@ const InfoCardsGrid = () => {
               {card.description}
             </Text>
             <Button
-              colorPalette={card.canCreate ? 'purple' : 'gray'}
+              colorPalette={card.canCreate ? 'purple' : card.isExternal ? 'blue' : 'gray'}
               variant={card.canCreate ? 'solid' : 'outline'}
-              onClick={() => navigate(card.actionPath)}
+              onClick={() => {
+                if (card.isExternal) {
+                  window.open(card.actionPath, '_blank');
+                } else {
+                  navigate(card.actionPath);
+                }
+              }}
               size="sm"
               width="fit-content"
+              leftIcon={card.isExternal ? <FiExternalLink /> : undefined}
             >
               {card.actionLabel}
             </Button>

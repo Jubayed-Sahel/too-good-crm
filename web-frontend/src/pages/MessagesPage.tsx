@@ -22,12 +22,13 @@ import {
   DialogFooter,
   DialogCloseTrigger,
 } from '../components/ui/dialog';
-import { FiMessageSquare, FiSend, FiPlus, FiSearch } from 'react-icons/fi';
+import { FiMessageSquare, FiSend, FiPlus, FiSearch, FiExternalLink } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { useMessages, useConversations, useSendMessage, useRecipients, useMessagesWithUser, useUnreadCount, useMarkMessageRead } from '@/hooks/useMessages';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { toaster } from '@/components/ui/toaster';
+import { GeminiChatWindow } from '@/components/messages/GeminiChatWindow';
 
 // Simple date formatting function
 const formatTimeAgo = (date: string | Date): string => {
@@ -42,6 +43,9 @@ const formatTimeAgo = (date: string | Date): string => {
   return then.toLocaleDateString();
 };
 
+// Special ID for AI Assistant
+const AI_ASSISTANT_ID = -1;
+
 const MessagesPage = () => {
   const { user } = useAuth();
   const { isVendor, isEmployee } = usePermissions();
@@ -52,7 +56,10 @@ const MessagesPage = () => {
   const [selectedRecipientId, setSelectedRecipientId] = useState<string>('');
 
   const { data: conversations, isLoading: conversationsLoading } = useConversations();
-  const { data: messages, isLoading: messagesLoading } = useMessagesWithUser(selectedUserId);
+  // Only fetch messages for real users (not AI Assistant)
+  const { data: messages, isLoading: messagesLoading } = useMessagesWithUser(
+    selectedUserId === AI_ASSISTANT_ID ? null : selectedUserId
+  );
   const { data: recipients } = useRecipients();
   const { data: unreadCount } = useUnreadCount();
   const sendMessage = useSendMessage();
@@ -66,6 +73,11 @@ const MessagesPage = () => {
   );
 
   const handleSendMessage = async () => {
+    // Don't send regular messages to AI Assistant
+    if (selectedUserId === AI_ASSISTANT_ID) {
+      return;
+    }
+    
     if (!selectedUserId || !messageContent.trim()) {
       toaster.create({
         title: 'Error',
@@ -121,9 +133,9 @@ const MessagesPage = () => {
     }
   };
 
-  // Mark messages as read when messages change and conversation is selected
+  // Mark messages as read when messages change and conversation is selected (skip for AI Assistant)
   React.useEffect(() => {
-    if (messages && selectedUserId && user) {
+    if (messages && selectedUserId && selectedUserId !== AI_ASSISTANT_ID && user) {
       messages.forEach(msg => {
         if (!msg.is_read && msg.recipient.id === user.id && msg.sender.id === selectedUserId) {
           markRead.mutate(msg.id);
@@ -145,7 +157,7 @@ const MessagesPage = () => {
 
   return (
     <DashboardLayout title="Messages">
-      <HStack align="stretch" gap={4} h="calc(100vh - 200px)">
+      <HStack align="stretch" gap={4} h="calc(100vh - 80px)" minH="600px">
         {/* Conversations List */}
         <Box
           w="350px"
@@ -211,19 +223,83 @@ const MessagesPage = () => {
                 <Spinner size="lg" />
                 <Text color="gray.500">Loading conversations...</Text>
               </VStack>
-            ) : filteredConversations.length === 0 ? (
-              <VStack justify="center" py={12} px={4}>
-                <FiMessageSquare size={48} color="var(--gray-400)" />
-                <Text color="gray.500" textAlign="center">
-                  No conversations yet
-                </Text>
-                <Text fontSize="sm" color="gray.400" textAlign="center">
-                  Start a conversation by sending a message
-                </Text>
-              </VStack>
             ) : (
               <VStack align="stretch" gap={0}>
-                {filteredConversations.map((conversation) => {
+                {/* Telegram Bot - Show for all users */}
+                <Box
+                  p={4}
+                  bg="blue.50"
+                  borderBottomWidth="1px"
+                  borderBottomColor="gray.100"
+                  borderRadius="md"
+                  mb={2}
+                >
+                  <HStack justify="space-between" mb={1}>
+                    <HStack>
+                      <Text fontSize="lg">📱</Text>
+                      <Text fontWeight="semibold" fontSize="sm">
+                        Telegram Bot
+                      </Text>
+                    </HStack>
+                  </HStack>
+                  <Text fontSize="xs" color="gray.600" mb={2} noOfLines={2}>
+                    Connect with LeadGrid Bot on Telegram for quick access to your CRM
+                  </Text>
+                  <Button
+                    size="xs"
+                    colorPalette="blue"
+                    variant="outline"
+                    onClick={() => window.open('https://t.me/LeadGrid_bot', '_blank')}
+                    leftIcon={<FiExternalLink size={12} />}
+                    width="100%"
+                  >
+                    Open LeadGrid Bot
+                  </Button>
+                </Box>
+
+                {/* AI Assistant - Show for Vendors and Employees */}
+                {(isVendor || isEmployee) && (
+                  <Box
+                    p={4}
+                    cursor="pointer"
+                    bg={selectedUserId === AI_ASSISTANT_ID ? 'purple.50' : 'white'}
+                    borderLeftWidth={selectedUserId === AI_ASSISTANT_ID ? '3px' : '0'}
+                    borderLeftColor={selectedUserId === AI_ASSISTANT_ID ? 'purple.500' : 'transparent'}
+                    borderBottomWidth="1px"
+                    borderBottomColor="gray.100"
+                    _hover={{ bg: selectedUserId === AI_ASSISTANT_ID ? 'purple.50' : 'gray.50' }}
+                    onClick={() => setSelectedUserId(AI_ASSISTANT_ID)}
+                  >
+                    <HStack justify="space-between" mb={1}>
+                      <HStack>
+                        <Text fontSize="lg">🤖</Text>
+                        <Text fontWeight="semibold" fontSize="sm">
+                          AI Assistant
+                        </Text>
+                        <Badge colorPalette="purple" size="sm">
+                          NEW
+                        </Badge>
+                      </HStack>
+                    </HStack>
+                    <Text fontSize="xs" color="gray.600" noOfLines={1}>
+                      Ask me about your CRM data, analytics, and more
+                    </Text>
+                  </Box>
+                )}
+
+                {/* Regular Conversations */}
+                {filteredConversations.length === 0 && !isVendor && !isEmployee ? (
+                  <VStack justify="center" py={12} px={4}>
+                    <FiMessageSquare size={48} color="var(--gray-400)" />
+                    <Text color="gray.500" textAlign="center">
+                      No conversations yet
+                    </Text>
+                    <Text fontSize="sm" color="gray.400" textAlign="center">
+                      Start a conversation by sending a message
+                    </Text>
+                  </VStack>
+                ) : (
+                  filteredConversations.map((conversation) => {
                   const participant = conversation.other_participant;
                   const isSelected = selectedUserId === participant?.id;
                   
@@ -265,14 +341,20 @@ const MessagesPage = () => {
                       )}
                     </Box>
                   );
-                })}
+                  })
+                )}
               </VStack>
             )}
           </Box>
         </Box>
 
         {/* Chat Window */}
-        <Box
+        {selectedUserId === AI_ASSISTANT_ID ? (
+          /* AI Assistant Chat Window */
+          <GeminiChatWindow />
+        ) : (
+          /* Regular User Chat Window */
+          <Box
           flex={1}
           bg="white"
           borderRadius="xl"
@@ -393,7 +475,8 @@ const MessagesPage = () => {
               </Text>
             </VStack>
           )}
-        </Box>
+          </Box>
+        )}
       </HStack>
 
       {/* New Message Dialog */}

@@ -162,6 +162,115 @@ class PusherService:
             })
         except Exception as e:
             logger.error(f"Failed to send unread count update: {e}", exc_info=True)
+    
+    def send_issue_created(self, issue, user):
+        """
+        Send real-time notification when an issue is created
+        
+        Args:
+            issue: Issue object
+            user: User who should receive the notification
+        """
+        if not self.pusher:
+            logger.debug("Pusher not available, skipping issue created notification")
+            return
+        
+        try:
+            channel_name = f'private-user-{user.id}'
+            
+            issue_data = {
+                'issue': {
+                    'id': issue.id,
+                    'issue_number': issue.issue_number,
+                    'title': issue.title,
+                    'description': issue.description,
+                    'status': issue.status,
+                    'priority': issue.priority,
+                    'category': issue.category,
+                    'organization_id': issue.organization.id if issue.organization else None,
+                    'organization_name': issue.organization.name if issue.organization else None,
+                    'synced_to_linear': issue.synced_to_linear,
+                    'linear_issue_url': issue.linear_issue_url,
+                    'created_at': issue.created_at.isoformat() if issue.created_at else None,
+                }
+            }
+            
+            self.pusher.trigger(channel_name, 'issue-created', issue_data)
+            logger.info(f"Sent Pusher notification for issue {issue.issue_number} to user {user.id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send issue created notification: {e}", exc_info=True)
+    
+    def send_issue_updated(self, issue, user, old_status=None):
+        """
+        Send real-time notification when an issue is updated
+        
+        Args:
+            issue: Issue object
+            user: User who should receive the notification
+            old_status: Previous status (if status changed)
+        """
+        if not self.pusher:
+            logger.debug("Pusher not available, skipping issue updated notification")
+            return
+        
+        try:
+            channel_name = f'private-user-{user.id}'
+            
+            issue_data = {
+                'issue': {
+                    'id': issue.id,
+                    'issue_number': issue.issue_number,
+                    'title': issue.title,
+                    'description': issue.description,
+                    'status': issue.status,
+                    'priority': issue.priority,
+                    'category': issue.category,
+                    'organization_id': issue.organization.id if issue.organization else None,
+                    'synced_to_linear': issue.synced_to_linear,
+                    'linear_issue_url': issue.linear_issue_url,
+                    'updated_at': issue.updated_at.isoformat() if issue.updated_at else None,
+                },
+                'old_status': old_status,
+            }
+            
+            self.pusher.trigger(channel_name, 'issue-updated', issue_data)
+            logger.info(f"Sent Pusher notification for issue {issue.issue_number} update to user {user.id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send issue updated notification: {e}", exc_info=True)
+    
+    def send_issue_status_changed(self, issue, old_status, user):
+        """
+        Send real-time notification when issue status changes
+        
+        Args:
+            issue: Issue object
+            old_status: Previous status
+            user: User who should receive the notification
+        """
+        if not self.pusher:
+            logger.debug("Pusher not available, skipping issue status changed notification")
+            return
+        
+        try:
+            channel_name = f'private-user-{user.id}'
+            
+            issue_data = {
+                'issue': {
+                    'id': issue.id,
+                    'issue_number': issue.issue_number,
+                    'status': issue.status,
+                    'old_status': old_status,
+                    'title': issue.title,
+                }
+            }
+            
+            self.pusher.trigger(channel_name, 'issue-status-changed', issue_data)
+            logger.info(f"Sent Pusher notification for issue {issue.issue_number} status change to user {user.id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send issue status changed notification: {e}", exc_info=True)
 
 
 # Singleton instance

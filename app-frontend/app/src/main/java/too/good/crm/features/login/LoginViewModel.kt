@@ -1,5 +1,6 @@
 package too.good.crm.features.login
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -9,6 +10,7 @@ import kotlinx.coroutines.launch
 import too.good.crm.data.repository.AuthRepository
 import too.good.crm.data.UserSession
 import too.good.crm.data.ActiveMode
+import too.good.crm.data.api.NetworkUtils
 
 sealed class LoginUiState {
     object Idle : LoginUiState()
@@ -18,7 +20,8 @@ sealed class LoginUiState {
 }
 
 class LoginViewModel(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
@@ -44,6 +47,18 @@ class LoginViewModel(
             return
         }
 
+        // Check network connectivity first
+        if (!NetworkUtils.isNetworkAvailable(context)) {
+            _uiState.value = LoginUiState.Error(
+                "No internet connection.\n\n" +
+                "Please check:\n" +
+                "• WiFi or mobile data is enabled\n" +
+                "• Device is connected to network\n" +
+                "• Network has internet access"
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
 
@@ -51,49 +66,103 @@ class LoginViewModel(
 
             result.fold(
                 onSuccess = { loginResponse ->
-                    // Convert User to AppUserProfile
-                    val user = loginResponse.user
-                    val profiles = user.profiles ?: emptyList()
+                    // Refresh user data from backend to get latest profiles and primary profile
+                    val refreshResult = authRepository.refreshUser()
+                    refreshResult.fold(
+                        onSuccess = { refreshedUser ->
+                            // Use refreshed user data (has latest profiles and primaryProfile)
+                            val user = refreshedUser
+                            val profiles = user.profiles ?: emptyList()
+                            
+                            // Get primary profile from backend response (most up-to-date)
+                            val primaryProfile = user.primaryProfile 
+                                ?: profiles.find { it.isPrimary }
+                                ?: profiles.firstOrNull()
 
-                    // Determine user role based on profiles
-                    val hasCustomerProfile = profiles.any { it.profileType == "customer" }
-                    val hasVendorProfile = profiles.any {
-                        it.profileType == "employee" || it.profileType == "vendor"
-                    }
+                            // Determine user role based on profiles
+                            val hasCustomerProfile = profiles.any { it.profileType == "customer" }
+                            val hasVendorProfile = profiles.any {
+                                it.profileType == "employee" || it.profileType == "vendor"
+                            }
 
-                    val userRole = when {
-                        hasCustomerProfile && hasVendorProfile -> too.good.crm.data.UserRole.BOTH
-                        hasCustomerProfile -> too.good.crm.data.UserRole.CLIENT
-                        hasVendorProfile -> too.good.crm.data.UserRole.VENDOR
-                        else -> too.good.crm.data.UserRole.CLIENT // Default to client
-                    }
+                            val userRole = when {
+                                hasCustomerProfile && hasVendorProfile -> too.good.crm.data.UserRole.BOTH
+                                hasCustomerProfile -> too.good.crm.data.UserRole.CLIENT
+                                hasVendorProfile -> too.good.crm.data.UserRole.VENDOR
+                                else -> too.good.crm.data.UserRole.CLIENT // Default to client
+                            }
 
-                    // Get the primary profile
-                    val primaryProfile = when {
-                        hasVendorProfile -> profiles.firstOrNull {
-                            it.profileType == "employee" || it.profileType == "vendor"
+                            // Set active mode based on primary profile type
+                            val activeMode = when (primaryProfile?.profileType) {
+                                "vendor", "employee" -> ActiveMode.VENDOR
+                                "customer" -> ActiveMode.CLIENT
+                                else -> if (hasVendorProfile) ActiveMode.VENDOR else ActiveMode.CLIENT
+                            }
+
+                            if (primaryProfile != null) {
+                                // Set user session with AppUserProfile
+                                UserSession.currentProfile = too.good.crm.data.AppUserProfile(
+                                    id = user.id,
+                                    name = "${user.firstName} ${user.lastName}",
+                                    email = user.email,
+                                    role = userRole,
+                                    organizationId = primaryProfile.organizationId ?: 0,
+                                    organizationName = primaryProfile.organizationName 
+                                        ?: primaryProfile.organization?.name 
+                                        ?: "Unknown",
+                                    activeMode = activeMode
+                                )
+                                UserSession.activeMode = activeMode
+                            }
+
+                            _uiState.value = LoginUiState.Success("Login successful")
+                            onSuccess()
+                        },
+                        onFailure = { refreshError ->
+                            // Fallback to login response if refresh fails
+                            val user = loginResponse.user
+                            val profiles = user.profiles ?: emptyList()
+                            val primaryProfile = user.primaryProfile 
+                                ?: profiles.find { it.isPrimary }
+                                ?: profiles.firstOrNull()
+
+                            val hasCustomerProfile = profiles.any { it.profileType == "customer" }
+                            val hasVendorProfile = profiles.any {
+                                it.profileType == "employee" || it.profileType == "vendor"
+                            }
+
+                            val userRole = when {
+                                hasCustomerProfile && hasVendorProfile -> too.good.crm.data.UserRole.BOTH
+                                hasCustomerProfile -> too.good.crm.data.UserRole.CLIENT
+                                hasVendorProfile -> too.good.crm.data.UserRole.VENDOR
+                                else -> too.good.crm.data.UserRole.CLIENT
+                            }
+
+                            val activeMode = when (primaryProfile?.profileType) {
+                                "vendor", "employee" -> ActiveMode.VENDOR
+                                "customer" -> ActiveMode.CLIENT
+                                else -> if (hasVendorProfile) ActiveMode.VENDOR else ActiveMode.CLIENT
+                            }
+
+                            if (primaryProfile != null) {
+                                UserSession.currentProfile = too.good.crm.data.AppUserProfile(
+                                    id = user.id,
+                                    name = "${user.firstName} ${user.lastName}",
+                                    email = user.email,
+                                    role = userRole,
+                                    organizationId = primaryProfile.organizationId ?: 0,
+                                    organizationName = primaryProfile.organizationName 
+                                        ?: primaryProfile.organization?.name 
+                                        ?: "Unknown",
+                                    activeMode = activeMode
+                                )
+                                UserSession.activeMode = activeMode
+                            }
+
+                            _uiState.value = LoginUiState.Success("Login successful")
+                            onSuccess()
                         }
-                        else -> profiles.firstOrNull { it.profileType == "customer" }
-                    } ?: profiles.firstOrNull()
-
-                    if (primaryProfile != null) {
-                        // Set user session with AppUserProfile
-                        UserSession.currentProfile = too.good.crm.data.AppUserProfile(
-                            id = user.id,
-                            name = "${user.firstName} ${user.lastName}",
-                            email = user.email,
-                            role = userRole,
-                            organizationId = primaryProfile.organizationId,
-                            organizationName = primaryProfile.organizationName ?: "Unknown",
-                            activeMode = if (userRole == too.good.crm.data.UserRole.VENDOR ||
-                                            userRole == too.good.crm.data.UserRole.BOTH)
-                                        ActiveMode.VENDOR
-                                        else ActiveMode.CLIENT
-                        )
-                    }
-
-                    _uiState.value = LoginUiState.Success("Login successful")
-                    onSuccess()
+                    )
                 },
                 onFailure = { error ->
                     _uiState.value = LoginUiState.Error(

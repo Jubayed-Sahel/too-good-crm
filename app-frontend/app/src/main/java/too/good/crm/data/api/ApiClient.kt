@@ -12,19 +12,25 @@ import java.util.concurrent.TimeUnit
  */
 object ApiClient {
 
-    // TODO: Update this with your backend URL
-    // For local testing on Android Emulator, use:
-//    private const val BASE_URL = "http://10.0.2.2:8000/api/"
-
-    // For physical device on same network, use:
-    // Step 1: Find your computer's IP address:
-    //   Windows: Open CMD and type: ipconfig (look for IPv4 Address)
-    //   Mac/Linux: Open Terminal and type: ifconfig or ip addr
-    // Step 2: Replace the IP below with your actual IP (e.g., "http://192.168.1.100:8000/api/")
-     private const val BASE_URL = "http://192.168.0.218:8000/api/"
-
-    // For production/ngrok:
-    // private const val BASE_URL = "https://your-ngrok-url.ngrok-free.dev/api/"
+    // ⚠️ BASE_URL Configuration
+    // Backend running on 0.0.0.0:8000
+    //
+    // OPTION 1: Android Emulator
+    //   Use: "http://10.0.2.2:8000/api/"
+    //   10.0.2.2 is the special IP that emulator uses to access host machine's localhost
+    //
+    // OPTION 2: Physical Device on Same Network
+    //   Find your computer's IP address:
+    //     Windows: ipconfig (look for IPv4 Address)
+    //     Mac/Linux: ifconfig or ip addr
+    //   Example: "http://192.168.1.100:8000/api/"
+    //
+    // OPTION 3: ngrok (for external access/testing)
+    //   Use: "https://your-ngrok-url.ngrok-free.dev/api/"
+    //
+    // ✅ CURRENT: Physical Device on same WiFi network (192.168.0.106)
+    // Make sure your phone is connected to the SAME WiFi network as your PC!
+    private const val BASE_URL = "http://192.168.0.106:8000/api/"
 
     private var authToken: String? = null
 
@@ -33,6 +39,13 @@ object ApiClient {
      */
     fun setAuthToken(token: String) {
         authToken = token
+    }
+    
+    /**
+     * Get the current authentication token
+     */
+    fun getAuthToken(): String? {
+        return authToken
     }
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
@@ -57,9 +70,10 @@ object ApiClient {
 
             chain.proceed(request)
         }
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
+        .connectTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(true)
         .build()
 
     private val retrofit = Retrofit.Builder()
@@ -70,6 +84,7 @@ object ApiClient {
 
     /**
      * Issue API Service instance
+     * NOTE: If IDE shows errors, do: File -> Invalidate Caches -> Invalidate and Restart
      */
     val issueApiService: IssueApiService by lazy {
         retrofit.create(IssueApiService::class.java)
@@ -77,6 +92,7 @@ object ApiClient {
 
     /**
      * Auth API Service instance
+     * NOTE: If IDE shows errors, do: File -> Invalidate Caches -> Invalidate and Restart
      */
     val authApiService: AuthApiService by lazy {
         retrofit.create(AuthApiService::class.java)
@@ -87,6 +103,55 @@ object ApiClient {
      */
     val customerApiService: CustomerApiService by lazy {
         retrofit.create(CustomerApiService::class.java)
+    }
+
+    /**
+     * Role Selection API Service instance
+     */
+    val roleSelectionApiService: RoleSelectionApiService by lazy {
+        retrofit.create(RoleSelectionApiService::class.java)
+    }
+
+    /**
+     * Analytics API Service instance
+     */
+    val analyticsApiService: AnalyticsApiService by lazy {
+        retrofit.create(AnalyticsApiService::class.java)
+    }
+
+    /**
+     * Employee API Service instance
+     */
+    val employeeApiService: EmployeeApiService by lazy {
+        retrofit.create(EmployeeApiService::class.java)
+    }
+
+    /**
+     * Lead API Service instance
+     */
+    val leadApiService: LeadApiService by lazy {
+        retrofit.create(LeadApiService::class.java)
+    }
+
+    /**
+     * Deal API Service instance
+     */
+    val dealApiService: DealApiService by lazy {
+        retrofit.create(DealApiService::class.java)
+    }
+
+    /**
+     * Message API Service instance
+     */
+    val messageApiService: MessageApiService by lazy {
+        retrofit.create(MessageApiService::class.java)
+    }
+
+    /**
+     * Activity API Service instance
+     */
+    val activityApiService: ActivityApiService by lazy {
+        retrofit.create(ActivityApiService::class.java)
     }
 
     // Add other API services here as needed

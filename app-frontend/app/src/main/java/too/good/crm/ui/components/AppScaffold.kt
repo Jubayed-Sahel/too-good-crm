@@ -2,6 +2,9 @@ package too.good.crm.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +22,10 @@ import too.good.crm.ui.theme.DesignTokens
 fun AppScaffoldWithDrawer(
     title: String,
     activeMode: ActiveMode,
+    profiles: List<too.good.crm.data.model.UserProfile> = emptyList(),
+    activeProfile: too.good.crm.data.model.UserProfile? = null,
+    isSwitchingProfile: Boolean = false,
+    onProfileSelected: ((too.good.crm.data.model.UserProfile) -> Unit)? = null,
     onModeChanged: (ActiveMode) -> Unit,
     onNavigate: (String) -> Unit,
     onLogout: () -> Unit,
@@ -27,6 +34,7 @@ fun AppScaffoldWithDrawer(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val canSwitchMode = UserSession.canSwitchMode()
+    val hasMultipleProfiles = profiles.size > 1
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -45,11 +53,14 @@ fun AppScaffoldWithDrawer(
         }
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Role Switcher ABOVE the top bar - ALWAYS VISIBLE
-            if (canSwitchMode) {
-                RoleSwitcher(
-                    currentMode = activeMode,
-                    onModeChanged = onModeChanged,
+            // Profile Switcher ABOVE the top bar - Only show if user has multiple profiles
+            // Employee profiles only show if they have an organization (same logic as web app)
+            if (hasMultipleProfiles && onProfileSelected != null) {
+                ProfileSwitcher(
+                    profiles = profiles,
+                    activeProfile = activeProfile,
+                    isSwitching = isSwitchingProfile,
+                    onProfileSelected = onProfileSelected,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -81,7 +92,8 @@ fun AppScaffoldWithDrawer(
                             titleContentColor = DesignTokens.Colors.White,
                             navigationIconContentColor = DesignTokens.Colors.White,
                             actionIconContentColor = DesignTokens.Colors.White
-                        )
+                        ),
+                        windowInsets = WindowInsets(top = 0.dp)
                     )
                 },
                 containerColor = DesignTokens.Colors.Background, // Match web gray.50
@@ -142,9 +154,9 @@ fun NavigationDrawerContent(
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // Navigation Items - Different for Vendor vs Client mode
+            // Navigation Items - Match exact web sidebar structure
             if (activeMode == ActiveMode.VENDOR) {
-                // Vendor Mode Navigation
+                // Vendor Mode Navigation (matches web vendorMenuItems)
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Dashboard, contentDescription = null) },
                     label = { Text("Dashboard") },
@@ -158,28 +170,28 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("customers") }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.TrendingUp, contentDescription = null) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null) },
                     label = { Text("Sales") },
                     selected = false,
                     onClick = { onNavigate("sales") }
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Description, contentDescription = null) },
-                    label = { Text("Deals") },
-                    selected = false,
-                    onClick = { onNavigate("deals") }
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = null) },
-                    label = { Text("Leads") },
-                    selected = false,
-                    onClick = { onNavigate("leads") }
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Event, contentDescription = null) },
                     label = { Text("Activities") },
                     selected = false,
                     onClick = { onNavigate("activities") }
+                )
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
+                    label = { Text("Messages") },
+                    selected = false,
+                    onClick = { onNavigate("messages") }
+                )
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.Default.ReportProblem, contentDescription = null) },
+                    label = { Text("Issues") },
+                    selected = false,
+                    onClick = { onNavigate("vendor-issues") }
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
@@ -194,10 +206,10 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("team") }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.ReportProblem, contentDescription = null) },
-                    label = { Text("Issues") },
+                    icon = { Icon(Icons.Default.People, contentDescription = null) },
+                    label = { Text("Employees") },
                     selected = false,
-                    onClick = { onNavigate("vendor-issues") }
+                    onClick = { onNavigate("employees") }
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = null) },
@@ -206,7 +218,7 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("settings") }
                 )
             } else {
-                // Client Mode Navigation
+                // Client Mode Navigation (matches web clientMenuItems)
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Dashboard, contentDescription = null) },
                     label = { Text("Dashboard") },
@@ -230,6 +242,12 @@ fun NavigationDrawerContent(
                     label = { Text("Payments") },
                     selected = false,
                     onClick = { onNavigate("payments") }
+                )
+                NavigationDrawerItem(
+                    icon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
+                    label = { Text("Messages") },
+                    selected = false,
+                    onClick = { onNavigate("messages") }
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Event, contentDescription = null) },
@@ -257,7 +275,7 @@ fun NavigationDrawerContent(
 
             // Sign Out
             NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Logout, contentDescription = null) },
+                icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
                 label = { Text("Sign Out", color = MaterialTheme.colorScheme.error) },
                 selected = false,
                 onClick = onLogout,

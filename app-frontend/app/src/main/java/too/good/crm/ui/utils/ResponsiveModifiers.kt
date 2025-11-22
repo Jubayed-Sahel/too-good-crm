@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import too.good.crm.ui.theme.DesignTokens
 
@@ -168,3 +169,86 @@ fun isTabletOrLarger(): Boolean = getWindowSize() != WindowSize.COMPACT
  */
 @Composable
 fun isExpandedScreen(): Boolean = getWindowSize() == WindowSize.EXPANDED
+
+// Helper functions with default values from DesignTokens
+
+/**
+ * Default responsive spacing using DesignTokens
+ */
+@Composable
+fun defaultResponsiveSpacing(): Dp = responsiveSpacing(
+    compact = DesignTokens.Spacing.Space4,
+    medium = DesignTokens.Spacing.Space5,
+    expanded = DesignTokens.Spacing.Space6
+)
+
+/**
+ * Default responsive padding using DesignTokens
+ */
+@Composable
+fun defaultResponsivePadding(): PaddingValues = responsivePadding(
+    compact = DesignTokens.Spacing.Space4,
+    medium = DesignTokens.Spacing.Space5,
+    expanded = DesignTokens.Spacing.Space6
+)
+
+/**
+ * Get responsive icon size based on window size
+ */
+@Composable
+fun getResponsiveIconSize(): Dp = responsiveSpacing(
+    compact = 24.dp,
+    medium = 28.dp,
+    expanded = 32.dp
+)
+
+/**
+ * Get responsive title font size based on window size
+ */
+@Composable
+fun getResponsiveTitleSize(): TextUnit = responsiveValue(
+    compact = DesignTokens.Typography.TitleLarge,
+    medium = DesignTokens.Typography.HeadlineSmall,
+    expanded = DesignTokens.Typography.HeadlineMedium
+)
+
+/**
+ * Get responsive body font size based on window size
+ */
+@Composable
+fun getResponsiveBodySize(): TextUnit = responsiveValue(
+    compact = DesignTokens.Typography.BodyMedium,
+    medium = DesignTokens.Typography.BodyLarge,
+    expanded = DesignTokens.Typography.BodyLarge
+)
+
+/**
+ * Get responsive small font size based on window size
+ */
+@Composable
+fun getResponsiveSmallSize(): TextUnit = responsiveValue(
+    compact = DesignTokens.Typography.BodySmall,
+    medium = DesignTokens.Typography.BodyMedium,
+    expanded = DesignTokens.Typography.BodyMedium
+)
+
+/**
+ * Get responsive corner radius based on window size
+ */
+@Composable
+fun getResponsiveCornerRadius(): Dp = responsiveSpacing(
+    compact = DesignTokens.Radius.Medium,
+    medium = DesignTokens.Radius.Large,
+    expanded = DesignTokens.Radius.Large
+)
+
+/**
+ * Get responsive elevation based on window size
+ */
+@Composable
+fun getResponsiveElevation(): Dp = responsiveSpacing(
+    compact = 2.dp,
+    medium = 4.dp,
+    expanded = 6.dp
+)
+

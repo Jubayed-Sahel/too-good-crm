@@ -184,3 +184,6 @@ export * from './vendor.types';
 export * from './issue.types';
 export * from './order.types';
 export * from './payment.types';
+
+// Export AI & Automation types
+export * from './gemini.types';
