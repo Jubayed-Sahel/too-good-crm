@@ -3,6 +3,7 @@ package too.good.crm.data.repository
 import too.good.crm.data.api.ApiClient
 import too.good.crm.data.model.CreateCustomerRequest
 import too.good.crm.data.model.Customer
+import too.good.crm.data.model.PaginatedResponse
 
 /**
  * Repository for customer data operations
@@ -15,7 +16,8 @@ class CustomerRepository {
         return try {
             val response = apiService.getCustomers()
             if (response.isSuccessful) {
-                val customers = response.body() ?: emptyList()
+                val paginatedResponse = response.body()
+                val customers = paginatedResponse?.results ?: emptyList()
                 Result.success(customers)
             } else {
                 val errorMessage = when (response.code()) {
@@ -27,6 +29,8 @@ class CustomerRepository {
                 }
                 Result.failure(Exception(errorMessage))
             }
+        } catch (e: com.google.gson.JsonSyntaxException) {
+            Result.failure(Exception("JSON parsing error: ${e.message}. Please check backend response format."))
         } catch (e: java.net.SocketTimeoutException) {
             Result.failure(Exception("Connection timeout. Please check your network."))
         } catch (e: java.net.ConnectException) {

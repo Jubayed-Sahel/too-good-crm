@@ -4,32 +4,33 @@ import com.google.gson.annotations.SerializedName
 
 data class Customer(
     val id: Int = 0,
-    val code: String = "",
+    val code: String? = null,
     val name: String,
     @SerializedName("first_name")
-    val firstName: String = "",
+    val firstName: String? = null,
     @SerializedName("last_name")
-    val lastName: String = "",
+    val lastName: String? = null,
     @SerializedName("full_name")
-    val fullName: String = "",
+    val fullName: String? = null,
     val email: String,
     val phone: String,
-    val company: String = "",
+    val company: String? = null,
     @SerializedName("company_name")
-    val companyName: String = "",
+    val companyName: String? = null,
+    val organization: String? = null,  // Alias for company_name from backend
     @SerializedName("customer_type")
-    val customerType: String = "individual",
+    val customerType: String? = null,
     val status: String = "active",
-    val address: String = "",
-    val city: String = "",
-    val state: String = "",
-    val country: String = "",
+    val address: String? = null,
+    val city: String? = null,
+    val state: String? = null,
+    val country: String? = null,
     @SerializedName("postal_code")
-    val postalCode: String = "",
+    val postalCode: String? = null,
     @SerializedName("zip_code")
-    val zipCode: String = "",
-    val website: String = "",
-    val notes: String = "",
+    val zipCode: String? = null,
+    val website: String? = null,
+    val notes: String? = null,
     @SerializedName("assigned_to")
     val assignedTo: Int? = null,
     @SerializedName("assigned_to_name")
@@ -39,9 +40,9 @@ data class Customer(
     @SerializedName("user_id")
     val userId: Int? = null,
     @SerializedName("created_at")
-    val createdAt: String = "",
+    val createdAt: String? = null,
     @SerializedName("updated_at")
-    val updatedAt: String = ""
+    val updatedAt: String? = null
 )
 
 data class CreateCustomerRequest(
