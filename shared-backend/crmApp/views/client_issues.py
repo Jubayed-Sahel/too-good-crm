@@ -265,6 +265,24 @@ class ClientRaiseIssueView(APIView):
                 response_data['linear_data'] = linear_data
                 response_data['message'] += ' and synced to Linear'
             
+            # Send real-time notification via Pusher
+            try:
+                from crmApp.services.pusher_service import pusher_service
+                # Notify the customer who created the issue
+                pusher_service.send_issue_created(issue, request.user)
+                # Also notify organization members (vendors/employees)
+                if organization:
+                    from crmApp.models import Employee
+                    employees = Employee.objects.filter(
+                        organization=organization,
+                        status='active'
+                    ).select_related('user')
+                    for employee in employees:
+                        if employee.user and employee.user != request.user:
+                            pusher_service.send_issue_created(issue, employee.user)
+            except Exception as e:
+                logger.warning(f"Failed to send Pusher notification for issue creation: {e}")
+            
             return Response(response_data, status=status.HTTP_201_CREATED)
                 
         except Exception as e:

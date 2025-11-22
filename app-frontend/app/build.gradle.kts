@@ -40,6 +40,10 @@ android {
     buildFeatures {
         compose = true
     }
+    lint {
+        disable.add("UnsafeOptInUsageError")
+        disable.add("UnsafeOptInUsageWarning")
+    }
 }
 
 dependencies {
@@ -66,5 +70,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.android)
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.android.material:material:1.11.0")
+    implementation(libs.accompanist.swiperefresh)
+    
+    // Pusher for real-time updates
+    implementation("com.pusher:pusher-java-client:2.4.4")
 
 }

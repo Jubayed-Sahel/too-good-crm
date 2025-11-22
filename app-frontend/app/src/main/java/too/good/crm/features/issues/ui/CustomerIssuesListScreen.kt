@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,9 +16,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import too.good.crm.data.model.Issue
+import too.good.crm.data.pusher.PusherService
+import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.issues.viewmodel.IssueViewModel
 import too.good.crm.features.issues.viewmodel.IssueUiState
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
+import org.json.JSONObject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,10 +39,48 @@ fun CustomerIssuesListScreen(
     viewModel: IssueViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val authRepository = remember { AuthRepository(context) }
 
-    // Load issues when screen opens
+    // Initialize Pusher and subscribe to real-time updates
     LaunchedEffect(Unit) {
+        val userId = authRepository.getUserId()
+        if (userId > 0) {
+            PusherService.initialize(userId)
+            
+            // Subscribe to user's private channel for issue updates
+            val channelName = "private-user-$userId"
+            PusherService.subscribeToChannel(channelName) { eventName, data ->
+                when (eventName) {
+                    "issue-created", "issue-updated", "issue-status-changed" -> {
+                        // Reload issues when any issue event is received
+                        viewModel.loadAllIssues()
+                    }
+                }
+            }
+        }
+        
+        // Load issues when screen opens
         viewModel.loadAllIssues()
+    }
+    
+    // Cleanup Pusher subscription when screen is disposed
+    DisposableEffect(Unit) {
+        onDispose {
+            val userId = authRepository.getUserId()
+            if (userId > 0) {
+                PusherService.unsubscribe("private-user-$userId")
+            }
+        }
+    }
+
+    // Handle pull-to-refresh
+    suspend fun refresh() {
+        isRefreshing = true
+        viewModel.loadAllIssues()
+        delay(1000) // Show refresh indicator for at least 1 second
+        isRefreshing = false
     }
 
     Scaffold(
@@ -42,6 +90,16 @@ fun CustomerIssuesListScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    IconButton(
+                        onClick = {
+                            isRefreshing = true
+                            viewModel.loadAllIssues()
+                        }
+                    ) {
+                        Icon(Icons.Default.Refresh, "Refresh")
                     }
                 }
             )
@@ -54,43 +112,56 @@ fun CustomerIssuesListScreen(
             }
         }
     ) { padding ->
-        Box(
+        val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
+        val coroutineScope = rememberCoroutineScope()
+
+        SwipeRefresh(
+            state = swipeRefreshState,
+            onRefresh = {
+                coroutineScope.launch {
+                    refresh()
+                }
+            },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when (val state = uiState) {
-                is IssueUiState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                is IssueUiState.Success -> {
-                    if (state.issues.isEmpty()) {
-                        EmptyIssuesView(
-                            modifier = Modifier.align(Alignment.Center),
-                            onCreateIssue = onNavigateToCreate
+            Box(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                when (val state = uiState) {
+                    is IssueUiState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
                         )
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(state.issues) { issue ->
-                                IssueCard(
-                                    issue = issue,
-                                    onClick = { onNavigateToDetail(issue.id) }
-                                )
+                    }
+                    is IssueUiState.Success -> {
+                        if (state.issues.isEmpty()) {
+                            EmptyIssuesView(
+                                modifier = Modifier.align(Alignment.Center),
+                                onCreateIssue = onNavigateToCreate
+                            )
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(state.issues) { issue ->
+                                    IssueCard(
+                                        issue = issue,
+                                        onClick = { onNavigateToDetail(issue.id) }
+                                    )
+                                }
                             }
                         }
                     }
-                }
-                is IssueUiState.Error -> {
-                    ErrorView(
-                        message = state.message,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
+                    is IssueUiState.Error -> {
+                        ErrorView(
+                            message = state.message,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
                 }
             }
         }

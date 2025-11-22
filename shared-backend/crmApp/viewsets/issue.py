@@ -387,6 +387,40 @@ class IssueViewSet(
         if linear_synced:
             response_data['linear_synced'] = True
         
+        # Send real-time notification via Pusher
+        try:
+            from crmApp.services.pusher_service import pusher_service
+            # Check if status changed
+            status_changed = old_status != instance.status
+            
+            # Notify the user who made the update
+            pusher_service.send_issue_updated(instance, request.user, old_status if status_changed else None)
+            
+            # If status changed, send status change event
+            if status_changed:
+                pusher_service.send_issue_status_changed(instance, old_status, request.user)
+            
+            # Notify issue creator (if different from updater)
+            if instance.raised_by_customer and instance.raised_by_customer.user != request.user:
+                pusher_service.send_issue_updated(instance, instance.raised_by_customer.user, old_status if status_changed else None)
+                if status_changed:
+                    pusher_service.send_issue_status_changed(instance, old_status, instance.raised_by_customer.user)
+            
+            # Notify organization members (vendors/employees)
+            if organization:
+                from crmApp.models import Employee
+                employees = Employee.objects.filter(
+                    organization=organization,
+                    status='active'
+                ).select_related('user')
+                for employee in employees:
+                    if employee.user and employee.user != request.user:
+                        pusher_service.send_issue_updated(instance, employee.user, old_status if status_changed else None)
+                        if status_changed:
+                            pusher_service.send_issue_status_changed(instance, old_status, employee.user)
+        except Exception as e:
+            logger.warning(f"Failed to send Pusher notification for issue update: {e}")
+        
         return Response(response_data)
     
     def destroy(self, request, *args, **kwargs):
@@ -485,6 +519,19 @@ class IssueViewSet(
                 response_data['linear_synced'] = True
                 response_data['message'] += ' and synced to Linear'
             
+            # Send real-time notification via Pusher
+            try:
+                from crmApp.services.pusher_service import pusher_service
+                pusher_service.send_issue_status_changed(issue, old_status, request.user)
+                pusher_service.send_issue_updated(issue, request.user, old_status)
+                
+                # Notify issue creator
+                if issue.raised_by_customer and issue.raised_by_customer.user != request.user:
+                    pusher_service.send_issue_status_changed(issue, old_status, issue.raised_by_customer.user)
+                    pusher_service.send_issue_updated(issue, issue.raised_by_customer.user, old_status)
+            except Exception as e:
+                logger.warning(f"Failed to send Pusher notification for issue resolve: {e}")
+            
             return Response(response_data, status=status.HTTP_200_OK)
             
         except Issue.DoesNotExist:
@@ -538,6 +585,19 @@ class IssueViewSet(
             
             if linear_updated[0]:
                 response_data['linear_synced'] = True
+            
+            # Send real-time notification via Pusher
+            try:
+                from crmApp.services.pusher_service import pusher_service
+                pusher_service.send_issue_status_changed(issue, old_status, request.user)
+                pusher_service.send_issue_updated(issue, request.user, old_status)
+                
+                # Notify issue creator
+                if issue.raised_by_customer and issue.raised_by_customer.user != request.user:
+                    pusher_service.send_issue_status_changed(issue, old_status, issue.raised_by_customer.user)
+                    pusher_service.send_issue_updated(issue, issue.raised_by_customer.user, old_status)
+            except Exception as e:
+                logger.warning(f"Failed to send Pusher notification for issue reopen: {e}")
             
             return Response(response_data, status=status.HTTP_200_OK)
             

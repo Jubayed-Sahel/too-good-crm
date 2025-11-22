@@ -47,6 +47,13 @@ object ApiClient {
     fun setAuthToken(token: String) {
         authToken = token
     }
+    
+    /**
+     * Get the current authentication token
+     */
+    fun getAuthToken(): String? {
+        return authToken
+    }
 
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
         level = HttpLoggingInterceptor.Level.BODY
