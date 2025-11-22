@@ -1,23 +1,33 @@
-import { Box, Text, VStack, HStack } from '@chakra-ui/react';
+import { Box, Text, VStack, HStack, Spinner } from '@chakra-ui/react';
 import { Card } from '../common';
+import { useConversionFunnel } from '@/hooks/useAnalytics';
 
-interface ConversionFunnelProps {
-  data?: Array<{
-    stage: string;
-    count: number;
-    percentage: number;
-  }>;
-}
+const ConversionFunnel = () => {
+  const { data, isLoading, error } = useConversionFunnel();
 
-const ConversionFunnel = ({
-  data = [
-    { stage: 'Leads', count: 500, percentage: 100 },
-    { stage: 'Qualified', count: 320, percentage: 64 },
-    { stage: 'Proposal', count: 180, percentage: 36 },
-    { stage: 'Negotiation', count: 120, percentage: 24 },
-    { stage: 'Closed Won', count: 80, percentage: 16 },
-  ]
-}: ConversionFunnelProps) => {
+  if (isLoading) {
+    return (
+      <Card variant="elevated">
+        <VStack justify="center" py={8}>
+          <Spinner size="lg" />
+          <Text color="gray.500">Loading conversion funnel...</Text>
+        </VStack>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card variant="elevated">
+        <VStack justify="center" py={8}>
+          <Text color="red.500">Failed to load conversion funnel</Text>
+        </VStack>
+      </Card>
+    );
+  }
+
+  const funnelData = data?.stages || [];
+  const conversionRate = data?.conversion_rates?.lead_to_won || 0;
   return (
     <Card variant="elevated">
       <VStack align="stretch" gap={4}>
@@ -33,12 +43,13 @@ const ConversionFunnel = ({
             Conversion Funnel
           </Text>
           <Text fontSize="sm" color="gray.500">
-            Lead to customer conversion rate: 16%
+            Lead to customer conversion rate: {conversionRate.toFixed(1)}%
           </Text>
         </Box>
 
         <VStack align="stretch" gap={2}>
-          {data.map((item, index) => {
+          {funnelData.length > 0 ? (
+            funnelData.map((item: any, index: number) => {
             const width = item.percentage;
             const isFirst = index === 0;
             const isLast = index === data.length - 1;
@@ -87,14 +98,19 @@ const ConversionFunnel = ({
                     {item.percentage}%
                   </Text>
                 </Box>
-                {index < data.length - 1 && (
+                {index < funnelData.length - 1 && (
                   <Box h="1" w="full" display="flex" justifyContent="center" py={1}>
                     <Box w="0" h="0" borderLeft="8px solid transparent" borderRight="8px solid transparent" borderTop="8px solid #CBD5E0" />
                   </Box>
                 )}
               </Box>
             );
-          })}
+          })
+          ) : (
+            <Box py={4} textAlign="center">
+              <Text color="gray.500" fontSize="sm">No conversion funnel data available</Text>
+            </Box>
+          )}
         </VStack>
       </VStack>
     </Card>

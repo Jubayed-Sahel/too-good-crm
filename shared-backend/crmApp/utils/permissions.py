@@ -18,6 +18,16 @@ class PermissionChecker:
             # Allow action
     """
     
+    # Mapping of new permission categories to old resource names
+    # This provides backward compatibility with existing frontend code
+    RESOURCE_MAPPING = {
+        'sales': ['customer', 'deal', 'lead'],  # sales permissions apply to customers, deals, leads
+        'activities': ['activity'],  # activities permission applies to activity
+        'issue': ['issue'],  # issue permission applies to issue
+        'analytics': ['analytics', 'dashboard'],  # analytics permission applies to analytics and dashboard
+        'team': ['employee', 'role', 'permission', 'team'],  # team permission applies to employee, role, permission management
+    }
+    
     def __init__(self, user, organization=None):
         self.user = user
         # If organization not provided, try to get from active profile
@@ -46,7 +56,17 @@ class PermissionChecker:
         if vendor_profile:
             # Vendors have all permissions in their organization
             all_perms = Permission.objects.filter(organization=self.organization)
-            self._permissions_cache = set(f"{p.resource}.{p.action}" for p in all_perms)
+            permissions = set()
+            for p in all_perms:
+                # Add the actual permission
+                permissions.add(f"{p.resource}.{p.action}")
+                
+                # Add mapped permissions for backward compatibility
+                if p.resource in self.RESOURCE_MAPPING:
+                    for mapped_resource in self.RESOURCE_MAPPING[p.resource]:
+                        permissions.add(f"{mapped_resource}.{p.action}")
+            
+            self._permissions_cache = permissions
             return self._permissions_cache
         
         # Check if user is employee - employees have permissions based on their role
@@ -92,11 +112,21 @@ class PermissionChecker:
             role__organization=self.organization
         ).select_related('permission')
         
-        self._permissions_cache = set(
-            f"{rp.permission.resource}.{rp.permission.action}" 
-            for rp in role_permissions
-        )
+        # Build permission set with both new and old resource names
+        permissions = set()
+        for rp in role_permissions:
+            resource = rp.permission.resource
+            action = rp.permission.action
+            
+            # Add the actual permission
+            permissions.add(f"{resource}.{action}")
+            
+            # Add mapped permissions for backward compatibility
+            if resource in self.RESOURCE_MAPPING:
+                for mapped_resource in self.RESOURCE_MAPPING[resource]:
+                    permissions.add(f"{mapped_resource}.{action}")
         
+        self._permissions_cache = permissions
         return self._permissions_cache
     
     def has_permission(self, resource, action):

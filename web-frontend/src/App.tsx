@@ -4,6 +4,7 @@ import { PermissionProvider } from './contexts/PermissionContext'
 import { ProfileProvider } from './contexts/ProfileContext'
 import { ProtectedRoute } from './components/auth'
 import { PermissionRoute } from './components/guards/PermissionRoute'
+import { Toaster } from './components/ui/toaster'
 // import { JitsiCallManager } from './components/jitsi/JitsiCallManager'
 // import { useAuth } from './hooks'
 import LoginPage from './pages/LoginPage'
@@ -62,6 +63,9 @@ function App() {
       <AccountModeProvider>
         <ProfileProvider>
           <PermissionProvider>
+            {/* Global Toaster for notifications */}
+            <Toaster />
+            
             {/* Global Jitsi Call Manager for all authenticated users */}
             {/* <JitsiCallWrapper /> */}
             

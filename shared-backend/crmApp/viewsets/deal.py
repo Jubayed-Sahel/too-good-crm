@@ -260,41 +260,77 @@ class DealViewSet(
     @action(detail=False, methods=['get'])
     def stats(self, request):
         """Get deal statistics"""
-        queryset = self.get_queryset()
-        
-        total_value = queryset.aggregate(total=Sum('value'))['total'] or 0
-        expected_revenue = queryset.aggregate(total=Sum('expected_revenue'))['total'] or 0
-        
-        stats = {
-            'total_deals': queryset.count(),
-            'total_value': float(total_value),
-            'expected_revenue': float(expected_revenue),
-            'won': queryset.filter(is_won=True).count(),
-            'lost': queryset.filter(is_lost=True).count(),
-            'open': queryset.filter(is_won=False, is_lost=False).count(),
-            'by_stage': [],
-            'by_priority': {
-                'low': queryset.filter(priority='low').count(),
-                'medium': queryset.filter(priority='medium').count(),
-                'high': queryset.filter(priority='high').count(),
-                'urgent': queryset.filter(priority='urgent').count(),
-            }
-        }
-        
-        # Group by stage
-        stages = queryset.values('stage__name').annotate(
-            count=Count('id'),
-            total_value=Sum('value')
-        )
-        for stage in stages:
-            if stage['stage__name']:
-                stats['by_stage'].append({
-                    'stage_name': stage['stage__name'],
-                    'count': stage['count'],
-                    'total_value': float(stage['total_value'] or 0)
+        try:
+            # Get queryset - this handles organization filtering
+            try:
+                queryset = self.get_queryset()
+            except Exception as qe:
+                logger.error(f'Error getting queryset in stats: {str(qe)}', exc_info=True)
+                # Return empty stats if queryset fails (e.g., no organization)
+                return Response({
+                    'total_deals': 0,
+                    'total_value': 0,
+                    'expected_revenue': 0,
+                    'won': 0,
+                    'lost': 0,
+                    'open': 0,
+                    'by_stage': [],
+                    'by_priority': {
+                        'low': 0, 'medium': 0, 'high': 0, 'urgent': 0
+                    }
                 })
-        
-        return Response(stats)
+            
+            total_value = queryset.aggregate(total=Sum('value'))['total'] or 0
+            expected_revenue = queryset.aggregate(total=Sum('expected_revenue'))['total'] or 0
+            
+            stats = {
+                'total_deals': queryset.count(),
+                'total_value': float(total_value),
+                'expected_revenue': float(expected_revenue),
+                'won': queryset.filter(is_won=True).count(),
+                'lost': queryset.filter(is_lost=True).count(),
+                'open': queryset.filter(is_won=False, is_lost=False).count(),
+                'by_stage': [],
+                'by_priority': {
+                    'low': queryset.filter(priority='low').count(),
+                    'medium': queryset.filter(priority='medium').count(),
+                    'high': queryset.filter(priority='high').count(),
+                    'urgent': queryset.filter(priority='urgent').count(),
+                }
+            }
+            
+            # Group by stage - handle deals with and without stages
+            stages = queryset.values('stage__name').annotate(
+                count=Count('id'),
+                total_value=Sum('value')
+            ).order_by('stage__name')
+            
+            for stage in stages:
+                stage_name = stage.get('stage__name')
+                if stage_name:
+                    stats['by_stage'].append({
+                        'stage_name': stage_name,
+                        'count': stage['count'],
+                        'total_value': float(stage.get('total_value') or 0)
+                    })
+            
+            return Response(stats)
+        except Exception as e:
+            logger.error(f'Error getting deal stats: {str(e)}', exc_info=True)
+            return Response(
+                {
+                    'error': f'Failed to get deal stats: {str(e)}',
+                    'total_deals': 0,
+                    'total_value': 0,
+                    'expected_revenue': 0,
+                    'won': 0,
+                    'lost': 0,
+                    'open': 0,
+                    'by_stage': [],
+                    'by_priority': {'low': 0, 'medium': 0, 'high': 0, 'urgent': 0}
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['post'])
     def move_stage(self, request, pk=None):

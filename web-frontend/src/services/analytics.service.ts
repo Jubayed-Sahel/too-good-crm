@@ -3,7 +3,7 @@
  */
 import api from '@/lib/apiClient';
 import { API_CONFIG } from '@/config/api.config';
-import type { 
+import type {
   DashboardStats,
   RevenueData,
   MonthlyRevenue,
@@ -44,9 +44,16 @@ class AnalyticsService {
     // Get last 6 months of data
     const monthlyData = await this.getRevenueByPeriod('month', 6);
     
+    // Transform to match expected format
+    const transformedMonthlyData = monthlyData.map((item: any) => ({
+      month: item.period || item.month || '',
+      revenue: item.revenue || 0,
+      deal_count: item.deal_count || 0,
+    }));
+    
     // Calculate current month and previous month
-    const currentMonth = monthlyData[monthlyData.length - 1]?.revenue || 0;
-    const previousMonth = monthlyData[monthlyData.length - 2]?.revenue || 0;
+    const currentMonth = transformedMonthlyData[transformedMonthlyData.length - 1]?.revenue || 0;
+    const previousMonth = transformedMonthlyData[transformedMonthlyData.length - 2]?.revenue || 0;
     const growth = previousMonth > 0 
       ? ((currentMonth - previousMonth) / previousMonth) * 100 
       : currentMonth > 0 ? 100 : 0;
@@ -55,7 +62,7 @@ class AnalyticsService {
       currentMonth,
       previousMonth,
       growth,
-      monthlyData,
+      monthlyData: transformedMonthlyData,
     };
   }
 
@@ -90,23 +97,31 @@ class AnalyticsService {
    * Get sales pipeline data (by pipeline stages)
    */
   async getSalesPipeline(): Promise<SalesPipelineData> {
-    // This will be handled by a new backend endpoint
-    // For now, return from deals stats
-    const response = await api.get<any>('/deals/stats/');
-    
-    // Transform to pipeline format
-    const stages = response.by_stage || [];
-    const totalValue = stages.reduce((sum: number, stage: any) => sum + (stage.total_value || 0), 0);
-    
-    return {
-      stages: stages.map((stage: any, index: number) => ({
-        name: stage.stage_name || 'Unknown',
-        count: stage.count || 0,
-        value: stage.total_value || 0,
-        color: this.getStageColor(index),
-      })),
-      totalValue,
-    };
+    try {
+      // Get deals stats from backend
+      const response = await api.get<any>(API_CONFIG.ENDPOINTS.DEALS.STATS);
+      
+      // Transform to pipeline format
+      const stages = response.by_stage || [];
+      const totalValue = stages.reduce((sum: number, stage: any) => sum + (stage.total_value || 0), 0);
+      
+      return {
+        stages: stages.map((stage: any, index: number) => ({
+          name: stage.stage_name || 'Unknown',
+          count: stage.count || 0,
+          value: stage.total_value || 0,
+          color: this.getStageColor(index),
+        })),
+        totalValue,
+      };
+    } catch (error: any) {
+      console.error('Error fetching sales pipeline:', error);
+      // Return empty pipeline if there's an error
+      return {
+        stages: [],
+        totalValue: 0,
+      };
+    }
   }
 
   /**
