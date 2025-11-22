@@ -1,9 +1,12 @@
 """
-Jitsi Meet Integration Service
-Handles creation of call sessions, room management, and user presence
+8x8 Video Integration Service (Jitsi Enterprise)
+Handles JWT token generation, call session management, and user presence for 8x8 Video
 """
 import uuid
 import hashlib
+import jwt
+import time
+from datetime import datetime, timedelta
 from django.utils import timezone
 from django.conf import settings
 from crmApp.models import JitsiCallSession, UserPresence, User
@@ -14,14 +17,21 @@ logger = logging.getLogger(__name__)
 
 class JitsiService:
     """
-    Service for managing Jitsi Meet video/audio calls between users.
-    Handles room creation, call session management, and user presence.
+    Service for managing 8x8 Video calls between CRM users.
+    Generates JWT tokens for secure authentication with 8x8's Jitsi platform.
     """
     
     def __init__(self):
-        # Use custom Jitsi server or default to meet.jit.si (public server - no login)
-        self.jitsi_server = getattr(settings, 'JITSI_SERVER', 'meet.jit.si')
-        self.jitsi_domain = getattr(settings, 'JITSI_DOMAIN', 'meet.jit.si')
+        # 8x8 Configuration
+        self.app_id = getattr(settings, 'JITSI_8X8_APP_ID', '')
+        self.api_key = getattr(settings, 'JITSI_8X8_API_KEY', '')
+        self.kid = getattr(settings, 'JITSI_8X8_KID', '')
+        self.server_domain = getattr(settings, 'JITSI_SERVER', '8x8.vc')
+        self.algorithm = getattr(settings, 'JITSI_JWT_ALGORITHM', 'RS256')
+        self.jwt_expires_in = getattr(settings, 'JITSI_JWT_EXPIRES_IN', 3600)
+        
+        if not self.app_id or not self.api_key:
+            logger.warning("8x8 Video credentials not configured. Set JITSI_8X8_APP_ID and JITSI_8X8_API_KEY in settings.")
     
     def generate_room_name(self, initiator_id, recipient_id=None):
         """
@@ -32,6 +42,66 @@ class JitsiService:
         unique_string = f"{initiator_id}-{recipient_id or 'group'}-{uuid.uuid4().hex[:8]}"
         hash_part = hashlib.md5(unique_string.encode()).hexdigest()[:8]
         return f"crm-{timestamp}-{hash_part}"
+    
+    def generate_jwt_token(self, room_name, user, moderator=True):
+        """
+        Generate JWT token for 8x8 Video authentication.
+        
+        Args:
+            room_name (str): The room identifier
+            user (User): Django user object
+            moderator (bool): Whether user has moderator privileges
+            
+        Returns:
+            str: JWT token for authentication
+        """
+        if not self.app_id or not self.api_key:
+            raise ValueError("8x8 credentials not configured")
+        
+        # Current time and expiration
+        now = int(time.time())
+        exp = now + self.jwt_expires_in
+        
+        # User display name
+        display_name = f"{user.first_name} {user.last_name}".strip() or user.username
+        
+        # JWT Payload for 8x8 Video
+        payload = {
+            # Standard JWT claims
+            "iss": self.app_id,  # Issuer (your 8x8 App ID)
+            "sub": self.server_domain,  # Subject (8x8 domain)
+            "aud": self.app_id,  # Audience (your 8x8 App ID)
+            "iat": now,  # Issued at
+            "nbf": now,  # Not before
+            "exp": exp,  # Expiration time
+            
+            # 8x8 Video specific claims
+            "room": room_name,  # Room name
+            "context": {
+                "user": {
+                    "id": str(user.id),
+                    "name": display_name,
+                    "email": user.email,
+                    "moderator": str(moderator).lower(),  # String boolean
+                },
+                "features": {
+                    "livestreaming": False,
+                    "recording": False,
+                    "transcription": False,
+                }
+            }
+        }
+        
+        # Generate JWT token
+        # For 8x8, API Key is the private key for RS256 signing
+        token = jwt.encode(
+            payload,
+            self.api_key,
+            algorithm=self.algorithm,
+            headers={'kid': self.kid} if self.kid else None
+        )
+        
+        return token
     
     def initiate_call(self, initiator, recipient=None, call_type='video', organization=None):
         """
@@ -44,7 +114,7 @@ class JitsiService:
             organization (Organization): Organization context
             
         Returns:
-            JitsiCallSession: Created call session
+            JitsiCallSession: Created call session with JWT token
             
         Raises:
             ValueError: If recipient is not available or inputs are invalid
@@ -60,14 +130,12 @@ class JitsiService:
                 if not presence.is_available:
                     raise ValueError(f"{recipient_name} is not available for calls")
             except UserPresence.DoesNotExist:
-                # Create presence record if it doesn't exist
                 recipient_name = f"{recipient.first_name} {recipient.last_name}".strip() or recipient.username
                 UserPresence.objects.create(user=recipient, status='offline')
                 raise ValueError(f"{recipient_name} is offline")
         
         # Get organization from user profile if not provided
         if not organization:
-            # Try to get organization from initiator's active profile
             from crmApp.models import UserProfile
             initiator_profile = UserProfile.objects.filter(
                 user=initiator,
@@ -98,7 +166,7 @@ class JitsiService:
             recipient=recipient,
             participants=[initiator.id] + ([recipient.id] if recipient else []),
             organization=organization,
-            jitsi_server=self.jitsi_server
+            jitsi_server=self.server_domain
         )
         
         logger.info(f"Call initiated: {initiator.username} → {recipient.username if recipient else 'group'} (Room: {room_name})")
@@ -161,6 +229,7 @@ class JitsiService:
             )
         
         logger.info(f"Call answered: {user.username} joined room {call_session.room_name}")
+        return call_session
     
     def reject_call(self, call_session, user):
         """
@@ -183,6 +252,7 @@ class JitsiService:
             pass
         
         logger.info(f"Call rejected: {user.username} rejected call from {call_session.initiator.username}")
+        return call_session
     
     def end_call(self, call_session, user):
         """
@@ -219,25 +289,37 @@ class JitsiService:
                 pass
         
         logger.info(f"Call ended: Room {call_session.room_name}, Duration: {call_session.duration_formatted}")
+        return call_session
     
-    def get_jitsi_url(self, call_session, user_name=None):
+    def get_video_url(self, call_session, user):
         """
-        Generate Jitsi Meet URL for joining a call.
+        Generate 8x8 Video URL with JWT token for joining a call.
         
         Args:
             call_session (JitsiCallSession): The call session
-            user_name (str, optional): Display name for the user
+            user (User): User joining the call
             
         Returns:
-            str: Full Jitsi Meet URL
+            dict: URL and JWT token for joining
         """
-        base_url = f"https://{self.jitsi_server}/{call_session.room_name}"
+        # Generate JWT token for this user
+        is_moderator = (call_session.initiator == user)
+        jwt_token = self.generate_jwt_token(
+            call_session.room_name,
+            user,
+            moderator=is_moderator
+        )
         
-        # Add user display name as URL parameter
-        if user_name:
-            base_url += f"#userInfo.displayName=\"{user_name}\""
+        # 8x8 Video URL format
+        video_url = f"https://{self.server_domain}/{self.app_id}/{call_session.room_name}"
         
-        return base_url
+        return {
+            'video_url': video_url,
+            'jwt_token': jwt_token,
+            'room_name': call_session.room_name,
+            'app_id': self.app_id,
+            'server_domain': self.server_domain,
+        }
     
     def get_active_calls(self, organization=None, user=None):
         """
@@ -252,58 +334,49 @@ class JitsiService:
         
         if user:
             queryset = queryset.filter(
-                Q(initiator=user) | 
+                Q(initiator=user) |
                 Q(recipient=user) |
                 Q(participants__contains=[user.id])
             )
         
-        return queryset.select_related('initiator', 'recipient', 'organization')
+        return queryset.select_related('initiator', 'recipient', 'organization').order_by('-started_at')
     
-    def get_online_users(self, organization=None):
+    def update_user_presence(self, user, status='online', status_message='', available_for_calls=True):
         """
-        Get all online users, optionally filtered by organization.
-        """
-        from django.db.models import Q
-        from crmApp.models import UserProfile
-        
-        queryset = UserPresence.objects.filter(
-            Q(status='online') | Q(status='away')
-        ).select_related('user')
-        
-        if organization:
-            # Filter by organization membership through UserProfile
-            queryset = queryset.filter(
-                user__user_profiles__organization=organization,
-                user__user_profiles__status='active'
-            ).distinct()
-        
-        # Only return users who are truly online (active in last 5 minutes)
-        return [p for p in queryset if p.is_online]
-    
-    def update_user_status(self, user, status, available_for_calls=None, status_message=None):
-        """
-        Update user's online status and availability.
-        
-        Args:
-            user (User): The user
-            status (str): 'online', 'busy', 'away', or 'offline'
-            available_for_calls (bool, optional): Whether to accept calls
-            status_message (str, optional): Custom status message
+        Update user's presence status.
         """
         presence, created = UserPresence.objects.get_or_create(user=user)
         presence.status = status
-        
-        if available_for_calls is not None:
-            presence.available_for_calls = available_for_calls
-        
-        if status_message is not None:
-            presence.status_message = status_message
-        
+        presence.status_message = status_message
+        presence.available_for_calls = available_for_calls
+        presence.last_seen = timezone.now()
         presence.save()
         
-        logger.info(f"User status updated: {user.username} → {status}")
-        
         return presence
+    
+    def get_online_users(self, organization=None):
+        """
+        Get list of users currently online and available for calls.
+        """
+        # Users online in the last 5 minutes
+        recent_time = timezone.now() - timezone.timedelta(minutes=5)
+        
+        queryset = UserPresence.objects.filter(
+            last_seen__gte=recent_time,
+            available_for_calls=True
+        ).select_related('user')
+        
+        if organization:
+            # Filter by organization membership
+            from crmApp.models import UserProfile
+            org_user_ids = UserProfile.objects.filter(
+                organization=organization,
+                status='active'
+            ).values_list('user_id', flat=True)
+            
+            queryset = queryset.filter(user_id__in=org_user_ids)
+        
+        return queryset
 
 
 # Singleton instance

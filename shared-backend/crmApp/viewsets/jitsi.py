@@ -189,13 +189,19 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
         """Get user's current active call if any (including pending/ringing)"""
         try:
             presence = UserPresence.objects.get(user=request.user)
-            # Return any ongoing call (pending, ringing, or active)
-            if presence.current_call and presence.current_call.status in ['pending', 'ringing', 'active']:
-                serializer = JitsiCallSessionSerializer(
-                    presence.current_call,
-                    context={'request': request}
-                )
-                return Response(serializer.data)
+            # Check if current_call is still valid
+            if presence.current_call:
+                if presence.current_call.status in ['pending', 'ringing', 'active']:
+                    serializer = JitsiCallSessionSerializer(
+                        presence.current_call,
+                        context={'request': request}
+                    )
+                    return Response(serializer.data)
+                else:
+                    # Call is no longer active - clear it
+                    presence.current_call = None
+                    presence.status = 'online'
+                    presence.save()
         except UserPresence.DoesNotExist:
             # User has no presence record - no active call
             pass

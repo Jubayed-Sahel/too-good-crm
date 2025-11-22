@@ -5,7 +5,6 @@ import {
 } from '../components/customers';
 import { ConfirmDialog, ErrorState } from '../components/common';
 import { useCustomers, useCustomersPage, useCustomerActions } from '@/hooks';
-import { initiateCall } from '@/components/jitsi/JitsiCallManager';
 import { toaster } from '@/components/ui/toaster';
 import { useState } from 'react';
 
@@ -56,7 +55,7 @@ const CustomersPage = () => {
     bulkDeleteDialogState,
   } = useCustomerActions({ onSuccess: refetch });
 
-  // Call handler - Jitsi integration
+  // Call handler - 8x8 Video integration
   const handleCall = async (customer: any) => {
     if (!customer.user_id) {
       toaster.create({
@@ -70,7 +69,8 @@ const CustomersPage = () => {
     setIsCallInitiating(true);
     
     try {
-      await initiateCall(customer.user_id, customer.full_name || customer.name, 'audio');
+      const { initiateAudioCall } = await import('../utils/videoCallHelpers');
+      await initiateAudioCall(customer.user_id);
       
       // Optionally refresh customer data
       refetch();
