@@ -4,14 +4,15 @@ import retrofit2.Response
 import retrofit2.http.*
 import too.good.crm.data.model.CreateCustomerRequest
 import too.good.crm.data.model.Customer
+import too.good.crm.data.model.PaginatedResponse
 
 /**
  * Customer API Service
- * Backend returns direct responses (not wrapped in success/data/message)
+ * Backend returns paginated responses (DRF StandardResultsSetPagination)
  */
 interface CustomerApiService {
     @GET("customers/")
-    suspend fun getCustomers(): Response<List<Customer>>
+    suspend fun getCustomers(): Response<PaginatedResponse<Customer>>
 
     @POST("customers/")
     suspend fun createCustomer(@Body request: CreateCustomerRequest): Response<Customer>
