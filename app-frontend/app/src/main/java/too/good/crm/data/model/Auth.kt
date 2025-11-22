@@ -31,12 +31,14 @@ data class RegisterRequest(
     val email: String,
     @SerializedName("password")
     val password: String,
+    @SerializedName("password_confirm")
+    val passwordConfirm: String,  // Required by backend
     @SerializedName("first_name")
     val firstName: String,
     @SerializedName("last_name")
     val lastName: String,
-    @SerializedName("phone_number")
-    val phoneNumber: String? = null
+    @SerializedName("phone")
+    val phone: String? = null  // Backend uses 'phone' not 'phone_number'
 )
 
 data class RegisterResponse(

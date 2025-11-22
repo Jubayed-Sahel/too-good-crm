@@ -67,10 +67,16 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
             
             console.log('[PermissionContext] Raw userPermissions response:', userPermissions);
             
-            // Convert permissions to simple strings like "customers:read", "customers:create"
-            const permissionStrings = userPermissions.permissions.map((p: Permission) => 
-              `${p.resource}:${p.action}`
-            );
+            // Backend returns permissions as strings with DOT notation (e.g., "customers.read")
+            // Convert to COLON notation for frontend (e.g., "customers:read")
+            const permissionStrings = userPermissions.permissions.map((p: string | Permission) => {
+              // If it's already a string, convert dot to colon
+              if (typeof p === 'string') {
+                return p.replace('.', ':');
+              }
+              // If it's an object (shouldn't happen with current backend), convert to string
+              return `${p.resource}:${p.action}`;
+            });
             
             console.log('[PermissionContext] Employee permissions:', permissionStrings);
             console.log('[PermissionContext] Permission count:', permissionStrings.length);

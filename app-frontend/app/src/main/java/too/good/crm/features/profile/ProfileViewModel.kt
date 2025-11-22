@@ -11,6 +11,13 @@ import too.good.crm.data.model.UserProfile
 import too.good.crm.data.repository.ProfileRepository
 import android.content.Context
 
+/**
+ * UI State for Profile Management
+ * Following Kotlin best practices:
+ * - Data class for automatic equals(), hashCode(), toString()
+ * - Val for immutability (thread-safe)
+ * - Descriptive property names
+ */
 data class ProfileUiState(
     val profiles: List<UserProfile> = emptyList(),
     val activeProfile: UserProfile? = null,
@@ -18,6 +25,17 @@ data class ProfileUiState(
     val error: String? = null,
     val isSwitching: Boolean = false
 )
+
+/**
+ * Sealed class for Profile Switch Result
+ * Provides exhaustive when() checking and type-safe result handling
+ * Following Kotlin best practices for representing restricted class hierarchies
+ */
+sealed class ProfileSwitchResult {
+    data class Success(val user: User) : ProfileSwitchResult()
+    data class Error(val message: String) : ProfileSwitchResult()
+    object Loading : ProfileSwitchResult()
+}
 
 class ProfileViewModel(context: Context) : ViewModel() {
     private val repository = ProfileRepository(context)
@@ -75,13 +93,48 @@ class ProfileViewModel(context: Context) : ViewModel() {
     }
 
     /**
-     * Switch to a different profile
+     * Switch to a different profile/role
+     * 
+     * Implementation follows web frontend pattern:
+     * 1. Optimistic UI update (instant feedback)
+     * 2. API call in background
+     * 3. Update with server response
+     * 4. Error handling with revert option
+     * 
+     * @param profileId The profile ID to switch to
+     * @param onSuccess Callback with updated user data
+     * @param onError Callback with error message
      */
-    fun switchProfile(profileId: Int, onSuccess: (User) -> Unit, onError: (String) -> Unit) {
+    fun switchProfile(
+        profileId: Int, 
+        onSuccess: (User) -> Unit, 
+        onError: (String) -> Unit
+    ) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isSwitching = true, error = null)
+            // Store previous state for potential revert
+            val previousState = _uiState.value
+            
+            // STEP 1: Optimistic Update (Instant UI feedback - matching web implementation)
+            val selectedProfile = _uiState.value.profiles.find { it.id == profileId }
+            if (selectedProfile != null) {
+                // Immediately update UI state before API call
+                _uiState.value = _uiState.value.copy(
+                    activeProfile = selectedProfile,
+                    isSwitching = true,
+                    error = null
+                )
+            } else {
+                // No optimistic update if profile not found
+                _uiState.value = _uiState.value.copy(
+                    isSwitching = true,
+                    error = null
+                )
+            }
+            
+            // STEP 2: Make API call in background
             repository.switchProfile(profileId)
                 .onSuccess { user ->
+                    // STEP 3: Update with server response
                     // Refresh profiles list from updated user data
                     val updatedProfiles = user.profiles ?: emptyList()
                     
@@ -91,19 +144,25 @@ class ProfileViewModel(context: Context) : ViewModel() {
                         ?: updatedProfiles.find { it.isPrimary }
                         ?: updatedProfiles.firstOrNull()
                     
-                    // Update state with new profiles and active profile
+                    // Update state with server-confirmed data
                     _uiState.value = _uiState.value.copy(
                         profiles = updatedProfiles,
                         activeProfile = newActiveProfile,
-                        isSwitching = false
+                        isSwitching = false,
+                        error = null
                     )
+                    
+                    // Trigger success callback
                     onSuccess(user)
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
+                    // STEP 4: Error handling - Revert optimistic update
+                    _uiState.value = previousState.copy(
                         isSwitching = false,
                         error = error.message ?: "Failed to switch profile"
                     )
+                    
+                    // Trigger error callback
                     onError(error.message ?: "Failed to switch profile")
                 }
         }
