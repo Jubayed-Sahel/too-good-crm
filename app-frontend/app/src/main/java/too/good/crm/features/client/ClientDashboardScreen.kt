@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -27,7 +28,9 @@ fun ClientDashboardScreen(
     onNavigate: (route: String) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
     val profileViewModel = remember { too.good.crm.features.profile.ProfileViewModel(context) }
+    val authRepository = remember { too.good.crm.data.repository.AuthRepository(context) }
     val profileState by profileViewModel.uiState.collectAsState()
     
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
@@ -108,7 +111,16 @@ fun ClientDashboardScreen(
             }
         },
         onNavigate = onNavigate,
-        onLogout = onLogoutClicked
+        onLogout = {
+            // Perform actual logout before navigating
+            scope.launch {
+                authRepository.logout()
+                // Clear user session
+                UserSession.clearSession()
+                // Now navigate to main/login
+                onLogoutClicked()
+            }
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier

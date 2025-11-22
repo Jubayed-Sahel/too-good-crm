@@ -67,14 +67,3 @@ data class CreateCustomerRequest(
     val notes: String? = null
 )
 
-data class CustomerResponse(
-    val success: Boolean,
-    val data: Customer? = null,
-    val message: String? = null
-)
-
-data class CustomersListResponse(
-    val success: Boolean,
-    val data: List<Customer> = emptyList(),
-    val message: String? = null
-)

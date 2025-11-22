@@ -114,13 +114,14 @@ class AuthRepository(context: Context) {
         username: String,
         email: String,
         password: String,
+        passwordConfirm: String,
         firstName: String,
         lastName: String,
         phoneNumber: String? = null
     ): Result<RegisterResponse> {
         return try {
             val response = apiService.register(
-                RegisterRequest(username, email, password, firstName, lastName, phoneNumber)
+                RegisterRequest(username, email, password, passwordConfirm, firstName, lastName, phoneNumber)
             )
             if (response.isSuccessful && response.body() != null) {
                 val registerResponse = response.body()!!
