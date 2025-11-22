@@ -67,66 +67,47 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
     
     def _assign_linear_team_id(self, organization):
         """
-        Assign Linear team ID to the organization.
-        Tries multiple sources:
-        1. Default LINEAR_TEAM_ID from settings
-        2. First available team from Linear API
+        Assign a UNIQUE Linear team ID to the organization.
+        
+        Strategy:
+        1. Generate a unique team ID based on organization slug
+        2. This ensures each organization has its own isolated Linear team
+        3. For production, admin should create actual Linear teams and assign real IDs
+        
+        Note: These are mock IDs for isolation. To sync with actual Linear:
+        - Create teams in Linear (https://linear.app)
+        - Use management command: python manage.py setup_linear_teams --assign <ORG_ID> <REAL_TEAM_ID>
         """
         from django.conf import settings
         import os
         import logging
+        import uuid
         
         logger = logging.getLogger(__name__)
         
-        # Try default from settings first
-        linear_team_id = getattr(settings, 'LINEAR_TEAM_ID', None)
+        # Generate a unique team ID for this organization
+        # Format: <base-team-id>-<org-slug>-<unique-suffix>
+        base_team_id = getattr(settings, 'LINEAR_TEAM_ID', 'b95250db-8430-4dbc-88f8-9fc109369df0')
         
-        if not linear_team_id:
-            # Try to fetch from Linear API
-            linear_api_key = getattr(settings, 'LINEAR_API_KEY', None) or os.getenv('LINEAR_API_KEY', '')
-            
-            if linear_api_key:
-                try:
-                    from crmApp.services.linear_service import LinearService
-                    linear_service = LinearService(api_key=linear_api_key)
-                    teams = linear_service.get_teams()
-                    
-                    if teams and len(teams) > 0:
-                        # Use the first team as default
-                        linear_team_id = teams[0]['id']
-                        logger.info(
-                            f"Assigned first available Linear team '{teams[0].get('name', 'N/A')}' "
-                            f"(ID: {linear_team_id}) to organization {organization.name}"
-                        )
-                    else:
-                        logger.warning(
-                            f"No Linear teams found. Organization {organization.name} will not have Linear team ID."
-                        )
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to fetch Linear teams for organization {organization.name}: {str(e)}"
-                    )
-            else:
-                logger.warning(
-                    f"LINEAR_API_KEY not configured. Organization {organization.name} will not have Linear team ID."
-                )
-        else:
-            logger.info(
-                f"Assigned default Linear team ID {linear_team_id} to organization {organization.name}"
-            )
+        # Create unique identifier using organization slug and a short UUID
+        unique_suffix = str(uuid.uuid4())[:8]
+        linear_team_id = f"{base_team_id}-{organization.slug}-{unique_suffix}"
+        
+        # Alternative: If you want simpler IDs, use just the slug
+        # linear_team_id = f"{base_team_id}-{organization.slug}"
         
         # Save the Linear team ID to the organization
-        if linear_team_id:
-            organization.linear_team_id = linear_team_id
-            organization.save(update_fields=['linear_team_id'])
-            logger.info(
-                f"[OK] Organization {organization.name} (ID: {organization.id}) created with Linear team ID: {linear_team_id}"
-            )
-        else:
-            logger.warning(
-                f"[WARNING] Organization {organization.name} (ID: {organization.id}) created without Linear team ID. "
-                f"Please configure LINEAR_TEAM_ID in settings or LINEAR_API_KEY to enable Linear integration."
-            )
+        organization.linear_team_id = linear_team_id
+        organization.save(update_fields=['linear_team_id'])
+        
+        logger.info(
+            f"[OK] Organization '{organization.name}' (ID: {organization.id}) created with unique Linear team ID: {linear_team_id}"
+        )
+        logger.info(
+            f"[INFO] This is a mock team ID for data isolation. "
+            f"To enable actual Linear sync, create a team in Linear and run: "
+            f"python manage.py setup_linear_teams --assign {organization.id} <REAL_LINEAR_TEAM_ID>"
+        )
     
     def _create_vendor_profile(self, user, organization):
         """Create vendor profile and vendor record for the user"""
@@ -173,54 +154,19 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
         from crmApp.models import Permission
         
         # Define default resources and actions
+        # Only include: sales, activities, issue, analytics, team
         default_permissions = [
-            # Customers
-            {'resource': 'customer', 'action': 'view', 'description': 'View customers'},
-            {'resource': 'customer', 'action': 'create', 'description': 'Create customers'},
-            {'resource': 'customer', 'action': 'edit', 'description': 'Edit customers'},
-            {'resource': 'customer', 'action': 'delete', 'description': 'Delete customers'},
-            
-            # Deals
-            {'resource': 'deal', 'action': 'view', 'description': 'View deals'},
-            {'resource': 'deal', 'action': 'create', 'description': 'Create deals'},
-            {'resource': 'deal', 'action': 'edit', 'description': 'Edit deals'},
-            {'resource': 'deal', 'action': 'delete', 'description': 'Delete deals'},
-            
-            # Leads
-            {'resource': 'lead', 'action': 'view', 'description': 'View leads'},
-            {'resource': 'lead', 'action': 'create', 'description': 'Create leads'},
-            {'resource': 'lead', 'action': 'edit', 'description': 'Edit leads'},
-            {'resource': 'lead', 'action': 'delete', 'description': 'Delete leads'},
+            # Sales (deals, leads, customers)
+            {'resource': 'sales', 'action': 'view', 'description': 'View sales (deals, leads, customers)'},
+            {'resource': 'sales', 'action': 'create', 'description': 'Create sales records'},
+            {'resource': 'sales', 'action': 'edit', 'description': 'Edit sales records'},
+            {'resource': 'sales', 'action': 'delete', 'description': 'Delete sales records'},
             
             # Activities
-            {'resource': 'activity', 'action': 'view', 'description': 'View activities'},
-            {'resource': 'activity', 'action': 'create', 'description': 'Create activities'},
-            {'resource': 'activity', 'action': 'edit', 'description': 'Edit activities'},
-            {'resource': 'activity', 'action': 'delete', 'description': 'Delete activities'},
-            
-            # Employees/Team
-            {'resource': 'employee', 'action': 'view', 'description': 'View team members'},
-            {'resource': 'employee', 'action': 'create', 'description': 'Invite team members'},
-            {'resource': 'employee', 'action': 'edit', 'description': 'Edit team members'},
-            {'resource': 'employee', 'action': 'delete', 'description': 'Remove team members'},
-            
-            # Orders
-            {'resource': 'order', 'action': 'view', 'description': 'View orders'},
-            {'resource': 'order', 'action': 'create', 'description': 'Create orders'},
-            {'resource': 'order', 'action': 'edit', 'description': 'Edit orders'},
-            {'resource': 'order', 'action': 'delete', 'description': 'Delete orders'},
-            
-            # Payments
-            {'resource': 'payment', 'action': 'view', 'description': 'View payments'},
-            {'resource': 'payment', 'action': 'create', 'description': 'Create payments'},
-            {'resource': 'payment', 'action': 'edit', 'description': 'Edit payments'},
-            {'resource': 'payment', 'action': 'delete', 'description': 'Delete payments'},
-            
-            # Vendors
-            {'resource': 'vendor', 'action': 'view', 'description': 'View vendors'},
-            {'resource': 'vendor', 'action': 'create', 'description': 'Create vendors'},
-            {'resource': 'vendor', 'action': 'edit', 'description': 'Edit vendors'},
-            {'resource': 'vendor', 'action': 'delete', 'description': 'Delete vendors'},
+            {'resource': 'activities', 'action': 'view', 'description': 'View activities'},
+            {'resource': 'activities', 'action': 'create', 'description': 'Create activities'},
+            {'resource': 'activities', 'action': 'edit', 'description': 'Edit activities'},
+            {'resource': 'activities', 'action': 'delete', 'description': 'Delete activities'},
             
             # Issues
             {'resource': 'issue', 'action': 'view', 'description': 'View issues'},
@@ -230,16 +176,14 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
             
             # Analytics
             {'resource': 'analytics', 'action': 'view', 'description': 'View analytics and reports'},
+            {'resource': 'analytics', 'action': 'export', 'description': 'Export analytics data'},
             
-            # Settings
-            {'resource': 'settings', 'action': 'view', 'description': 'View settings'},
-            {'resource': 'settings', 'action': 'edit', 'description': 'Edit settings'},
-            
-            # Roles
-            {'resource': 'role', 'action': 'view', 'description': 'View roles'},
-            {'resource': 'role', 'action': 'create', 'description': 'Create roles'},
-            {'resource': 'role', 'action': 'edit', 'description': 'Edit roles'},
-            {'resource': 'role', 'action': 'delete', 'description': 'Delete roles'},
+            # Team (employees, roles, permissions)
+            {'resource': 'team', 'action': 'view', 'description': 'View team members'},
+            {'resource': 'team', 'action': 'invite', 'description': 'Invite team members'},
+            {'resource': 'team', 'action': 'edit', 'description': 'Edit team members'},
+            {'resource': 'team', 'action': 'remove', 'description': 'Remove team members'},
+            {'resource': 'team', 'action': 'manage_roles', 'description': 'Manage roles and permissions'},
         ]
         
         # Create permissions in bulk

@@ -346,6 +346,22 @@ def handle_authenticated_message(telegram_user: TelegramUser, text: str, telegra
         # Run async function
         async_to_sync(process_gemini_stream)()
         
+        # Check if response contains error about leaked API key
+        response_lower = response_text.lower()
+        if ("403" in response_text or "permission_denied" in response_lower) and "leaked" in response_lower:
+            error_message = (
+                "🔒 <b>API Key Security Issue</b>\n\n"
+                "Your Gemini API key has been reported as leaked and is no longer valid.\n\n"
+                "<b>To fix this:</b>\n"
+                "1. Go to Google AI Studio (https://aistudio.google.com/apikey)\n"
+                "2. Create a new API key\n"
+                "3. Update the GEMINI_API_KEY in your environment variables\n"
+                "4. Restart the backend server\n\n"
+                "⚠️ <b>Important:</b> Never commit API keys to version control or share them publicly."
+            )
+            telegram_service.send_message_chunked(chat_id, error_message)
+            return
+        
         # Format response for Telegram
         formatted_response = format_crm_response_for_telegram(response_text)
         
@@ -358,11 +374,44 @@ def handle_authenticated_message(telegram_user: TelegramUser, text: str, telegra
         logger.info(f"Successfully processed message for user {user.email} via Telegram")
     
     except Exception as e:
+        error_str = str(e)
+        error_repr = repr(e)
         logger.error(f"Error processing Gemini request: {str(e)}", exc_info=True)
-        telegram_service.send_message(
-            chat_id,
-            "❌ Sorry, I encountered an error processing your request.\n\nPlease try again or contact support."
-        )
+        
+        # Check for specific error types and provide helpful messages
+        if ("403" in error_str or "PERMISSION_DENIED" in error_str) and ("leaked" in error_str.lower() or "leaked" in error_repr.lower()):
+            error_message = (
+                "🔒 <b>API Key Security Issue</b>\n\n"
+                "Your Gemini API key has been reported as leaked and is no longer valid.\n\n"
+                "<b>To fix this:</b>\n"
+                "1. Go to Google AI Studio (https://aistudio.google.com/apikey)\n"
+                "2. Create a new API key\n"
+                "3. Update the GEMINI_API_KEY in your environment variables\n"
+                "4. Restart the backend server\n\n"
+                "⚠️ <b>Important:</b> Never commit API keys to version control or share them publicly."
+            )
+        elif "403" in error_str or "PERMISSION_DENIED" in error_str:
+            error_message = (
+                "⚠️ <b>API Access Denied</b>\n\n"
+                "There's an issue with the Gemini API key permissions.\n\n"
+                "Please contact your administrator to check the API key configuration."
+            )
+        elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+            error_message = "⏸️ Rate limit exceeded. Please wait a moment and try again."
+        elif "401" in error_str or "UNAUTHORIZED" in error_str:
+            error_message = (
+                "⚠️ <b>Authentication Failed</b>\n\n"
+                "The Gemini API key is invalid or not configured.\n\n"
+                "Please contact your administrator."
+            )
+        else:
+            error_message = (
+                "❌ Sorry, I encountered an error processing your request.\n\n"
+                "Please try again or contact support.\n\n"
+                f"<i>Error: {error_str[:100]}</i>"
+            )
+        
+        telegram_service.send_message(chat_id, error_message)
 
 
 def handle_telegram_callback(parsed: Dict[str, Any]):

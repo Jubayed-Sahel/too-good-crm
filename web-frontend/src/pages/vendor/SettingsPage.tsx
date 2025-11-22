@@ -4,22 +4,26 @@ import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import {
   SettingsHeader,
   SettingsTabs,
-  ProfileSettings,
   OrganizationSettings,
   TeamSettings,
   RolesSettings,
   NotificationSettings,
   SecuritySettings,
-  BillingSettings,
 } from '../../components/settings';
 
+const vendorTabs = [
+  { id: 'organization', label: 'Organization' },
+  { id: 'team', label: 'Team' },
+  { id: 'roles', label: 'Roles' },
+  { id: 'notifications', label: 'Notifications' },
+  { id: 'security', label: 'Security' },
+];
+
 const SettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('organization');
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'profile':
-        return <ProfileSettings />;
       case 'organization':
         return <OrganizationSettings />;
       case 'team':
@@ -30,10 +34,8 @@ const SettingsPage = () => {
         return <NotificationSettings />;
       case 'security':
         return <SecuritySettings />;
-      case 'billing':
-        return <BillingSettings />;
       default:
-        return <ProfileSettings />;
+        return <OrganizationSettings />;
     }
   };
 
@@ -41,7 +43,7 @@ const SettingsPage = () => {
     <DashboardLayout title="Settings">
       <VStack align="stretch" gap={5}>
         <SettingsHeader />
-        <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} tabs={vendorTabs} />
         {renderTabContent()}
       </VStack>
     </DashboardLayout>
