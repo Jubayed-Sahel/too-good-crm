@@ -5,10 +5,11 @@
         <!-- Android Emulator localhost -->
         <domain includeSubdomains="true">10.0.2.2</domain>
 
-        <!-- Local network IP addresses (192.168.x.x) -->
-        <domain includeSubdomains="true">192.168.0.218</domain>
+        <!-- Physical Device - Your PC's IP Address -->
+        <domain includeSubdomains="true">192.168.0.106</domain>
 
-        <!-- Add your computer's IP if different -->
+        <!-- Other local network IPs (if needed) -->
+        <!-- <domain includeSubdomains="true">192.168.0.218</domain> -->
         <!-- <domain includeSubdomains="true">192.168.1.100</domain> -->
     </domain-config>
 

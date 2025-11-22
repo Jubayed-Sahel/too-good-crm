@@ -2,6 +2,9 @@ package too.good.crm.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -167,7 +170,7 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("customers") }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.TrendingUp, contentDescription = null) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null) },
                     label = { Text("Sales") },
                     selected = false,
                     onClick = { onNavigate("sales") }
@@ -179,7 +182,7 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("activities") }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Message, contentDescription = null) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
                     label = { Text("Messages") },
                     selected = false,
                     onClick = { onNavigate("messages") }
@@ -241,7 +244,7 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("payments") }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Message, contentDescription = null) },
+                    icon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
                     label = { Text("Messages") },
                     selected = false,
                     onClick = { onNavigate("messages") }
@@ -272,7 +275,7 @@ fun NavigationDrawerContent(
 
             // Sign Out
             NavigationDrawerItem(
-                icon = { Icon(Icons.Default.Logout, contentDescription = null) },
+                icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
                 label = { Text("Sign Out", color = MaterialTheme.colorScheme.error) },
                 selected = false,
                 onClick = onLogout,

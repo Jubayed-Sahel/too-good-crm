@@ -230,7 +230,7 @@ fun ProgressIndicator(
         verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
     ) {
         LinearProgressIndicator(
-            progress = progress,
+            progress = { progress },
             modifier = Modifier.fillMaxWidth(),
             color = DesignTokens.Colors.Primary,
             trackColor = DesignTokens.Colors.SurfaceVariant

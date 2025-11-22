@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -246,7 +248,7 @@ fun DashboardScreen(
                         value = activeLeads.toString(),
                         change = formatPercentage(leadGrowth),
                         changeLabel = "vs last month",
-                        icon = Icons.Default.TrendingUp,
+                        icon = Icons.AutoMirrored.Filled.TrendingUp,
                         isPositive = (leadGrowth ?: 0.0) >= 0,
                         iconBackgroundColor = DesignTokens.Colors.Warning100,
                         iconTintColor = DesignTokens.Colors.Warning
@@ -318,7 +320,7 @@ fun WelcomeCard() {
                     ),
                     shape = MaterialTheme.shapes.medium
                 ) {
-                    Icon(Icons.Default.TrendingUp, contentDescription = null)
+                    Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null)
                     Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space2))
                     Text("Analytics")
                 }
@@ -385,7 +387,7 @@ fun MetricCard(
                 Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = if (isPositive) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                        imageVector = if (isPositive) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
                         contentDescription = null,
                         tint = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
                         modifier = Modifier.size(16.dp)

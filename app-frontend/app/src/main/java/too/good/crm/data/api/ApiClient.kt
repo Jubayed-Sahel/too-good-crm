@@ -15,7 +15,7 @@ object ApiClient {
     // ⚠️ BASE_URL Configuration
     // Backend running on 0.0.0.0:8000
     //
-    // OPTION 1: Android Emulator (Default)
+    // OPTION 1: Android Emulator
     //   Use: "http://10.0.2.2:8000/api/"
     //   10.0.2.2 is the special IP that emulator uses to access host machine's localhost
     //
@@ -28,8 +28,9 @@ object ApiClient {
     // OPTION 3: ngrok (for external access/testing)
     //   Use: "https://your-ngrok-url.ngrok-free.dev/api/"
     //
-    // ✅ CURRENT: Android Emulator connecting to localhost:8000
-    private const val BASE_URL = "http://10.0.2.2:8000/api/"
+    // ✅ CURRENT: Physical Device on same WiFi network (192.168.0.106)
+    // Make sure your phone is connected to the SAME WiFi network as your PC!
+    private const val BASE_URL = "http://192.168.0.106:8000/api/"
 
     private var authToken: String? = null
 
