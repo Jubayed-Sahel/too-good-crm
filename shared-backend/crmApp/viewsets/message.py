@@ -268,21 +268,27 @@ class MessageViewSet(PermissionCheckMixin, OrganizationFilterMixin, viewsets.Mod
                 from crmApp.utils.profile_context import get_active_profile_organization
                 organization = get_active_profile_organization(request.user)
             
+            # Get messages with higher limit to ensure all old messages are loaded
             messages = MessageService.get_messages(
                 request.user,
                 other_user,
                 organization,
-                limit=100
+                limit=500  # Increased limit to load more old messages
             )
+            
+            logger.info(f"Retrieved {len(messages)} messages between user {request.user.id} and {other_user.id} in org {organization.id if organization else None}")
             
             # Mark messages as read
             for message in messages:
                 if message.recipient == request.user and not message.is_read:
                     MessageService.mark_as_read(message, request.user)
             
-            return Response(
-                MessageSerializer(messages, many=True, context={'request': request}).data
-            )
+            # Serialize messages
+            serialized_messages = MessageSerializer(messages, many=True, context={'request': request}).data
+            
+            logger.debug(f"Serialized {len(serialized_messages)} messages for response")
+            
+            return Response(serialized_messages)
         
         except User.DoesNotExist:
             return Response(

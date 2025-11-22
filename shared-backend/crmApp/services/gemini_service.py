@@ -480,17 +480,30 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         # === LEAD TOOLS ===
         async def list_leads_tool(status: str = "all", limit: int = 10):
-            """List leads in the organization. Leads are in any stage of the sales pipeline."""
+            """List leads in the organization. Leads are in any stage of the sales pipeline. Organization ID is automatically determined from the user context."""
             @sync_to_async
             def fetch():
-                # Get all active leads (status field should be 'active', not qualification_status)
+                # Ensure we have org_id (should always be set from user context)
+                if not org_id:
+                    return {"error": "No organization context found. Please ensure you're logged in."}
+                
+                # Get ALL leads for the organization (regardless of stage)
+                # Leads are any record in the Lead model, regardless of stage
                 queryset = Lead.objects.filter(organization_id=org_id, status='active')
                 
-                # Optionally filter by qualification_status
+                # Optionally filter by qualification_status if specified
                 if status and status.lower() not in ["all", ""]:
-                    queryset = queryset.filter(qualification_status=status)
+                    queryset = queryset.filter(qualification_status=status.lower())
                 
-                leads = queryset.select_related('stage')[:limit]
+                leads = queryset.select_related('stage').order_by('-created_at')[:limit]
+                lead_list = list(leads)  # Convert to list to check count
+                
+                logger.info(f"Found {len(lead_list)} leads for organization_id={org_id}")
+                
+                if len(lead_list) == 0:
+                    logger.warning(f"No leads found for organization_id={org_id}")
+                    return []
+                
                 return [
                     {
                         "id": l.id,
@@ -718,80 +731,182 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             return await fetch()
         
         # === ISSUE TOOLS ===
-        async def list_issues_tool(status: str = "open", limit: int = 10):
-            """List issues/tickets in the organization"""
+        async def list_issues_tool(status: str = None, priority: str = None, limit: int = 20):
+            """List issues/tickets in the organization. If no status is specified, returns all issues."""
             @sync_to_async
             def fetch():
-                issues = Issue.objects.filter(organization_id=org_id, status=status)[:limit]
-                return [
+                if not org_id:
+                    return {"error": "No organization context found. Please ensure you're logged in."}
+                
+                logger.info(f"Listing issues for organization_id={org_id}, status={status}, priority={priority}, limit={limit}")
+                
+                # Start with organization filter
+                queryset = Issue.objects.filter(organization_id=org_id)
+                
+                # Apply optional filters
+                if status and status.lower() != "all":
+                    queryset = queryset.filter(status=status.lower())
+                
+                if priority:
+                    queryset = queryset.filter(priority=priority.lower())
+                
+                # Order by most recent first
+                issues = queryset.order_by('-created_at')[:limit]
+                
+                logger.info(f"Found {issues.count()} issues for org {org_id}")
+                
+                result = [
                     {
                         "id": i.id,
                         "title": i.title,
                         "priority": i.priority,
                         "status": i.status,
+                        "category": i.category,
                         "customer_name": i.customer.name if i.customer else None,
+                        "created_at": str(i.created_at) if hasattr(i, 'created_at') else None,
                     }
                     for i in issues
                 ]
+                
+                logger.debug(f"Returning {len(result)} issues")
+                return result if result else []
             return await fetch()
         
-        async def create_issue_tool(title: str, description: str, priority: str = "medium", customer_id: int = None):
+        async def create_issue_tool(title: str, description: str, priority: str = "medium", category: str = "other", customer_id: int = None):
             """Create a new issue/ticket"""
             @sync_to_async
             def create():
-                issue = Issue.objects.create(
-                    organization_id=org_id,
-                    title=title,
-                    description=description,
-                    priority=priority,
-                    customer_id=customer_id,
-                    status="open"
-                )
-                return {
-                    "success": True,
-                    "id": issue.id,
-                    "title": issue.title,
-                    "message": f"Issue '{title}' created successfully"
-                }
-            return await create()
-        
-        async def update_issue_tool(issue_id: int, status: str = None, priority: str = None):
-            """Update an existing issue"""
-            @sync_to_async
-            def update():
+                if not org_id:
+                    return {"error": "No organization context found. Please ensure you're logged in."}
+                
+                logger.info(f"Creating issue for organization_id={org_id}: {title}")
+                
                 try:
-                    issue = Issue.objects.get(id=issue_id, organization_id=org_id)
-                    if status:
-                        issue.status = status
-                    if priority:
-                        issue.priority = priority
-                    issue.save()
+                    # Get customer if customer_id provided
+                    customer = None
+                    if customer_id:
+                        from crmApp.models import Customer
+                        try:
+                            customer = Customer.objects.get(id=customer_id, organization_id=org_id)
+                        except Customer.DoesNotExist:
+                            return {"error": f"Customer with ID {customer_id} not found in your organization"}
+                    
+                    issue = Issue.objects.create(
+                        organization_id=org_id,
+                        title=title,
+                        description=description,
+                        priority=priority.lower() if priority else "medium",
+                        category=category.lower() if category else "other",
+                        customer=customer,
+                        status="open"
+                    )
+                    
+                    logger.info(f"Issue {issue.id} created successfully")
+                    
                     return {
                         "success": True,
                         "id": issue.id,
                         "title": issue.title,
+                        "message": f"Issue '{title}' created successfully"
+                    }
+                except Exception as e:
+                    logger.error(f"Error creating issue: {e}", exc_info=True)
+                    return {"error": f"Failed to create issue: {str(e)}"}
+            return await create()
+        
+        async def update_issue_tool(issue_id: int, status: str = None, priority: str = None, title: str = None, description: str = None):
+            """Update an existing issue"""
+            @sync_to_async
+            def update():
+                if not org_id:
+                    return {"error": "No organization context found. Please ensure you're logged in."}
+                
+                logger.info(f"Updating issue {issue_id} for organization_id={org_id}")
+                
+                try:
+                    issue = Issue.objects.get(id=issue_id, organization_id=org_id)
+                    
+                    if status:
+                        issue.status = status.lower()
+                    if priority:
+                        issue.priority = priority.lower()
+                    if title:
+                        issue.title = title
+                    if description:
+                        issue.description = description
+                    
+                    issue.save()
+                    
+                    logger.info(f"Issue {issue.id} updated successfully")
+                    
+                    return {
+                        "success": True,
+                        "id": issue.id,
+                        "title": issue.title,
+                        "status": issue.status,
+                        "priority": issue.priority,
                         "message": f"Issue '{issue.title}' updated successfully"
                     }
                 except Issue.DoesNotExist:
-                    return {"error": "Issue not found"}
+                    logger.warning(f"Issue {issue_id} not found in org {org_id}")
+                    return {"error": f"Issue with ID {issue_id} not found in your organization"}
+                except Exception as e:
+                    logger.error(f"Error updating issue: {e}", exc_info=True)
+                    return {"error": f"Failed to update issue: {str(e)}"}
             return await update()
+        
+        async def get_issue_tool(issue_id: int):
+            """Get detailed information about a specific issue"""
+            @sync_to_async
+            def fetch():
+                if not org_id:
+                    return {"error": "No organization context found. Please ensure you're logged in."}
+                
+                try:
+                    issue = Issue.objects.select_related('customer', 'assigned_to').get(id=issue_id, organization_id=org_id)
+                    return {
+                        "id": issue.id,
+                        "title": issue.title,
+                        "description": issue.description,
+                        "priority": issue.priority,
+                        "status": issue.status,
+                        "category": issue.category,
+                        "customer_name": issue.customer.name if issue.customer else None,
+                        "created_at": str(issue.created_at) if hasattr(issue, 'created_at') else None,
+                    }
+                except Issue.DoesNotExist:
+                    return {"error": f"Issue with ID {issue_id} not found in your organization"}
+            return await fetch()
         
         async def resolve_issue_tool(issue_id: int):
             """Mark an issue as resolved"""
             @sync_to_async
             def resolve():
+                if not org_id:
+                    return {"error": "No organization context found. Please ensure you're logged in."}
+                
+                logger.info(f"Resolving issue {issue_id} for organization_id={org_id}")
+                
                 try:
                     issue = Issue.objects.get(id=issue_id, organization_id=org_id)
                     issue.status = "resolved"
                     issue.save()
+                    
+                    logger.info(f"Issue {issue.id} resolved successfully")
+                    
                     return {
                         "success": True,
                         "id": issue.id,
                         "title": issue.title,
+                        "status": issue.status,
                         "message": f"Issue '{issue.title}' marked as resolved ✓"
                     }
                 except Issue.DoesNotExist:
-                    return {"error": "Issue not found"}
+                    logger.warning(f"Issue {issue_id} not found in org {org_id}")
+                    return {"error": f"Issue with ID {issue_id} not found in your organization"}
+                except Exception as e:
+                    logger.error(f"Error resolving issue: {e}", exc_info=True)
+                    return {"error": f"Failed to resolve issue: {str(e)}"}
             return await resolve()
         
         # === ANALYTICS TOOLS ===
@@ -896,12 +1011,12 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             # Lead functions
             types.FunctionDeclaration(
                 name="list_leads",
-                description="List leads in the organization. Leads are potential customers in any stage of the sales pipeline. When a lead reaches 'Closed Won' stage, they become both a lead and a customer.",
+                description="List leads in the user's organization. IMPORTANT: Organization ID is automatically determined from the user context - you do NOT need to pass any organization ID. This function will automatically filter leads based on the authenticated user's organization. Leads are any records in the Lead model, regardless of their pipeline stage (Lead, Qualified, Proposal, Negotiation, Closed Won, Closed Lost). When a lead reaches 'Closed Won' stage, they become both a lead and a customer. Use this function whenever the user asks about 'my leads', 'show leads', 'list leads', etc.",
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
-                        "status": types.Schema(type=types.Type.STRING, description="Filter by qualification status: new, contacted, qualified, unqualified, converted, lost, or 'all' for all leads (default: all)"),
-                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 10)"),
+                        "status": types.Schema(type=types.Type.STRING, description="Optional filter by qualification status: new, contacted, qualified, unqualified, converted, lost, or 'all' for all leads regardless of qualification status (default: all)"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 10, max: 100)"),
                     },
                 ),
             ),
@@ -1027,49 +1142,75 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             # Issue functions
             types.FunctionDeclaration(
                 name="list_issues",
-                description="List issues/tickets in the organization",
+                description="List issues/tickets in the user's organization. Organization ID is automatically determined from user context. Returns all issues by default unless status filter is specified. Use this function when user asks about 'my issues', 'show issues', 'list issues', 'open issues', etc.",
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
-                        "status": types.Schema(type=types.Type.STRING, description="Filter by status: open, in_progress, resolved, closed"),
-                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 10)"),
+                        "status": types.Schema(type=types.Type.STRING, description="Optional filter by status: open, in_progress, resolved, closed, or 'all' for all statuses (default: all if not specified)"),
+                        "priority": types.Schema(type=types.Type.STRING, description="Optional filter by priority: low, medium, high, critical"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 20, max: 100)"),
                     },
                 ),
             ),
             types.FunctionDeclaration(
+                name="get_issue",
+                description="Get detailed information about a specific issue by ID. Organization ID is automatically determined from user context.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "issue_id": types.Schema(type=types.Type.INTEGER, description="Issue ID (required)"),
+                    },
+                    required=["issue_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
                 name="create_issue",
-                description="Create a new issue/support ticket in the CRM",
+                description="Create a new issue/support ticket in the CRM. Organization ID is automatically determined from user context.",
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
                         "title": types.Schema(type=types.Type.STRING, description="Issue title (required)"),
                         "description": types.Schema(type=types.Type.STRING, description="Issue description (required)"),
-                        "priority": types.Schema(type=types.Type.STRING, description="Priority: low, medium, high, urgent (default: medium)"),
+                        "priority": types.Schema(type=types.Type.STRING, description="Priority: low, medium, high, critical (default: medium)"),
+                        "category": types.Schema(type=types.Type.STRING, description="Category: quality, delivery, payment, communication, other (default: other)"),
                         "customer_id": types.Schema(type=types.Type.INTEGER, description="Associated customer ID (optional)"),
                     },
                     required=["title", "description"],
                 ),
             ),
             types.FunctionDeclaration(
+                name="get_issue",
+                description="Get detailed information about a specific issue by ID. Organization ID is automatically determined from user context.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "issue_id": types.Schema(type=types.Type.INTEGER, description="Issue ID (required)"),
+                    },
+                    required=["issue_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
                 name="update_issue",
-                description="Update an existing issue's status or priority",
+                description="Update an existing issue's status, priority, title, or description. Organization ID is automatically determined from user context.",
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
                         "issue_id": types.Schema(type=types.Type.INTEGER, description="Issue ID (required)"),
                         "status": types.Schema(type=types.Type.STRING, description="New status: open, in_progress, resolved, closed (optional)"),
-                        "priority": types.Schema(type=types.Type.STRING, description="New priority: low, medium, high, urgent (optional)"),
+                        "priority": types.Schema(type=types.Type.STRING, description="New priority: low, medium, high, critical (optional)"),
+                        "title": types.Schema(type=types.Type.STRING, description="New title (optional)"),
+                        "description": types.Schema(type=types.Type.STRING, description="New description (optional)"),
                     },
                     required=["issue_id"],
                 ),
             ),
             types.FunctionDeclaration(
                 name="resolve_issue",
-                description="Mark an issue as resolved",
+                description="Mark an issue as resolved. Organization ID is automatically determined from user context.",
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
-                        "issue_id": types.Schema(type=types.Type.INTEGER, description="Issue ID to resolve"),
+                        "issue_id": types.Schema(type=types.Type.INTEGER, description="Issue ID to resolve (required)"),
                     },
                     required=["issue_id"],
                 ),
@@ -1109,6 +1250,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             "get_deal_stats": get_deal_stats_tool,
             # Issue tools
             "list_issues": list_issues_tool,
+            "get_issue": get_issue_tool,
             "create_issue": create_issue_tool,
             "update_issue": update_issue_tool,
             "resolve_issue": resolve_issue_tool,

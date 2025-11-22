@@ -22,7 +22,7 @@ import {
   DialogFooter,
   DialogCloseTrigger,
 } from '../components/ui/dialog';
-import { FiMessageSquare, FiSend, FiPlus, FiSearch } from 'react-icons/fi';
+import { FiMessageSquare, FiSend, FiPlus, FiSearch, FiExternalLink } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { useMessages, useConversations, useSendMessage, useRecipients, useMessagesWithUser, useUnreadCount, useMarkMessageRead } from '@/hooks/useMessages';
 import { useAuth } from '@/hooks/useAuth';
@@ -225,6 +225,38 @@ const MessagesPage = () => {
               </VStack>
             ) : (
               <VStack align="stretch" gap={0}>
+                {/* Telegram Bot - Show for all users */}
+                <Box
+                  p={4}
+                  bg="blue.50"
+                  borderBottomWidth="1px"
+                  borderBottomColor="gray.100"
+                  borderRadius="md"
+                  mb={2}
+                >
+                  <HStack justify="space-between" mb={1}>
+                    <HStack>
+                      <Text fontSize="lg">📱</Text>
+                      <Text fontWeight="semibold" fontSize="sm">
+                        Telegram Bot
+                      </Text>
+                    </HStack>
+                  </HStack>
+                  <Text fontSize="xs" color="gray.600" mb={2} noOfLines={2}>
+                    Connect with LeadGrid Bot on Telegram for quick access to your CRM
+                  </Text>
+                  <Button
+                    size="xs"
+                    colorPalette="blue"
+                    variant="outline"
+                    onClick={() => window.open('https://t.me/LeadGrid_bot', '_blank')}
+                    leftIcon={<FiExternalLink size={12} />}
+                    width="100%"
+                  >
+                    Open LeadGrid Bot
+                  </Button>
+                </Box>
+
                 {/* AI Assistant - Show for Vendors and Employees */}
                 {(isVendor || isEmployee) && (
                   <Box

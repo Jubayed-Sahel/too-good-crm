@@ -7,7 +7,7 @@ import os
 import sys
 import django
 import asyncio
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Callable
 import logging
 
 # Setup Django environment
@@ -32,11 +32,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize FastMCP server
-mcp = FastMCP(
-    name="CRM Assistant",
-    version="1.0.0",
-    description="AI-powered CRM assistant with access to customer, lead, deal, issue, and analytics data"
-)
+mcp = FastMCP(name="CRM Assistant", version="1.0.0")
 
 # Global user context storage (set by Gemini proxy)
 _user_context: Dict[str, Any] = {}
@@ -138,6 +134,29 @@ register_order_tools(mcp)
 register_employee_tools(mcp)
 register_organization_tools(mcp)
 logger.info("All MCP tools registered successfully")
+
+# Global tool registry for direct access
+_tool_registry: Dict[str, Callable] = {}
+
+# Access registered tools from FastMCP and store in registry
+if hasattr(mcp, '_tools'):
+    _tool_registry.update(mcp._tools)
+elif hasattr(mcp, 'tools'):
+    _tool_registry.update(mcp.tools)
+elif hasattr(mcp, '_registered_tools'):
+    _tool_registry.update(mcp._registered_tools)
+else:
+    logger.warning("Could not find tools in FastMCP instance. Tools may not be accessible.")
+
+logger.info(f"Tool registry initialized with {len(_tool_registry)} tools: {list(_tool_registry.keys())[:10]}...")
+
+def get_tool_function(tool_name: str) -> Optional[Callable]:
+    """Get a tool function by name"""
+    return _tool_registry.get(tool_name)
+
+def list_tool_names() -> List[str]:
+    """List all registered tool names"""
+    return list(_tool_registry.keys())
 
 if __name__ == "__main__":
     # Run the MCP server

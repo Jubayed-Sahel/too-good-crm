@@ -165,6 +165,9 @@ class MessageService:
             QuerySet of Message objects
         """
         from django.db import models
+        import logging
+        logger = logging.getLogger(__name__)
+        
         queryset = Message.objects.filter(
             models.Q(sender=user1, recipient=user2) |
             models.Q(sender=user2, recipient=user1)
@@ -173,7 +176,11 @@ class MessageService:
         if organization:
             queryset = queryset.filter(organization=organization)
         
-        return list(queryset.order_by('-created_at')[:limit])
+        # Return messages ordered by created_at (oldest first) for proper chat display
+        # Frontend reverses this to show newest at bottom
+        messages = list(queryset.order_by('created_at')[:limit])
+        logger.info(f"get_messages: Found {len(messages)} messages between user {user1.id} and {user2.id} (org: {organization.id if organization else None}, limit: {limit})")
+        return messages
     
     @staticmethod
     def mark_as_read(message: Message, user: User):

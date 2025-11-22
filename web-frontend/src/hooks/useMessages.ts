@@ -171,11 +171,19 @@ export const useMessagesWithUser = (userId: number | null) => {
     queryKey: ['messages', 'with-user', userId],
     queryFn: async () => {
       if (!userId) return [];
-      const response = await api.get<Message[]>(`/api/messages/with_user/?user_id=${userId}`);
-      return response;
+      try {
+        const response = await api.get<Message[]>(`/api/messages/with_user/?user_id=${userId}`);
+        console.log(`📨 Loaded ${response?.length || 0} messages for user ${userId}`, response);
+        return response || [];
+      } catch (error: any) {
+        console.error('❌ Error loading messages:', error);
+        // Return empty array on error instead of throwing
+        return [];
+      }
     },
     enabled: !!userId,
-    refetchInterval: 5000, // Fallback: poll every 5 seconds if Pusher fails
+    refetchInterval: false, // Disable polling - rely on Pusher for updates
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
   
   // Subscribe to real-time message updates for this conversation
@@ -215,7 +223,7 @@ export const useMessagesWithUser = (userId: number | null) => {
             return oldMessages;
           }
           
-          console.log('➕ Adding new message to cache');
+          console.log(`➕ Adding new message to cache (current count: ${oldMessages.length})`);
           
           // Add new message to the list
           const newMessage: Message = {
@@ -229,12 +237,18 @@ export const useMessagesWithUser = (userId: number | null) => {
             organization: message.organization_id,
           };
           
-          return [...oldMessages, newMessage];
+          // Add to end of array (messages are ordered oldest first, newest last)
+          const updated = [...oldMessages, newMessage];
+          console.log(`✅ Cache updated with new message (new count: ${updated.length})`);
+          return updated;
         });
         
-        // Also invalidate to ensure we have latest data from server
-        queryClient.invalidateQueries({ queryKey: ['messages', 'with-user', userId] });
-        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        // Invalidate queries to ensure consistency, but don't refetch immediately
+        // to avoid losing the real-time update
+        setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: ['messages', 'with-user', userId] });
+          queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        }, 1000);
       }
     }, [userId, user?.id, queryClient])
   );
