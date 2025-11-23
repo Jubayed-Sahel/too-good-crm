@@ -11,6 +11,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
@@ -41,10 +42,16 @@ import too.good.crm.features.team.TeamScreen
 import too.good.crm.ui.components.PrimaryButton
 import too.good.crm.ui.components.SecondaryButton
 import too.good.crm.ui.theme.DesignTokens
+import too.good.crm.ui.video.VideoCallManager
+import too.good.crm.ui.video.VideoCallHelper
+import android.widget.Toast
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize VideoCallHelper for global access
+        VideoCallHelper.initialize()
         
         // Initialize API client session (load saved token if exists)
         val authRepository = too.good.crm.data.repository.AuthRepository(this)
@@ -78,6 +85,23 @@ class MainActivity : ComponentActivity() {
                 )
             ) {
                 val navController = rememberNavController()
+                val context = androidx.compose.ui.platform.LocalContext.current
+                
+                // Observe user session state for reactive updates
+                val currentProfile by UserSession.currentProfileState
+                val isAuthenticated = currentProfile != null
+                val currentUserId = currentProfile?.id
+                
+                // Video Call Manager - runs globally
+                android.util.Log.d("MainActivity", "VideoCallManager - isAuthenticated: $isAuthenticated, userId: $currentUserId, profile: ${currentProfile?.name}")
+                VideoCallManager(
+                    isAuthenticated = isAuthenticated,
+                    currentUserId = currentUserId,
+                    onShowToast = { message ->
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    }
+                )
+                
                 Scaffold(
                     modifier = Modifier
                         .fillMaxSize()

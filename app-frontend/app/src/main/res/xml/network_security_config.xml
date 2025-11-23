@@ -1,16 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
-    <!-- Allow cleartext (HTTP) traffic for local development -->
+    <!-- Allow cleartext (HTTP) traffic for ALL local development -->
+    <!-- This allows ANY local IP address during development -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Specific domains for local development (optional - already covered by base-config) -->
     <domain-config cleartextTrafficPermitted="true">
         <!-- Android Emulator localhost -->
         <domain includeSubdomains="true">10.0.2.2</domain>
 
-        <!-- Physical Device - Your PC's IP Address -->
+        <!-- Local network IP ranges -->
         <domain includeSubdomains="true">192.168.0.106</domain>
-
-        <!-- Other local network IPs (if needed) -->
-        <!-- <domain includeSubdomains="true">192.168.0.218</domain> -->
-        <!-- <domain includeSubdomains="true">192.168.1.100</domain> -->
+        <domain includeSubdomains="true">192.168.1.100</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
     </domain-config>
 
     <!-- For production, you can add specific HTTPS-only domains -->
