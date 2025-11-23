@@ -1833,22 +1833,33 @@ const SalesPage = () => {
             {/* Pipeline Grid with Drag and Drop */}
             <Box
               overflowX="auto"
-              pb={2}
+              pb={4}
               css={{
                 '&::-webkit-scrollbar': {
-                  height: '8px',
+                  height: '12px',
                 },
                 '&::-webkit-scrollbar-track': {
-                  background: '#f1f1f1',
-                  borderRadius: '8px',
+                  background: '#e2e8f0',
+                  borderRadius: '10px',
+                  marginLeft: '4px',
+                  marginRight: '4px',
                 },
                 '&::-webkit-scrollbar-thumb': {
-                  background: '#888',
-                  borderRadius: '8px',
+                  background: '#805ad5',
+                  borderRadius: '10px',
+                  border: '2px solid #e2e8f0',
+                  cursor: 'grab',
                 },
                 '&::-webkit-scrollbar-thumb:hover': {
-                  background: '#555',
+                  background: '#6b46c1',
                 },
+                '&::-webkit-scrollbar-thumb:active': {
+                  background: '#553c9a',
+                  cursor: 'grabbing',
+                },
+                // For Firefox
+                scrollbarWidth: 'auto',
+                scrollbarColor: '#805ad5 #e2e8f0',
               }}
             >
               <HStack
