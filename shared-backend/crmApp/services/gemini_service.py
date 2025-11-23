@@ -943,6 +943,75 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                 }
             return await fetch()
         
+        # === EMPLOYEE TOOLS ===
+        async def list_employees_tool(status: str = "active", limit: int = 20):
+            """List employees in the organization"""
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                from crmApp.models import Employee
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                queryset = Employee.objects.filter(organization_id=org_id)
+                
+                if status and status.lower() != "all":
+                    queryset = queryset.filter(status=status.lower())
+                
+                employees = queryset.order_by('-created_at')[:limit]
+                
+                return [
+                    {
+                        "id": e.id,
+                        "name": f"{e.first_name} {e.last_name}",
+                        "email": e.email,
+                        "phone": e.phone or "",
+                        "job_title": e.job_title or "",
+                        "department": e.department or "",
+                        "status": e.status,
+                        "employment_type": e.employment_type,
+                    }
+                    for e in employees
+                ]
+            return await fetch()
+        
+        async def get_employee_tool(employee_id: int):
+            """Get detailed employee information"""
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                from crmApp.models import Employee
+                try:
+                    if org_id:
+                        employee = Employee.objects.get(id=employee_id, organization_id=org_id)
+                    else:
+                        employee = Employee.objects.get(id=employee_id, organization_id__isnull=True)
+                    return {
+                        "id": employee.id,
+                        "name": f"{employee.first_name} {employee.last_name}",
+                        "email": employee.email,
+                        "phone": employee.phone or "",
+                        "job_title": employee.job_title or "",
+                        "department": employee.department or "",
+                        "employment_type": employee.employment_type,
+                        "status": employee.status,
+                        "hire_date": str(employee.hire_date) if employee.hire_date else None,
+                        "address": employee.address or "",
+                        "city": employee.city or "",
+                        "country": employee.country or "",
+                    }
+                except Exception as e:
+                    return {"error": f"Employee not found: {str(e)}"}
+            return await fetch()
+        
+        async def get_current_user_context_tool():
+            """Get information about the current logged-in user"""
+            return {
+                "user_id": user_context.get('user_id'),
+                "organization_id": user_context.get('organization_id'),
+                "role": user_context.get('role'),
+                "permissions_count": len(user_context.get('permissions', [])),
+                "message": f"You are logged in as user ID {user_context.get('user_id')} with role '{user_context.get('role')}' in organization {user_context.get('organization_id')}"
+            }
+        
         # Define all function declarations
         function_declarations = [
             # Customer functions
@@ -1216,6 +1285,35 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                 description="Get comprehensive dashboard statistics for customers, leads, deals, and issues",
                 parameters=types.Schema(type=types.Type.OBJECT, properties={}),
             ),
+            # Employee functions
+            types.FunctionDeclaration(
+                name="list_employees",
+                description="List employees in the organization. Returns employee names, emails, designations, and departments.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "status": types.Schema(type=types.Type.STRING, description="Filter by status: active, inactive (default: active)"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 20)"),
+                    },
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="get_employee",
+                description="Get detailed information about a specific employee by ID",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "employee_id": types.Schema(type=types.Type.INTEGER, description="Employee ID (required)"),
+                    },
+                    required=["employee_id"],
+                ),
+            ),
+            # User context functions
+            types.FunctionDeclaration(
+                name="get_current_user_context",
+                description="Get information about the current logged-in user, including their role, organization, and permissions",
+                parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+            ),
         ]
         
         # Return tools with all function declarations
@@ -1251,6 +1349,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             "resolve_issue": resolve_issue_tool,
             # Analytics tools
             "get_dashboard_stats": get_dashboard_stats_tool,
+            # Employee tools
+            "list_employees": list_employees_tool,
+            "get_employee": get_employee_tool,
+            # User context tools
+            "get_current_user_context": get_current_user_context_tool,
         }
         
         return tools
