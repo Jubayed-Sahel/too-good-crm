@@ -30,6 +30,28 @@ import { usePermissions } from '@/contexts/PermissionContext';
 import { toaster } from '@/components/ui/toaster';
 import { GeminiChatWindow } from '@/components/messages/GeminiChatWindow';
 
+// Add CSS for select element
+const styles = document.createElement('style');
+styles.textContent = `
+  .chakra-select {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #E2E8F0;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+  }
+  .chakra-select:focus {
+    outline: 2px solid #805AD5;
+    outline-offset: 2px;
+  }
+`;
+if (!document.head.querySelector('style[data-select-styles]')) {
+  styles.setAttribute('data-select-styles', 'true');
+  document.head.appendChild(styles);
+}
+
 // Simple date formatting function
 const formatTimeAgo = (date: string | Date): string => {
   const now = new Date();
@@ -55,11 +77,31 @@ const MessagesPage = () => {
   const [isNewMessageDialogOpen, setIsNewMessageDialogOpen] = useState(false);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string>('');
 
-  const { data: conversations, isLoading: conversationsLoading } = useConversations();
+  const { data: conversations, isLoading: conversationsLoading, error: conversationsError } = useConversations();
   // Only fetch messages for real users (not AI Assistant)
-  const { data: messages, isLoading: messagesLoading } = useMessagesWithUser(
+  const { data: messages, isLoading: messagesLoading, error: messagesError } = useMessagesWithUser(
     selectedUserId === AI_ASSISTANT_ID ? null : selectedUserId
   );
+
+  // Debug logging - detailed
+  React.useEffect(() => {
+    console.log('===== MESSAGES PAGE STATE =====');
+    console.log('User:', { id: user?.id, email: user?.email });
+    console.log('Conversations Loading:', conversationsLoading);
+    console.log('Conversations Error:', conversationsError);
+    console.log('Conversations Count:', conversations?.length || 0);
+    console.log('Conversations Sample:', conversations?.slice(0, 2));
+    console.log('---');
+    console.log('Selected User ID:', selectedUserId);
+    console.log('Is AI Assistant:', selectedUserId === AI_ASSISTANT_ID);
+    console.log('Messages Loading:', messagesLoading);
+    console.log('Has Error:', !!messagesError);
+    console.log('Messages Data Type:', typeof messages);
+    console.log('Messages Is Array:', Array.isArray(messages));
+    console.log('Messages Count:', messages?.length || 0);
+    console.log('Messages Sample:', messages?.slice(0, 3));
+    console.log('==============================');
+  }, [user, conversations, conversationsLoading, conversationsError, selectedUserId, messages, messagesLoading, messagesError]);
   const { data: recipients } = useRecipients();
   const { data: unreadCount } = useUnreadCount();
   const sendMessage = useSendMessage();
@@ -154,6 +196,17 @@ const MessagesPage = () => {
   });
 
   const selectedParticipant = selectedConversation?.other_participant;
+
+  // Debug selected participant
+  React.useEffect(() => {
+    if (selectedUserId) {
+      console.log('👤 Selected Participant:', {
+        userId: selectedUserId,
+        conversation: selectedConversation,
+        participant: selectedParticipant
+      });
+    }
+  }, [selectedUserId, selectedConversation, selectedParticipant]);
 
   return (
     <DashboardLayout title="Messages">
@@ -328,16 +381,16 @@ const MessagesPage = () => {
                       </HStack>
                       
                       {conversation.last_message && (
-                        <>
-                          <Text fontSize="xs" color="gray.600" noOfLines={1} mb={1}>
+                        <HStack justify="space-between" align="start">
+                          <Text fontSize="xs" color="gray.600" noOfLines={1} flex={1} wordBreak="break-word">
                             {conversation.last_message.content}
                           </Text>
-                          <Text fontSize="xs" color="gray.400">
+                          <Text fontSize="xs" color="gray.400" flexShrink={0} ml={2}>
                             {conversation.last_message_at
                               ? formatTimeAgo(conversation.last_message_at)
                               : ''}
                           </Text>
-                        </>
+                        </HStack>
                       )}
                     </Box>
                   );
@@ -369,25 +422,32 @@ const MessagesPage = () => {
               {/* Chat Header */}
               <Box p={4} borderBottomWidth="1px" borderColor="gray.200">
                 <HStack justify="space-between">
-                  <VStack align="start" gap={0}>
-                    <Text fontWeight="bold" fontSize="lg">
-                      {selectedParticipant?.first_name && selectedParticipant?.last_name
-                        ? `${selectedParticipant.first_name} ${selectedParticipant.last_name}`
-                        : selectedParticipant?.email || 'Unknown User'}
-                    </Text>
-                    <Text fontSize="xs" color="gray.500">
-                      {selectedParticipant?.email}
-                    </Text>
-                  </VStack>
+                  <Text fontWeight="bold" fontSize="lg">
+                    {selectedParticipant?.first_name && selectedParticipant?.last_name
+                      ? `${selectedParticipant.first_name} ${selectedParticipant.last_name}`
+                      : selectedParticipant?.email || 'Unknown User'}
+                  </Text>
                 </HStack>
               </Box>
 
               {/* Messages */}
-              <Box flex={1} overflowY="auto" p={4}>
+              <Box 
+                flex={1} 
+                overflowY="auto" 
+                p={4}
+                display="flex"
+                flexDirection="column"
+              >
                 {messagesLoading ? (
                   <VStack justify="center" py={8}>
                     <Spinner size="lg" />
                     <Text color="gray.500">Loading messages...</Text>
+                  </VStack>
+                ) : messagesError ? (
+                  <VStack justify="center" py={8}>
+                    <Text color="red.500" fontWeight="semibold">Failed to load messages</Text>
+                    <Text fontSize="sm" color="gray.500">{(messagesError as any)?.message || 'Unknown error'}</Text>
+                    <Button size="sm" onClick={() => window.location.reload()}>Retry</Button>
                   </VStack>
                 ) : !messages || messages.length === 0 ? (
                   <VStack justify="center" py={12}>
@@ -398,26 +458,42 @@ const MessagesPage = () => {
                     </Text>
                   </VStack>
                 ) : (
-                  <VStack align="stretch" gap={3}>
-                    {[...messages].reverse().map((message) => {
-                      const isFromMe = user && message.sender.id === user.id;
+                  <VStack align="stretch" gap={2} flex={1}>
+                    {messages.map((message: any, index: number) => {
+                      const isFromMe = user && message.sender?.id === user.id;
+                      const senderName = message.sender?.first_name && message.sender?.last_name
+                        ? `${message.sender.first_name} ${message.sender.last_name}`
+                        : message.sender?.email || 'Unknown';
+                      
+                      // Show sender name only if different from previous message
+                      const prevMessage = index > 0 ? messages[index - 1] : null;
+                      const showSenderName = !prevMessage || prevMessage.sender?.id !== message.sender?.id;
                       
                       return (
                         <Box
                           key={message.id}
-                          alignSelf={isFromMe ? 'flex-end' : 'flex-start'}
-                          maxW="70%"
+                          display="flex"
+                          flexDirection="column"
+                          alignItems={isFromMe ? 'flex-end' : 'flex-start'}
+                          w="full"
+                          mt={showSenderName ? 2 : 0}
                         >
+                          {showSenderName && (
+                            <Text fontSize="xs" color="gray.500" mb={1} px={1}>
+                              {isFromMe ? 'You' : senderName}
+                            </Text>
+                          )}
                           <Box
+                            maxW="70%"
                             p={3}
                             borderRadius="lg"
                             bg={isFromMe ? 'purple.500' : 'gray.100'}
                             color={isFromMe ? 'white' : 'gray.900'}
                           >
-                            <Text fontSize="sm" mb={1}>
+                            <Text fontSize="sm" whiteSpace="pre-wrap" wordBreak="break-word">
                               {message.content}
                             </Text>
-                            <Text fontSize="xs" opacity={0.7}>
+                            <Text fontSize="xs" opacity={0.7} mt={1}>
                               {formatTimeAgo(message.created_at)}
                             </Text>
                           </Box>
@@ -493,28 +569,21 @@ const MessagesPage = () => {
           <DialogBody>
             <VStack align="stretch" gap={4}>
               <Field label="Select Recipient" required>
-                <Box>
-                  <select
-                    value={selectedRecipientId}
-                    onChange={(e) => setSelectedRecipientId(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid #E2E8F0',
-                      fontSize: '14px',
-                    }}
-                  >
-                    <option value="">Select a recipient...</option>
-                    {recipients && Array.isArray(recipients) && recipients.map((recipient: any) => (
-                      <option key={recipient.id} value={recipient.id}>
-                        {recipient.first_name && recipient.last_name
-                          ? `${recipient.first_name} ${recipient.last_name} (${recipient.email})`
-                          : recipient.email || `User ${recipient.id}`}
-                      </option>
-                    ))}
-                  </select>
-                </Box>
+                <select
+                  value={selectedRecipientId}
+                  onChange={(e) => setSelectedRecipientId(e.target.value)}
+                  title="Select a recipient"
+                  className="chakra-select"
+                >
+                  <option value="">Select a recipient...</option>
+                  {recipients && Array.isArray(recipients) && recipients.map((recipient: any) => (
+                    <option key={recipient.id} value={recipient.id}>
+                      {recipient.first_name && recipient.last_name
+                        ? `${recipient.first_name} ${recipient.last_name} (${recipient.email})`
+                        : recipient.email || `User ${recipient.id}`}
+                    </option>
+                  ))}
+                </select>
               </Field>
               {recipients && Array.isArray(recipients) && recipients.length === 0 && (
                 <Text fontSize="sm" color="gray.500" textAlign="center" py={4}>

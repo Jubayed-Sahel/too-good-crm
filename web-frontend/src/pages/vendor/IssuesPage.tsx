@@ -185,7 +185,6 @@ const IssuesPage = () => {
     refetchStats();
   };
 
-  /* Linear integration disabled
   const handleFetchFromLinear = async (syncToCrm: boolean = false) => {
     if (!canFetchFromLinear) {
       toaster.create({
@@ -208,7 +207,7 @@ const IssuesPage = () => {
         : `Fetched ${response.linear_issues?.length || 0} issues from Linear`;
       
       toaster.create({
-        title: 'Issues Fetched',
+        title: 'Issues Fetched Successfully',
         description: message,
         type: 'success',
         duration: 5000,
@@ -220,9 +219,9 @@ const IssuesPage = () => {
         refetchStats();
       }
     } catch (error: any) {
-      const errorMessage = error.response?.data?.details || error.message || 'Failed to fetch issues from Linear';
+      const errorMessage = error.response?.data?.details || error.response?.data?.error || error.message || 'Failed to fetch issues from Linear';
       toaster.create({
-        title: 'Error',
+        title: 'Fetch Failed',
         description: errorMessage,
         type: 'error',
         duration: 5000,
@@ -231,7 +230,6 @@ const IssuesPage = () => {
       setIsFetchingFromLinear(false);
     }
   };
-  */
 
   // Error state
   if (error) {
@@ -267,7 +265,6 @@ const IssuesPage = () => {
               >
                 Refresh
               </StandardButton>
-              {/* Linear integration disabled
               {canFetchFromLinear && (
                 <>
                   <StandardButton
@@ -279,16 +276,15 @@ const IssuesPage = () => {
                     {isFetchingFromLinear ? 'Fetching...' : 'Fetch from Linear'}
                   </StandardButton>
                   <StandardButton
-                    variant="primary"
+                    colorPalette="blue"
                     onClick={() => handleFetchFromLinear(true)}
                     disabled={isFetchingFromLinear}
                     leftIcon={<FiDownload />}
                   >
-                    {isFetchingFromLinear ? 'Syncing...' : 'Sync from Linear'}
+                    {isFetchingFromLinear ? 'Syncing...' : 'Fetch & Sync from Linear'}
                   </StandardButton>
                 </>
               )}
-              */}
               {canRaiseIssue && (
                 <StandardButton
                   variant="primary"

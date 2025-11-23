@@ -9,7 +9,6 @@ export { useDeals } from './useDeals';
 export { useDashboardStats } from './useDashboardStats';
 export { useEmployees } from './useEmployees';
 export * from './useLeads';
-export * from './useAnalytics';
 export * from './useSalesPage';
 
 // Client/Vendor hooks

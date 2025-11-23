@@ -57,8 +57,5 @@ export type {
   UpdateNotificationPreferencesData
 } from './notificationPreferences.service';
 
-// Analytics
-export { analyticsService } from './analytics.service';
-
 // AI & Automation
 export { geminiService } from './gemini.service';

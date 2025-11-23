@@ -5,7 +5,6 @@
 
 // Dashboard
 export { default as DashboardPage } from './DashboardPage';
-export { default as AnalyticsPage } from './AnalyticsPage';
 
 // Customer Management
 export { default as CustomersPage } from './CustomersPage';

@@ -4,7 +4,6 @@ import {
   FiHome, 
   FiUsers, 
   FiFileText, 
-  FiBarChart2, 
   FiSettings, 
   FiLogOut,
   FiUserPlus,
@@ -109,7 +108,6 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiActivity, label: 'Activities', path: '/activities', resource: CRM_RESOURCES.ACTIVITIES, action: 'read' },
     { icon: FiMessageSquare, label: 'Messages', path: '/messages', alwaysShow: true },
     { icon: FiAlertCircle, label: 'Issues', path: '/issues', resource: CRM_RESOURCES.ISSUES, action: 'read' },
-    { icon: FiBarChart2, label: 'Analytics', path: '/analytics', resource: CRM_RESOURCES.ANALYTICS, action: 'read' },
     { icon: HiUserGroup, label: 'Team', path: '/team', resource: CRM_RESOURCES.EMPLOYEES, action: 'read' },
     { icon: FiSettings, label: 'Settings', path: '/settings', alwaysShow: true },
   ];
@@ -119,9 +117,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiHome, label: 'Dashboard', path: '/client/dashboard', resource: 'vendors' },
     { icon: FiShoppingBag, label: 'My Vendors', path: '/client/vendors', resource: 'vendors' },
     { icon: FiPackage, label: 'My Orders', path: '/client/orders', resource: 'orders' },
-    { icon: FiCreditCard, label: 'Payments', path: '/client/payments', resource: 'payments' },
     { icon: FiMessageSquare, label: 'Messages', path: '/messages', alwaysShow: true },
-    { icon: FiActivity, label: 'Activities', path: '/client/activities', resource: 'activities' },
     { icon: FiAlertCircle, label: 'Issues', path: '/client/issues', resource: 'issues' },
     { icon: FiSettings, label: 'Settings', path: '/client/settings', resource: 'settings' },
   ];

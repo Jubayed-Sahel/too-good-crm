@@ -194,12 +194,6 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("vendor-issues") }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
-                    label = { Text("Analytics") },
-                    selected = false,
-                    onClick = { onNavigate("analytics") }
-                )
-                NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Group, contentDescription = null) },
                     label = { Text("Team") },
                     selected = false,
@@ -232,22 +226,10 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("my-orders") }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Payment, contentDescription = null) },
-                    label = { Text("Payments") },
-                    selected = false,
-                    onClick = { onNavigate("payments") }
-                )
-                NavigationDrawerItem(
                     icon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
                     label = { Text("Messages") },
                     selected = false,
                     onClick = { onNavigate("messages") }
-                )
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Event, contentDescription = null) },
-                    label = { Text("Activities") },
-                    selected = false,
-                    onClick = { onNavigate("activities") }
                 )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.ReportProblem, contentDescription = null) },

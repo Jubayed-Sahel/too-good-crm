@@ -170,9 +170,12 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Account Settings
+            // Determine if user is an employee
+            val isEmployee = profileState.activeProfile?.profileType == "employee"
+
+            // Security Settings (Always shown, but content varies)
             Text(
-                text = "Account",
+                text = "Security",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = DesignTokens.Colors.OnSurface
@@ -186,118 +189,141 @@ fun SettingsScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    SettingsItem(
-                        icon = Icons.Default.Person,
-                        title = "Edit Profile",
-                        subtitle = "Update your personal information",
-                        onClick = { /* Navigate to edit profile */ }
-                    )
-                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
                     SettingsItem(
                         icon = Icons.Default.Lock,
                         title = "Change Password",
                         subtitle = "Update your password",
                         onClick = { /* Navigate to change password */ }
                     )
-                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                    SettingsItem(
-                        icon = Icons.Default.Email,
-                        title = "Email Preferences",
-                        subtitle = "Manage email settings",
-                        onClick = { /* Navigate to email preferences */ }
-                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            // Show additional settings only for non-employees
+            if (!isEmployee) {
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // Preferences
-            Text(
-                text = "Preferences",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = DesignTokens.Colors.OnSurface
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+                // Account Settings
+                Text(
+                    text = "Account",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DesignTokens.Colors.OnSurface
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    SettingsSwitchItem(
-                        icon = Icons.Default.DarkMode,
-                        title = "Dark Mode",
-                        subtitle = "Toggle dark theme",
-                        checked = darkMode,
-                        onCheckedChange = { darkMode = it }
-                    )
-                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                    SettingsSwitchItem(
-                        icon = Icons.Default.Notifications,
-                        title = "Notifications",
-                        subtitle = "Enable push notifications",
-                        checked = notificationsEnabled,
-                        onCheckedChange = { notificationsEnabled = it }
-                    )
-                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                    SettingsSwitchItem(
-                        icon = Icons.Default.Email,
-                        title = "Email Notifications",
-                        subtitle = "Receive updates via email",
-                        checked = emailNotifications,
-                        onCheckedChange = { emailNotifications = it }
-                    )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        SettingsItem(
+                            icon = Icons.Default.Person,
+                            title = "Edit Profile",
+                            subtitle = "Update your personal information",
+                            onClick = { /* Navigate to edit profile */ }
+                        )
+                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
+                        SettingsItem(
+                            icon = Icons.Default.Email,
+                            title = "Email Preferences",
+                            subtitle = "Manage email settings",
+                            onClick = { /* Navigate to email preferences */ }
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // Support & Info
-            Text(
-                text = "Support & Information",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = DesignTokens.Colors.OnSurface
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+                // Preferences
+                Text(
+                    text = "Preferences",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DesignTokens.Colors.OnSurface
+                )
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    SettingsItem(
-                        icon = Icons.Default.Help,
-                        title = "Help & Support",
-                        subtitle = "Get help or contact support",
-                        onClick = { /* Navigate to help */ }
-                    )
-                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                    SettingsItem(
-                        icon = Icons.Default.Info,
-                        title = "About",
-                        subtitle = "App version and information",
-                        onClick = { /* Navigate to about */ }
-                    )
-                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                    SettingsItem(
-                        icon = Icons.Default.Description,
-                        title = "Privacy Policy",
-                        subtitle = "Read our privacy policy",
-                        onClick = { /* Navigate to privacy */ }
-                    )
-                    HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                    SettingsItem(
-                        icon = Icons.Default.Gavel,
-                        title = "Terms of Service",
-                        subtitle = "Read our terms",
-                        onClick = { /* Navigate to terms */ }
-                    )
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        SettingsSwitchItem(
+                            icon = Icons.Default.DarkMode,
+                            title = "Dark Mode",
+                            subtitle = "Toggle dark theme",
+                            checked = darkMode,
+                            onCheckedChange = { darkMode = it }
+                        )
+                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
+                        SettingsSwitchItem(
+                            icon = Icons.Default.Notifications,
+                            title = "Notifications",
+                            subtitle = "Enable push notifications",
+                            checked = notificationsEnabled,
+                            onCheckedChange = { notificationsEnabled = it }
+                        )
+                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
+                        SettingsSwitchItem(
+                            icon = Icons.Default.Email,
+                            title = "Email Notifications",
+                            subtitle = "Receive updates via email",
+                            checked = emailNotifications,
+                            onCheckedChange = { emailNotifications = it }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Support & Info
+                Text(
+                    text = "Support & Information",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = DesignTokens.Colors.OnSurface
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        SettingsItem(
+                            icon = Icons.Default.Help,
+                            title = "Help & Support",
+                            subtitle = "Get help or contact support",
+                            onClick = { /* Navigate to help */ }
+                        )
+                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
+                        SettingsItem(
+                            icon = Icons.Default.Info,
+                            title = "About",
+                            subtitle = "App version and information",
+                            onClick = { /* Navigate to about */ }
+                        )
+                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
+                        SettingsItem(
+                            icon = Icons.Default.Description,
+                            title = "Privacy Policy",
+                            subtitle = "Read our privacy policy",
+                            onClick = { /* Navigate to privacy */ }
+                        )
+                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
+                        SettingsItem(
+                            icon = Icons.Default.Gavel,
+                            title = "Terms of Service",
+                            subtitle = "Read our terms",
+                            onClick = { /* Navigate to terms */ }
+                        )
+                    }
                 }
             }
 

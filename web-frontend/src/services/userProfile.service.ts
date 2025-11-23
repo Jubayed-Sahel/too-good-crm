@@ -42,9 +42,9 @@ export interface UpdateProfileData {
 }
 
 export interface ChangePasswordData {
-  current_password: string;
+  old_password: string;
   new_password: string;
-  confirm_password: string;
+  new_password_confirm: string;
 }
 
 export interface SecuritySettings {
@@ -63,7 +63,7 @@ export interface ActiveSession {
 }
 
 class UserProfileService {
-  private readonly baseUrl = '/users';
+  private readonly baseUrl = '/api/users';
 
   /**
    * Get current user profile
@@ -83,7 +83,7 @@ class UserProfileService {
    * Change password
    */
   async changePassword(data: ChangePasswordData): Promise<{ message: string }> {
-    return api.post<{ message: string }>(`${this.baseUrl}/change_password/`, data);
+    return api.post<{ message: string }>('/api/auth/change-password/', data);
   }
 
   /**
