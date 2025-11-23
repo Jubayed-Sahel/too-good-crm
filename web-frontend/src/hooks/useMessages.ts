@@ -146,11 +146,12 @@ export const useConversations = () => {
     },
     enabled: !!user,
     retry: 2,
-    staleTime: Infinity, // Data never becomes stale
+    staleTime: 5000, // Consider data stale after 5 seconds
     gcTime: Infinity, // Keep in cache forever
     refetchOnMount: false, // Never refetch on mount
     refetchOnReconnect: false, // Never refetch on reconnect
     refetchOnWindowFocus: false, // Never refetch on window focus
+    refetchInterval: 5000, // Poll every 5 seconds as fallback when Pusher isn't working
   });
   
   // Subscribe to real-time conversation updates
@@ -216,11 +217,12 @@ export const useMessagesWithUser = (userId: number | null) => {
     },
     enabled: !!userId && userId !== AI_ASSISTANT_ID,
     retry: 2,
-    staleTime: Infinity, // Data never becomes stale
+    staleTime: 3000, // Consider data stale after 3 seconds
     gcTime: Infinity, // Keep in cache forever
     refetchOnMount: false, // Never refetch on mount
     refetchOnReconnect: false, // Never refetch on reconnect
     refetchOnWindowFocus: false, // Never refetch on window focus
+    refetchInterval: 3000, // Poll every 3 seconds as fallback when Pusher isn't working
   });
   
   // Subscribe to real-time message updates for this conversation

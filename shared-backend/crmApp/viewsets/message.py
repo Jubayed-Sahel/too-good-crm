@@ -87,6 +87,8 @@ class MessageViewSet(PermissionCheckMixin, OrganizationFilterMixin, viewsets.Mod
                 from crmApp.utils.profile_context import get_active_profile_organization
                 organization = get_active_profile_organization(request.user)
             
+            logger.info(f"[MESSAGE SEND] User {request.user.email} (ID: {request.user.id}) attempting to send message to user {recipient.email} (ID: {recipient.id}) in org {organization.id if organization else 'None'}")
+            
             # Check if user is vendor - only vendors can initiate messages
             from crmApp.models import UserProfile
             sender_profile = UserProfile.objects.filter(
@@ -96,10 +98,13 @@ class MessageViewSet(PermissionCheckMixin, OrganizationFilterMixin, viewsets.Mod
             ).first()
             
             if not sender_profile:
+                logger.warning(f"[MESSAGE SEND] No active profile found for user {request.user.email} in org {organization.id if organization else 'None'}")
                 return Response(
                     {'error': 'No active profile found for this organization'},
                     status=status.HTTP_403_FORBIDDEN
                 )
+            
+            logger.info(f"[MESSAGE SEND] Sender profile type: {sender_profile.profile_type}")
             
             # Check if this is a new conversation (no existing messages)
             existing_messages = Message.objects.filter(
@@ -108,12 +113,16 @@ class MessageViewSet(PermissionCheckMixin, OrganizationFilterMixin, viewsets.Mod
                 organization=organization
             ).exists()
             
+            logger.info(f"[MESSAGE SEND] Existing messages between users: {existing_messages}")
+            
             # If it's a new conversation, check permissions:
             # - Vendors can initiate with anyone
             # - Employees can only initiate with their vendor
             # - Customers cannot initiate
             if not existing_messages:
+                logger.info(f"[MESSAGE SEND] New conversation - checking initiation permissions")
                 if sender_profile.profile_type == 'customer':
+                    logger.warning(f"[MESSAGE SEND] Customer {request.user.email} attempted to initiate conversation with {recipient.email}")
                     return Response(
                         {'error': 'Customers can only reply to existing conversations. Only vendors and employees can initiate new conversations.'},
                         status=status.HTTP_403_FORBIDDEN
@@ -126,12 +135,18 @@ class MessageViewSet(PermissionCheckMixin, OrganizationFilterMixin, viewsets.Mod
                         status='active'
                     ).first()
                     
+                    logger.info(f"[MESSAGE SEND] Employee attempting to initiate - recipient profile type: {recipient_profile.profile_type if recipient_profile else 'None'}")
+                    
                     if not recipient_profile or recipient_profile.profile_type != 'vendor':
+                        logger.warning(f"[MESSAGE SEND] Employee {request.user.email} attempted to initiate conversation with non-vendor {recipient.email}")
                         return Response(
                             {'error': 'Employees can only initiate conversations with their vendor.'},
                             status=status.HTTP_403_FORBIDDEN
                         )
                 # Vendors can initiate with anyone (no check needed)
+                logger.info(f"[MESSAGE SEND] Initiation permission granted for {sender_profile.profile_type}")
+            else:
+                logger.info(f"[MESSAGE SEND] Replying to existing conversation - permission check passed")
             
             # Get related objects if provided
             related_lead = None
@@ -168,8 +183,6 @@ class MessageViewSet(PermissionCheckMixin, OrganizationFilterMixin, viewsets.Mod
                 from crmApp.services.pusher_service import pusher_service
                 pusher_service.send_message(message, request.user, recipient)
             except Exception as e:
-                import logging
-                logger = logging.getLogger(__name__)
                 logger.warning(f"Failed to send Pusher notification: {e}")
             
             return Response(
