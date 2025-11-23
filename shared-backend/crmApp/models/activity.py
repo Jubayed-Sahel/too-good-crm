@@ -90,6 +90,10 @@ class Activity(TimestampedModel):
     meeting_url = models.URLField(max_length=500, null=True, blank=True)
     attendees = models.JSONField(default=list, blank=True)
     
+    # For video calls (Jitsi/8x8)
+    video_call_room = models.CharField(max_length=255, null=True, blank=True, help_text="Video call room name")
+    video_call_url = models.URLField(max_length=500, null=True, blank=True, help_text="Full video call URL")
+    
     # For tasks
     task_priority = models.CharField(max_length=10, choices=[('low', 'Low'), ('medium', 'Medium'), ('high', 'High')], null=True, blank=True)
     task_due_date = models.DateField(null=True, blank=True)

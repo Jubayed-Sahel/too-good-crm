@@ -162,15 +162,14 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onCall, onBulkDele
 
             {/* Actions */}
             <HStack gap={2} pt={2} borderTopWidth="1px" borderColor="gray.100">
-              {customer.phone && (
+              {customer.email && onCall && (
                 <Button
                   size="sm"
                   variant="outline"
                   colorPalette="green"
                   flex={1}
-                  as="a"
-                  href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`}
-                  title={`Call ${customer.phone}`}
+                  onClick={() => onCall(customer)}
+                  title={`Video call ${customer.name}`}
                 >
                   <FiPhone size={16} />
                   <Box ml={2}>Call</Box>
@@ -327,15 +326,14 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onCall, onBulkDele
                 </Table.Cell>
                 <Table.Cell>
                   <HStack gap={1} justify="center">
-                    {customer.phone && (
+                    {customer.email && onCall && (
                       <IconButton
-                        aria-label="Call customer phone"
+                        aria-label="Video call customer"
                         size="sm"
                         variant="ghost"
                         colorPalette="green"
-                        as="a"
-                        href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`}
-                        title={`Call ${customer.phone}`}
+                        onClick={() => onCall(customer)}
+                        title={`Video call ${customer.name}`}
                       >
                         <FiPhone size={16} />
                       </IconButton>

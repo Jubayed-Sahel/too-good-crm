@@ -1,32 +1,68 @@
 /**
  * VideoCallManager Component
- * Global video call state manager with heartbeat and incoming call detection
+ * Global video call state manager with real-time WebSocket notifications
  */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { videoService } from '../../services/video.service';
 import VideoCallWindow from './VideoCallWindow';
-import type { VideoCallSession } from '../../types/video.types';
+import type { VideoCallSession, CallStatus } from '../../types/video.types';
 import { toaster } from '@/components/ui/toaster';
+import { useAuth } from '@/hooks/useAuth';
+import { useVideoCallWebSocket, type VideoCallEvent } from '@/hooks/useVideoCallWebSocket';
 
 // Heartbeat interval (30 seconds)
 const HEARTBEAT_INTERVAL = 30 * 1000;
-
-// Polling interval for incoming calls (5 seconds)
-const POLL_INTERVAL = 5 * 1000;
 
 /**
  * VideoCallManager
  * Singleton component that manages video call state globally
  * - Sends heartbeat every 30 seconds to mark user as online
- * - Polls for incoming calls every 5 seconds
+ * - Listens to real-time Pusher events for instant call notifications
  * - Renders VideoCallWindow when a call is active
  */
 const VideoCallManager: React.FC = () => {
+  const { isAuthenticated, user } = useAuth();
   const [currentCall, setCurrentCall] = useState<VideoCallSession | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null);
   const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const currentCallRef = useRef<VideoCallSession | null>(null);
+  const userRef = useRef(user);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    currentCallRef.current = currentCall;
+    userRef.current = user;
+  }, [currentCall, user]);
+
+  // Get auth token from localStorage and update state
+  useEffect(() => {
+    console.log('[VideoCallManager] Token loading effect - isAuthenticated:', isAuthenticated);
+    if (isAuthenticated) {
+      const storedTokens = localStorage.getItem('auth_tokens');
+      console.log('[VideoCallManager] localStorage auth_tokens exists:', !!storedTokens);
+      if (storedTokens) {
+        try {
+          const tokens = JSON.parse(storedTokens);
+          const token = tokens.access || null;
+          console.log('[VideoCallManager] ✅ Auth token loaded successfully, length:', token?.length);
+          setAuthToken(token);
+        } catch (error) {
+          console.error('[VideoCallManager] ❌ Failed to parse auth tokens:', error);
+          setAuthToken(null);
+        }
+      } else {
+        console.warn('[VideoCallManager] ⚠️ No auth_tokens in localStorage - user may need to re-login');
+        setAuthToken(null);
+      }
+    } else {
+      console.log('[VideoCallManager] Not authenticated, clearing token');
+      setAuthToken(null);
+    }
+  }, [isAuthenticated]);
+
+  console.log('[VideoCallManager] Render - isAuthenticated:', isAuthenticated, 'user:', user?.id, 'hasToken:', !!authToken, 'isInitialized:', isInitialized, 'currentCall:', currentCall);
 
   /**
    * Send heartbeat to mark user as online
@@ -35,53 +71,151 @@ const VideoCallManager: React.FC = () => {
     try {
       await videoService.sendHeartbeat();
       console.log('[VideoCallManager] Heartbeat sent');
-    } catch (error) {
-      console.error('[VideoCallManager] Failed to send heartbeat:', error);
+    } catch (error: any) {
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        console.error('[VideoCallManager] Authentication error in heartbeat');
+      } else {
+        console.error('[VideoCallManager] Failed to send heartbeat:', error);
+      }
     }
   }, []);
 
   /**
-   * Poll for incoming or active calls
+   * Convert VideoCallEvent to VideoCallSession
    */
-  const pollForCalls = useCallback(async () => {
-    try {
-      const activeCall = await videoService.getMyActiveCall();
-
-      if (activeCall) {
-        // New incoming call or active call
-        if (!currentCall || currentCall.id !== activeCall.id) {
-          console.log('[VideoCallManager] New call detected:', activeCall);
-          setCurrentCall(activeCall);
-
-          // Show toast notification for incoming calls
-          if (activeCall.status === 'pending') {
-            toaster.create({
-              title: 'Incoming Call',
-              description: `${activeCall.initiator_name || 'Someone'} is calling you`,
-              type: 'info',
-              duration: 10000,
-            });
-          }
-        } else if (currentCall && activeCall.status !== currentCall.status) {
-          // Call status changed (e.g., answered, ended)
-          console.log('[VideoCallManager] Call status changed:', activeCall.status);
-          setCurrentCall(activeCall);
-        }
-      } else if (currentCall) {
-        // Call ended
-        console.log('[VideoCallManager] Call ended');
-        setCurrentCall(null);
-      }
-    } catch (error) {
-      console.error('[VideoCallManager] Failed to poll for calls:', error);
-    }
-  }, [currentCall]);
+  const eventToSession = useCallback((event: VideoCallEvent): VideoCallSession => {
+    return {
+      id: event.data.id,
+      session_id: event.data.room_name,
+      room_name: event.data.room_name,
+      call_type: event.data.call_type,
+      status: event.data.status as CallStatus,
+      initiator: event.data.initiator,
+      initiator_name: event.data.initiator_name,
+      recipient: event.data.recipient,
+      recipient_name: event.data.recipient_name,
+      jitsi_url: event.data.jitsi_url,
+      jitsi_server: event.data.jitsi_url?.server_domain || '8x8.vc',
+      created_at: event.data.created_at || '',
+      updated_at: event.data.created_at || '',
+      started_at: event.data.started_at,
+      ended_at: event.data.ended_at,
+      duration_seconds: event.data.duration_seconds,
+      duration_formatted: '',
+      participants: event.data.participants,
+      organization: 0,
+      is_active: event.data.status === 'active',
+      participant_count: event.data.participants.length,
+      recording_url: null,
+      notes: '',
+    };
+  }, []);
 
   /**
-   * Initialize heartbeat and polling
+   * Handle call initiated event from Pusher
+   */
+  const handleCallInitiated = useCallback((event: VideoCallEvent) => {
+    const session = eventToSession(event);
+    const currentUser = userRef.current;
+    
+    console.log('[VideoCallManager] Call initiated via Pusher:', session);
+    setCurrentCall(session);
+
+    // Show toast notification for incoming calls (only for recipients)
+    if (session.status === 'pending' && currentUser && session.recipient === currentUser.id) {
+      toaster.create({
+        title: 'Incoming Call',
+        description: `${session.initiator_name || 'Someone'} is calling you`,
+        type: 'info',
+        duration: 10000,
+      });
+    }
+  }, [eventToSession]);
+
+  /**
+   * Handle call answered event from Pusher
+   */
+  const handleCallAnswered = useCallback((event: VideoCallEvent) => {
+    const session = eventToSession(event);
+    console.log('[VideoCallManager] Call answered via Pusher:', session);
+    setCurrentCall(session);
+  }, [eventToSession]);
+
+  /**
+   * Handle call rejected event from Pusher
+   */
+  const handleCallRejected = useCallback((event: VideoCallEvent) => {
+    const session = eventToSession(event);
+    const currentUser = userRef.current;
+    
+    console.log('[VideoCallManager] Call rejected via Pusher:', session);
+    setCurrentCall(session);
+    
+    // Show toast for declined calls (only to initiator)
+    if (currentUser && session.initiator === currentUser.id) {
+      toaster.create({
+        title: 'Call Declined',
+        description: `${session.recipient_name || 'User'} declined your call`,
+        type: 'warning',
+        duration: 5000,
+      });
+    }
+
+    // Auto-clear the declined call after 3 seconds
+    setTimeout(() => {
+      setCurrentCall(null);
+    }, 3000);
+  }, [eventToSession]);
+
+  /**
+   * Handle call ended event from Pusher
+   */
+  const handleCallEnded = useCallback((event: VideoCallEvent) => {
+    console.log('[VideoCallManager] Call ended via Pusher:', event);
+    setCurrentCall(null);
+    
+    toaster.create({
+      title: 'Call Ended',
+      description: 'The call has ended.',
+      type: 'info',
+      duration: 3000,
+    });
+  }, []);
+
+  /**
+   * Subscribe to WebSocket video call events (only when authenticated)
+   */
+  useVideoCallWebSocket({
+    userId: isAuthenticated ? user?.id ?? null : null,
+    onCallInitiated: handleCallInitiated,
+    onCallAnswered: handleCallAnswered,
+    onCallRejected: handleCallRejected,
+    onCallEnded: handleCallEnded,
+    enabled: isAuthenticated,
+  });
+
+  /**
+   * Check for existing active call on mount
+   */
+  const checkExistingCall = useCallback(async () => {
+    try {
+      const activeCall = await videoService.getMyActiveCall();
+      if (activeCall) {
+        console.log('[VideoCallManager] Found existing active call:', activeCall);
+        setCurrentCall(activeCall);
+      }
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        console.error('[VideoCallManager] Failed to check for existing call:', error);
+      }
+    }
+  }, []);
+
+  /**
+   * Initialize heartbeat and check for existing calls
    */
   useEffect(() => {
-    if (isInitialized) {
+    if (isInitialized || !isAuthenticated) {
       return;
     }
 
@@ -92,13 +226,10 @@ const VideoCallManager: React.FC = () => {
     sendHeartbeat();
 
     // Check for existing active calls
-    pollForCalls();
+    checkExistingCall();
 
     // Start heartbeat timer
     heartbeatTimerRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
-
-    // Start polling timer
-    pollTimerRef.current = setInterval(pollForCalls, POLL_INTERVAL);
 
     // Cleanup on unmount
     return () => {
@@ -106,12 +237,8 @@ const VideoCallManager: React.FC = () => {
         clearInterval(heartbeatTimerRef.current);
         heartbeatTimerRef.current = null;
       }
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
     };
-  }, [isInitialized, sendHeartbeat, pollForCalls]);
+  }, [isInitialized, isAuthenticated, sendHeartbeat, checkExistingCall]);
 
   /**
    * Handle call answer
@@ -137,15 +264,15 @@ const VideoCallManager: React.FC = () => {
    */
   const handleReject = useCallback(async (callId: number) => {
     try {
-      await videoService.rejectCall(callId);
-      setCurrentCall(null);
+      const updatedCall = await videoService.rejectCall(callId);
+      // Keep the call in state to show "Call Declined" message
+      setCurrentCall(updatedCall);
       console.log('[VideoCallManager] Call rejected');
-      toaster.create({
-        title: 'Call Declined',
-        description: 'You declined the call.',
-        type: 'info',
-        duration: 3000,
-      });
+      
+      // Auto-clear the declined call after 3 seconds
+      setTimeout(() => {
+        setCurrentCall(null);
+      }, 3000);
     } catch (error) {
       console.error('[VideoCallManager] Failed to reject call:', error);
       toaster.create({
@@ -182,14 +309,26 @@ const VideoCallManager: React.FC = () => {
     }
   }, []);
 
+  // Show call window for:
+  // - Active calls (both initiator and recipient)
+  // - Pending calls (calling... for initiator, incoming for recipient)
+  // - Declined/rejected calls (show "Call Declined" message)
+  const shouldShowCallWindow = currentCall && (
+    currentCall.status === 'active' ||
+    currentCall.status === 'pending' ||
+    currentCall.status === 'rejected' ||
+    currentCall.status === 'cancelled'
+  );
+
   return (
     <>
-      {currentCall && (
+      {shouldShowCallWindow && currentCall && (
         <VideoCallWindow
           callSession={currentCall}
           onAnswer={handleAnswer}
           onReject={handleReject}
           onEnd={handleEnd}
+          currentUserId={user?.id}
         />
       )}
     </>

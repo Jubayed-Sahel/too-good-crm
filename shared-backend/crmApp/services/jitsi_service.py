@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 from django.conf import settings
 from crmApp.models import JitsiCallSession, UserPresence, User
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 import logging
 
 logger = logging.getLogger(__name__)
@@ -65,29 +67,31 @@ class JitsiService:
         # User display name
         display_name = f"{user.first_name} {user.last_name}".strip() or user.username
         
-        # JWT Payload for 8x8 Video
+        # JWT Payload for 8x8 Video (Jaas format)
         payload = {
             # Standard JWT claims
-            "iss": self.app_id,  # Issuer (your 8x8 App ID)
-            "sub": self.server_domain,  # Subject (8x8 domain)
-            "aud": self.app_id,  # Audience (your 8x8 App ID)
+            "iss": "chat",  # Issuer - must be "chat" for 8x8
+            "sub": self.app_id,  # Subject (your 8x8 App ID)
+            "aud": "jitsi",  # Audience - must be "jitsi"
             "iat": now,  # Issued at
             "nbf": now,  # Not before
             "exp": exp,  # Expiration time
             
             # 8x8 Video specific claims
-            "room": room_name,  # Room name
+            "room": "*",  # Allow access to any room (or specify room_name)
             "context": {
                 "user": {
                     "id": str(user.id),
                     "name": display_name,
                     "email": user.email,
+                    "avatar": "",
                     "moderator": str(moderator).lower(),  # String boolean
                 },
                 "features": {
-                    "livestreaming": False,
-                    "recording": False,
-                    "transcription": False,
+                    "livestreaming": "false",
+                    "recording": "false",
+                    "transcription": "false",
+                    "outbound-call": "false",
                 }
             }
         }
@@ -134,7 +138,7 @@ class JitsiService:
                 UserPresence.objects.create(user=recipient, status='offline')
                 raise ValueError(f"{recipient_name} is offline")
         
-        # Get organization from user profile if not provided
+        # Get organization from user profile if not provided (optional)
         if not organization:
             from crmApp.models import UserProfile
             initiator_profile = UserProfile.objects.filter(
@@ -148,8 +152,7 @@ class JitsiService:
             
             if initiator_profile and initiator_profile.organization:
                 organization = initiator_profile.organization
-            else:
-                raise ValueError("Organization is required for call sessions. User must have an active profile with an organization.")
+            # Organization is optional - users can make calls without one
         
         # Generate unique room name
         room_name = self.generate_room_name(
@@ -165,7 +168,7 @@ class JitsiService:
             initiator=initiator,
             recipient=recipient,
             participants=[initiator.id] + ([recipient.id] if recipient else []),
-            organization=organization,
+            organization=organization,  # Can be None
             jitsi_server=self.server_domain
         )
         
@@ -196,6 +199,13 @@ class JitsiService:
                     current_call=call_session,
                     status='online'
                 )
+        
+        # Send real-time Pusher notification to recipient
+        if recipient:
+            self._send_call_notification(call_session, 'call-initiated', recipient.id)
+        
+        # Also notify initiator that call was created
+        self._send_call_notification(call_session, 'call-initiated', initiator.id)
         
         return call_session
     
@@ -229,6 +239,11 @@ class JitsiService:
             )
         
         logger.info(f"Call answered: {user.username} joined room {call_session.room_name}")
+        
+        # Send real-time notification to both users
+        self._send_call_notification(call_session, 'call-answered', call_session.initiator.id)
+        self._send_call_notification(call_session, 'call-answered', call_session.recipient.id)
+        
         return call_session
     
     def reject_call(self, call_session, user):
@@ -252,6 +267,11 @@ class JitsiService:
             pass
         
         logger.info(f"Call rejected: {user.username} rejected call from {call_session.initiator.username}")
+        
+        # Send real-time notification to both users
+        self._send_call_notification(call_session, 'call-rejected', call_session.initiator.id)
+        self._send_call_notification(call_session, 'call-rejected', call_session.recipient.id)
+        
         return call_session
     
     def end_call(self, call_session, user):
@@ -289,6 +309,14 @@ class JitsiService:
                 pass
         
         logger.info(f"Call ended: Room {call_session.room_name}, Duration: {call_session.duration_formatted}")
+        
+        # Log the call as an activity
+        self._log_call_activity(call_session)
+        
+        # Send real-time notification to all participants
+        for participant_id in call_session.participants:
+            self._send_call_notification(call_session, 'call-ended', participant_id)
+        
         return call_session
     
     def get_video_url(self, call_session, user):
@@ -377,6 +405,118 @@ class JitsiService:
             queryset = queryset.filter(user_id__in=org_user_ids)
         
         return queryset
+    
+    def _log_call_activity(self, call_session):
+        """
+        Create an Activity record for a completed video call.
+        
+        Args:
+            call_session: JitsiCallSession object
+        """
+        from crmApp.models import Activity
+        
+        try:
+            # Only log completed calls with actual duration
+            if call_session.status != 'completed' or not call_session.duration_seconds:
+                return
+            
+            # Get initiator and recipient info
+            initiator = call_session.initiator
+            recipient = call_session.recipient
+            
+            if not initiator or not recipient:
+                logger.debug(f"Skipping activity log for call {call_session.id}: Missing initiator or recipient")
+                return
+            
+            # Format recipient info
+            recipient_name = f"{recipient.first_name} {recipient.last_name}".strip() or recipient.username
+            recipient_email = recipient.email
+            
+            # Create activity title and description
+            call_type_label = "Video Call" if call_session.call_type == 'video' else "Audio Call"
+            title = f"{call_type_label} with {recipient_name}"
+            description = (
+                f"{call_type_label} between {initiator.username} and {recipient_name} ({recipient_email})\n"
+                f"Duration: {call_session.duration_formatted}\n"
+                f"Room: {call_session.room_name}"
+            )
+            
+            # Create the activity record
+            video_url = f"https://{self.server_domain}/{self.app_id}/{call_session.room_name}"
+            activity = Activity.objects.create(
+                organization=call_session.organization,
+                activity_type='call',
+                title=title,
+                description=description,
+                customer_name=recipient_name,
+                phone_number=recipient_email,  # Store email in phone_number field for reference
+                call_duration=call_session.duration_seconds,
+                duration_minutes=call_session.duration_seconds // 60,
+                status='completed',
+                scheduled_at=call_session.started_at,
+                completed_at=call_session.ended_at,
+                created_by=initiator,
+                video_call_room=call_session.room_name,
+                video_call_url=video_url,
+            )
+            
+            logger.info(f"Created activity record {activity.id} for video call {call_session.id}")
+        except Exception as e:
+            logger.error(f"Failed to create activity for call {call_session.id}: {e}")
+    
+    def _send_call_notification(self, call_session, event_type, user_id):
+        """
+        Send real-time call notification via WebSocket (Django Channels)
+        
+        Args:
+            call_session: JitsiCallSession object
+            event_type: 'call-initiated', 'call-answered', 'call-rejected', 'call-ended'
+            user_id: ID of the user to notify
+        """
+        try:
+            channel_layer = get_channel_layer()
+            if not channel_layer:
+                logger.debug("Channel layer not available, skipping real-time video call notification")
+                return
+            
+            # Get video URL data for the call
+            user = User.objects.get(id=user_id)
+            video_url_data = self.get_video_url(call_session, user)
+            
+            # Prepare call data
+            call_data = {
+                'event': event_type,
+                'data': {
+                    'id': call_session.id,
+                    'room_name': call_session.room_name,
+                    'call_type': call_session.call_type,
+                    'status': call_session.status,
+                    'initiator': call_session.initiator.id,
+                    'initiator_name': f"{call_session.initiator.first_name} {call_session.initiator.last_name}".strip() or call_session.initiator.username,
+                    'recipient': call_session.recipient.id if call_session.recipient else None,
+                    'recipient_name': f"{call_session.recipient.first_name} {call_session.recipient.last_name}".strip() or call_session.recipient.username if call_session.recipient else None,
+                    'jitsi_url': video_url_data,
+                    'created_at': call_session.created_at.isoformat() if call_session.created_at else None,
+                    'started_at': call_session.started_at.isoformat() if call_session.started_at else None,
+                    'ended_at': call_session.ended_at.isoformat() if call_session.ended_at else None,
+                    'duration_seconds': call_session.duration_seconds,
+                    'participants': call_session.participants,
+                }
+            }
+            
+            # Send to user's WebSocket group
+            group_name = f'video_call_{user_id}'
+            async_to_sync(channel_layer.group_send)(
+                group_name,
+                {
+                    'type': 'video_call_event',
+                    'data': call_data
+                }
+            )
+            
+            logger.info(f"Sent WebSocket notification: {event_type} for call {call_session.id} to user {user_id}")
+        except Exception as e:
+            logger.error(f"Failed to send WebSocket video call notification: {e}")
 
 
 # Singleton instance

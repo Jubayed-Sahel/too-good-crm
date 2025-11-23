@@ -99,6 +99,8 @@ class ActivitySerializer(serializers.ModelSerializer):
             'telegram_username', 'telegram_chat_id',
             # Meeting fields
             'meeting_location', 'meeting_url', 'attendees',
+            # Video call fields
+            'video_call_room', 'video_call_url',
             # Task fields
             'task_priority', 'task_due_date',
             # Note fields

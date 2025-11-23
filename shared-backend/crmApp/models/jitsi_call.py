@@ -95,12 +95,14 @@ class JitsiCallSession(TimestampedModel):
         help_text="Total call duration in seconds"
     )
     
-    # Organization context
+    # Organization context (optional)
     organization = models.ForeignKey(
         'Organization',
         on_delete=models.CASCADE,
         related_name='jitsi_calls',
-        help_text="Organization this call belongs to"
+        null=True,
+        blank=True,
+        help_text="Organization this call belongs to (optional)"
     )
     
     # Additional metadata

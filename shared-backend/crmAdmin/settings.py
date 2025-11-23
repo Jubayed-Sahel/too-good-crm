@@ -42,6 +42,7 @@ else:
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # WebSocket support - must be first
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',  # Token authentication
     'corsheaders',
+    'channels',  # WebSocket channels
     
     # Your apps
     'crmApp',
@@ -314,6 +316,20 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 # Telegram Bot Integration Settings
 TG_BOT_TOKEN = os.getenv('TG_BOT_TOKEN', '')
 TG_WEBHOOK_SECRET = os.getenv('TG_WEBHOOK_SECRET', '')
+
+# Django Channels Configuration (WebSocket support for video calls)
+ASGI_APPLICATION = 'crmAdmin.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'  # Simple in-memory for development
+        # For production, use Redis:
+        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        # 'CONFIG': {
+        #     "hosts": [('127.0.0.1', 6379)],
+        # },
+    }
+}
 
 # Security Settings (for production)
 if not DEBUG:

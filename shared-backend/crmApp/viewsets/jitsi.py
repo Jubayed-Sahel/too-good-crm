@@ -40,11 +40,12 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
         ).values_list('organization_id', flat=True)
         
         # Allow access to calls in user's orgs OR where user is involved
+        # Note: participants__contains requires PostgreSQL JSONField support
+        # For SQLite compatibility, we rely on initiator/recipient checks
         queryset = JitsiCallSession.objects.filter(
             Q(organization_id__in=user_orgs) |
             Q(initiator=self.request.user) |
-            Q(recipient=self.request.user) |
-            Q(participants__contains=[self.request.user.id])
+            Q(recipient=self.request.user)
         )
         
         # Filter by status
@@ -57,11 +58,73 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
         if user_filter:
             queryset = queryset.filter(
                 Q(initiator=self.request.user) |
-                Q(recipient=self.request.user) |
-                Q(participants__contains=[self.request.user.id])
+                Q(recipient=self.request.user)
             )
         
         return queryset.select_related('initiator', 'recipient', 'organization').order_by('-created_at')
+    
+    @action(detail=False, methods=['post'])
+    def initiate_call_by_email(self, request):
+        """
+        Initiate a new call by looking up user by email.
+        
+        Request body:
+        {
+            "recipient_email": "user@example.com",
+            "call_type": "video"  // "video" or "audio"
+        }
+        """
+        recipient_email = request.data.get('recipient_email')
+        call_type = request.data.get('call_type', 'video')
+        
+        if not recipient_email:
+            return Response(
+                {'error': 'recipient_email is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Look up user by email
+            recipient = User.objects.get(email=recipient_email)
+            
+            # Get organization from user's primary profile
+            user_profile = request.user.user_profiles.filter(is_primary=True).first()
+            if not user_profile:
+                return Response(
+                    {'error': 'User must have an active profile'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Initiate call using service
+            call_session = jitsi_service.initiate_call(
+                initiator=request.user,
+                recipient=recipient,
+                call_type=call_type,
+                organization=user_profile.organization
+            )
+            
+            # Return call details
+            return Response({
+                'message': 'Call initiated successfully',
+                'call_session': JitsiCallSessionSerializer(call_session, context={'request': request}).data
+            }, status=status.HTTP_201_CREATED)
+            
+        except User.DoesNotExist:
+            return Response(
+                {'error': f'No user found with email: {recipient_email}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Error initiating call by email: {str(e)}")
+            return Response(
+                {'error': f'Failed to initiate call: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False, methods=['post'])
     def initiate_call(self, request):
@@ -187,31 +250,61 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def my_active_call(self, request):
         """Get user's current active call if any (including pending/ringing)"""
+        logger.info(f"[my_active_call] Checking for user: {request.user.username} (ID: {request.user.id})")
         try:
             presence = UserPresence.objects.get(user=request.user)
+            logger.info(f"[my_active_call] Found presence - current_call: {presence.current_call}, status: {presence.status}")
             # Check if current_call is still valid
             if presence.current_call:
+                logger.info(f"[my_active_call] Call status: {presence.current_call.status}")
                 if presence.current_call.status in ['pending', 'ringing', 'active']:
                     serializer = JitsiCallSessionSerializer(
                         presence.current_call,
                         context={'request': request}
                     )
+                    logger.info(f"[my_active_call] Returning active call: {presence.current_call.id}")
                     return Response(serializer.data)
                 else:
                     # Call is no longer active - clear it
+                    logger.info(f"[my_active_call] Call no longer active, clearing")
                     presence.current_call = None
                     presence.status = 'online'
                     presence.save()
         except UserPresence.DoesNotExist:
             # User has no presence record - no active call
+            logger.info(f"[my_active_call] No presence record found")
             pass
         except Exception as e:
             # Handle any other database errors gracefully
             logger.error(f"Error getting active call: {str(e)}", exc_info=True)
-            # Return 204 (no content) instead of 500 to avoid breaking frontend
             pass
         
-        return Response({'message': 'No active call'}, status=status.HTTP_204_NO_CONTENT)
+        # Return 404 when no active call (frontend expects this)
+        logger.info(f"[my_active_call] No active call found, returning 404")
+        return Response({'error': 'No active call'}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=False, methods=['post'])
+    def heartbeat(self, request):
+        """Update user's last seen timestamp (called periodically from frontend)"""
+        try:
+            presence, created = UserPresence.objects.get_or_create(
+                user=request.user,
+                defaults={'status': 'online', 'available_for_calls': True}
+            )
+            
+            # Update status to online if not already
+            if presence.status != 'online':
+                presence.status = 'online'
+            
+            # Heartbeat automatically updates last_seen due to auto_now
+            presence.save()
+            
+            return Response({'status': 'ok'})
+        except Exception as e:
+            # Log but don't fail - heartbeat failures shouldn't break the app
+            logger.error(f"Error in heartbeat: {str(e)}", exc_info=True)
+            # Return success anyway to avoid breaking frontend polling
+            return Response({'status': 'ok'}, status=status.HTTP_200_OK)
 
 
 class UserPresenceViewSet(viewsets.ModelViewSet):

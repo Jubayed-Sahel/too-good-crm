@@ -49,6 +49,29 @@ export const videoService = {
   },
 
   /**
+   * Initiate a call by looking up user by email
+   * @param email - Email address of the user to call
+   * @param callType - Type of call (video or audio)
+   * @returns Call session with JWT token for authentication
+   */
+  async initiateCallByEmail(
+    email: string,
+    callType: 'video' | 'audio' = 'video'
+  ): Promise<VideoCallSession> {
+    const request = {
+      recipient_email: email,
+      call_type: callType,
+    };
+
+    const response = await apiClient.post<InitiateCallResponse>(
+      `${JITSI_BASE_URL}/initiate_call_by_email/`,
+      request
+    );
+
+    return response.call_session;
+  },
+
+  /**
    * Answer an incoming call
    * @param callId - ID of the call session
    * @returns Updated call session with JWT token
@@ -108,14 +131,20 @@ export const videoService = {
    */
   async getMyActiveCall(): Promise<VideoCallSession | null> {
     try {
-      const response = await apiClient.get<GetActiveCallResponse>(
+      const response = await apiClient.get<VideoCallSession>(
         `${JITSI_BASE_URL}/my_active_call/`
       );
 
-      return response.call || null;
+      // Backend returns the call session directly, not wrapped in {call: ...}
+      return response || null;
     } catch (error: any) {
-      // Return null if no active call (404)
-      if (error.response?.status === 404) {
+      // Return null if no active call (404 or 204)
+      if (error.response?.status === 404 || error.response?.status === 204) {
+        return null;
+      }
+      // Also handle network errors gracefully
+      if (!error.response) {
+        console.warn('[VideoService] Network error checking for active call, assuming none');
         return null;
       }
       throw error;

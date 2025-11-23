@@ -91,7 +91,14 @@ export const CreateLeadDialog = ({
     onClose();
   };
 
-  const isFormValid = formData.name && formData.company && formData.email && formData.organization;
+  // Email validation regex
+  const isValidEmail = (email: string) => {
+    if (!email) return false;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const isFormValid = formData.name && formData.company && isValidEmail(formData.email) && formData.organization;
 
   return (
     <DialogRoot open={isOpen} onOpenChange={(details: any) => !details.open && handleClose()} size={{ base: 'full', md: 'lg' }}>
@@ -133,7 +140,13 @@ export const CreateLeadDialog = ({
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   size="sm"
+                  invalid={formData.email !== '' && !isValidEmail(formData.email)}
                 />
+                {formData.email !== '' && !isValidEmail(formData.email) && (
+                  <Text fontSize="xs" color="red.500">
+                    Please enter a valid email address
+                  </Text>
+                )}
               </VStack>
               <VStack gap={1} align="stretch">
                 <Text fontSize="sm" fontWeight="medium" color="gray.700">

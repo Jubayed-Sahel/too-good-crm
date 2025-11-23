@@ -45,11 +45,12 @@ export interface VideoCallSession {
 
 // 8x8 Video URL Data (returned by backend)
 export interface VideoUrlData {
-  video_url: string;
-  jwt_token: string;
-  room_name: string;
-  app_id: string;
-  server_domain: string;
+  video_url?: string;
+  jwt_token?: string;
+  room_name?: string;
+  app_id?: string;
+  server_domain?: string;
+  error?: string; // Error message when JWT generation fails
 }
 
 // User Presence
