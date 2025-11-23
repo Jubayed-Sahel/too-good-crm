@@ -330,6 +330,10 @@ CHANNEL_LAYERS = {
         # },
     }
 }
+# MCP Server Settings
+MCP_SERVER_TITLE = os.getenv('MCP_SERVER_TITLE', 'Too Good CRM MCP Server')
+MCP_SERVER_INSTRUCTIONS = os.getenv('MCP_SERVER_INSTRUCTIONS', 'A Django-based CRM MCP server for managing customer relationships, orders, activities, and issues.')
+MCP_SERVER_VERSION = os.getenv('MCP_SERVER_VERSION', '1.0.0')
 
 # Security Settings (for production)
 if not DEBUG:

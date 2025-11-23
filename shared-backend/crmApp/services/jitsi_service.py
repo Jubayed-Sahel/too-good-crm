@@ -128,15 +128,21 @@ class JitsiService:
             if recipient == initiator:
                 raise ValueError("Cannot call yourself")
             
-            try:
-                presence = UserPresence.objects.get(user=recipient)
-                recipient_name = f"{recipient.first_name} {recipient.last_name}".strip() or recipient.username
-                if not presence.is_available:
-                    raise ValueError(f"{recipient_name} is not available for calls")
-            except UserPresence.DoesNotExist:
-                recipient_name = f"{recipient.first_name} {recipient.last_name}".strip() or recipient.username
-                UserPresence.objects.create(user=recipient, status='offline')
-                raise ValueError(f"{recipient_name} is offline")
+            # Get or create presence record for recipient
+            presence, created = UserPresence.objects.get_or_create(
+                user=recipient,
+                defaults={
+                    'status': 'online',
+                    'available_for_calls': True
+                }
+            )
+            
+            recipient_name = f"{recipient.first_name} {recipient.last_name}".strip() or recipient.username
+            
+            # Only check availability if user is explicitly marked as unavailable
+            # Allow calls even if user is offline - they can answer when they come online
+            if presence.status == 'busy' or (presence.status != 'offline' and not presence.available_for_calls):
+                raise ValueError(f"{recipient_name} is not available for calls")
         
         # Get organization from user profile if not provided (optional)
         if not organization:

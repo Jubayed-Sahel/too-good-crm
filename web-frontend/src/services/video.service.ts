@@ -135,11 +135,16 @@ export const videoService = {
         `${JITSI_BASE_URL}/my_active_call/`
       );
 
-      // Backend returns the call session directly, not wrapped in {call: ...}
-      return response || null;
+      // Backend returns the call session directly, or empty/null for 204 No Content
+      // If response is empty/null/undefined, there's no active call
+      if (!response || (typeof response === 'object' && Object.keys(response).length === 0)) {
+        return null;
+      }
+
+      return response;
     } catch (error: any) {
-      // Return null if no active call (404 or 204)
-      if (error.response?.status === 404 || error.response?.status === 204) {
+      // Return null if no active call (404 Not Found)
+      if (error.response?.status === 404) {
         return null;
       }
       // Also handle network errors gracefully

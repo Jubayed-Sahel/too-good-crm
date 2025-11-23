@@ -279,9 +279,9 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
             logger.error(f"Error getting active call: {str(e)}", exc_info=True)
             pass
         
-        # Return 404 when no active call (frontend expects this)
-        logger.info(f"[my_active_call] No active call found, returning 404")
-        return Response({'error': 'No active call'}, status=status.HTTP_404_NOT_FOUND)
+        # Return 204 No Content when no active call (more semantically correct)
+        logger.info(f"[my_active_call] No active call found, returning 204")
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
     @action(detail=False, methods=['post'])
     def heartbeat(self, request):
