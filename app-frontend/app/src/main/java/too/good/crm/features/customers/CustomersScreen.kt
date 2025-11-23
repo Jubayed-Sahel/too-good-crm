@@ -111,6 +111,47 @@ fun CustomersScreen(
         )
     }
 
+    // Show delete confirmation dialog
+    if (uiState.showDeleteConfirmDialog) {
+        val customerToDelete = uiState.customerToDelete
+        if (customerToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.hideDeleteConfirmDialog() },
+                title = { Text("Delete Customer") },
+                text = {
+                    Text("Are you sure you want to delete ${customerToDelete.name}? This action cannot be undone.")
+                },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.deleteCustomer() },
+                    enabled = !uiState.isDeletingCustomer,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DesignTokens.Colors.Error
+                    )
+                ) {
+                    if (uiState.isDeletingCustomer) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = DesignTokens.Colors.OnPrimary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text("Delete")
+                }
+            },
+                dismissButton = {
+                    TextButton(
+                        onClick = { viewModel.hideDeleteConfirmDialog() },
+                        enabled = !uiState.isDeletingCustomer
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+    }
+
     AppScaffoldWithDrawer(
             profiles = profileState.profiles,
             activeProfile = profileState.activeProfile,
@@ -335,7 +376,20 @@ fun CustomersScreen(
                         )
                     ) {
                         items(filteredCustomers) { customer ->
-                            ResponsiveCustomerCard(customer = customer)
+                            ResponsiveCustomerCard(
+                                customer = customer,
+                                onView = { 
+                                    Toast.makeText(context, "View customer: ${customer.name}", Toast.LENGTH_SHORT).show()
+                                    // TODO: Navigate to customer detail screen
+                                },
+                                onEdit = { 
+                                    Toast.makeText(context, "Edit customer: ${customer.name}", Toast.LENGTH_SHORT).show()
+                                    // TODO: Navigate to customer edit screen
+                                },
+                                onDelete = { 
+                                    viewModel.showDeleteConfirmDialog(customer)
+                                }
+                            )
                         }
                     }
                 }
@@ -368,11 +422,16 @@ fun CustomersScreen(
 }
 
 @Composable
-fun ResponsiveCustomerCard(customer: Customer) {
+fun ResponsiveCustomerCard(
+    customer: Customer,
+    onView: () -> Unit = {},
+    onEdit: () -> Unit = {},
+    onDelete: () -> Unit = {}
+) {
     ResponsiveCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Navigate to customer detail */ }
+            .clickable { onView() }
     ) {
         // Header row with name and status badge - matching web design
         Row(
@@ -517,7 +576,7 @@ fun ResponsiveCustomerCard(customer: Customer) {
             
             // View button
             OutlinedButton(
-                onClick = { /* Navigate to view */ },
+                onClick = onView,
                 modifier = Modifier.weight(if (customer.email.isNotEmpty()) 1f else 1.5f),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = DesignTokens.Colors.Secondary
@@ -534,7 +593,7 @@ fun ResponsiveCustomerCard(customer: Customer) {
             
             // Edit button
             OutlinedButton(
-                onClick = { /* Navigate to edit */ },
+                onClick = onEdit,
                 modifier = Modifier.weight(if (customer.email.isNotEmpty()) 1f else 1.5f),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = DesignTokens.Colors.Primary
@@ -551,7 +610,7 @@ fun ResponsiveCustomerCard(customer: Customer) {
             
             // Delete icon button
             IconButton(
-                onClick = { /* Delete customer */ },
+                onClick = onDelete,
                 modifier = Modifier.size(40.dp)
             ) {
                 Icon(

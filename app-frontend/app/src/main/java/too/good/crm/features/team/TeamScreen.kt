@@ -35,25 +35,17 @@ fun TeamScreen(
     val profileViewModel = remember { ProfileViewModel(context) }
     val profileState by profileViewModel.uiState.collectAsState()
     
+    val teamViewModel = remember { TeamViewModel(context) }
+    val teamUiState by teamViewModel.uiState.collectAsState()
+    
     var searchQuery by remember { mutableStateOf("") }
     var filterRole by remember { mutableStateOf<TeamRole?>(null) }
-    val teamMembers = remember { TeamSampleData.getTeamMembers() }
-
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     
     LaunchedEffect(Unit) {
         if (profileState.profiles.isEmpty() && !profileState.isLoading) {
             profileViewModel.loadProfiles()
         }
-    }
-
-    val filteredMembers = teamMembers.filter { member ->
-        val matchesSearch = searchQuery.isEmpty() ||
-                member.name.contains(searchQuery, ignoreCase = true) ||
-                member.email.contains(searchQuery, ignoreCase = true) ||
-                member.department.contains(searchQuery, ignoreCase = true)
-        val matchesFilter = filterRole == null || member.role == filterRole
-        matchesSearch && matchesFilter
     }
 
     AppScaffoldWithDrawer(
@@ -116,29 +108,84 @@ fun TeamScreen(
 
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space6))
 
-            // Compact Stats Cards
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
-            ) {
-                TeamStatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Total",
-                    value = teamMembers.size.toString(),
-                    color = DesignTokens.Colors.Primary
-                )
-                TeamStatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Active",
-                    value = teamMembers.count { it.status == TeamStatus.ACTIVE }.toString(),
-                    color = DesignTokens.Colors.Success
-                )
-                TeamStatCard(
-                    modifier = Modifier.weight(1f),
-                    title = "Departments",
-                    value = teamMembers.map { it.department }.distinct().size.toString(),
-                    color = DesignTokens.Colors.StatusScheduled
-                )
+            // Compact Stats Cards - Show based on state
+            when (val state = teamUiState) {
+                is TeamUiState.Loading -> {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                    ) {
+                        repeat(3) {
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+                                colors = CardDefaults.cardColors(containerColor = DesignTokens.Colors.White),
+                                shape = MaterialTheme.shapes.large
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(DesignTokens.Spacing.Space3),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                is TeamUiState.Success -> {
+                    val employees = state.employees
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                    ) {
+                        TeamStatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Total",
+                            value = employees.size.toString(),
+                            color = DesignTokens.Colors.Primary
+                        )
+                        TeamStatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Active",
+                            value = employees.count { it.status == "active" }.toString(),
+                            color = DesignTokens.Colors.Success
+                        )
+                        TeamStatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Departments",
+                            value = employees.mapNotNull { it.department }.distinct().size.toString(),
+                            color = DesignTokens.Colors.StatusScheduled
+                        )
+                    }
+                }
+                is TeamUiState.Error -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+                        colors = CardDefaults.cardColors(containerColor = DesignTokens.Colors.White),
+                        shape = MaterialTheme.shapes.large
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(DesignTokens.Spacing.Space4),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Failed to load employees",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = DesignTokens.Colors.Error
+                            )
+                            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
+                            Button(onClick = { teamViewModel.retry() }) {
+                                Text("Retry", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
@@ -220,12 +267,98 @@ fun TeamScreen(
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
 
             // Team Members List
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
-            ) {
-                items(filteredMembers) { member ->
-                    TeamMemberCard(member = member)
+            when (val state = teamUiState) {
+                is TeamUiState.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
+                            Text(
+                                text = "Loading team members...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                is TeamUiState.Success -> {
+                    val employees = state.employees
+                    
+                    // Filter employees based on search and role
+                    val filteredEmployees = employees.filter { employee ->
+                        val matchesSearch = searchQuery.isEmpty() ||
+                                employee.fullName.contains(searchQuery, ignoreCase = true) ||
+                                employee.email.contains(searchQuery, ignoreCase = true) ||
+                                (employee.department?.contains(searchQuery, ignoreCase = true) ?: false)
+                        // Note: Role filtering would need role mapping from employee.roleName to TeamRole
+                        // For now, just use search filter
+                        matchesSearch
+                    }
+                    
+                    if (filteredEmployees.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.People,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = DesignTokens.Colors.OnSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
+                                Text(
+                                    text = if (searchQuery.isEmpty()) "No team members yet" else "No results found",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = DesignTokens.Colors.OnSurfaceVariant
+                                )
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                        ) {
+                            items(filteredEmployees, key = { it.id }) { employee ->
+                                RealTeamMemberCard(employee = employee)
+                            }
+                        }
+                    }
+                }
+                is TeamUiState.Error -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = DesignTokens.Colors.Error
+                            )
+                            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
+                            Text(
+                                text = "Failed to load team members",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = DesignTokens.Colors.Error
+                            )
+                            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space1))
+                            Text(
+                                text = state.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space3))
+                            Button(onClick = { teamViewModel.retry() }) {
+                                Text("Retry", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -386,6 +519,152 @@ fun TeamMemberCard(member: TeamMember) {
                     color = DesignTokens.Colors.OnSurfaceTertiary,
                     fontSize = 11.sp
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun RealTeamMemberCard(employee: too.good.crm.data.models.Employee) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(containerColor = DesignTokens.Colors.White),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(DesignTokens.Padding.CardPaddingStandard),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(DesignTokens.Heights.ImageThumbnail)
+                        .clip(CircleShape)
+                        .background(DesignTokens.Colors.Primary100),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = employee.initials,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = DesignTokens.Colors.Primary,
+                        fontWeight = DesignTokens.Typography.FontWeightBold
+                    )
+                }
+
+                // Employee Info
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space1)
+                ) {
+                    Text(
+                        text = employee.fullName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = DesignTokens.Typography.FontWeightBold,
+                        color = DesignTokens.Colors.OnSurface
+                    )
+                    Text(
+                        text = employee.email,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DesignTokens.Colors.OnSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space1))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Role Badge
+                        employee.roleName?.let { roleName ->
+                            Surface(
+                                shape = RoundedCornerShape(DesignTokens.Radius.ExtraSmall),
+                                color = DesignTokens.Colors.Info.copy(alpha = 0.1f)
+                            ) {
+                                Text(
+                                    text = roleName,
+                                    modifier = Modifier.padding(horizontal = DesignTokens.Spacing.Space2, vertical = DesignTokens.Spacing.Space1),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = DesignTokens.Colors.Info,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+
+                        // Department
+                        employee.department?.let { dept ->
+                            Text(
+                                text = "• $dept",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = DesignTokens.Colors.OnSurfaceTertiary
+                            )
+                        }
+                        
+                        // Job Title
+                        employee.jobTitle?.let { title ->
+                            Text(
+                                text = "• $title",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = DesignTokens.Colors.OnSurfaceTertiary
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Status and Actions
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Status Badge
+                val statusColor = when (employee.status) {
+                    "active" -> DesignTokens.Colors.Success
+                    "inactive" -> DesignTokens.Colors.OnSurfaceVariant
+                    "on-leave" -> DesignTokens.Colors.Warning
+                    "terminated" -> DesignTokens.Colors.Error
+                    else -> DesignTokens.Colors.OnSurfaceVariant
+                }
+                
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = statusColor.copy(alpha = 0.1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(statusColor)
+                        )
+                        Text(
+                            text = employee.statusDisplay ?: employee.status.replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = statusColor,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                // Employee Code
+                employee.code.let { code ->
+                    Text(
+                        text = "ID: $code",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = DesignTokens.Colors.OnSurfaceTertiary,
+                        fontSize = 11.sp
+                    )
+                }
             }
         }
     }

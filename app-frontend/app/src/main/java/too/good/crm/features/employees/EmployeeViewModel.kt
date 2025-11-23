@@ -43,12 +43,14 @@ class EmployeeViewModel(private val context: Context) : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val employees = api.getEmployees(
+                val response = api.getEmployees(
                     organization = organizationId,
                     status = status,
                     department = department,
                     search = search
                 )
+                // Extract employees from paginated response
+                val employees = response.results
                 _uiState.value = _uiState.value.copy(
                     employees = employees,
                     isLoading = false

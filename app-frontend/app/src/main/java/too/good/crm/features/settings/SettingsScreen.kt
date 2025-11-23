@@ -40,9 +40,6 @@ fun SettingsScreen(
     val settingsUiState by settingsViewModel.uiState.collectAsState()
     val passwordChangeState by settingsViewModel.passwordChangeState.collectAsState()
     
-    var darkMode by remember { mutableStateOf(false) }
-    var notificationsEnabled by remember { mutableStateOf(true) }
-    var emailNotifications by remember { mutableStateOf(true) }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
     
@@ -80,7 +77,6 @@ fun SettingsScreen(
         onModeChanged = { newMode ->
             activeMode = newMode
             UserSession.activeMode = newMode
-            // Navigate to appropriate dashboard when mode changes
             if (newMode == ActiveMode.CLIENT) {
                 onNavigate("client-dashboard")
             } else {
@@ -101,18 +97,17 @@ fun SettingsScreen(
             Text(
                 text = "Settings",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 8.dp)
             )
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Manage your account and preferences",
                 style = MaterialTheme.typography.bodyMedium,
-                color = DesignTokens.Colors.OnSurfaceVariant
+                color = DesignTokens.Colors.OnSurfaceVariant,
+                modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Profile Section - Show loading, error, or content
+            // Profile Section
             when (val state = settingsUiState) {
                 is SettingsUiState.Loading -> {
                     Card(
@@ -157,7 +152,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Button(onClick = { settingsViewModel.retry() }) {
-                                Text("Retry", style = MaterialTheme.typography.labelMedium)
+                                Text("Retry")
                             }
                         }
                     }
@@ -179,7 +174,6 @@ fun SettingsScreen(
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Avatar
                             Box(
                                 modifier = Modifier
                                     .size(64.dp)
@@ -211,7 +205,9 @@ fun SettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = user.primaryProfile?.profileTypeDisplay ?: user.primaryProfile?.profileType?.capitalize() ?: "User",
+                                    text = user.primaryProfile?.profileTypeDisplay 
+                                        ?: user.primaryProfile?.profileType?.replaceFirstChar { it.uppercase() } 
+                                        ?: "User",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = DesignTokens.Colors.OnSurfaceVariant
                                 )
@@ -231,10 +227,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Determine if user is an employee
-            val isEmployee = profileState.activeProfile?.profileType == "employee"
-
-            // Security Settings (Always shown, but content varies)
+            // Security Section
             Text(
                 text = "Security",
                 style = MaterialTheme.typography.titleMedium,
@@ -249,150 +242,19 @@ fun SettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    SettingsItem(
-                        icon = Icons.Default.Lock,
-                        title = "Change Password",
-                        subtitle = "Update your password",
-                        onClick = { showChangePasswordDialog = true }
-                    )
-                }
-            }
-
-            // Show additional settings only for non-employees
-            if (!isEmployee) {
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Account Settings
-                Text(
-                    text = "Account",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = DesignTokens.Colors.OnSurface
+                SettingsItem(
+                    icon = Icons.Default.Lock,
+                    title = "Change Password",
+                    subtitle = "Update your password",
+                    onClick = { showChangePasswordDialog = true }
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        SettingsItem(
-                            icon = Icons.Default.Person,
-                            title = "Edit Profile",
-                            subtitle = "Update your personal information",
-                            onClick = { /* Navigate to edit profile */ }
-                        )
-                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                        SettingsItem(
-                            icon = Icons.Default.Email,
-                            title = "Email Preferences",
-                            subtitle = "Manage email settings",
-                            onClick = { /* Navigate to email preferences */ }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Preferences
-                Text(
-                    text = "Preferences",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = DesignTokens.Colors.OnSurface
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        SettingsSwitchItem(
-                            icon = Icons.Default.DarkMode,
-                            title = "Dark Mode",
-                            subtitle = "Toggle dark theme",
-                            checked = darkMode,
-                            onCheckedChange = { darkMode = it }
-                        )
-                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                        SettingsSwitchItem(
-                            icon = Icons.Default.Notifications,
-                            title = "Notifications",
-                            subtitle = "Enable push notifications",
-                            checked = notificationsEnabled,
-                            onCheckedChange = { notificationsEnabled = it }
-                        )
-                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                        SettingsSwitchItem(
-                            icon = Icons.Default.Email,
-                            title = "Email Notifications",
-                            subtitle = "Receive updates via email",
-                            checked = emailNotifications,
-                            onCheckedChange = { emailNotifications = it }
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Support & Info
-                Text(
-                    text = "Support & Information",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = DesignTokens.Colors.OnSurface
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        SettingsItem(
-                            icon = Icons.Default.Help,
-                            title = "Help & Support",
-                            subtitle = "Get help or contact support",
-                            onClick = { /* Navigate to help */ }
-                        )
-                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                        SettingsItem(
-                            icon = Icons.Default.Info,
-                            title = "About",
-                            subtitle = "App version and information",
-                            onClick = { /* Navigate to about */ }
-                        )
-                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                        SettingsItem(
-                            icon = Icons.Default.Description,
-                            title = "Privacy Policy",
-                            subtitle = "Read our privacy policy",
-                            onClick = { /* Navigate to privacy */ }
-                        )
-                        HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
-                        SettingsItem(
-                            icon = Icons.Default.Gavel,
-                            title = "Terms of Service",
-                            subtitle = "Read our terms",
-                            onClick = { /* Navigate to terms */ }
-                        )
-                    }
-                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             // Logout Button
             Button(
-                onClick = { onBack() },
+                onClick = onBack,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),
@@ -488,56 +350,3 @@ fun SettingsItem(
         )
     }
 }
-
-@Composable
-fun SettingsSwitchItem(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(24.dp)
-        )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = DesignTokens.Colors.OnSurface
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = DesignTokens.Colors.OnSurfaceVariant,
-                fontSize = 12.sp
-            )
-        }
-
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                uncheckedThumbColor = Color.White,
-                uncheckedTrackColor = DesignTokens.Colors.Outline
-            )
-        )
-    }
-}
-

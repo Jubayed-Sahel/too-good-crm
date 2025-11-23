@@ -1,7 +1,9 @@
 package too.good.crm.data.api
 
 import retrofit2.http.*
+import too.good.crm.data.model.PaginatedResponse
 import too.good.crm.data.models.Employee
+import too.good.crm.data.models.EmployeeDetail
 import too.good.crm.data.models.InviteEmployeeRequest
 import too.good.crm.data.models.InviteEmployeeResponse
 import too.good.crm.data.models.UpdateEmployeeRequest
@@ -17,7 +19,7 @@ interface EmployeeApiService {
         @Query("status") status: String? = null,
         @Query("department") department: String? = null,
         @Query("search") search: String? = null
-    ): List<Employee>
+    ): PaginatedResponse<Employee>
     
     @GET("employees/{id}/")
     suspend fun getEmployee(@Path("id") id: Int): Employee

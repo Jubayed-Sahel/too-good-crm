@@ -26,5 +26,10 @@ interface AuthApiService {
     suspend fun changePassword(
         @Body request: ChangePasswordRequest
     ): Response<MessageResponse>
+    
+    @PATCH("users/update_profile/")
+    suspend fun updateProfile(
+        @Body updates: Map<String, Any>
+    ): Response<User>
 }
 

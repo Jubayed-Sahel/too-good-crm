@@ -76,7 +76,7 @@ fun EmployeeEditScreen(
             phone = employee.phone ?: ""
             jobTitle = employee.jobTitle ?: ""
             department = employee.department ?: ""
-            employmentType = employee.employmentType
+            employmentType = employee.employmentType ?: "full-time"
             status = employee.status
             hireDate = employee.hireDate ?: ""
             emergencyContact = employee.emergencyContact ?: ""

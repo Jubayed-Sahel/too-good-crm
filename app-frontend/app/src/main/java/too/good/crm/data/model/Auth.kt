@@ -90,6 +90,22 @@ data class User(
     val firstName: String,
     @SerializedName("last_name")
     val lastName: String,
+    @SerializedName("phone")
+    val phone: String? = null,
+    @SerializedName("title")
+    val title: String? = null,
+    @SerializedName("department")
+    val department: String? = null,
+    @SerializedName("bio")
+    val bio: String? = null,
+    @SerializedName("location")
+    val location: String? = null,
+    @SerializedName("timezone")
+    val timezone: String? = null,
+    @SerializedName("language")
+    val language: String? = null,
+    @SerializedName("profile_image")
+    val profileImage: String? = null,
     @SerializedName("is_active")
     val isActive: Boolean = true,
     @SerializedName("profiles")

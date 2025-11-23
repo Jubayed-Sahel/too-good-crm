@@ -16,7 +16,10 @@ data class CustomersUiState(
     val error: String? = null,
     val showAddCustomerDialog: Boolean = false,
     val isCreatingCustomer: Boolean = false,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val showDeleteConfirmDialog: Boolean = false,
+    val customerToDelete: Customer? = null,
+    val isDeletingCustomer: Boolean = false
 )
 
 class CustomersViewModel : ViewModel() {
@@ -138,6 +141,57 @@ class CustomersViewModel : ViewModel() {
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    fun showDeleteConfirmDialog(customer: Customer) {
+        _uiState.value = _uiState.value.copy(
+            showDeleteConfirmDialog = true,
+            customerToDelete = customer
+        )
+    }
+
+    fun hideDeleteConfirmDialog() {
+        _uiState.value = _uiState.value.copy(
+            showDeleteConfirmDialog = false,
+            customerToDelete = null
+        )
+    }
+
+    fun deleteCustomer() {
+        val customer = _uiState.value.customerToDelete ?: return
+        
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isDeletingCustomer = true, error = null)
+            
+            // Parse customer ID from string
+            val customerId = customer.id.toIntOrNull()
+            if (customerId == null) {
+                _uiState.value = _uiState.value.copy(
+                    isDeletingCustomer = false,
+                    error = "Invalid customer ID"
+                )
+                return@launch
+            }
+            
+            repository.deleteCustomer(customerId)
+                .onSuccess {
+                    _uiState.value = _uiState.value.copy(
+                        customers = _uiState.value.customers.filter { it.id != customer.id },
+                        isDeletingCustomer = false,
+                        showDeleteConfirmDialog = false,
+                        customerToDelete = null,
+                        successMessage = "Customer deleted successfully"
+                    )
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isDeletingCustomer = false,
+                        showDeleteConfirmDialog = false,
+                        customerToDelete = null,
+                        error = error.message ?: "Failed to delete customer"
+                    )
+                }
+        }
     }
 
     // Convert API Customer to UI Customer

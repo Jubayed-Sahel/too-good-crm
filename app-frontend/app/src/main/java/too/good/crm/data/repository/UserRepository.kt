@@ -11,8 +11,7 @@ import too.good.crm.data.model.*
  */
 class UserRepository(context: Context) {
     
-    private val apiClient = ApiClient.getInstance(context)
-    private val authService = apiClient.authApiService
+    private val authService = ApiClient.authApiService
     
     companion object {
         private const val TAG = "UserRepository"
@@ -49,15 +48,18 @@ class UserRepository(context: Context) {
     
     /**
      * Update user profile
-     * PATCH /api/users/me/
-     * 
-     * Note: Backend might not have a PATCH endpoint for /users/me/
-     * This is a placeholder for future implementation
+     * PUT/PATCH /api/users/update_profile/
      */
     suspend fun updateProfile(
         firstName: String? = null,
         lastName: String? = null,
-        phone: String? = null
+        phone: String? = null,
+        title: String? = null,
+        department: String? = null,
+        bio: String? = null,
+        location: String? = null,
+        timezone: String? = null,
+        language: String? = null
     ): Result<User> {
         return try {
             Log.d(TAG, "Updating user profile")
@@ -67,15 +69,34 @@ class UserRepository(context: Context) {
             firstName?.let { updates["first_name"] = it }
             lastName?.let { updates["last_name"] = it }
             phone?.let { updates["phone"] = it }
+            title?.let { updates["title"] = it }
+            department?.let { updates["department"] = it }
+            bio?.let { updates["bio"] = it }
+            location?.let { updates["location"] = it }
+            timezone?.let { updates["timezone"] = it }
+            language?.let { updates["language"] = it }
             
             if (updates.isEmpty()) {
                 return Result.failure(Exception("No fields to update"))
             }
             
-            // TODO: Backend needs to add PATCH /api/users/me/ endpoint
-            // For now, return a not implemented error
-            Log.w(TAG, "Update profile not implemented in backend yet")
-            Result.failure(Exception("Profile update not available yet"))
+            Log.d(TAG, "Updating fields: ${updates.keys}")
+            val response = authService.updateProfile(updates)
+            
+            if (response.isSuccessful) {
+                val user = response.body()
+                if (user != null) {
+                    Log.d(TAG, "Profile updated successfully")
+                    Result.success(user)
+                } else {
+                    Log.e(TAG, "Update response body is null")
+                    Result.failure(Exception("Empty response"))
+                }
+            } else {
+                val errorMsg = "Failed to update profile: ${response.code()} - ${response.message()}"
+                Log.e(TAG, errorMsg)
+                Result.failure(Exception(errorMsg))
+            }
             
         } catch (e: Exception) {
             Log.e(TAG, "Error updating profile", e)

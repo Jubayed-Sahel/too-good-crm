@@ -271,7 +271,7 @@ fun EmployeeDetailScreen(
                     InfoRow(
                         icon = Icons.Default.Work,
                         label = "Employment Type",
-                        value = employee.employmentTypeDisplay ?: employee.employmentType
+                        value = employee.employmentTypeDisplay ?: employee.employmentType ?: "N/A"
                     )
                     if (employee.hireDate != null) {
                         InfoRow(

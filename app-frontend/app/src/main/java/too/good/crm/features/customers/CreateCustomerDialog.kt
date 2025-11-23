@@ -215,13 +215,15 @@ fun CreateCustomerDialog(
                         value = phone,
                         onValueChange = {
                             phone = it
-                            phoneError = it.isBlank()
+                            // Remove non-digit characters for validation
+                            val digitsOnly = it.replace(Regex("[^0-9+]"), "").replace("+", "")
+                            phoneError = digitsOnly.length < 7
                         },
                         label = { Text("Phone *") },
                         modifier = Modifier.fillMaxWidth(),
                         isError = phoneError,
                         supportingText = if (phoneError) {
-                            { Text("Phone is required") }
+                            { Text("Phone must be at least 7 digits") }
                         } else null,
                         singleLine = true,
                         shape = RoundedCornerShape(DesignTokens.Radius.Medium)
@@ -353,7 +355,9 @@ fun CreateCustomerDialog(
                             // Validate
                             nameError = name.isBlank()
                             emailError = email.isBlank() || !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
-                            phoneError = phone.isBlank()
+                            // Validate phone has at least 7 digits
+                            val phoneDigits = phone.replace(Regex("[^0-9+]"), "").replace("+", "")
+                            phoneError = phoneDigits.length < 7
 
                             if (!nameError && !emailError && !phoneError) {
                                 onCreateCustomer(
