@@ -239,6 +239,9 @@ def create_command_help_message() -> str:
         "/login - Login to your CRM account\n"
         "/logout - Logout from Telegram bot\n"
         "/me - View your account information\n\n"
+        "<b>Profile Management:</b>\n"
+        "/profiles - List all your profiles (vendor/employee/customer)\n"
+        "/switch &lt;id&gt; - Switch to a different profile/organization\n\n"
         "<b>CRM Actions:</b>\n"
         "Just ask naturally in plain English!\n\n"
         "<b>Examples:</b>\n"
@@ -254,7 +257,8 @@ def create_command_help_message() -> str:
         "/features - See all available CRM actions\n"
         "/actions - Quick actions based on your role\n"
         "/clear - Clear conversation history\n\n"
-        "<i>All CRM actions use AI-powered natural language processing.</i>"
+        "<i>💡 All CRM actions use AI-powered natural language processing.</i>\n"
+        "<i>🔄 Use /profiles and /switch to work with different organizations.</i>"
     )
     
     return message

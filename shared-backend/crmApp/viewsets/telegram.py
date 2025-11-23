@@ -178,6 +178,18 @@ def handle_command(telegram_user: TelegramUser, parsed: Dict[str, Any], telegram
         message = create_quick_actions_message(user_role)
         telegram_service.send_message(chat_id, message)
     
+    elif command == 'profiles':
+        if not telegram_user.is_authenticated:
+            telegram_service.send_message(chat_id, "🔐 Please authenticate first with /start")
+        else:
+            handle_profiles_command(telegram_user, telegram_service)
+    
+    elif command == 'switch':
+        if not telegram_user.is_authenticated:
+            telegram_service.send_message(chat_id, "🔐 Please authenticate first with /start")
+        else:
+            handle_switch_command(telegram_user, args, telegram_service)
+    
     else:
         telegram_service.send_message(
             chat_id,
@@ -339,7 +351,8 @@ def handle_authenticated_message(telegram_user: TelegramUser, text: str, telegra
             async for chunk in gemini_service.chat_stream(
                 message=text,
                 user=user,
-                conversation_history=conversation_history
+                conversation_history=conversation_history,
+                telegram_user=telegram_user
             ):
                 response_text += chunk
         
@@ -386,6 +399,143 @@ def handle_telegram_callback(parsed: Dict[str, Any]):
     # Handle specific callbacks here
     # For now, just acknowledge
     telegram_service.send_message(chat_id, f"Received: {callback_data}")
+
+
+def handle_profiles_command(telegram_user: TelegramUser, telegram_service: TelegramService):
+    """
+    Handle /profiles command - list all available profiles for the user.
+    """
+    chat_id = telegram_user.chat_id
+    user = telegram_user.user
+    
+    if not user:
+        telegram_service.send_message(chat_id, "❌ No user linked to this Telegram account.")
+        return
+    
+    # Get all profiles
+    profiles = user.user_profiles.filter(status='active').order_by('-is_primary', 'profile_type')
+    
+    if not profiles.exists():
+        telegram_service.send_message(chat_id, "❌ You don't have any active profiles.")
+        return
+    
+    # Get currently selected profile
+    current_profile = telegram_user.selected_profile or profiles.filter(is_primary=True).first() or profiles.first()
+    
+    # Build message
+    message_lines = ["<b>👤 Your Profiles</b>\n"]
+    
+    for idx, profile in enumerate(profiles, 1):
+        is_current = (current_profile and profile.id == current_profile.id)
+        
+        # Profile type icon
+        icon = {
+            'vendor': '💼',
+            'employee': '👔',
+            'customer': '🛒'
+        }.get(profile.profile_type, '👤')
+        
+        # Build profile line
+        profile_line = f"{idx}. {icon} <b>{profile.profile_type.title()}</b>"
+        
+        if profile.organization:
+            profile_line += f" at <i>{profile.organization.name}</i>"
+        else:
+            profile_line += " <i>(No organization)</i>"
+        
+        # Mark primary and current
+        badges = []
+        if profile.is_primary:
+            badges.append("⭐ Primary")
+        if is_current:
+            badges.append("✅ Active")
+        
+        if badges:
+            profile_line += f" [{', '.join(badges)}]"
+        
+        profile_line += f"\n   <code>ID: {profile.id}</code>"
+        
+        # Add org ID if exists
+        if profile.organization:
+            profile_line += f" | <code>Org: {profile.organization_id}</code>"
+        
+        message_lines.append(profile_line)
+    
+    message_lines.append("\n<i>💡 Use /switch &lt;profile_id&gt; to change your active profile</i>")
+    message_lines.append("<i>Example: /switch 43</i>")
+    
+    message = "\n".join(message_lines)
+    telegram_service.send_message(chat_id, message)
+
+
+def handle_switch_command(telegram_user: TelegramUser, args: list, telegram_service: TelegramService):
+    """
+    Handle /switch command - switch to a different profile.
+    """
+    chat_id = telegram_user.chat_id
+    user = telegram_user.user
+    
+    if not user:
+        telegram_service.send_message(chat_id, "❌ No user linked to this Telegram account.")
+        return
+    
+    if not args or len(args) == 0:
+        telegram_service.send_message(
+            chat_id,
+            "❌ Please provide a profile ID.\n\n<i>Usage: /switch &lt;profile_id&gt;</i>\n<i>Use /profiles to see available profiles</i>"
+        )
+        return
+    
+    try:
+        profile_id = int(args[0])
+    except ValueError:
+        telegram_service.send_message(
+            chat_id,
+            f"❌ Invalid profile ID: {args[0]}\n\n<i>Profile ID must be a number</i>"
+        )
+        return
+    
+    # Get the profile
+    from crmApp.models import UserProfile
+    try:
+        profile = UserProfile.objects.get(
+            id=profile_id,
+            user=user,
+            status='active'
+        )
+    except UserProfile.DoesNotExist:
+        telegram_service.send_message(
+            chat_id,
+            f"❌ Profile ID {profile_id} not found or not accessible.\n\n<i>Use /profiles to see available profiles</i>"
+        )
+        return
+    
+    # Update selected profile
+    telegram_user.selected_profile = profile
+    telegram_user.save(update_fields=['selected_profile'])
+    
+    # Clear conversation history for clean context
+    telegram_user.clear_conversation_history()
+    
+    # Build confirmation message
+    icon = {
+        'vendor': '💼',
+        'employee': '👔',
+        'customer': '🛒'
+    }.get(profile.profile_type, '👤')
+    
+    org_info = f" at <b>{profile.organization.name}</b>" if profile.organization else " (No organization)"
+    org_id_info = f"\n<code>Organization ID: {profile.organization_id}</code>" if profile.organization else ""
+    
+    message = (
+        f"✅ <b>Profile switched successfully!</b>\n\n"
+        f"{icon} <b>{profile.profile_type.title()}</b>{org_info}\n"
+        f"<code>Profile ID: {profile.id}</code>{org_id_info}\n\n"
+        f"<i>All new data (leads, customers, deals) will now be linked to this organization.</i>\n\n"
+        f"💡 <i>Your conversation history has been cleared for a fresh start.</i>"
+    )
+    
+    telegram_service.send_message(chat_id, message)
 
 
 @api_view(['GET'])
