@@ -14,6 +14,7 @@ import { toaster } from '../ui/toaster';
 import { useEmployees } from '@/hooks/useEmployees';
 import { employeeService } from '@/services';
 import type { Employee } from '@/services';
+import { useProfile } from '@/contexts/ProfileContext';
 import { exportData } from '@/utils';
 
 export const TeamMembersTab = () => {
@@ -31,8 +32,11 @@ export const TeamMembersTab = () => {
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [employeesToBulkDelete, setEmployeesToBulkDelete] = useState<string[]>([]);
 
-  // Data fetching
-  const { employees, isLoading, error, refetch } = useEmployees();
+  // Data fetching - explicitly pass organization filter
+  const { activeOrganizationId } = useProfile();
+  const { employees, isLoading, error, refetch } = useEmployees({ 
+    organization: activeOrganizationId 
+  });
   const hasRefetchedRef = useRef(false);
   
   // Refetch employees when navigating back to team page (only once per navigation)

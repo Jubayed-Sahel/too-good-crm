@@ -21,6 +21,17 @@ interface GroupedPermissions {
   [resource: string]: Permission[];
 }
 
+// Helper function to get display name for resources
+const getResourceDisplayName = (resource: string): string => {
+  const displayNames: Record<string, string> = {
+    'order': 'Sales/Order',
+    'customer': 'Customers',
+    'activity': 'Activities',
+    'issue': 'Issues',
+  };
+  return displayNames[resource] || resource.charAt(0).toUpperCase() + resource.slice(1);
+};
+
 export const PermissionsTab = () => {
   const [permissions, setPermissions] = useState<GroupedPermissions>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -34,38 +45,66 @@ export const PermissionsTab = () => {
     try {
       const data = await permissionService.getPermissionsByResource();
       
-      // Filter to show only standardized permissions (singular resources + standard CRUD actions)
-      // This removes duplicates like:
-      // - Plural resources (customers vs customer)
-      // - Old actions (view/edit vs read/update)
+      // Filter to show only allowed permissions
       const filteredData: GroupedPermissions = {};
       
+      // Allowed resources: customer, order (or deal), activity, issue
+      // Also include plural forms for matching
+      const allowedResources = ['customer', 'customers', 'order', 'orders', 'deal', 'deals', 'activity', 'activities', 'issue', 'issues'];
+      
+      // Filter to keep only standardized CRUD actions (read, create, update, delete)
+      const standardActions = ['read', 'create', 'update', 'delete'];
+      
       Object.entries(data).forEach(([resource, perms]) => {
-        // Only keep singular resource names and standard actions
-        const singularResource = resource.endsWith('s') && resource !== 'analytics' && resource !== 'settings'
-          ? resource.slice(0, -1)
-          : resource;
+        // Normalize resource name to lowercase for comparison
+        const resourceLower = resource.toLowerCase().trim();
         
-        // Filter to keep only standardized CRUD actions (read, create, update, delete)
-        const standardActions = ['read', 'create', 'update', 'delete'];
-        const standardPerms = perms.filter(p => standardActions.includes(p.action));
+        // Convert plural to singular for matching (but keep original for display if needed)
+        let singularResource = resourceLower;
+        if (resourceLower.endsWith('ies')) {
+          singularResource = resourceLower.slice(0, -3) + 'y'; // activities -> activity
+        } else if (resourceLower.endsWith('es') && resourceLower !== 'issues' && resourceLower !== 'activities') {
+          singularResource = resourceLower.slice(0, -2); // customers -> customer
+        } else if (resourceLower.endsWith('s') && resourceLower !== 'analytics' && resourceLower !== 'settings' && resourceLower !== 'access') {
+          singularResource = resourceLower.slice(0, -1); // orders -> order, deals -> deal
+        }
         
-        // Use singular resource as key
+        // Check if this resource is allowed (check both original and singular form)
+        const isAllowed = allowedResources.includes(resourceLower) || allowedResources.includes(singularResource);
+        
+        if (!isAllowed) {
+          return; // Skip this resource
+        }
+        
+        // Filter to keep only standardized CRUD actions
+        const standardPerms = perms.filter(p => {
+          const actionLower = (p.action || '').toLowerCase().trim();
+          return standardActions.includes(actionLower);
+        });
+        
+        // Use normalized singular resource as key
         if (standardPerms.length > 0) {
-          // If we already have this resource (e.g., both "customer" and "customers" exist)
-          // merge and deduplicate by action
-          if (filteredData[singularResource]) {
-            const existingActions = new Set(filteredData[singularResource].map(p => p.action));
+          // Normalize 'deal' to 'order' for Sales/Order
+          const normalizedResource = singularResource === 'deal' ? 'order' : singularResource;
+          
+          // If we already have this resource, merge and deduplicate by action
+          if (filteredData[normalizedResource]) {
+            const existingActions = new Set(filteredData[normalizedResource].map(p => p.action.toLowerCase()));
             standardPerms.forEach(p => {
-              if (!existingActions.has(p.action)) {
-                filteredData[singularResource].push(p);
+              const actionLower = (p.action || '').toLowerCase();
+              if (!existingActions.has(actionLower)) {
+                filteredData[normalizedResource].push(p);
               }
             });
           } else {
-            filteredData[singularResource] = standardPerms;
+            filteredData[normalizedResource] = standardPerms;
           }
         }
       });
+      
+      // Log filtered results for debugging
+      console.log('Filtered permissions:', filteredData);
+      console.log('Allowed resources:', Object.keys(filteredData));
       
       setPermissions(filteredData);
     } catch (error: any) {
@@ -158,8 +197,8 @@ export const PermissionsTab = () => {
                       <FiLock color="#805AD5" size={18} />
                     </Box>
                     <VStack align="start" gap={0}>
-                      <Text fontWeight="semibold" fontSize="md" textTransform="capitalize">
-                        {resource}
+                      <Text fontWeight="semibold" fontSize="md">
+                        {getResourceDisplayName(resource)}
                       </Text>
                       <Text fontSize="xs" color="gray.600">
                         {perms.length} permission{perms.length !== 1 ? 's' : ''}

@@ -8,6 +8,7 @@ import {
   CreateCustomerDialog,
 } from '@/components/customers';
 import { PageHeader, StandardButton } from '@/components/common';
+import { usePermissions } from '@/contexts/PermissionContext';
 import type { MappedCustomer, CustomerStats as Stats } from '@/hooks/useCustomersPage';
 
 /**
@@ -73,6 +74,9 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
   isCreateDialogOpen,
   onCloseCreateDialog,
 }) => {
+  const { canAccess } = usePermissions();
+  const canCreate = canAccess('customer', 'create');
+  
   return (
     <VStack gap={5} align="stretch">
       {/* Page Header */}
@@ -80,13 +84,15 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
         title="Customers"
         description="Manage your customer relationships, track interactions, and monitor customer activity"
         actions={
-          <StandardButton
-            variant="primary"
-            leftIcon={<FiPlus />}
-            onClick={onAddCustomer}
-          >
-            Add Customer
-          </StandardButton>
+          canCreate ? (
+            <StandardButton
+              variant="primary"
+              leftIcon={<FiPlus />}
+              onClick={onAddCustomer}
+            >
+              Add Customer
+            </StandardButton>
+          ) : undefined
         }
         />
 
@@ -99,7 +105,7 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
         onSearchChange={onSearchChange}
         statusFilter={statusFilter}
         onStatusChange={onStatusChange}
-        onAddCustomer={onAddCustomer}
+        onAddCustomer={canCreate ? onAddCustomer : undefined}
       />
 
       {/* Customer Table */}

@@ -43,6 +43,11 @@ interface CustomerTableProps {
 const CustomerTable = ({ customers, onEdit, onDelete, onView, onCall, onBulkDelete, onBulkExport }: CustomerTableProps) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const { canAccess } = usePermissions();
+  
+  // Check permissions for each action (using singular 'customer')
+  const canView = canAccess('customer', 'read');
+  const canEdit = canAccess('customer', 'update');
+  const canDelete = canAccess('customer', 'delete');
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -176,37 +181,41 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onCall, onBulkDele
                   <Box ml={2}>Call</Box>
                 </Button>
               )}
-              <Button
-                size="sm"
-                variant="outline"
-                colorPalette="purple"
-                flex={1}
-                onClick={() => onView(customer)}
-              >
-                <FiEye size={16} />
-                <Box ml={2}>View</Box>
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                colorPalette="blue"
-                flex={1}
-                onClick={() => onEdit(customer)}
-                disabled={!canAccess('customers', 'update')}
-              >
-                <FiEdit size={16} />
-                <Box ml={2}>Edit</Box>
-              </Button>
-              <IconButton
-                aria-label="Delete"
-                size="sm"
-                variant="outline"
-                colorPalette="red"
-                onClick={() => onDelete(customer)}
-                disabled={!canAccess('customers', 'delete')}
-              >
-                <FiTrash2 size={16} />
-              </IconButton>
+              {canView && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="purple"
+                  flex={1}
+                  onClick={() => onView(customer)}
+                >
+                  <FiEye size={16} />
+                  <Box ml={2}>View</Box>
+                </Button>
+              )}
+              {canEdit && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorPalette="blue"
+                  flex={1}
+                  onClick={() => onEdit(customer)}
+                >
+                  <FiEdit size={16} />
+                  <Box ml={2}>Edit</Box>
+                </Button>
+              )}
+              {canDelete && (
+                <IconButton
+                  aria-label="Delete"
+                  size="sm"
+                  variant="outline"
+                  colorPalette="red"
+                  onClick={() => onDelete(customer)}
+                >
+                  <FiTrash2 size={16} />
+                </IconButton>
+              )}
             </HStack>
           </VStack>
         </Card>
@@ -340,35 +349,39 @@ const CustomerTable = ({ customers, onEdit, onDelete, onView, onCall, onBulkDele
                         <FiPhone size={16} />
                       </IconButton>
                     )}
-                    <IconButton
-                      aria-label="View customer"
-                      size="sm"
-                      variant="ghost"
-                      colorPalette="purple"
-                      onClick={() => onView(customer)}
-                    >
-                      <FiEye size={16} />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Edit customer"
-                      size="sm"
-                      variant="ghost"
-                      colorPalette="blue"
-                      onClick={() => onEdit(customer)}
-                      disabled={!canAccess('customers', 'update')}
-                    >
-                      <FiEdit size={16} />
-                    </IconButton>
-                    <IconButton
-                      aria-label="Delete customer"
-                      size="sm"
-                      variant="ghost"
-                      colorPalette="red"
-                      onClick={() => onDelete(customer)}
-                      disabled={!canAccess('customers', 'delete')}
-                    >
-                      <FiTrash2 size={16} />
-                    </IconButton>
+                    {canView && (
+                      <IconButton
+                        aria-label="View customer"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="purple"
+                        onClick={() => onView(customer)}
+                      >
+                        <FiEye size={16} />
+                      </IconButton>
+                    )}
+                    {canEdit && (
+                      <IconButton
+                        aria-label="Edit customer"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="blue"
+                        onClick={() => onEdit(customer)}
+                      >
+                        <FiEdit size={16} />
+                      </IconButton>
+                    )}
+                    {canDelete && (
+                      <IconButton
+                        aria-label="Delete customer"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="red"
+                        onClick={() => onDelete(customer)}
+                      >
+                        <FiTrash2 size={16} />
+                      </IconButton>
+                    )}
                   </HStack>
                 </Table.Cell>
               </Table.Row>

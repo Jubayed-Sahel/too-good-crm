@@ -36,6 +36,17 @@ interface GroupedPermissions {
   [resource: string]: Permission[];
 }
 
+// Helper function to get display name for resources
+const getResourceDisplayName = (resource: string): string => {
+  const displayNames: Record<string, string> = {
+    'order': 'Sales/Order',
+    'customer': 'Customers',
+    'activity': 'Activities',
+    'issue': 'Issues',
+  };
+  return displayNames[resource] || resource.charAt(0).toUpperCase() + resource.slice(1);
+};
+
 export const ManagePermissionsDialog = ({ 
   isOpen, 
   onClose, 
@@ -66,21 +77,39 @@ export const ManagePermissionsDialog = ({
       // Filter and deduplicate permissions
       const filteredPerms: GroupedPermissions = {};
       const standardActions = ['read', 'create', 'update', 'delete'];
+      // Allowed resources: customer, order (or deal), activity, issue
+      // Also include plural forms for matching
+      const allowedResources = ['customer', 'customers', 'order', 'orders', 'deal', 'deals', 'activity', 'activities', 'issue', 'issues'];
       
       Object.entries(groupedPerms).forEach(([resource, permissions]) => {
-        // Normalize resource name to singular
-        const normalizedResource = resource.endsWith('s') && resource !== 'access'
-          ? resource.slice(0, -1)
-          : resource;
+        // Normalize resource name to lowercase for comparison
+        const resourceLower = resource.toLowerCase().trim();
+        
+        // Convert plural to singular for matching
+        let singularResource = resourceLower;
+        if (resourceLower.endsWith('ies')) {
+          singularResource = resourceLower.slice(0, -3) + 'y'; // activities -> activity
+        } else if (resourceLower.endsWith('es') && resourceLower !== 'issues' && resourceLower !== 'activities') {
+          singularResource = resourceLower.slice(0, -2); // customers -> customer
+        } else if (resourceLower.endsWith('s') && resourceLower !== 'analytics' && resourceLower !== 'settings' && resourceLower !== 'access') {
+          singularResource = resourceLower.slice(0, -1); // orders -> order, deals -> deal
+        }
+        
+        // Check if this resource is allowed (check both original and singular form)
+        const isAllowed = allowedResources.includes(resourceLower) || allowedResources.includes(singularResource);
+        
+        if (!isAllowed) {
+          return; // Skip this resource
+        }
         
         // Filter to standard actions and remove duplicates
         const uniquePerms = new Map<string, Permission>();
         
         permissions.forEach(perm => {
           // Normalize action (view -> read, edit -> update)
-          let normalizedAction = perm.action;
-          if (perm.action === 'view') normalizedAction = 'read';
-          if (perm.action === 'edit') normalizedAction = 'update';
+          let normalizedAction = (perm.action || '').toLowerCase().trim();
+          if (normalizedAction === 'view') normalizedAction = 'read';
+          if (normalizedAction === 'edit') normalizedAction = 'update';
           
           // Only include standard CRUD actions
           if (standardActions.includes(normalizedAction)) {
@@ -89,16 +118,42 @@ export const ManagePermissionsDialog = ({
               uniquePerms.set(normalizedAction, {
                 ...perm,
                 action: normalizedAction,
-                resource: normalizedResource
+                resource: singularResource
               });
             }
           }
         });
         
         if (uniquePerms.size > 0) {
-          filteredPerms[normalizedResource] = Array.from(uniquePerms.values());
+          // Normalize 'deal' to 'order' for Sales/Order
+          const finalResource = singularResource === 'deal' ? 'order' : singularResource;
+          
+          // Merge if 'order' already exists (from 'deal' or 'order')
+          if (filteredPerms[finalResource]) {
+            const existingActions = new Set(filteredPerms[finalResource].map(p => p.action.toLowerCase()));
+            Array.from(uniquePerms.values()).forEach(p => {
+              const actionLower = (p.action || '').toLowerCase();
+              if (!existingActions.has(actionLower)) {
+                filteredPerms[finalResource].push({
+                  ...p,
+                  resource: finalResource,
+                  action: p.action
+                });
+              }
+            });
+          } else {
+            filteredPerms[finalResource] = Array.from(uniquePerms.values()).map(p => ({
+              ...p,
+              resource: finalResource,
+              action: p.action
+            }));
+          }
         }
       });
+      
+      // Log filtered results for debugging
+      console.log('Filtered permissions in dialog:', filteredPerms);
+      console.log('Allowed resources:', Object.keys(filteredPerms));
       
       setAllPermissions(filteredPerms);
       setSelectedPermissionIds(rolePerms.map(p => p.id));
@@ -271,8 +326,8 @@ export const ManagePermissionsDialog = ({
                                 <FiLock color="#805AD5" size={16} />
                               </Box>
                               <VStack align="start" gap={0}>
-                                <Text fontWeight="semibold" fontSize="md" textTransform="capitalize">
-                                  {resource}
+                                <Text fontWeight="semibold" fontSize="md">
+                                  {getResourceDisplayName(resource)}
                                 </Text>
                                 <Text fontSize="xs" color="gray.600">
                                   {selectedCount} of {permissions.length} selected

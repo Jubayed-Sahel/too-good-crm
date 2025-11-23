@@ -1,31 +1,18 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VStack, Box, Spinner, Text } from '@chakra-ui/react';
-import { FiPlus, FiRefreshCw, FiDownload } from 'react-icons/fi';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { IssueStatsGrid, IssueFiltersPanel, IssuesDataTable, CreateIssueModal, ResolveIssueModal } from '../../components/issues';
+import { IssueStatsGrid, IssueFiltersPanel, IssuesDataTable, ResolveIssueModal } from '../../components/issues';
 import { ErrorState, PageHeader, StandardButton, ConfirmDialog } from '../../components/common';
 import { useIssues, useIssueStats, useIssueMutations } from '../../hooks/useIssues';
-import { useProfile } from '../../contexts/ProfileContext';
-import { issueService } from '../../services/issue.service';
 import type { Issue, IssuePriority, IssueStatus, IssueCategory } from '../../types';
 import { toaster } from '../../components/ui/toaster';
 
 const EmployeeIssuesPage = () => {
   const navigate = useNavigate();
-  const { activeProfileType } = useProfile();
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedIssueForResolve, setSelectedIssueForResolve] = useState<Issue | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [issueToDelete, setIssueToDelete] = useState<Issue | null>(null);
-  
-  // Only customers can raise issues - vendors and employees can only view and update
-  const canRaiseIssue = activeProfileType === 'customer';
-  // Vendors and employees can fetch from Linear
-  const canFetchFromLinear = activeProfileType === 'vendor' || activeProfileType === 'employee';
-  
-  // Fetch from Linear state
-  const [isFetchingFromLinear, setIsFetchingFromLinear] = useState(false);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,7 +34,7 @@ const EmployeeIssuesPage = () => {
   const { data: statsData, refetch: refetchStats } = useIssueStats();
 
   // Mutations
-  const { createIssue, updateIssue, deleteIssue, resolveIssue } = useIssueMutations();
+  const { updateIssue, deleteIssue, resolveIssue } = useIssueMutations();
 
   // Calculate stats
   const stats = useMemo(() => {
@@ -156,75 +143,9 @@ const EmployeeIssuesPage = () => {
     }
   };
 
-  const handleCreateSubmit = async (data: any) => {
-    try {
-      await createIssue.mutateAsync(data);
-      setIsCreateDialogOpen(false);
-      
-      toaster.create({
-        title: 'Issue Created',
-        description: 'New issue has been created successfully',
-        type: 'success',
-        duration: 3000,
-      });
-    } catch (error) {
-      toaster.create({
-        title: 'Creation Failed',
-        description: 'Failed to create issue',
-        type: 'error',
-        duration: 3000,
-      });
-    }
-  };
-
-
   const handleRefresh = () => {
     refetch();
     refetchStats();
-  };
-
-  const handleFetchFromLinear = async (syncToCrm: boolean = false) => {
-    if (!canFetchFromLinear) {
-      toaster.create({
-        title: 'Permission Denied',
-        description: 'Only vendors and employees can fetch issues from Linear',
-        type: 'error',
-        duration: 3000,
-      });
-      return;
-    }
-
-    setIsFetchingFromLinear(true);
-    try {
-      const response = await issueService.fetchFromLinear(50, syncToCrm);
-      
-      const message = syncToCrm
-        ? `Fetched ${response.linear_issues?.length || 0} issues from Linear and synced ${response.synced_issues?.length || 0} to CRM`
-        : `Fetched ${response.linear_issues?.length || 0} issues from Linear`;
-      
-      toaster.create({
-        title: 'Issues Fetched',
-        description: message,
-        type: 'success',
-        duration: 5000,
-      });
-      
-      // Refresh local issues if synced
-      if (syncToCrm) {
-        refetch();
-        refetchStats();
-      }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.details || error.message || 'Failed to fetch issues from Linear';
-      toaster.create({
-        title: 'Error',
-        description: errorMessage,
-        type: 'error',
-        duration: 5000,
-      });
-    } finally {
-      setIsFetchingFromLinear(false);
-    }
   };
 
   // Error state
@@ -246,52 +167,7 @@ const EmployeeIssuesPage = () => {
         {/* Page Header */}
         <PageHeader
           title="Issue Management"
-          description={
-            canRaiseIssue 
-              ? "Raise and track issues across vendors, orders, and projects"
-              : "Track and manage issues raised by customers"
-          }
-          actions={
-            <>
-              <StandardButton
-                variant="secondary"
-                onClick={handleRefresh}
-                disabled={isLoading}
-                leftIcon={<FiRefreshCw />}
-              >
-                Refresh
-              </StandardButton>
-              {canFetchFromLinear && (
-                <>
-                  <StandardButton
-                    variant="outline"
-                    onClick={() => handleFetchFromLinear(false)}
-                    disabled={isFetchingFromLinear}
-                    leftIcon={<FiDownload />}
-                  >
-                    {isFetchingFromLinear ? 'Fetching...' : 'Fetch from Linear'}
-                  </StandardButton>
-                  <StandardButton
-                    variant="primary"
-                    onClick={() => handleFetchFromLinear(true)}
-                    disabled={isFetchingFromLinear}
-                    leftIcon={<FiDownload />}
-                  >
-                    {isFetchingFromLinear ? 'Syncing...' : 'Sync from Linear'}
-                  </StandardButton>
-                </>
-              )}
-              {canRaiseIssue && (
-                <StandardButton
-                  variant="primary"
-                  onClick={() => setIsCreateDialogOpen(true)}
-                  leftIcon={<FiPlus />}
-                >
-                  Raise Issue
-                </StandardButton>
-              )}
-            </>
-          }
+          description="Track and manage issues raised by customers"
         />
 
         {/* Stats */}
@@ -334,13 +210,6 @@ const EmployeeIssuesPage = () => {
         )}
 
         {/* Modals */}
-        <CreateIssueModal
-          isOpen={isCreateDialogOpen}
-          onClose={() => setIsCreateDialogOpen(false)}
-          onSubmit={handleCreateSubmit}
-          isLoading={createIssue.isPending}
-        />
-
         {selectedIssueForResolve && (
           <ResolveIssueModal
             isOpen={!!selectedIssueForResolve}

@@ -2,6 +2,7 @@ import { Table, Badge, Button, HStack, Text, Box } from '@chakra-ui/react';
 import { FiEye, FiEdit, FiCheckCircle, FiTrash2, FiExternalLink, FiDownload } from 'react-icons/fi';
 import { Checkbox } from '../ui/checkbox';
 import { useState } from 'react';
+import { usePermissions } from '@/contexts/PermissionContext';
 import type { Issue, IssueStatus } from '@/types';
 
 const formatDate = (dateString: string) => {
@@ -60,6 +61,12 @@ const IssuesDataTable = ({
   onBulkExport,
 }: IssuesDataTableProps) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const { canAccess } = usePermissions();
+  
+  // Check permissions for each action (using singular 'issue')
+  const canView = canAccess('issue', 'read');
+  const canEdit = canAccess('issue', 'update');
+  const canDelete = canAccess('issue', 'delete');
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -240,23 +247,27 @@ const IssuesDataTable = ({
                 </Table.Cell>
                 <Table.Cell>
                   <HStack justify="flex-end" gap={1}>
-                    <Button
-                      onClick={() => onView(issue)}
-                      size="xs"
-                      variant="ghost"
-                      colorPalette="gray"
-                    >
-                      <FiEye />
-                    </Button>
-                    <Button
-                      onClick={() => onEdit(issue)}
-                      size="xs"
-                      variant="ghost"
-                      colorPalette="blue"
-                    >
-                      <FiEdit />
-                    </Button>
-                    {issue.status !== 'resolved' && issue.status !== 'closed' && (
+                    {canView && (
+                      <Button
+                        onClick={() => onView(issue)}
+                        size="xs"
+                        variant="ghost"
+                        colorPalette="gray"
+                      >
+                        <FiEye />
+                      </Button>
+                    )}
+                    {canEdit && (
+                      <Button
+                        onClick={() => onEdit(issue)}
+                        size="xs"
+                        variant="ghost"
+                        colorPalette="blue"
+                      >
+                        <FiEdit />
+                      </Button>
+                    )}
+                    {canEdit && issue.status !== 'resolved' && issue.status !== 'closed' && (
                       <Button
                         onClick={() => onResolve(issue)}
                         size="xs"
@@ -266,14 +277,16 @@ const IssuesDataTable = ({
                         <FiCheckCircle />
                       </Button>
                     )}
-                    <Button
-                      onClick={() => onDelete(issue.id)}
-                      size="xs"
-                      variant="ghost"
-                      colorPalette="red"
-                    >
-                      <FiTrash2 />
-                    </Button>
+                    {canDelete && (
+                      <Button
+                        onClick={() => onDelete(issue.id)}
+                        size="xs"
+                        variant="ghost"
+                        colorPalette="red"
+                      >
+                        <FiTrash2 />
+                      </Button>
+                    )}
                   </HStack>
                 </Table.Cell>
               </Table.Row>
