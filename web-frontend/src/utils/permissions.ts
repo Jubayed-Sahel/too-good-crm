@@ -20,7 +20,6 @@ export const CRM_RESOURCES = {
   NOTES: 'notes',
   PIPELINES: 'pipelines',
   STAGES: 'stages',
-  ANALYTICS: 'analytics',
   EMPLOYEES: 'employees',
   VENDORS: 'vendors',
   ISSUES: 'issues',

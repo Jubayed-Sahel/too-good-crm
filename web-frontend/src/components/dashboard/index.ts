@@ -16,6 +16,5 @@ export {
   ActivitiesWidget,
   TasksWidget,
   PipelinesWidget,
-  AnalyticsWidget,
   DashboardWidgetsGrid,
 } from './DashboardWidgets';

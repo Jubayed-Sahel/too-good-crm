@@ -4,6 +4,7 @@ import { PermissionProvider } from './contexts/PermissionContext'
 import { ProfileProvider } from './contexts/ProfileContext'
 import { ProtectedRoute } from './components/auth'
 import { PermissionRoute } from './components/guards/PermissionRoute'
+import { Toaster } from './components/ui/toaster'
 // import { JitsiCallManager } from './components/jitsi/JitsiCallManager'
 // import { useAuth } from './hooks'
 import LoginPage from './pages/LoginPage'
@@ -20,7 +21,6 @@ import EditCustomerPage from './pages/EditCustomerPage'
 import ActivitiesPage from './pages/ActivitiesPage'
 import ActivityDetailPage from './pages/ActivityDetailPage'
 import EditActivityPage from './pages/EditActivityPage'
-import AnalyticsPage from './pages/AnalyticsPage'
 import EmployeesPage from './pages/vendor/EmployeesPage'
 import TeamPage from './pages/vendor/TeamPage'
 import EmployeeDetailPage from './pages/vendor/EmployeeDetailPage'
@@ -62,6 +62,8 @@ function App() {
       <AccountModeProvider>
         <ProfileProvider>
           <PermissionProvider>
+            {/* Global Toaster for all notifications */}
+            <Toaster />
             {/* Global Jitsi Call Manager for all authenticated users */}
             {/* <JitsiCallWrapper /> */}
             
@@ -220,16 +222,6 @@ function App() {
             }
           />
           <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="analytics" action="read" redirectTo="/dashboard">
-                  <AnalyticsPage />
-                </PermissionRoute>
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="/employees"
             element={
               <ProtectedRoute allowedProfiles={['vendor']}>
@@ -362,22 +354,6 @@ function App() {
             element={
               <ProtectedRoute allowedProfiles={['customer']}>
                 <ClientOrderDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/client/payments"
-            element={
-              <ProtectedRoute allowedProfiles={['customer']}>
-                <ClientPaymentsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/client/activities"
-            element={
-              <ProtectedRoute allowedProfiles={['customer']}>
-                <ActivitiesPage />
               </ProtectedRoute>
             }
           />

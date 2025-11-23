@@ -9,7 +9,6 @@ from .auth_service import AuthService
 from .customer_service import CustomerService
 from .lead_service import LeadService
 from .deal_service import DealService
-from .analytics_service import AnalyticsService
 from .rbac_service import RBACService
 from .linear_service import LinearService
 from .issue_linear_service import IssueLinearService
@@ -19,7 +18,6 @@ __all__ = [
     'CustomerService',
     'LeadService',
     'DealService',
-    'AnalyticsService',
     'RBACService',
     'LinearService',
     'IssueLinearService',

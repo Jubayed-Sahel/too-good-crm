@@ -1,25 +1,35 @@
-import { useState } from 'react';
-import { Box, Button, Input, VStack, HStack, Text, Grid, Textarea } from '@chakra-ui/react';
+import { useState, useEffect } from 'react';
+import { Box, Button, Input, VStack, HStack, Text, Grid } from '@chakra-ui/react';
 import { Card } from '../../common';
 import { Field } from '../../ui/field';
 import { toaster } from '../../ui/toaster';
-import { FiUser, FiMail, FiPhone, FiMapPin, FiCamera, FiBriefcase } from 'react-icons/fi';
+import { FiUser, FiMail, FiPhone, FiCamera } from 'react-icons/fi';
+import { useCurrentUserProfile, useUpdateProfile } from '@/hooks/useUser';
 
 const ClientProfileSettings = () => {
+  const { data: currentUser, isLoading } = useCurrentUserProfile();
+  const updateProfileMutation = useUpdateProfile();
+
   const [formData, setFormData] = useState({
-    firstName: 'John',
-    lastName: 'Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    company: 'Tech Startup Inc',
-    title: 'CEO',
-    bio: '',
-    address: '123 Business St',
-    city: 'San Francisco',
-    state: 'CA',
-    zipCode: '94102',
-    country: 'United States',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    username: '',
   });
+
+  // Load user data when available
+  useEffect(() => {
+    if (currentUser) {
+      setFormData({
+        firstName: currentUser.first_name || '',
+        lastName: currentUser.last_name || '',
+        email: currentUser.email || '',
+        phone: currentUser.phone || '',
+        username: currentUser.username || '',
+      });
+    }
+  }, [currentUser]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -28,16 +38,46 @@ const ClientProfileSettings = () => {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    toaster.create({
-      title: 'Profile updated',
-      description: 'Your profile has been updated successfully.',
-      type: 'success',
-      duration: 3000,
-    });
+    try {
+      await updateProfileMutation.mutateAsync({
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        phone: formData.phone,
+        username: formData.username,
+      });
+
+      toaster.create({
+        title: 'Profile Updated Successfully!',
+        description: 'Your profile information has been saved.',
+        type: 'success',
+        duration: 3000,
+      });
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      const errorMsg = error.response?.data?.detail || 
+                       error.response?.data?.error || 
+                       'Failed to update profile. Please try again.';
+      toaster.create({
+        title: 'Update Failed',
+        description: errorMsg,
+        type: 'error',
+        duration: 4000,
+      });
+    }
   };
+
+  if (isLoading) {
+    return (
+      <VStack align="stretch" gap={6}>
+        <Card variant="elevated">
+          <Text>Loading profile...</Text>
+        </Card>
+      </VStack>
+    );
+  }
 
   return (
     <VStack align="stretch" gap={6}>
@@ -83,28 +123,38 @@ const ClientProfileSettings = () => {
               Personal Information
             </Text>
 
+            <Field label="Username" required>
+              <Box position="relative">
+                <Box
+                  position="absolute"
+                  left="12px"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  pointerEvents="none"
+                  color="gray.400"
+                >
+                  <FiUser size={16} />
+                </Box>
+                <Input
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  size="md"
+                  pl="40px"
+                  borderRadius="lg"
+                />
+              </Box>
+            </Field>
+
             <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
               <Field label="First Name" required>
-                <Box position="relative">
-                  <Box
-                    position="absolute"
-                    left="12px"
-                    top="50%"
-                    transform="translateY(-50%)"
-                    pointerEvents="none"
-                    color="gray.400"
-                  >
-                    <FiUser size={16} />
-                  </Box>
-                  <Input
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleChange}
-                    size="md"
-                    pl="40px"
-                    borderRadius="lg"
-                  />
-                </Box>
+                <Input
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  size="md"
+                  borderRadius="lg"
+                />
               </Field>
 
               <Field label="Last Name" required>
@@ -118,107 +168,7 @@ const ClientProfileSettings = () => {
               </Field>
             </Grid>
 
-            <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
-              <Field label="Email" required>
-                <Box position="relative">
-                  <Box
-                    position="absolute"
-                    left="12px"
-                    top="50%"
-                    transform="translateY(-50%)"
-                    pointerEvents="none"
-                    color="gray.400"
-                  >
-                    <FiMail size={16} />
-                  </Box>
-                  <Input
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    size="md"
-                    pl="40px"
-                    borderRadius="lg"
-                  />
-                </Box>
-              </Field>
-
-              <Field label="Phone">
-                <Box position="relative">
-                  <Box
-                    position="absolute"
-                    left="12px"
-                    top="50%"
-                    transform="translateY(-50%)"
-                    pointerEvents="none"
-                    color="gray.400"
-                  >
-                    <FiPhone size={16} />
-                  </Box>
-                  <Input
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    size="md"
-                    pl="40px"
-                    borderRadius="lg"
-                  />
-                </Box>
-              </Field>
-            </Grid>
-
-            <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
-              <Field label="Company">
-                <Box position="relative">
-                  <Box
-                    position="absolute"
-                    left="12px"
-                    top="50%"
-                    transform="translateY(-50%)"
-                    pointerEvents="none"
-                    color="gray.400"
-                  >
-                    <FiBriefcase size={16} />
-                  </Box>
-                  <Input
-                    name="company"
-                    value={formData.company}
-                    onChange={handleChange}
-                    size="md"
-                    pl="40px"
-                    borderRadius="lg"
-                  />
-                </Box>
-              </Field>
-
-              <Field label="Job Title">
-                <Input
-                  name="title"
-                  value={formData.title}
-                  onChange={handleChange}
-                  size="md"
-                  borderRadius="lg"
-                />
-              </Field>
-            </Grid>
-
-            <Field label="Bio">
-              <Textarea
-                name="bio"
-                value={formData.bio}
-                onChange={handleChange}
-                size="md"
-                rows={3}
-                placeholder="Tell us about yourself..."
-                borderRadius="lg"
-              />
-            </Field>
-
-            <Text fontSize="sm" fontWeight="semibold" color="gray.700" pt={2}>
-              Address Information
-            </Text>
-
-            <Field label="Street Address">
+            <Field label="Email" required helperText="Email cannot be changed">
               <Box position="relative">
                 <Box
                   position="absolute"
@@ -228,69 +178,52 @@ const ClientProfileSettings = () => {
                   pointerEvents="none"
                   color="gray.400"
                 >
-                  <FiMapPin size={16} />
+                  <FiMail size={16} />
                 </Box>
                 <Input
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  disabled
                   size="md"
                   pl="40px"
                   borderRadius="lg"
+                  bg="gray.50"
+                  cursor="not-allowed"
                 />
               </Box>
             </Field>
 
-            <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={4}>
-              <Field label="City">
+            <Field label="Phone">
+              <Box position="relative">
+                <Box
+                  position="absolute"
+                  left="12px"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  pointerEvents="none"
+                  color="gray.400"
+                >
+                  <FiPhone size={16} />
+                </Box>
                 <Input
-                  name="city"
-                  value={formData.city}
+                  name="phone"
+                  value={formData.phone}
                   onChange={handleChange}
                   size="md"
+                  pl="40px"
                   borderRadius="lg"
+                  placeholder="+1 (555) 123-4567"
                 />
-              </Field>
-
-              <Field label="State">
-                <Input
-                  name="state"
-                  value={formData.state}
-                  onChange={handleChange}
-                  size="md"
-                  borderRadius="lg"
-                />
-              </Field>
-
-              <Field label="ZIP Code">
-                <Input
-                  name="zipCode"
-                  value={formData.zipCode}
-                  onChange={handleChange}
-                  size="md"
-                  borderRadius="lg"
-                />
-              </Field>
-            </Grid>
-
-            <Field label="Country">
-              <Input
-                name="country"
-                value={formData.country}
-                onChange={handleChange}
-                size="md"
-                borderRadius="lg"
-              />
+              </Box>
             </Field>
 
             <HStack justify="flex-end" pt={2}>
-              <Button variant="outline" size="md">
-                Cancel
-              </Button>
               <Button
                 type="submit"
                 colorPalette="blue"
                 size="md"
+                loading={updateProfileMutation.isPending}
               >
                 Save Changes
               </Button>

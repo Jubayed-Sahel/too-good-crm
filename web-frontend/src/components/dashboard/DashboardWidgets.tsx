@@ -448,63 +448,6 @@ export const PipelinesWidget = () => {
 };
 
 /**
- * Analytics Widget
- * Shows key metrics and trends
- */
-export const AnalyticsWidget = () => {
-  const navigate = useNavigate();
-  const { hasPermission, isLoading } = usePermissions();
-
-  // Don't render while permissions are loading
-  if (isLoading) {
-    return null;
-  }
-
-  const canRead = hasPermission(CRM_RESOURCES.ANALYTICS, 'read').hasPermission;
-
-  if (!canRead) {
-    return null;
-  }
-
-  return (
-    <Card p={6}>
-      <VStack align="stretch" gap={4}>
-        <HStack justify="space-between">
-          <HStack gap={2}>
-            <Icon as={FiTrendingUp} w={5} h={5} color="pink.600" />
-            <Heading size="md">Analytics</Heading>
-          </HStack>
-          <Badge colorPalette="pink">Live</Badge>
-        </HStack>
-
-        <VStack align="stretch" gap={2}>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Revenue Growth</Text>
-            <Text fontWeight="bold" color="green.600">+12.5%</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Conversion Rate</Text>
-            <Text fontWeight="bold">24.3%</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Avg. Deal Size</Text>
-            <Text fontWeight="bold">$52K</Text>
-          </HStack>
-        </VStack>
-
-        <Button
-          size="sm"
-          colorPalette="pink"
-          onClick={() => navigate('/analytics')}
-        >
-          View Full Report
-        </Button>
-      </VStack>
-    </Card>
-  );
-};
-
-/**
  * Dashboard Widgets Grid
  * Renders all available widgets based on permissions
  */
@@ -517,7 +460,6 @@ export const DashboardWidgetsGrid = () => {
       <ActivitiesWidget />
       <TasksWidget />
       <PipelinesWidget />
-      <AnalyticsWidget />
     </SimpleGrid>
   );
 };

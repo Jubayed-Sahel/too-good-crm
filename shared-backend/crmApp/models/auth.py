@@ -43,6 +43,14 @@ class User(AbstractBaseUser, PermissionsMixin, TimestampedModel):
     last_name = models.CharField(max_length=100, null=True, blank=True)
     profile_image = models.CharField(max_length=255, null=True, blank=True)
     
+    # Extended profile fields
+    title = models.CharField(max_length=100, null=True, blank=True, help_text="Job title")
+    department = models.CharField(max_length=100, null=True, blank=True)
+    bio = models.TextField(null=True, blank=True, help_text="User biography")
+    location = models.CharField(max_length=200, null=True, blank=True, help_text="City, State or Country")
+    timezone = models.CharField(max_length=50, null=True, blank=True, default='America/New_York')
+    language = models.CharField(max_length=10, null=True, blank=True, default='en')
+    
     is_active = models.BooleanField(default=True)
     is_verified = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)

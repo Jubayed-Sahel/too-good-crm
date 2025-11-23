@@ -4,36 +4,27 @@ import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import {
   SettingsHeader,
   SettingsTabs,
-  ProfileSettings,
   OrganizationSettings,
   TeamSettings,
   RolesSettings,
-  NotificationSettings,
   SecuritySettings,
-  BillingSettings,
 } from '../../components/settings';
 
 const SettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('organization');
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'profile':
-        return <ProfileSettings />;
       case 'organization':
         return <OrganizationSettings />;
       case 'team':
         return <TeamSettings />;
       case 'roles':
         return <RolesSettings />;
-      case 'notifications':
-        return <NotificationSettings />;
       case 'security':
         return <SecuritySettings />;
-      case 'billing':
-        return <BillingSettings />;
       default:
-        return <ProfileSettings />;
+        return <OrganizationSettings />;
     }
   };
 
