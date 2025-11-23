@@ -1,8 +1,7 @@
-import { Box, Text, VStack, HStack, Badge, Spinner } from '@chakra-ui/react';
+import { Box, Text, VStack, HStack, Badge } from '@chakra-ui/react';
 import { Card } from '../common';
 import { FiAward } from 'react-icons/fi';
 import { formatCurrency } from '@/utils';
-import { useTopPerformers } from '@/hooks/useAnalytics';
 
 // Simple Avatar component
 const Avatar = ({ name, size = 'md', bg }: { name: string; size?: string; bg?: string }) => {
@@ -41,31 +40,25 @@ const Avatar = ({ name, size = 'md', bg }: { name: string; size?: string; bg?: s
   );
 };
 
-const TopPerformers = () => {
-  const { data: performers, isLoading, error } = useTopPerformers('revenue', 5);
+interface TopPerformersProps {
+  performers?: Array<{
+    name: string;
+    role: string;
+    deals: number;
+    revenue: number;
+    avatar?: string;
+  }>;
+}
 
-  if (isLoading) {
-    return (
-      <Card variant="elevated">
-        <VStack justify="center" py={8}>
-          <Spinner size="lg" />
-          <Text color="gray.500">Loading top performers...</Text>
-        </VStack>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card variant="elevated">
-        <VStack justify="center" py={8}>
-          <Text color="red.500">Failed to load top performers</Text>
-        </VStack>
-      </Card>
-    );
-  }
-
-  const performersList = performers || [];
+const TopPerformers = ({
+  performers = [
+    { name: 'John Smith', role: 'Sales Manager', deals: 24, revenue: 580000 },
+    { name: 'Sarah Johnson', role: 'Sales Rep', deals: 19, revenue: 425000 },
+    { name: 'Michael Chen', role: 'Sales Rep', deals: 16, revenue: 380000 },
+    { name: 'Emily Davis', role: 'Account Manager', deals: 14, revenue: 340000 },
+    { name: 'David Wilson', role: 'Sales Rep', deals: 12, revenue: 295000 },
+  ]
+}: TopPerformersProps) => {
   const getRankColor = (index: number) => {
     switch (index) {
       case 0: return 'yellow';
@@ -94,8 +87,7 @@ const TopPerformers = () => {
         </HStack>
 
         <VStack align="stretch" gap={3}>
-          {performersList.length > 0 ? (
-            performersList.map((performer: any, index: number) => (
+          {performers.map((performer, index) => (
             <HStack
               key={performer.name}
               gap={3}
@@ -148,12 +140,7 @@ const TopPerformers = () => {
                 </Text>
               </VStack>
             </HStack>
-            ))
-          ) : (
-            <Box py={4} textAlign="center">
-              <Text color="gray.500" fontSize="sm">No performer data available</Text>
-            </Box>
-          )}
+          ))}
         </VStack>
       </VStack>
     </Card>

@@ -1,59 +1,26 @@
-import { Box, Text, VStack, HStack, Flex, Heading, Spinner } from '@chakra-ui/react';
+import { Box, Text, VStack, HStack, Flex, Heading } from '@chakra-ui/react';
 import { Card } from '../common';
 import { formatCurrency } from '@/utils';
-import { useSalesPipeline } from '@/hooks/useAnalytics';
 
-const SalesPipeline = () => {
-  const { data, isLoading, error } = useSalesPipeline();
+interface SalesPipelineProps {
+  stages?: Array<{
+    name: string;
+    count: number;
+    value: number;
+    color: string;
+  }>;
+}
 
-  if (isLoading) {
-    return (
-      <Card variant="elevated">
-        <VStack justify="center" py={8}>
-          <Spinner size="lg" />
-          <Text color="gray.500">Loading pipeline data...</Text>
-        </VStack>
-      </Card>
-    );
-  }
-
-  if (error) {
-    console.error('SalesPipeline error:', error);
-    return (
-      <Card variant="elevated">
-        <VStack justify="center" py={8}>
-          <Text color="red.500" fontSize="sm" fontWeight="semibold">Failed to load pipeline data</Text>
-          {error instanceof Error && (
-            <Text color="gray.500" fontSize="xs" mt={2}>
-              {error.message}
-            </Text>
-          )}
-        </VStack>
-      </Card>
-    );
-  }
-
-  const pipelineData = data || { stages: [], totalValue: 0 };
-  const stages = pipelineData.stages || [];
-  const totalValue = pipelineData.totalValue || 0;
-
-  // Helper to get color for stage based on index
-  const getStageColor = (index: number) => {
-    const colors = [
-      '#718096', // gray
-      '#3182CE', // blue
-      '#805AD5', // purple
-      '#DD6B20', // orange
-      '#38A169', // green
-    ];
-    return colors[index % colors.length];
-  };
-
-  // Map stages to include color if not present
-  const stagesWithColors = stages.map((stage: any, index: number) => ({
-    ...stage,
-    color: stage.color || getStageColor(index),
-  }));
+const SalesPipeline = ({ 
+  stages = [
+    { name: 'Lead', count: 45, value: 225000, color: '#718096' },
+    { name: 'Qualified', count: 32, value: 480000, color: '#3182CE' },
+    { name: 'Proposal', count: 18, value: 540000, color: '#805AD5' },
+    { name: 'Negotiation', count: 12, value: 360000, color: '#DD6B20' },
+    { name: 'Closed Won', count: 8, value: 320000, color: '#38A169' },
+  ]
+}: SalesPipelineProps) => {
+  const totalValue = stages.reduce((sum, stage) => sum + stage.value, 0);
 
   return (
     <Card variant="elevated">
@@ -83,9 +50,8 @@ const SalesPipeline = () => {
         </Box>
 
         <VStack align="stretch" gap={3}>
-          {stagesWithColors.length > 0 ? (
-            stagesWithColors.map((stage) => {
-              const percentage = totalValue > 0 ? (stage.value / totalValue) * 100 : 0;
+          {stages.map((stage) => {
+            const percentage = (stage.value / totalValue) * 100;
             return (
               <Box key={stage.name}>
                 <HStack justify="space-between" mb={1.5}>
@@ -128,12 +94,7 @@ const SalesPipeline = () => {
                 </Flex>
               </Box>
             );
-          })
-          ) : (
-            <Box py={4} textAlign="center">
-              <Text color="gray.500" fontSize="sm">No pipeline data available</Text>
-            </Box>
-          )}
+          })}
         </VStack>
       </VStack>
     </Card>

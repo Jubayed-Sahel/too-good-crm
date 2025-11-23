@@ -1408,26 +1408,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         except Exception as e:
             # Handle different types of errors with user-friendly messages
             error_str = str(e)
-            error_repr = repr(e)
             
-            # Check for leaked API key error (403 PERMISSION_DENIED)
-            if ("403" in error_str or "PERMISSION_DENIED" in error_str) and ("leaked" in error_str.lower() or "leaked" in error_repr.lower()):
-                error_msg = (
-                    "🔒 **API Key Security Issue**\n\n"
-                    "Your Gemini API key has been reported as leaked and is no longer valid.\n\n"
-                    "**To fix this:**\n"
-                    "1. Go to Google AI Studio (https://aistudio.google.com/apikey)\n"
-                    "2. Create a new API key\n"
-                    "3. Update the GEMINI_API_KEY in your environment variables\n"
-                    "4. Restart the backend server\n\n"
-                    "⚠️ **Important:** Never commit API keys to version control or share them publicly."
-                )
-            elif "validation errors" in error_str.lower():
+            if "validation errors" in error_str.lower():
                 error_msg = "Sorry, there was an issue with the message format. Please try again with a simple question."
             elif "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
                 error_msg = "⏸️ Rate limit exceeded. Please wait a moment and try again."
-            elif "403" in error_str or "PERMISSION_DENIED" in error_str:
-                error_msg = "⚠️ API access denied. Please check your Gemini API key permissions and configuration."
             elif "401" in error_str or "UNAUTHORIZED" in error_str:
                 error_msg = "⚠️ API authentication failed. Please check your Gemini API key configuration."
             elif "404" in error_str or "NOT_FOUND" in error_str:

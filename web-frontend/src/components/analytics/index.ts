@@ -4,6 +4,3 @@ export { default as SalesPipeline } from './SalesPipeline';
 export { default as TopPerformers } from './TopPerformers';
 export { default as ConversionFunnel } from './ConversionFunnel';
 export { default as RecentActivities } from './RecentActivities';
-export { default as KeyMetricsCards } from './KeyMetricsCards';
-export { default as DealWinLossChart } from './DealWinLossChart';
-export { default as RecentDeals } from './RecentDeals';

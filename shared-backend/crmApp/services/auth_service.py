@@ -56,25 +56,9 @@ class AuthService:
             organization = None
             if organization_name:
                 from django.utils.text import slugify
-                from django.conf import settings
-                import uuid
-                import logging
-                
-                logger = logging.getLogger(__name__)
-                
                 organization = Organization.objects.create(
                     name=organization_name,
                     slug=slugify(organization_name)
-                )
-                
-                # Assign unique Linear team ID
-                base_team_id = getattr(settings, 'LINEAR_TEAM_ID', 'b95250db-8430-4dbc-88f8-9fc109369df0')
-                unique_suffix = str(uuid.uuid4())[:8]
-                organization.linear_team_id = f"{base_team_id}-{organization.slug}-{unique_suffix}"
-                organization.save(update_fields=['linear_team_id'])
-                
-                logger.info(
-                    f"[OK] Organization '{organization.name}' created during registration with unique Linear team ID: {organization.linear_team_id}"
                 )
                 
                 # Link user to organization as owner

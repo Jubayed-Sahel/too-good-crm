@@ -3,23 +3,23 @@ import { Box, Heading, Text, VStack, HStack } from '@chakra-ui/react';
 import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import {
   ClientProfileSettings,
+  ClientNotificationSettings,
 } from '../../components/settings/client';
-import { SecuritySettings } from '../../components/settings';
 
 const ClientSettingsPage = () => {
   const [activeTab, setActiveTab] = useState('profile');
 
   const tabs = [
     { id: 'profile', label: 'Profile' },
-    { id: 'security', label: 'Security' },
+    { id: 'notifications', label: 'Notifications' },
   ];
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'profile':
         return <ClientProfileSettings />;
-      case 'security':
-        return <SecuritySettings />;
+      case 'notifications':
+        return <ClientNotificationSettings />;
       default:
         return <ClientProfileSettings />;
     }

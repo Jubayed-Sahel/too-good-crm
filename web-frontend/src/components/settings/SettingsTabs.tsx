@@ -9,10 +9,9 @@ interface SettingsTab {
 interface SettingsTabsProps {
   activeTab: string;
   onTabChange: (tabId: string) => void;
-  tabs?: SettingsTab[]; // Optional custom tabs
 }
 
-const defaultTabs: SettingsTab[] = [
+const tabs: SettingsTab[] = [
   { id: 'profile', label: 'Profile' },
   { id: 'organization', label: 'Organization' },
   { id: 'notifications', label: 'Notifications' },
@@ -20,7 +19,7 @@ const defaultTabs: SettingsTab[] = [
   { id: 'billing', label: 'Billing' },
 ];
 
-const SettingsTabs = ({ activeTab, onTabChange, tabs = defaultTabs }: SettingsTabsProps) => {
+const SettingsTabs = ({ activeTab, onTabChange }: SettingsTabsProps) => {
   return (
     <Box
       overflowX="auto"

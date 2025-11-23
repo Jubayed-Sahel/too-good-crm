@@ -18,25 +18,6 @@ class PermissionChecker:
             # Allow action
     """
     
-    # Mapping of new permission categories to old resource names
-    # This provides backward compatibility with existing frontend code
-    RESOURCE_MAPPING = {
-        'sales': ['customer', 'customers', 'deal', 'deals', 'lead', 'leads'],  # sales permissions apply to customers, deals, leads (both singular and plural)
-        'activities': ['activity', 'activities'],  # activities permission applies to activity (both singular and plural)
-        'issue': ['issue', 'issues'],  # issue permission applies to issue (both singular and plural)
-        'analytics': ['analytics', 'dashboard'],  # analytics permission applies to analytics and dashboard
-        'team': ['employee', 'employees', 'role', 'roles', 'permission', 'permissions', 'team'],  # team permission applies to employee, role, permission management
-    }
-    
-    # Mapping of action names for compatibility
-    # Frontend might check 'read' while backend has 'view', or vice versa
-    ACTION_MAPPING = {
-        'view': ['view', 'read'],  # 'view' permission also grants 'read' access
-        'read': ['view', 'read'],  # 'read' permission also grants 'view' access
-        'edit': ['edit', 'update'],  # 'edit' permission also grants 'update' access
-        'update': ['edit', 'update'],  # 'update' permission also grants 'edit' access
-    }
-    
     def __init__(self, user, organization=None):
         self.user = user
         # If organization not provided, try to get from active profile
@@ -65,21 +46,7 @@ class PermissionChecker:
         if vendor_profile:
             # Vendors have all permissions in their organization
             all_perms = Permission.objects.filter(organization=self.organization)
-            permissions = set()
-            for p in all_perms:
-                # Get all action variants (e.g., 'view' also grants 'read')
-                action_variants = self.ACTION_MAPPING.get(p.action, [p.action])
-                
-                for action_variant in action_variants:
-                    # Add the actual permission with action variant
-                    permissions.add(f"{p.resource}.{action_variant}")
-                    
-                    # Add mapped permissions for backward compatibility
-                    if p.resource in self.RESOURCE_MAPPING:
-                        for mapped_resource in self.RESOURCE_MAPPING[p.resource]:
-                            permissions.add(f"{mapped_resource}.{action_variant}")
-            
-            self._permissions_cache = permissions
+            self._permissions_cache = set(f"{p.resource}.{p.action}" for p in all_perms)
             return self._permissions_cache
         
         # Check if user is employee - employees have permissions based on their role
@@ -125,25 +92,11 @@ class PermissionChecker:
             role__organization=self.organization
         ).select_related('permission')
         
-        # Build permission set with both new and old resource names
-        permissions = set()
-        for rp in role_permissions:
-            resource = rp.permission.resource
-            action = rp.permission.action
-            
-            # Get all action variants (e.g., 'view' also grants 'read')
-            action_variants = self.ACTION_MAPPING.get(action, [action])
-            
-            for action_variant in action_variants:
-                # Add the actual permission with action variant
-                permissions.add(f"{resource}.{action_variant}")
-                
-                # Add mapped permissions for backward compatibility
-                if resource in self.RESOURCE_MAPPING:
-                    for mapped_resource in self.RESOURCE_MAPPING[resource]:
-                        permissions.add(f"{mapped_resource}.{action_variant}")
+        self._permissions_cache = set(
+            f"{rp.permission.resource}.{rp.permission.action}" 
+            for rp in role_permissions
+        )
         
-        self._permissions_cache = permissions
         return self._permissions_cache
     
     def has_permission(self, resource, action):

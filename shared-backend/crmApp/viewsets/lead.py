@@ -503,87 +503,52 @@ class LeadViewSet(
                         first_name = name_parts[0]
                         last_name = ''
                 
-                try:
-                    if lead.email:
-                        customer, created = Customer.objects.get_or_create(
-                            organization=lead.organization,
-                            email=lead.email,
-                            defaults={
-                                'name': lead.name or lead.organization_name or 'Customer',
-                                'first_name': first_name or lead.organization_name or '',
-                                'last_name': last_name,
-                                'company_name': lead.organization_name,
-                                'phone': lead.phone,
-                                'customer_type': 'business' if lead.organization_name else 'individual',
-                                'status': 'active',
-                                'source': lead.source or 'lead',
-                                'address': lead.address,
-                                'city': lead.city,
-                                'state': lead.state,
-                                'postal_code': lead.postal_code,
-                                'country': lead.country,
-                                'converted_from_lead': lead,
-                                'converted_at': timezone.now(),
-                            }
-                        )
-                    else:
-                        # No email, use name as lookup
-                        customer_name = lead.name or lead.organization_name or 'Customer'
-                        customer, created = Customer.objects.get_or_create(
-                            organization=lead.organization,
-                            name=customer_name,
-                            defaults={
-                                'first_name': first_name or lead.organization_name or '',
-                                'last_name': last_name,
-                                'email': f"{customer_name.lower().replace(' ', '.').replace('@', '')}@example.com",
-                                'company_name': lead.organization_name,
-                                'phone': lead.phone,
-                                'customer_type': 'business' if lead.organization_name else 'individual',
-                                'status': 'active',
-                                'source': lead.source or 'lead',
-                                'address': lead.address,
-                                'city': lead.city,
-                                'state': lead.state,
-                                'postal_code': lead.postal_code,
-                                'country': lead.country,
-                                'converted_from_lead': lead,
-                                'converted_at': timezone.now(),
-                            }
-                        )
-                except Exception as customer_error:
-                    logger.error(f"Error creating/updating customer from lead {lead.id}: {str(customer_error)}", exc_info=True)
-                    # Try to get existing customer or create with minimal data
-                    try:
-                        if lead.email:
-                            customer = Customer.objects.filter(
-                                organization=lead.organization,
-                                email=lead.email
-                            ).first()
-                        else:
-                            customer_name = lead.name or lead.organization_name or 'Customer'
-                            customer = Customer.objects.filter(
-                                organization=lead.organization,
-                                name=customer_name
-                            ).first()
-                        
-                        if not customer:
-                            # Create minimal customer as fallback
-                            customer = Customer.objects.create(
-                                organization=lead.organization,
-                                name=lead.name or lead.organization_name or 'Customer',
-                                email=lead.email or f"lead_{lead.id}@example.com",
-                                customer_type='business' if lead.organization_name else 'individual',
-                                status='active',
-                                converted_from_lead=lead,
-                                converted_at=timezone.now(),
-                            )
-                            logger.info(f"Created minimal customer {customer.id} as fallback for lead {lead.id}")
-                    except Exception as fallback_error:
-                        logger.error(f"Critical error creating fallback customer for lead {lead.id}: {str(fallback_error)}", exc_info=True)
-                        return Response(
-                            {'error': f'Failed to create customer from lead: {str(customer_error)}'},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                        )
+                if lead.email:
+                    customer, created = Customer.objects.get_or_create(
+                        organization=lead.organization,
+                        email=lead.email,
+                        defaults={
+                            'name': lead.name or lead.organization_name or 'Customer',
+                            'first_name': first_name or lead.organization_name or '',
+                            'last_name': last_name,
+                            'company_name': lead.organization_name,
+                            'phone': lead.phone,
+                            'customer_type': 'business' if lead.organization_name else 'individual',
+                            'status': 'active',
+                            'source': lead.source or 'lead',
+                            'address': lead.address,
+                            'city': lead.city,
+                            'state': lead.state,
+                            'postal_code': lead.postal_code,
+                            'country': lead.country,
+                            'converted_from_lead': lead,
+                            'converted_at': timezone.now(),
+                        }
+                    )
+                else:
+                    # No email, use name as lookup
+                    customer_name = lead.name or lead.organization_name or 'Customer'
+                    customer, created = Customer.objects.get_or_create(
+                        organization=lead.organization,
+                        name=customer_name,
+                        defaults={
+                            'first_name': first_name or lead.organization_name or '',
+                            'last_name': last_name,
+                            'email': f"{customer_name.lower().replace(' ', '.')}@example.com",
+                            'company_name': lead.organization_name,
+                            'phone': lead.phone,
+                            'customer_type': 'business' if lead.organization_name else 'individual',
+                            'status': 'active',
+                            'source': lead.source or 'lead',
+                            'address': lead.address,
+                            'city': lead.city,
+                            'state': lead.state,
+                            'postal_code': lead.postal_code,
+                            'country': lead.country,
+                            'converted_from_lead': lead,
+                            'converted_at': timezone.now(),
+                        }
+                    )
                 
                 if created:
                     logger.info(f"✅ Created customer {customer.id} (name: {customer.name}, email: {customer.email}, status: {customer.status}) from lead {lead.id} moved to closed-won")

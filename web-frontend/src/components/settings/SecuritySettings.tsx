@@ -53,38 +53,9 @@ const SecuritySettings = () => {
       setConfirmPassword('');
     } catch (error: any) {
       console.error('Failed to change password:', error);
-      
-      // Handle validation errors from backend
-      let errorMessage = 'Failed to change password';
-      
-      if (error.response?.data) {
-        const errorData = error.response.data;
-        
-        // Check for field-specific errors
-        if (errorData.old_password) {
-          errorMessage = Array.isArray(errorData.old_password) 
-            ? errorData.old_password[0] 
-            : errorData.old_password;
-        } else if (errorData.new_password) {
-          errorMessage = Array.isArray(errorData.new_password) 
-            ? errorData.new_password[0] 
-            : errorData.new_password;
-        } else if (errorData.detail) {
-          errorMessage = typeof errorData.detail === 'string' 
-            ? errorData.detail 
-            : (Array.isArray(errorData.detail) ? errorData.detail[0] : String(errorData.detail));
-        } else if (errorData.error) {
-          errorMessage = errorData.error;
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
       toaster.create({
         title: 'Error',
-        description: errorMessage,
+        description: error.response?.data?.detail || error.response?.data?.error || 'Failed to change password',
         type: 'error',
       });
     } finally {

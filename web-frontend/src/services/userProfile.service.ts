@@ -81,18 +81,9 @@ class UserProfileService {
 
   /**
    * Change password
-   * Maps frontend field names to backend expected field names
    */
   async changePassword(data: ChangePasswordData): Promise<{ message: string }> {
-    // Backend expects: old_password, new_password, new_password_confirm
-    // Frontend sends: current_password, new_password, confirm_password
-    // Backend endpoint is /api/auth/change-password/
-    const backendData = {
-      old_password: data.current_password,
-      new_password: data.new_password,
-      new_password_confirm: data.confirm_password,
-    };
-    return api.post<{ message: string }>('/api/auth/change-password/', backendData);
+    return api.post<{ message: string }>(`${this.baseUrl}/change_password/`, data);
   }
 
   /**

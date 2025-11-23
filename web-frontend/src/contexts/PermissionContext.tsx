@@ -5,8 +5,10 @@
 import { createContext, useContext, useMemo, useEffect, useState } from 'react';
 import { useAuth } from '@/hooks';
 import { useProfile } from './ProfileContext';
+import { rbacService } from '@/services';
 import { hasPermission, hasAnyPermission, hasAllPermissions, getResourcePermissions } from '@/utils/permissions';
 import type { ReactNode } from 'react';
+import type { Permission } from '@/types';
 import type { PermissionCheckResult } from '@/utils/permissions';
 
 interface PermissionContextType {
@@ -61,50 +63,16 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
           });
           
           try {
-            // Get token from localStorage (stored as 'authToken')
-            const token = localStorage.getItem('authToken');
-            if (!token) {
-              throw new Error('No authentication token found');
-            }
-            
-            // Ensure organizationId is a number
-            const orgId = typeof activeOrganizationId === 'object' ? activeOrganizationId?.id : activeOrganizationId;
-            
-            console.log('[PermissionContext] Making API call:', {
-              url: `/api/user-context/permissions/?organization=${orgId}`,
-              token: token ? `${token.substring(0, 10)}...` : 'none',
-            });
-            
-            // Call the correct endpoint: /api/user-context/permissions/
-            const response = await fetch(`/api/user-context/permissions/?organization=${orgId}`, {
-              headers: {
-                'Authorization': `Token ${token}`,
-                'Content-Type': 'application/json',
-              },
-            });
-            
-            console.log('[PermissionContext] API response status:', response.status);
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              console.error('[PermissionContext] API error response:', errorText);
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const userPermissions = await response.json();
+            const userPermissions = await rbacService.getUserPermissions(user.id, activeOrganizationId);
             
             console.log('[PermissionContext] Raw userPermissions response:', userPermissions);
-            console.log('[PermissionContext] Permissions type:', typeof userPermissions.permissions);
-            console.log('[PermissionContext] Permissions sample:', userPermissions.permissions?.slice(0, 5));
             
-            // Backend returns permissions as array of strings with DOT notation (e.g., ["customers.read", "deals.read"])
-            // Convert to COLON notation for frontend (e.g., ["customers:read", "deals:read"])
-            const permissionStrings = (userPermissions.permissions || []).map((p: string) => {
-              // Convert dot to colon: "customers.read" → "customers:read"
-              return p.replace(/\./g, ':');
-            });
+            // Convert permissions to simple strings like "customers:read", "customers:create"
+            const permissionStrings = userPermissions.permissions.map((p: Permission) => 
+              `${p.resource}:${p.action}`
+            );
             
-            console.log('[PermissionContext] Employee permissions (converted):', permissionStrings.slice(0, 10));
+            console.log('[PermissionContext] Employee permissions:', permissionStrings);
             console.log('[PermissionContext] Permission count:', permissionStrings.length);
             
             // If no permissions found, employee has no role assigned - restrict access
@@ -167,16 +135,17 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
     const isCustomer = profileType === 'customer';
     const isOwner = activeProfile.is_owner || false;
 
-    // Debug logging (always enabled for debugging)
-    console.log('[PermissionContext] Profile context:', {
-      profileType,
-      isVendor,
-      isEmployee,
-      isCustomer,
-      isOwner,
-      permissionsCount: permissions.length,
-      samplePermissions: permissions.slice(0, 5),
-    });
+    // Debug logging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[PermissionContext] Profile context:', {
+        profileType,
+        isVendor,
+        isEmployee,
+        isCustomer,
+        isOwner,
+        permissionsCount: permissions.length,
+      });
+    }
 
     /**
      * Check if user can access a resource/action
@@ -189,11 +158,8 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
      * - customers:delete or customer:delete
      */
     const canAccess = (resource: string, action: string = 'read'): boolean => {
-      console.log('[PermissionContext.canAccess] Checking:', { resource, action, isVendor, isOwner, isEmployee, permissionsCount: permissions.length });
-      
       // Vendors/Owners have full access
       if (isVendor || isOwner) {
-        console.log('[PermissionContext.canAccess] Granted (vendor/owner)');
         return true;
       }
 
@@ -201,13 +167,11 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
       if (isEmployee) {
         // For employees with no permissions, deny access
         if (permissions.length === 0) {
-          console.log('[PermissionContext.canAccess] Denied (no permissions)');
           return false;
         }
 
         // Check wildcard permission
         if (permissions.includes('*:*')) {
-          console.log('[PermissionContext.canAccess] Granted (wildcard)');
           return true;
         }
       }
@@ -232,14 +196,12 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
         // Check plural resource with action (e.g., "customers:read")
         const pluralPerm = `${resource}:${possibleAction}`;
         if (permissions.includes(pluralPerm)) {
-          console.log('[PermissionContext.canAccess] Granted (found:', pluralPerm, ')');
           return true;
         }
         
         // Check singular resource with action (e.g., "customer:view")
         const singularPerm = `${singularResource}:${possibleAction}`;
         if (permissions.includes(singularPerm)) {
-          console.log('[PermissionContext.canAccess] Granted (found:', singularPerm, ')');
           return true;
         }
         
@@ -247,13 +209,11 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
         const pluralWildcard = `${resource}:*`;
         const singularWildcard = `${singularResource}:*`;
         if (permissions.includes(pluralWildcard) || permissions.includes(singularWildcard)) {
-          console.log('[PermissionContext.canAccess] Granted (wildcard)');
           return true;
         }
       }
 
       // No matching permission found
-      console.log('[PermissionContext.canAccess] Denied (no match found)');
       return false;
     };
 

@@ -16,7 +16,6 @@ class ActivityListSerializer(serializers.ModelSerializer):
     lead_name = serializers.SerializerMethodField()
     deal_name = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
-    created_by_name = serializers.SerializerMethodField()
     activity_type_display = serializers.CharField(source='get_activity_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     
@@ -24,10 +23,9 @@ class ActivityListSerializer(serializers.ModelSerializer):
         model = Activity
         fields = [
             'id', 'activity_type', 'activity_type_display',
-            'title', 'description', 'customer', 'customer_name',
+            'title', 'customer', 'customer_name',
             'lead', 'lead_name', 'deal', 'deal_name',
             'assigned_to', 'assigned_to_name',
-            'created_by', 'created_by_name',
             'status', 'status_display',
             'scheduled_at', 'completed_at', 'created_at'
         ]
@@ -39,14 +37,8 @@ class ActivityListSerializer(serializers.ModelSerializer):
         return obj.deal.title if obj.deal else None
     
     def get_assigned_to_name(self, obj):
-        if obj.assigned_to and hasattr(obj.assigned_to, 'first_name'):
+        if obj.assigned_to:
             return f"{obj.assigned_to.first_name} {obj.assigned_to.last_name}".strip()
-        return None
-    
-    def get_created_by_name(self, obj):
-        if obj.created_by:
-            name = f"{obj.created_by.first_name} {obj.created_by.last_name}".strip()
-            return name if name else obj.created_by.email
         return None
 
 

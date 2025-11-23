@@ -28,10 +28,10 @@ class Command(BaseCommand):
                 first_name='Admin',
                 last_name='User'
             )
-            self.stdout.write(self.style.SUCCESS('Created superuser: admin@crm.com'))
+            self.stdout.write(self.style.SUCCESS('✓ Created superuser: admin@crm.com'))
         else:
             user = User.objects.get(email='admin@crm.com')
-            self.stdout.write('[WARNING] Superuser already exists')
+            self.stdout.write('⚠ Superuser already exists')
         
         # Create organization
         org, created = Organization.objects.get_or_create(
@@ -45,7 +45,7 @@ class Command(BaseCommand):
             }
         )
         if created:
-            self.stdout.write(self.style.SUCCESS('[OK] Created organization: Demo Company'))
+            self.stdout.write(self.style.SUCCESS('✓ Created organization: Demo Company'))
             
             # Add user to organization as owner
             UserOrganization.objects.create(
@@ -55,7 +55,7 @@ class Command(BaseCommand):
                 is_active=True
             )
         else:
-            self.stdout.write('[WARNING] Organization already exists')
+            self.stdout.write('⚠ Organization already exists')
         
         # Create permissions
         resources = ['customers', 'leads', 'deals', 'employees', 'vendors']
@@ -74,9 +74,9 @@ class Command(BaseCommand):
                     created_count += 1
         
         if created_count > 0:
-            self.stdout.write(self.style.SUCCESS(f'[OK] Created {created_count} permissions'))
+            self.stdout.write(self.style.SUCCESS(f'✓ Created {created_count} permissions'))
         else:
-            self.stdout.write('[WARNING] Permissions already exist')
+            self.stdout.write('⚠ Permissions already exist')
         
         # Create roles
         admin_role, created = Role.objects.get_or_create(
@@ -88,7 +88,7 @@ class Command(BaseCommand):
             }
         )
         if created:
-            self.stdout.write(self.style.SUCCESS('[OK] Created role: Admin'))
+            self.stdout.write(self.style.SUCCESS('✓ Created role: Admin'))
             # Assign all permissions to admin role
             for permission in Permission.objects.filter(organization=org):
                 RolePermission.objects.get_or_create(
@@ -105,7 +105,7 @@ class Command(BaseCommand):
             }
         )
         if created:
-            self.stdout.write(self.style.SUCCESS('[OK] Created role: Sales'))
+            self.stdout.write(self.style.SUCCESS('✓ Created role: Sales'))
             # Assign relevant permissions to sales role
             sales_resources = ['customers', 'leads', 'deals']
             for permission in Permission.objects.filter(organization=org, resource__in=sales_resources):
@@ -306,9 +306,9 @@ class Command(BaseCommand):
                 )
         
         if employees_created > 0:
-            self.stdout.write(self.style.SUCCESS(f'[OK] Created {employees_created} employees'))
+            self.stdout.write(self.style.SUCCESS(f'✓ Created {employees_created} employees'))
         else:
-            self.stdout.write('[WARNING] Employees already exist')
+            self.stdout.write('⚠ Employees already exist')
         
         # Get employees for assigning to entities
         employees = list(Employee.objects.filter(organization=org))
@@ -391,7 +391,7 @@ class Command(BaseCommand):
                 created_count += 1
         
         if created_count > 0:
-            self.stdout.write(self.style.SUCCESS(f'[OK] Created {created_count} customers'))
+            self.stdout.write(self.style.SUCCESS(f'✓ Created {created_count} customers'))
         
         # Create sample leads
         lead_data = [
@@ -477,7 +477,7 @@ class Command(BaseCommand):
                 created_count += 1
         
         if created_count > 0:
-            self.stdout.write(self.style.SUCCESS(f'[OK] Created {created_count} leads'))
+            self.stdout.write(self.style.SUCCESS(f'✓ Created {created_count} leads'))
         
         # Create pipeline
         pipeline, created = Pipeline.objects.get_or_create(
@@ -492,7 +492,7 @@ class Command(BaseCommand):
         )
         
         if created:
-            self.stdout.write(self.style.SUCCESS('[OK] Created pipeline: Sales Pipeline'))
+            self.stdout.write(self.style.SUCCESS('✓ Created pipeline: Sales Pipeline'))
             
             # Create pipeline stages
             stages = [
@@ -510,9 +510,9 @@ class Command(BaseCommand):
                     **stage_data
                 )
             
-            self.stdout.write(self.style.SUCCESS('[OK] Created 6 pipeline stages'))
+            self.stdout.write(self.style.SUCCESS('✓ Created 6 pipeline stages'))
         else:
-            self.stdout.write('[WARNING] Pipeline already exists')
+            self.stdout.write('⚠ Pipeline already exists')
         
         # Get stages for deals
         stages_list = list(pipeline.stages.filter(is_active=True).exclude(is_closed_won=True, is_closed_lost=True))
@@ -604,7 +604,7 @@ class Command(BaseCommand):
                     created_count += 1
             
             if created_count > 0:
-                self.stdout.write(self.style.SUCCESS(f'[OK] Created {created_count} deals'))
+                self.stdout.write(self.style.SUCCESS(f'✓ Created {created_count} deals'))
         
         # Create sample activities
         if customers_list:
@@ -714,9 +714,9 @@ class Command(BaseCommand):
                     created_count += 1
             
             if created_count > 0:
-                self.stdout.write(self.style.SUCCESS(f'[OK] Created {created_count} activities'))
+                self.stdout.write(self.style.SUCCESS(f'✓ Created {created_count} activities'))
         
-        self.stdout.write(self.style.SUCCESS('\n[SUCCESS] Database seeding completed!'))
+        self.stdout.write(self.style.SUCCESS('\n✅ Database seeding completed!'))
         self.stdout.write(f'\nLogin credentials:')
         self.stdout.write(f'  Username: admin')
         self.stdout.write(f'  Email: admin@crm.com')

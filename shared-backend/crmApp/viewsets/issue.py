@@ -151,23 +151,15 @@ class IssueViewSet(
         """Override list to add debug logging"""
         queryset = self.filter_queryset(self.get_queryset())
         
-        # Enhanced debug logging
+        # Debug logging
         active_profile = getattr(request.user, 'active_profile', None)
         if active_profile:
-            org_name = active_profile.organization.name if active_profile.organization else 'None'
-            org_id = active_profile.organization.id if active_profile.organization else None
-            
-            logger.info(
-                f"[ISSUE LIST] User: {request.user.email} | "
-                f"Profile: {active_profile.profile_type} | "
-                f"Organization: {org_name} (ID: {org_id}) | "
-                f"Issues returned: {queryset.count()}"
+            logger.debug(
+                f"Issue list request from {request.user.email} "
+                f"(Profile: {active_profile.profile_type}, "
+                f"Organization: {active_profile.organization.name if active_profile.organization else 'None'}) - "
+                f"Found {queryset.count()} issues"
             )
-            
-            # Log unique organizations in the queryset
-            if queryset.exists():
-                org_names = set(issue.organization.name for issue in queryset[:100])
-                logger.info(f"[ISSUE LIST] Organizations in results: {', '.join(org_names)}")
         
         page = self.paginate_queryset(queryset)
         if page is not None:
@@ -1002,28 +994,26 @@ class IssueViewSet(
         Returns Linear issues that can be synced to CRM
         """
         try:
-            # Get organization using the mixin method
-            organization = self.get_organization_from_request(request)
-            
-            if not organization:
+            # Get organization from active profile
+            active_profile = getattr(request.user, 'active_profile', None)
+            if not active_profile:
                 return Response(
-                    {'error': 'Bad Request', 'details': 'Organization is required. Please ensure you have an active profile.'},
+                    {'error': 'Bad Request', 'details': 'No active profile found'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Check if user is vendor or employee
-            from crmApp.models import UserProfile
-            user_profile = UserProfile.objects.filter(
-                user=request.user,
-                organization=organization,
-                profile_type__in=['vendor', 'employee'],
-                status='active'
-            ).first()
-            
-            if not user_profile:
+            # Only vendors and employees can fetch from Linear
+            if active_profile.profile_type not in ['vendor', 'employee']:
                 return Response(
                     {'error': 'Forbidden', 'details': 'Only vendors and employees can fetch issues from Linear'},
                     status=status.HTTP_403_FORBIDDEN
+                )
+            
+            organization = active_profile.organization
+            if not organization:
+                return Response(
+                    {'error': 'Bad Request', 'details': 'Organization not found'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
             
             # Get Linear team ID
@@ -1045,8 +1035,6 @@ class IssueViewSet(
             from crmApp.services.linear_service import LinearService
             linear_service = LinearService()
             
-            logger.info(f"Fetching issues from Linear for team: {linear_team_id}, limit: {limit}")
-            
             linear_issues = linear_service.get_team_issues(
                 team_id=linear_team_id,
                 limit=limit
@@ -1055,15 +1043,11 @@ class IssueViewSet(
             issues_data = linear_issues.get('nodes', [])
             page_info = linear_issues.get('pageInfo', {})
             
-            logger.info(f"Fetched {len(issues_data)} issues from Linear for organization: {organization.name}")
-            
             # If sync_to_crm is True, sync Linear issues to CRM
             synced_issues = []
             if sync_to_crm:
                 from crmApp.services.issue_linear_service import IssueLinearService
                 sync_service = IssueLinearService()
-                
-                logger.info(f"Starting sync of {len(issues_data)} Linear issues to CRM for organization: {organization.name}")
                 
                 for linear_issue in issues_data:
                     # Check if issue already exists in CRM
@@ -1102,12 +1086,7 @@ class IssueViewSet(
                                 'action': 'updated'
                             })
                         except Exception as e:
-                            logger.error(f"Error updating issue from Linear {linear_issue.get('identifier')}: {str(e)}", exc_info=True)
-                            synced_issues.append({
-                                'linear_id': linear_issue['id'],
-                                'error': str(e),
-                                'action': 'update_failed'
-                            })
+                            logger.error(f"Error updating issue from Linear: {str(e)}", exc_info=True)
                     else:
                         # Create new issue in CRM
                         try:
@@ -1144,14 +1123,8 @@ class IssueViewSet(
                                 'issue_number': new_issue.issue_number,
                                 'action': 'created'
                             })
-                            logger.info(f"Created new issue {new_issue.issue_number} from Linear issue {linear_issue.get('identifier')}")
                         except Exception as e:
-                            logger.error(f"Error creating issue from Linear {linear_issue.get('identifier')}: {str(e)}", exc_info=True)
-                            synced_issues.append({
-                                'linear_id': linear_issue['id'],
-                                'error': str(e),
-                                'action': 'create_failed'
-                            })
+                            logger.error(f"Error creating issue from Linear: {str(e)}", exc_info=True)
             
             # Format response
             response_data = {

@@ -6,9 +6,8 @@ import {
   RevenueChart,
   SalesPipeline,
   TopPerformers,
-  KeyMetricsCards,
-  DealWinLossChart,
-  RecentDeals,
+  ConversionFunnel,
+  RecentActivities,
 } from '../../components/analytics';
 import { exportData } from '@/utils';
 import { toaster } from '@/components/ui/toaster';
@@ -101,9 +100,6 @@ const EmployeeAnalyticsPage = () => {
           }
         />
 
-        {/* Key Metrics Cards */}
-        <KeyMetricsCards />
-
         {/* Revenue Chart - Full Width */}
         <RevenueChart />
 
@@ -121,8 +117,8 @@ const EmployeeAnalyticsPage = () => {
           templateColumns={{ base: '1fr', lg: '1fr 1fr' }}
           gap={5}
         >
-          <DealWinLossChart />
-          <RecentDeals />
+          <ConversionFunnel />
+          <RecentActivities />
         </Grid>
       </VStack>
     </DashboardLayout>

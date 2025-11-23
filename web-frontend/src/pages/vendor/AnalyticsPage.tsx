@@ -6,9 +6,8 @@ import {
   RevenueChart,
   SalesPipeline,
   TopPerformers,
-  KeyMetricsCards,
-  DealWinLossChart,
-  RecentDeals,
+  ConversionFunnel,
+  RecentActivities,
 } from '../../components/analytics';
 import { exportData } from '@/utils';
 import { toaster } from '@/components/ui/toaster';
@@ -30,11 +29,10 @@ const AnalyticsPage = () => {
       // Prepare export data
       const exportRows = [
         // Dashboard Stats
-        { Metric: 'Total Revenue', Value: `$${(dashboardStats.revenue?.total || 0).toLocaleString()}` },
-        { Metric: 'Total Deals', Value: dashboardStats.deals?.total || 0 },
-        { Metric: 'Active Customers', Value: dashboardStats.customers?.total || 0 },
-        { Metric: 'Win Rate', Value: `${dashboardStats.deals?.win_rate || 0}%` },
-        { Metric: 'Lead Conversion Rate', Value: `${dashboardStats.leads?.conversion_rate || 0}%` },
+        { Metric: 'Total Revenue', Value: `$${dashboardStats.totalRevenue?.toLocaleString() || 0}` },
+        { Metric: 'Total Deals', Value: dashboardStats.totalDeals || 0 },
+        { Metric: 'Active Customers', Value: dashboardStats.activeCustomers || 0 },
+        { Metric: 'Conversion Rate', Value: `${dashboardStats.conversionRate || 0}%` },
         // Revenue Data
         ...revenueData.monthlyData.map(month => ({
           Metric: `Revenue - ${month.month}`,
@@ -104,9 +102,6 @@ const AnalyticsPage = () => {
           }
         />
 
-        {/* Key Metrics Cards */}
-        <KeyMetricsCards />
-
         {/* Revenue Chart - Full Width */}
         <RevenueChart />
 
@@ -124,8 +119,8 @@ const AnalyticsPage = () => {
           templateColumns={{ base: '1fr', lg: '1fr 1fr' }}
           gap={5}
         >
-          <DealWinLossChart />
-          <RecentDeals />
+          <ConversionFunnel />
+          <RecentActivities />
         </Grid>
       </VStack>
     </DashboardLayout>
