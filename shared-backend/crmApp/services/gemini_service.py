@@ -30,22 +30,36 @@ class GeminiService:
         
         self.model_name = "gemini-2.5-flash"  # Using Gemini 2.5 Flash (latest, separate quota)
     
-    def _get_user_context_sync(self, user) -> Dict[str, Any]:
+    def _get_user_context_sync(self, user, telegram_user=None) -> Dict[str, Any]:
         """
         Synchronous helper to build user context from database.
         Can be called directly from sync contexts or wrapped for async.
+        
+        Args:
+            user: Django user object
+            telegram_user: Optional TelegramUser instance for profile selection
         """
         # Get active user profile
-        active_profile = user.user_profiles.filter(
-            is_primary=True,
-            status='active'
-        ).first()
+        active_profile = None
         
+        # PRIORITY 1: Use Telegram user's selected profile if available
+        if telegram_user and telegram_user.selected_profile:
+            active_profile = telegram_user.selected_profile
+            logger.info(f"Using Telegram-selected profile: {active_profile.id} ({active_profile.profile_type})")
+        
+        # PRIORITY 2: Use primary profile
+        if not active_profile:
+            active_profile = user.user_profiles.filter(
+                is_primary=True,
+                status='active'
+            ).first()
+        
+        # PRIORITY 3: Use any active profile
         if not active_profile:
             active_profile = user.user_profiles.filter(status='active').first()
         
+        # PRIORITY 4: Try to get any profile at all
         if not active_profile:
-            # Try to get any profile at all
             active_profile = user.user_profiles.first()
             
         if not active_profile:
@@ -96,31 +110,33 @@ class GeminiService:
         
         return context
     
-    async def get_user_context(self, user) -> Dict[str, Any]:
+    async def get_user_context(self, user, telegram_user=None) -> Dict[str, Any]:
         """
         Build user context for MCP server authentication and RBAC (async).
         
         Args:
             user: Django user object
+            telegram_user: Optional TelegramUser instance for profile selection
         
         Returns:
             Dictionary with user context (user_id, organization_id, role, permissions)
         """
         from asgiref.sync import sync_to_async
         # Use thread_sensitive=False to avoid deadlocks in async context
-        return await sync_to_async(self._get_user_context_sync, thread_sensitive=False)(user)
+        return await sync_to_async(self._get_user_context_sync, thread_sensitive=False)(user, telegram_user)
     
-    def get_user_context_sync(self, user) -> Dict[str, Any]:
+    def get_user_context_sync(self, user, telegram_user=None) -> Dict[str, Any]:
         """
         Build user context synchronously (for non-async views).
         
         Args:
             user: Django user object
+            telegram_user: Optional TelegramUser instance for profile selection
         
         Returns:
             Dictionary with user context (user_id, organization_id, role, permissions)
         """
-        return self._get_user_context_sync(user)
+        return self._get_user_context_sync(user, telegram_user)
     
     def _build_system_prompt(self, user_context: Dict[str, Any]) -> str:
         """
@@ -535,13 +551,14 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     email=email,
                     phone=phone or "",
                     source=source,
-                    status="new"
+                    status="active",
+                    qualification_status="new"
                 )
                 return {
                     "success": True,
                     "id": lead.id,
                     "name": lead.name,
-                    "message": f"Lead '{name}' created successfully"
+                    "message": f"Lead '{name}' created successfully with ID {lead.id}"
                 }
             return await create()
         
@@ -1361,7 +1378,8 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         self,
         message: str,
         user,
-        conversation_history: Optional[list] = None
+        conversation_history: Optional[list] = None,
+        telegram_user=None
     ) -> AsyncIterator[str]:
         """
         Stream Gemini responses with MCP tool access.
@@ -1370,6 +1388,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             message: User's message
             user: Django user object
             conversation_history: Optional previous conversation messages
+            telegram_user: Optional TelegramUser instance for profile selection
         
         Yields:
             Response chunks from Gemini
@@ -1382,7 +1401,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         try:
             # Build user context (async operation)
             logger.info("Building user context...")
-            user_context = await self.get_user_context(user)
+            user_context = await self.get_user_context(user, telegram_user)
             logger.info(f"User context built: {user_context.get('user_id')}")
             
             # Initialize Gemini client (sync)

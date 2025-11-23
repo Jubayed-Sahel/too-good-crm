@@ -27,6 +27,16 @@ class TelegramUser(TimestampedModel):
         blank=True
     )
     
+    # Profile selection (which organization/role context to use)
+    selected_profile = models.ForeignKey(
+        'UserProfile',
+        on_delete=models.SET_NULL,
+        related_name='telegram_users',
+        null=True,
+        blank=True,
+        help_text='The active profile/organization context for this Telegram user'
+    )
+    
     # Authentication state
     is_authenticated = models.BooleanField(default=False)
     pending_email = models.EmailField(null=True, blank=True)  # During auth flow
