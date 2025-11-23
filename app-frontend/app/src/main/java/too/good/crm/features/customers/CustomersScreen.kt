@@ -229,56 +229,30 @@ fun CustomersScreen(
                     }
                 }
 
-                // Stats Grid - Responsive (1/2/3 columns)
-                StatsGrid(
-                    stats = listOf(
-                        StatData(
-                            title = "TOTAL CUSTOMERS",
-                            value = uiState.customers.size.toString(),
-                            icon = {
-                                Icon(
-                                    Icons.Default.People,
-                                    contentDescription = null,
-                                    tint = DesignTokens.Colors.Primary
-                                )
-                            },
-                            change = "+12%",
-                            isPositive = true,
-                            iconBackgroundColor = DesignTokens.Colors.PrimaryLight.copy(alpha = 0.2f),
-                            iconTintColor = DesignTokens.Colors.Primary
-                        ),
-                        StatData(
-                            title = "ACTIVE",
-                            value = uiState.customers.count { it.status == CustomerStatus.ACTIVE }.toString(),
-                            icon = {
-                                Icon(
-                                    Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = DesignTokens.Colors.Success
-                                )
-                            },
-                            change = "+8%",
-                            isPositive = true,
-                            iconBackgroundColor = DesignTokens.Colors.SuccessLight,
-                            iconTintColor = DesignTokens.Colors.Success
-                        ),
-                        StatData(
-                            title = "TOTAL VALUE",
-                            value = "$${uiState.customers.sumOf { it.value }.toInt() / 1000}K",
-                            icon = {
-                                Icon(
-                                    Icons.Default.AttachMoney,
-                                    contentDescription = null,
-                                    tint = DesignTokens.Colors.Secondary
-                                )
-                            },
-                            change = "+23%",
-                            isPositive = true,
-                            iconBackgroundColor = DesignTokens.Colors.SecondaryContainer,
-                            iconTintColor = DesignTokens.Colors.Secondary
-                        )
+                // Compact Stats Cards - Horizontal Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                ) {
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Total",
+                        value = uiState.customers.size.toString(),
+                        color = DesignTokens.Colors.Primary
                     )
-                )
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Active",
+                        value = uiState.customers.count { it.status == CustomerStatus.ACTIVE }.toString(),
+                        color = DesignTokens.Colors.Success
+                    )
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Value",
+                        value = "$${uiState.customers.sumOf { it.value }.toInt() / 1000}K",
+                        color = DesignTokens.Colors.Secondary
+                    )
+                }
 
                 // Search Bar - Responsive
                 OutlinedTextField(
@@ -682,33 +656,34 @@ fun CustomerCard(customer: Customer) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable { /* Navigate to detail */ },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(containerColor = DesignTokens.Colors.White),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(DesignTokens.Padding.CardPaddingStandard),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Avatar
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(DesignTokens.Heights.ImageThumbnail)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                    .background(DesignTokens.Colors.Primary.copy(alpha = 0.1f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = customer.name.first().uppercase(),
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    color = DesignTokens.Colors.Primary,
+                    fontWeight = DesignTokens.Typography.FontWeightBold
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space4))
 
             // Customer Info
             Column(modifier = Modifier.weight(1f)) {
@@ -720,7 +695,8 @@ fun CustomerCard(customer: Customer) {
                     Text(
                         text = customer.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = DesignTokens.Typography.FontWeightBold,
+                        color = DesignTokens.Colors.OnSurface
                     )
                     val (text, color) = when (customer.status) {
                         CustomerStatus.ACTIVE -> "Active" to DesignTokens.Colors.Success
@@ -730,7 +706,7 @@ fun CustomerCard(customer: Customer) {
                     StatusBadge(text = text, color = color)
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space1))
 
                 Text(
                     text = customer.company,
@@ -738,7 +714,7 @@ fun CustomerCard(customer: Customer) {
                     color = DesignTokens.Colors.OnSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -748,10 +724,10 @@ fun CustomerCard(customer: Customer) {
                         Icon(
                             Icons.Default.Email,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(DesignTokens.Heights.IconXs),
                             tint = DesignTokens.Colors.OnSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space1))
                         Text(
                             text = customer.email,
                             style = MaterialTheme.typography.bodySmall,
@@ -762,7 +738,7 @@ fun CustomerCard(customer: Customer) {
                     Text(
                         text = NumberFormat.getCurrencyInstance(Locale.US).format(customer.value),
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = DesignTokens.Typography.FontWeightBold,
                         color = DesignTokens.Colors.Success
                     )
                 }
@@ -786,29 +762,30 @@ fun StatCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(containerColor = DesignTokens.Colors.White),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(DesignTokens.Spacing.Space3),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
                 color = DesignTokens.Colors.OnSurfaceVariant,
-                fontSize = 12.sp
+                fontSize = 11.sp
             )
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space1))
             Text(
                 text = value,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = DesignTokens.Typography.FontWeightBold,
                 color = color,
-                fontSize = 24.sp
+                fontSize = 20.sp
             )
         }
     }

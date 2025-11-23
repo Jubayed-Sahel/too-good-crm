@@ -98,57 +98,55 @@ fun TeamScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(DesignTokens.Colors.Background)
-                .padding(16.dp)
+                .padding(DesignTokens.Spacing.Space4)
         ) {
             // Header
             Text(
                 text = "Team",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = DesignTokens.Typography.FontWeightBold,
+                color = DesignTokens.Colors.OnSurface
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
             Text(
                 text = "Manage your team members and their roles",
                 style = MaterialTheme.typography.bodyMedium,
                 color = DesignTokens.Colors.OnSurfaceVariant
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space6))
 
-            // Stats Cards
+            // Compact Stats Cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
             ) {
                 TeamStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Total",
                     value = teamMembers.size.toString(),
-                    icon = Icons.Default.People,
                     color = DesignTokens.Colors.Primary
                 )
                 TeamStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Active",
                     value = teamMembers.count { it.status == TeamStatus.ACTIVE }.toString(),
-                    icon = Icons.Default.CheckCircle,
                     color = DesignTokens.Colors.Success
                 )
                 TeamStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Departments",
                     value = teamMembers.map { it.department }.distinct().size.toString(),
-                    icon = Icons.Default.Business,
                     color = DesignTokens.Colors.StatusScheduled
                 )
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
 
             // Search and Filter Bar
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedTextField(
@@ -166,10 +164,10 @@ fun TeamScreen(
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = DesignTokens.Colors.Primary,
                         unfocusedBorderColor = DesignTokens.Colors.OutlineVariant,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White
+                        focusedContainerColor = DesignTokens.Colors.White,
+                        unfocusedContainerColor = DesignTokens.Colors.White
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(DesignTokens.Radius.Medium)
                 )
 
                 // Add Member Button
@@ -178,24 +176,24 @@ fun TeamScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = DesignTokens.Colors.Primary
                     ),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(DesignTokens.Radius.Medium)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Member",
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(DesignTokens.Heights.IconXs)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space1))
                     Text("Add")
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
 
             // Role Filter Chips
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
             ) {
                 FilterChip(
                     selected = filterRole == null,
@@ -219,12 +217,12 @@ fun TeamScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
 
             // Team Members List
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
             ) {
                 items(filteredMembers) { member ->
                     TeamMemberCard(member = member)
@@ -239,38 +237,34 @@ fun TeamStatCard(
     modifier: Modifier = Modifier,
     title: String,
     value: String,
-    icon: ImageVector,
     color: Color
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(containerColor = DesignTokens.Colors.White),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.Start
+                .padding(DesignTokens.Spacing.Space3),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(32.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = DesignTokens.Colors.OnSurface
-            )
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = DesignTokens.Colors.OnSurfaceVariant
+                style = MaterialTheme.typography.bodySmall,
+                color = DesignTokens.Colors.OnSurfaceVariant,
+                fontSize = 11.sp
+            )
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space1))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = DesignTokens.Typography.FontWeightBold,
+                color = color,
+                fontSize = 20.sp
             )
         }
     }
@@ -280,26 +274,27 @@ fun TeamStatCard(
 fun TeamMemberCard(member: TeamMember) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(containerColor = DesignTokens.Colors.White),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(DesignTokens.Spacing.Space4),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3),
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.weight(1f)
             ) {
                 // Avatar
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(DesignTokens.Heights.ImageThumbnail)
                         .clip(CircleShape)
                         .background(member.role.color.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center
@@ -307,7 +302,7 @@ fun TeamMemberCard(member: TeamMember) {
                     Text(
                         text = member.name.split(" ").mapNotNull { it.firstOrNull() }.take(2).joinToString(""),
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = DesignTokens.Typography.FontWeightBold,
                         color = member.role.color
                     )
                 }
@@ -317,7 +312,7 @@ fun TeamMemberCard(member: TeamMember) {
                     Text(
                         text = member.name,
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = DesignTokens.Typography.FontWeightSemiBold,
                         color = DesignTokens.Colors.OnSurface
                     )
                     Text(
@@ -325,19 +320,19 @@ fun TeamMemberCard(member: TeamMember) {
                         style = MaterialTheme.typography.bodySmall,
                         color = DesignTokens.Colors.OnSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space1))
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Role Badge
                         Surface(
-                            shape = RoundedCornerShape(6.dp),
+                            shape = RoundedCornerShape(DesignTokens.Radius.ExtraSmall),
                             color = member.role.color.copy(alpha = 0.1f)
                         ) {
                             Text(
                                 text = member.role.displayName,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                modifier = Modifier.padding(horizontal = DesignTokens.Spacing.Space2, vertical = DesignTokens.Spacing.Space1),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = member.role.color,
                                 fontWeight = FontWeight.Medium

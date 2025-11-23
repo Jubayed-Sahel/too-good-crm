@@ -25,7 +25,7 @@ android {
         // For Production - use: "https://api.yourdomain.com/api/"
 
         //  EDIT THIS LINE WITH IP ADDRESS
-        val backendUrl = "http://192.168.0.218:8000/api/"
+        val backendUrl = "http://192.168.0.106:8000/api/"
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
     }
 

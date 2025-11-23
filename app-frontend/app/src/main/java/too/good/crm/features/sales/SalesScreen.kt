@@ -247,14 +247,15 @@ fun SalesMetricCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(containerColor = DesignTokens.Colors.White),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(DesignTokens.Spacing.Space3)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -265,38 +266,40 @@ fun SalesMetricCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = color,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(DesignTokens.Heights.IconSm)
                 )
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(DesignTokens.Radius.Small),
                     color = if (isPositive) DesignTokens.Colors.Success.copy(alpha = 0.1f) else DesignTokens.Colors.Error.copy(alpha = 0.1f)
                 ) {
                     Text(
                         text = change,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = DesignTokens.Spacing.Space2, vertical = DesignTokens.Spacing.Space1),
                         style = MaterialTheme.typography.bodySmall,
                         color = if (isPositive) DesignTokens.Colors.Success else DesignTokens.Colors.Error,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = DesignTokens.Typography.FontWeightMedium,
                         fontSize = 11.sp
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space1))
 
             Text(
                 text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = DesignTokens.Colors.OnSurface
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = DesignTokens.Typography.FontWeightBold,
+                color = DesignTokens.Colors.OnSurface,
+                fontSize = 20.sp
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space1))
 
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodySmall,
-                color = DesignTokens.Colors.OnSurfaceVariant
+                color = DesignTokens.Colors.OnSurfaceVariant,
+                fontSize = 11.sp
             )
         }
     }
