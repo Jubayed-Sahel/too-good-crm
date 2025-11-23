@@ -24,12 +24,18 @@ data class AppUserProfile(
 object UserSession {
     private var _currentProfile: AppUserProfile? = null
     private var _activeMode: ActiveMode = ActiveMode.VENDOR
+    
+    // Compose-observable state
+    private val _currentProfileState = androidx.compose.runtime.mutableStateOf<AppUserProfile?>(null)
+    val currentProfileState: androidx.compose.runtime.State<AppUserProfile?> = _currentProfileState
 
     var currentProfile: AppUserProfile?
         get() = _currentProfile
         set(value) {
             _currentProfile = value
+            _currentProfileState.value = value
             _activeMode = value?.activeMode ?: ActiveMode.VENDOR
+            android.util.Log.d("UserSession", "Profile set: userId=${value?.id}, name=${value?.name}, authenticated=${value != null}")
         }
 
     var activeMode: ActiveMode
@@ -37,6 +43,18 @@ object UserSession {
         set(value) {
             _activeMode = value
         }
+    
+    /**
+     * Check if user is authenticated
+     */
+    val isAuthenticated: Boolean
+        get() = _currentProfile != null
+    
+    /**
+     * Get current user ID
+     */
+    val userId: Int?
+        get() = _currentProfile?.id
 
     fun canSwitchMode(): Boolean {
         return _currentProfile?.role == UserRole.BOTH

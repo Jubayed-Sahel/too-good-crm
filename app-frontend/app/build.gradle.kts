@@ -19,6 +19,14 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // For Android Emulator - use: "http://10.0.2.2:8000/api/"
+        // For Physical Phone - use: "http://YOUR_IP:8000/api/" (replace YOUR_IP with your computer's IP)
+        // For Production - use: "https://api.yourdomain.com/api/"
+
+        //  EDIT THIS LINE WITH IP ADDRESS
+        val backendUrl = "http://192.168.0.218:8000/api/"
+        buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
     }
 
     buildTypes {
@@ -39,6 +47,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     lint {
         disable.add("UnsafeOptInUsageError")
@@ -74,5 +83,10 @@ dependencies {
     
     // Pusher for real-time updates
     implementation("com.pusher:pusher-java-client:2.4.4")
+    
+    // Jitsi Meet SDK for video calling
+    implementation("org.jitsi.react:jitsi-meet-sdk:9.2.2") {
+        isTransitive = true
+    }
 
 }

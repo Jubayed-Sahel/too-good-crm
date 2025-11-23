@@ -8,7 +8,8 @@ data class Vendor(
     val totalOrders: Int,
     val status: VendorStatus,
     val email: String,
-    val phone: String
+    val phone: String,
+    val userId: Int? = null  // User ID for video calling
 )
 
 enum class VendorStatus {
@@ -26,7 +27,8 @@ object VendorSampleData {
             totalOrders = 45,
             status = VendorStatus.ACTIVE,
             email = "contact@techsolutions.com",
-            phone = "+1 555-0101"
+            phone = "+1 555-0101",
+            userId = 5  // Sample user ID for testing
         ),
         Vendor(
             id = "2",
@@ -36,7 +38,8 @@ object VendorSampleData {
             totalOrders = 120,
             status = VendorStatus.ACTIVE,
             email = "sales@officesupplies.com",
-            phone = "+1 555-0102"
+            phone = "+1 555-0102",
+            userId = 6  // Sample user ID for testing
         ),
         Vendor(
             id = "3",
@@ -46,7 +49,8 @@ object VendorSampleData {
             totalOrders = 28,
             status = VendorStatus.ACTIVE,
             email = "support@cloudhosting.com",
-            phone = "+1 555-0103"
+            phone = "+1 555-0103",
+            userId = 7  // Sample user ID for testing
         ),
         Vendor(
             id = "4",

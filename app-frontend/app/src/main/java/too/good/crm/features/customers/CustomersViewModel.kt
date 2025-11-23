@@ -34,21 +34,35 @@ class CustomersViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
-            repository.getCustomers()
-                .onSuccess { apiCustomers ->
-                    // Convert API customers to UI customers
-                    val customers = apiCustomers.map { it.toUiCustomer() }
-                    _uiState.value = _uiState.value.copy(
-                        customers = customers,
-                        isLoading = false
-                    )
-                }
-                .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = error.message ?: "Failed to load customers"
-                    )
-                }
+            try {
+                repository.getCustomers()
+                    .onSuccess { apiCustomers ->
+                        // Convert API customers to UI customers
+                        val customers = apiCustomers.mapNotNull { 
+                            try {
+                                it.toUiCustomer()
+                            } catch (e: Exception) {
+                                // Skip customers with invalid data
+                                null
+                            }
+                        }
+                        _uiState.value = _uiState.value.copy(
+                            customers = customers,
+                            isLoading = false
+                        )
+                    }
+                    .onFailure { error ->
+                        _uiState.value = _uiState.value.copy(
+                            isLoading = false,
+                            error = error.message ?: "Failed to load customers"
+                        )
+                    }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Error loading customers: ${e.message}"
+                )
+            }
         }
     }
 
@@ -130,21 +144,27 @@ class CustomersViewModel : ViewModel() {
     private fun ApiCustomer.toUiCustomer(): Customer {
         return Customer(
             id = this.id.toString(),
-            name = this.fullName?.takeIf { it.isNotBlank() } ?: this.name,
-            email = this.email,
-            phone = this.phone,
-            company = this.companyName?.takeIf { it.isNotBlank() } ?: this.company?.takeIf { it.isNotBlank() } ?: "",
-            status = when (this.status.lowercase()) {
+            name = this.fullName?.takeIf { it.isNotBlank() } 
+                ?: this.name.takeIf { it.isNotBlank() } 
+                ?: "Unknown",
+            email = this.email?.takeIf { it.isNotBlank() } ?: "",
+            phone = this.phone?.takeIf { it.isNotBlank() } ?: "",
+            company = this.companyName?.takeIf { it.isNotBlank() } 
+                ?: this.company?.takeIf { it.isNotBlank() } 
+                ?: this.organization?.takeIf { it.isNotBlank() } 
+                ?: "",
+            status = when (this.status?.lowercase() ?: "active") {
                 "active" -> CustomerStatus.ACTIVE
                 "inactive" -> CustomerStatus.INACTIVE
                 "prospect", "pending" -> CustomerStatus.PENDING
                 else -> CustomerStatus.ACTIVE
             },
-            value = this.totalValue,
+            value = this.totalValue ?: 0.0,
             createdDate = this.createdAt ?: "",
             lastContact = this.updatedAt ?: "",
             industry = "",
-            website = this.website ?: ""
+            website = this.website ?: "",
+            userId = this.userId
         )
     }
 }

@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import too.good.crm.data.NetworkResult
 import too.good.crm.data.repository.DashboardStatsRepository
+import too.good.crm.data.model.DashboardStats
+import too.good.crm.data.model.RevenueByPeriodResponse
 
 /**
  * ViewModel for Sales Screen
@@ -58,11 +60,11 @@ class SalesViewModel : ViewModel() {
     /**
      * Load revenue data by period
      */
-    fun loadRevenueData(period: String = "month", limit: Int = 12) {
+    fun loadRevenueData(period: String = "month") {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoadingRevenue = true, revenueError = null)
             
-            when (val result = repository.getRevenueByPeriod(period, limit)) {
+            when (val result = repository.getRevenueByPeriod(period)) {
                 is NetworkResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         revenueData = result.data,
@@ -110,11 +112,14 @@ class SalesViewModel : ViewModel() {
     }
     
     /**
-     * Helper methods to extract stats from Map
+     * Helper methods to extract stats from DashboardStats
      */
-    fun getTotalRevenue(): Double = _uiState.value.stats?.get("total_revenue") as? Double ?: 0.0
-    fun getTotalDeals(): Int = _uiState.value.stats?.get("total_deals") as? Int ?: 0
-    fun getWonDeals(): Int = _uiState.value.stats?.get("won_deals") as? Int ?: 0
+    fun getTotalRevenue(): Double = _uiState.value.stats?.totalRevenue ?: 0.0
+    fun getTotalDeals(): Int = _uiState.value.stats?.totalDeals ?: 0
+    fun getWonDeals(): Int = _uiState.value.stats?.wonDealsCount ?: 0
+    fun getLostDeals(): Int = _uiState.value.stats?.lostDealsCount ?: 0
+    fun getConversionRate(): Double = _uiState.value.stats?.conversionRate ?: 0.0
+    fun getActiveDealsValue(): Double = _uiState.value.stats?.activeDealsValue ?: 0.0
     fun getWinRate(): Double {
         val total = getTotalDeals()
         val won = getWonDeals()
@@ -126,8 +131,8 @@ class SalesViewModel : ViewModel() {
  * UI State for Sales Screen
  */
 data class SalesUiState(
-    val stats: Map<String, Any>? = null,
-    val revenueData: Map<String, Any>? = null,
+    val stats: DashboardStats? = null,
+    val revenueData: RevenueByPeriodResponse? = null,
     val isLoading: Boolean = false,
     val isLoadingRevenue: Boolean = false,
     val error: String? = null,
