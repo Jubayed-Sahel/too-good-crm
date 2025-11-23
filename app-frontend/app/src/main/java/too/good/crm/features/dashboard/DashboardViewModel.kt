@@ -8,12 +8,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import too.good.crm.data.NetworkResult
 import too.good.crm.data.repository.DashboardStatsRepository
+import too.good.crm.data.model.DashboardStats
 
 /**
  * UI State for Dashboard Screen
  */
 data class DashboardUiState(
-    val stats: Map<String, Any>? = null,
+    val stats: DashboardStats? = null,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null
@@ -54,17 +55,39 @@ class DashboardViewModel : ViewModel() {
                     )
                 }
                 is NetworkResult.Error -> {
+                    // Clean up error message - remove HTML if present
+                    val cleanError = result.message
+                        ?.replace(Regex("<[^>]*>"), "") // Remove HTML tags
+                        ?.take(200) // Limit length
+                        ?: "Failed to load dashboard stats"
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = result.message
+                        error = if (cleanError.contains("<!DOCTYPE", ignoreCase = true)) {
+                            "Backend error: Please check if server is running and accessible"
+                        } else {
+                            cleanError
+                        }
                     )
                 }
                 is NetworkResult.Exception -> {
+                    val errorMsg = when {
+                        result.exception.message?.contains("Unable to resolve host") == true ->
+                            "Cannot reach server. Check your network and backend URL"
+                        result.exception.message?.contains("Connection refused") == true ->
+                            "Backend is not running. Start Django server with: python manage.py runserver 0.0.0.0:8000"
+                        result.exception.message?.contains("timeout") == true ->
+                            "Connection timeout. Check your network connection"
+                        result.exception.message?.contains("Unauthorized") == true ->
+                            "Please login again"
+                        else -> result.exception.message ?: "Failed to load dashboard stats"
+                    }
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = result.exception.message ?: "Failed to load dashboard stats"
+                        error = errorMsg
                     )
                 }
             }
@@ -86,12 +109,14 @@ class DashboardViewModel : ViewModel() {
     }
     
     /**
-     * Helper methods to extract stats from Map
+     * Helper methods to extract stats from DashboardStats
      */
-    fun getTotalCustomers(): Int = _uiState.value.stats?.get("total_customers") as? Int ?: 0
-    fun getTotalDeals(): Int = _uiState.value.stats?.get("total_deals") as? Int ?: 0
-    fun getTotalRevenue(): Double = _uiState.value.stats?.get("total_revenue") as? Double ?: 0.0
-    fun getActiveLeads(): Int = _uiState.value.stats?.get("active_leads") as? Int ?: 0
-    fun getWonDeals(): Int = _uiState.value.stats?.get("won_deals") as? Int ?: 0
-    fun getPendingTasks(): Int = _uiState.value.stats?.get("pending_tasks") as? Int ?: 0
+    fun getTotalCustomers(): Int = _uiState.value.stats?.totalCustomers ?: 0
+    fun getTotalDeals(): Int = _uiState.value.stats?.totalDeals ?: 0
+    fun getTotalRevenue(): Double = _uiState.value.stats?.totalRevenue ?: 0.0
+    fun getTotalLeads(): Int = _uiState.value.stats?.totalLeads ?: 0
+    fun getWonDealsCount(): Int = _uiState.value.stats?.wonDealsCount ?: 0
+    fun getLostDealsCount(): Int = _uiState.value.stats?.lostDealsCount ?: 0
+    fun getConversionRate(): Double = _uiState.value.stats?.conversionRate ?: 0.0
+    fun getActiveDealsValue(): Double = _uiState.value.stats?.activeDealsValue ?: 0.0
 }

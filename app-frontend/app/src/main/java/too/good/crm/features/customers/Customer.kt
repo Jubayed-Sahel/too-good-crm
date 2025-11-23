@@ -11,7 +11,8 @@ data class Customer(
     val createdDate: String,
     val lastContact: String,
     val industry: String = "",
-    val website: String = ""
+    val website: String = "",
+    val userId: Int? = null  // User ID for video calling
 )
 
 enum class CustomerStatus {
@@ -33,7 +34,8 @@ object CustomerSampleData {
             createdDate = "2024-01-15",
             lastContact = "2024-11-01",
             industry = "Technology",
-            website = "techcorp.com"
+            website = "techcorp.com",
+            userId = 2  // Sample user ID for testing
         ),
         Customer(
             id = "2",
@@ -46,7 +48,8 @@ object CustomerSampleData {
             createdDate = "2024-02-20",
             lastContact = "2024-10-28",
             industry = "Software",
-            website = "innovate.io"
+            website = "innovate.io",
+            userId = 3  // Sample user ID for testing
         ),
         Customer(
             id = "3",
@@ -59,7 +62,8 @@ object CustomerSampleData {
             createdDate = "2023-11-10",
             lastContact = "2024-11-03",
             industry = "Enterprise",
-            website = "globalcorp.com"
+            website = "globalcorp.com",
+            userId = 4  // Sample user ID for testing
         ),
         Customer(
             id = "4",

@@ -4,6 +4,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import too.good.crm.BuildConfig
 import java.util.concurrent.TimeUnit
 
 /**
@@ -13,24 +14,26 @@ import java.util.concurrent.TimeUnit
 object ApiClient {
 
     // ⚠️ BASE_URL Configuration
-    // Backend running on 0.0.0.0:8000
+    //
+    // TO CHANGE THE BACKEND URL:
+    // Edit the file: gradle.properties (in the root project folder)
+    // Update the line: BACKEND_URL=http://YOUR_IP:8000/api/
     //
     // OPTION 1: Android Emulator
-    //   Use: "http://10.0.2.2:8000/api/"
-    //   10.0.2.2 is the special IP that emulator uses to access host machine's localhost
+    //   BACKEND_URL=http://10.0.2.2:8000/api/
+    //   (10.0.2.2 is the special IP that emulator uses to access host machine's localhost)
     //
     // OPTION 2: Physical Device on Same Network
-    //   Find your computer's IP address:
-    //     Windows: ipconfig (look for IPv4 Address)
-    //     Mac/Linux: ifconfig or ip addr
-    //   Example: "http://192.168.1.100:8000/api/"
+    //   BACKEND_URL=http://192.168.1.100:8000/api/
+    //   (Replace 192.168.1.100 with your computer's IP address)
+    //   Find your IP: Windows: ipconfig | Mac/Linux: ifconfig
     //
-    // OPTION 3: ngrok (for external access/testing)
-    //   Use: "https://your-ngrok-url.ngrok-free.dev/api/"
+    // OPTION 3: Production/ngrok
+    //   BACKEND_URL=https://api.yourdomain.com/api/
     //
-    // ✅ CURRENT: Physical Device on same WiFi network (192.168.0.106)
+    // ✅ CURRENT: Configured in gradle.properties
     // Make sure your phone is connected to the SAME WiFi network as your PC!
-    private const val BASE_URL = "http://192.168.0.106:8000/api/"
+    private val BASE_URL = BuildConfig.BACKEND_URL
 
     private var authToken: String? = null
 
@@ -168,6 +171,13 @@ object ApiClient {
      */
     val activityApiService: ActivityApiService by lazy {
         retrofit.create(ActivityApiService::class.java)
+    }
+
+    /**
+     * Video API Service instance (8x8 Video/Jitsi)
+     */
+    val videoApiService: VideoApiService by lazy {
+        retrofit.create(VideoApiService::class.java)
     }
 
     // Add other API services here as needed

@@ -204,24 +204,24 @@ fun DashboardScreen(
                 // Show stats cards
                 val stats = dashboardState.stats
                 
-                // Extract values from Map
-                val totalCustomers = (stats?.get("total_customers") as? Int) ?: 0
-                val customerGrowth = (stats?.get("customer_growth_percent") as? Double)
-                val totalDeals = (stats?.get("total_deals") as? Int) ?: 0
-                val dealGrowth = (stats?.get("deal_growth_percent") as? Double)
-                val totalRevenue = (stats?.get("total_revenue") as? Double) ?: 0.0
-                val revenueGrowth = (stats?.get("revenue_growth_percent") as? Double)
-                val activeLeads = (stats?.get("active_leads") as? Int)
-                val leadGrowth = (stats?.get("lead_growth_percent") as? Double)
-                
+                // Extract values from DashboardStats data class
+                val totalCustomers = stats?.totalCustomers ?: 0
+                val totalDeals = stats?.totalDeals ?: 0
+                val totalRevenue = stats?.totalRevenue ?: 0.0
+                val totalLeads = stats?.totalLeads ?: 0
+                val wonDealsCount = stats?.wonDealsCount ?: 0
+                val lostDealsCount = stats?.lostDealsCount ?: 0
+                val conversionRate = stats?.conversionRate ?: 0.0
+                val activeDealsValue = stats?.activeDealsValue ?: 0.0
+
                 // Total Customers Card
                 MetricCard(
                     title = "TOTAL CUSTOMERS",
                     value = totalCustomers.toString(),
-                    change = formatPercentage(customerGrowth),
-                    changeLabel = "vs last month",
+                    change = "",
+                    changeLabel = "",
                     icon = Icons.Default.People,
-                    isPositive = (customerGrowth ?: 0.0) >= 0,
+                    isPositive = true,
                     iconBackgroundColor = DesignTokens.Colors.Primary100,
                     iconTintColor = DesignTokens.Colors.Primary
                 )
@@ -229,12 +229,12 @@ fun DashboardScreen(
                 
                 // Active Deals Card
                 MetricCard(
-                    title = "ACTIVE DEALS",
+                    title = "TOTAL DEALS",
                     value = totalDeals.toString(),
-                    change = formatPercentage(dealGrowth),
-                    changeLabel = "vs last month",
+                    change = "",
+                    changeLabel = "",
                     icon = Icons.Default.Description,
-                    isPositive = (dealGrowth ?: 0.0) >= 0,
+                    isPositive = true,
                     iconBackgroundColor = DesignTokens.Colors.Info100,
                     iconTintColor = DesignTokens.Colors.Info
                 )
@@ -242,31 +242,89 @@ fun DashboardScreen(
                 
                 // Revenue Card
                 MetricCard(
-                    title = "REVENUE",
+                    title = "TOTAL REVENUE",
                     value = formatCurrency(totalRevenue),
-                    change = formatPercentage(revenueGrowth),
-                    changeLabel = "vs last month",
+                    change = "",
+                    changeLabel = "",
                     icon = Icons.Default.AttachMoney,
-                    isPositive = (revenueGrowth ?: 0.0) >= 0,
+                    isPositive = true,
                     iconBackgroundColor = DesignTokens.Colors.Success100,
                     iconTintColor = DesignTokens.Colors.Success
                 )
                 Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
                 
-                // Active Leads Card
-                if (activeLeads != null) {
-                    MetricCard(
-                        title = "ACTIVE LEADS",
-                        value = activeLeads.toString(),
-                        change = formatPercentage(leadGrowth),
-                        changeLabel = "vs last month",
-                        icon = Icons.AutoMirrored.Filled.TrendingUp,
-                        isPositive = (leadGrowth ?: 0.0) >= 0,
-                        iconBackgroundColor = DesignTokens.Colors.Warning100,
-                        iconTintColor = DesignTokens.Colors.Warning
-                    )
-                    Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
+                // Active Deals Value Card
+                MetricCard(
+                    title = "ACTIVE DEALS VALUE",
+                    value = formatCurrency(activeDealsValue),
+                    change = "",
+                    changeLabel = "",
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
+                    isPositive = true,
+                    iconBackgroundColor = DesignTokens.Colors.Warning100,
+                    iconTintColor = DesignTokens.Colors.Warning
+                )
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
+
+                // Total Leads Card
+                MetricCard(
+                    title = "TOTAL LEADS",
+                    value = totalLeads.toString(),
+                    change = "",
+                    changeLabel = "",
+                    icon = Icons.Default.Insights,
+                    isPositive = true,
+                    iconBackgroundColor = DesignTokens.Colors.Primary100,
+                    iconTintColor = DesignTokens.Colors.Primary
+                )
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
+
+                // Won/Lost Deals Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space4)
+                ) {
+                    // Won Deals Card
+                    Box(modifier = Modifier.weight(1f)) {
+                        MetricCard(
+                            title = "WON DEALS",
+                            value = wonDealsCount.toString(),
+                            change = "",
+                            changeLabel = "",
+                            icon = Icons.Default.CheckCircle,
+                            isPositive = true,
+                            iconBackgroundColor = DesignTokens.Colors.Success100,
+                            iconTintColor = DesignTokens.Colors.Success
+                        )
+                    }
+
+                    // Lost Deals Card
+                    Box(modifier = Modifier.weight(1f)) {
+                        MetricCard(
+                            title = "LOST DEALS",
+                            value = lostDealsCount.toString(),
+                            change = "",
+                            changeLabel = "",
+                            icon = Icons.Default.Cancel,
+                            isPositive = false,
+                            iconBackgroundColor = DesignTokens.Colors.ErrorLight,
+                            iconTintColor = DesignTokens.Colors.Error
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
+
+                // Conversion Rate Card
+                MetricCard(
+                    title = "CONVERSION RATE",
+                    value = formatPercentage(conversionRate),
+                    change = "",
+                    changeLabel = "",
+                    icon = Icons.Default.TrendingUp,
+                    isPositive = true,
+                    iconBackgroundColor = DesignTokens.Colors.Info100,
+                    iconTintColor = DesignTokens.Colors.Info
+                )
             }
         }
     }

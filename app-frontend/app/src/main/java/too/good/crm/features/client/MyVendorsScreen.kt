@@ -22,6 +22,12 @@ import too.good.crm.data.UserSession
 import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
+import too.good.crm.ui.video.VideoCallHelper
+import too.good.crm.ui.video.VideoCallPermissionHandler
+import too.good.crm.data.models.CallType
+import too.good.crm.data.Resource
+import android.widget.Toast
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -252,7 +258,8 @@ fun VendorCard(vendor: Vendor) {
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -268,6 +275,110 @@ fun VendorCard(vendor: Vendor) {
                         color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
+                
+                // Video/Audio Call Buttons
+                if (vendor.userId != null) {
+                    VendorCallButtons(userId = vendor.userId)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun VendorCallButtons(userId: Int) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var isInitiatingCall by remember { mutableStateOf(false) }
+    
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        // Video Call Button
+        VideoCallPermissionHandler(
+            onPermissionsGranted = {
+                isInitiatingCall = true
+                coroutineScope.launch {
+                    val result = VideoCallHelper.initiateCall(
+                        recipientId = userId,
+                        callType = CallType.VIDEO
+                    )
+                    isInitiatingCall = false
+                    
+                    if (result is Resource.Error) {
+                        Toast.makeText(
+                            context,
+                            result.message ?: "Failed to start call",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            },
+            onPermissionsDenied = {
+                Toast.makeText(
+                    context,
+                    "Camera and microphone permissions required",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        ) { requestPermissions ->
+            IconButton(
+                onClick = { requestPermissions() },
+                enabled = !isInitiatingCall,
+                modifier = Modifier.size(32.dp)
+            ) {
+                if (isInitiatingCall) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Videocam,
+                        contentDescription = "Video Call",
+                        tint = DesignTokens.Colors.Info,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+        
+        // Audio Call Button
+        VideoCallPermissionHandler(
+            onPermissionsGranted = {
+                coroutineScope.launch {
+                    val result = VideoCallHelper.initiateCall(
+                        recipientId = userId,
+                        callType = CallType.AUDIO
+                    )
+                    
+                    if (result is Resource.Error) {
+                        Toast.makeText(
+                            context,
+                            result.message ?: "Failed to start call",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            },
+            onPermissionsDenied = {
+                Toast.makeText(
+                    context,
+                    "Microphone permission required",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        ) { requestPermissions ->
+            IconButton(
+                onClick = { requestPermissions() },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = "Audio Call",
+                    tint = DesignTokens.Colors.Info,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

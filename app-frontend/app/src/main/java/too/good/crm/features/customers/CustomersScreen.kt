@@ -1,5 +1,6 @@
 package too.good.crm.features.customers
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,6 +27,12 @@ import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.*
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.*
+import too.good.crm.ui.video.VideoCallHelper
+import too.good.crm.ui.video.VideoCallPermissionHandler
+import too.good.crm.data.models.CallType
+import too.good.crm.data.Resource
+import android.widget.Toast
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.*
 
@@ -104,22 +111,7 @@ fun CustomersScreen(
         )
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.showAddCustomerDialog() },
-                containerColor = DesignTokens.Colors.Primary,
-                contentColor = DesignTokens.Colors.OnPrimary
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Add Customer"
-                )
-            }
-        }
-    ) { paddingValues ->
-        AppScaffoldWithDrawer(
+    AppScaffoldWithDrawer(
             profiles = profileState.profiles,
             activeProfile = profileState.activeProfile,
             isSwitchingProfile = profileState.isSwitching,
@@ -156,24 +148,26 @@ fun CustomersScreen(
             },
             onNavigate = onNavigate,
             onLogout = onBack
-        ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(DesignTokens.Colors.Background)
-                .padding(
-                    responsivePadding(
+        ) { drawerPadding ->
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(DesignTokens.Colors.Background)
+                    .padding(drawerPadding)
+                    .padding(
+                        responsivePadding(
+                            compact = DesignTokens.Spacing.Space4,
+                            medium = DesignTokens.Spacing.Space5,
+                            expanded = DesignTokens.Spacing.Space6
+                        )
+                    ),
+                verticalArrangement = Arrangement.spacedBy(
+                    responsiveSpacing(
                         compact = DesignTokens.Spacing.Space4,
-                        medium = DesignTokens.Spacing.Space5,
-                        expanded = DesignTokens.Spacing.Space6
+                        medium = DesignTokens.Spacing.Space5
                     )
-                ),
-            verticalArrangement = Arrangement.spacedBy(
-                responsiveSpacing(
-                    compact = DesignTokens.Spacing.Space4,
-                    medium = DesignTokens.Spacing.Space5
                 )
-            )
             ) {
                 // Header Section
                 Column(
@@ -372,6 +366,29 @@ fun CustomersScreen(
                     }
                 }
             }
+
+            // Floating Action Button
+            FloatingActionButton(
+                onClick = { viewModel.showAddCustomerDialog() },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp),
+                containerColor = DesignTokens.Colors.Primary,
+                contentColor = DesignTokens.Colors.OnPrimary
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Add Customer"
+                )
+            }
+
+            // Snackbar
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 80.dp)
+            )
         }
     }
 }
@@ -383,72 +400,276 @@ fun ResponsiveCustomerCard(customer: Customer) {
             .fillMaxWidth()
             .clickable { /* Navigate to customer detail */ }
     ) {
+        // Header row with name and status badge - matching web design
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
-            // Left: Customer Info
-            Row(
+            Column(
                 modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space1)
             ) {
-                // Avatar
-                Surface(
-                    modifier = Modifier.size(DesignTokens.Heights.AvatarMd),
-                    shape = CircleShape,
-                    color = DesignTokens.Colors.PrimaryContainer
+                Text(
+                    text = customer.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = DesignTokens.Typography.FontWeightBold,
+                    color = DesignTokens.Colors.OnSurface
+                )
+                Text(
+                    text = customer.company,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = DesignTokens.Colors.OnSurfaceVariant
+                )
+            }
+            
+            // Status badge
+            val (text, color) = when (customer.status) {
+                CustomerStatus.ACTIVE -> "Active" to DesignTokens.Colors.Success
+                CustomerStatus.INACTIVE -> "Inactive" to DesignTokens.Colors.OnSurfaceVariant
+                CustomerStatus.PENDING -> "Pending" to DesignTokens.Colors.Warning
+            }
+            StatusBadge(text = text, color = color)
+        }
+        
+        // Contact info section - matching web design
+        Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space3))
+        Column(
+            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
+        ) {
+            // Email
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Email,
+                    contentDescription = null,
+                    tint = DesignTokens.Colors.OnSurfaceVariant,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = customer.email,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = DesignTokens.Colors.OnSurfaceVariant
+                )
+            }
+            
+            // Phone
+            if (customer.phone.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = customer.name.take(1).uppercase(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = DesignTokens.Typography.FontWeightBold,
-                            color = DesignTokens.Colors.Primary
-                        )
-                    }
-                }
-
-                // Info
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space1)
-                ) {
-                    Text(
-                        text = customer.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = DesignTokens.Typography.FontWeightSemiBold,
-                        color = DesignTokens.Colors.OnSurface
+                    Icon(
+                        imageVector = Icons.Default.Phone,
+                        contentDescription = null,
+                        tint = DesignTokens.Colors.OnSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = customer.company,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = DesignTokens.Colors.OnSurfaceVariant
-                    )
-                    Text(
-                        text = customer.email,
+                        text = customer.phone,
                         style = MaterialTheme.typography.bodySmall,
                         color = DesignTokens.Colors.OnSurfaceVariant
                     )
                 }
             }
-
-            // Right: Status and Value
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
-            ) {
-                val (text, color) = when (customer.status) {
-                    CustomerStatus.ACTIVE -> "Active" to DesignTokens.Colors.Success
-                    CustomerStatus.INACTIVE -> "Inactive" to DesignTokens.Colors.OnSurfaceVariant
-                    CustomerStatus.PENDING -> "Pending" to DesignTokens.Colors.Warning
-                }
-                StatusBadge(text = text, color = color)
+        }
+        
+        // Stats row - matching web design
+        Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            color = DesignTokens.Colors.Outline.copy(alpha = 0.2f),
+            thickness = 1.dp
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = DesignTokens.Spacing.Space2),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(
+                    text = "Total Value",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = DesignTokens.Colors.OnSurfaceVariant
+                )
                 Text(
                     text = NumberFormat.getCurrencyInstance(Locale.US).format(customer.value),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = DesignTokens.Typography.FontWeightBold,
                     color = DesignTokens.Colors.OnSurface
                 )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "Last Contact",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = DesignTokens.Colors.OnSurfaceVariant
+                )
+                Text(
+                    text = customer.lastContact,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = DesignTokens.Colors.OnSurfaceVariant
+                )
+            }
+        }
+        
+        // Action buttons row - matching web design
+        Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            color = DesignTokens.Colors.Outline.copy(alpha = 0.2f),
+            thickness = 1.dp
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = DesignTokens.Spacing.Space2),
+            horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
+        ) {
+            val context = LocalContext.current
+            
+            // Call button (show for all customers with email - matching web behavior)
+            if (customer.email.isNotEmpty()) {
+                CustomerCallButton(
+                    userId = customer.userId,
+                    email = customer.email,
+                    customerName = customer.name,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            
+            // View button
+            OutlinedButton(
+                onClick = { /* Navigate to view */ },
+                modifier = Modifier.weight(if (customer.email.isNotEmpty()) 1f else 1.5f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = DesignTokens.Colors.Secondary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = "View",
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("View", style = MaterialTheme.typography.bodyMedium)
+            }
+            
+            // Edit button
+            OutlinedButton(
+                onClick = { /* Navigate to edit */ },
+                modifier = Modifier.weight(if (customer.email.isNotEmpty()) 1f else 1.5f),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = DesignTokens.Colors.Primary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Edit", style = MaterialTheme.typography.bodyMedium)
+            }
+            
+            // Delete icon button
+            IconButton(
+                onClick = { /* Delete customer */ },
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = DesignTokens.Colors.Error
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomerCallButton(
+    userId: Int? = null,
+    email: String,
+    customerName: String,
+    modifier: Modifier = Modifier
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var isInitiatingCall by remember { mutableStateOf(false) }
+    
+    // Call button matching website design
+    VideoCallPermissionHandler(
+        onPermissionsGranted = {
+            isInitiatingCall = true
+            coroutineScope.launch {
+                // Try calling by userId first if available, otherwise by email
+                val result = if (userId != null) {
+                    android.util.Log.d("CustomerCallButton", "Calling by userId: $userId")
+                    VideoCallHelper.initiateCall(
+                        recipientId = userId,
+                        callType = CallType.VIDEO
+                    )
+                } else {
+                    android.util.Log.d("CustomerCallButton", "Calling by email: $email")
+                    VideoCallHelper.initiateCallByEmail(
+                        email = email,
+                        callType = CallType.VIDEO
+                    )
+                }
+                isInitiatingCall = false
+                
+                android.util.Log.d("CustomerCallButton", "Call result: ${if (result is Resource.Success) "Success - Call ID: ${result.data?.id}" else "Error"}")
+                
+                if (result is Resource.Error) {
+                    Toast.makeText(
+                        context,
+                        result.message ?: "Failed to start call",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } else if (result is Resource.Success) {
+                    Toast.makeText(
+                        context,
+                        "Call initiated",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        },
+        onPermissionsDenied = {
+            Toast.makeText(
+                context,
+                "Camera and microphone permissions required",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    ) { requestPermissions ->
+        OutlinedButton(
+            onClick = { requestPermissions() },
+            enabled = !isInitiatingCall,
+            modifier = modifier,
+            colors = ButtonDefaults.outlinedButtonColors(
+                contentColor = Color(0xFF22C55E) // Green like website
+            ),
+            border = BorderStroke(1.dp, Color(0xFF22C55E))
+        ) {
+            if (isInitiatingCall) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = Color(0xFF22C55E)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Phone,
+                    contentDescription = "Call",
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Call", style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
