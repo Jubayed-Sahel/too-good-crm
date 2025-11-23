@@ -48,10 +48,10 @@ from .payment import PaymentViewSet
 from .activity import ActivityViewSet
 
 # Jitsi Calls
-# from .jitsi import (
-#     JitsiCallViewSet,
-#     UserPresenceViewSet,
-# )
+from .jitsi import (
+    JitsiCallViewSet,
+    UserPresenceViewSet,
+)
 
 # Settings & Preferences
 from .notification import NotificationPreferencesViewSet
@@ -101,8 +101,8 @@ __all__ = [
     'ActivityViewSet',
     
     # Jitsi Calls
-    # 'JitsiCallViewSet',
-    # 'UserPresenceViewSet',
+    'JitsiCallViewSet',
+    'UserPresenceViewSet',
     
     # Settings
     'NotificationPreferencesViewSet',

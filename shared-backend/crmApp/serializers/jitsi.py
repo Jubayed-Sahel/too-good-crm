@@ -114,17 +114,24 @@ class JitsiCallSessionSerializer(serializers.ModelSerializer):
         return None
     
     def get_jitsi_url(self, obj):
-        """Get Jitsi Meet URL for this call"""
+        """Get 8x8 Video URL with JWT token for this call"""
         from crmApp.services.jitsi_service import jitsi_service
-        user_name = None
         
-        # Get user name from context if available
+        # Get user from context if available
         request = self.context.get('request')
         if request and request.user:
-            full_name = f"{request.user.first_name} {request.user.last_name}".strip()
-            user_name = full_name or request.user.username
+            try:
+                video_data = jitsi_service.get_video_url(obj, request.user)
+                return video_data
+            except Exception as e:
+                # Return basic info if JWT generation fails
+                return {
+                    'room_name': obj.room_name,
+                    'error': str(e)
+                }
         
-        return jitsi_service.get_jitsi_url(obj, user_name)
+        # Return minimal info if no user context
+        return {'room_name': obj.room_name}
 
 
 class InitiateCallSerializer(serializers.Serializer):

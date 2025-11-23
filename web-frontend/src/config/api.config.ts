@@ -217,20 +217,20 @@ export const API_CONFIG = {
       TOP_PERFORMERS: '/api/analytics/top_performers/',
     },
 
-    // Jitsi Video Calls - COMMENTED OUT
-    // JITSI: {
-    //   BASE: '',
-    //   CALLS: '/api/jitsi-calls/',
-    //   CALL_DETAIL: (id: number | string) => `/api/jitsi-calls/${id}/`,
-    //   INITIATE_CALL: '/api/jitsi-calls/initiate_call/',
-    //   UPDATE_CALL_STATUS: (id: number | string) => `/api/jitsi-calls/${id}/update_status/`,
-    //   ACTIVE_CALLS: '/api/jitsi-calls/active_calls/',
-    //   MY_ACTIVE_CALL: '/api/jitsi-calls/my_active_call/',
-    //   USER_PRESENCE: '/api/user-presence/',
-    //   ONLINE_USERS: '/api/user-presence/online_users/',
-    //   UPDATE_MY_STATUS: '/api/user-presence/update_my_status/',
-    //   HEARTBEAT: '/api/user-presence/heartbeat/',
-    // },
+    // Jitsi Video Calls
+    JITSI: {
+      BASE: '',
+      CALLS: '/api/jitsi-calls/',
+      CALL_DETAIL: (id: number | string) => `/api/jitsi-calls/${id}/`,
+      INITIATE_CALL: '/api/jitsi-calls/initiate_call/',
+      UPDATE_CALL_STATUS: (id: number | string) => `/api/jitsi-calls/${id}/update_status/`,
+      ACTIVE_CALLS: '/api/jitsi-calls/active_calls/',
+      MY_ACTIVE_CALL: '/api/jitsi-calls/my_active_call/',
+      USER_PRESENCE: '/api/user-presence/',
+      ONLINE_USERS: '/api/user-presence/online_users/',
+      UPDATE_MY_STATUS: '/api/user-presence/update_my_status/',
+      HEARTBEAT: '/api/user-presence/heartbeat/',
+    },
   },
 
   // Query Parameters

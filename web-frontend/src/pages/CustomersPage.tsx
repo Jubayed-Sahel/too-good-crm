@@ -5,7 +5,6 @@ import {
 } from '../components/customers';
 import { ConfirmDialog, ErrorState } from '../components/common';
 import { useCustomers, useCustomersPage, useCustomerActions } from '@/hooks';
-import { initiateCall } from '@/components/jitsi/JitsiCallManager';
 import { toaster } from '@/components/ui/toaster';
 import { useState } from 'react';
 
@@ -56,12 +55,12 @@ const CustomersPage = () => {
     bulkDeleteDialogState,
   } = useCustomerActions({ onSuccess: refetch });
 
-  // Call handler - Jitsi integration
+  // Call handler - 8x8 Video integration
   const handleCall = async (customer: any) => {
-    if (!customer.user_id) {
+    if (!customer.email) {
       toaster.create({
         title: 'Cannot Call',
-        description: `${customer.name} is not a registered user. Only users with accounts can receive audio calls.`,
+        description: `${customer.name} has no email address. A registered email is required for calls.`,
         type: 'error',
       });
       return;
@@ -70,7 +69,8 @@ const CustomersPage = () => {
     setIsCallInitiating(true);
     
     try {
-      await initiateCall(customer.user_id, customer.full_name || customer.name, 'audio');
+      const { initiateAudioCallByEmail } = await import('../utils/videoCallHelpers');
+      await initiateAudioCallByEmail(customer.email, customer.name);
       
       // Optionally refresh customer data
       refetch();

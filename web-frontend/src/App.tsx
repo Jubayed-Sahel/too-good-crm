@@ -4,9 +4,9 @@ import { PermissionProvider } from './contexts/PermissionContext'
 import { ProfileProvider } from './contexts/ProfileContext'
 import { ProtectedRoute } from './components/auth'
 import { PermissionRoute } from './components/guards/PermissionRoute'
+import VideoCallManager from './components/video/VideoCallManager'
+import { useAuth } from './hooks'
 import { Toaster } from './components/ui/toaster'
-// import { JitsiCallManager } from './components/jitsi/JitsiCallManager'
-// import { useAuth } from './hooks'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardPage from './pages/DashboardPage'
@@ -43,29 +43,13 @@ import EmployeeSettingsPage from './pages/employee/EmployeeSettingsPage'
 import MessagesPage from './pages/MessagesPage'
 import './App.css'
 
-/**
- * Component to manage Jitsi calls for authenticated users
- */
-// function JitsiCallWrapper() {
-//   const { user, isAuthenticated } = useAuth();
-//   
-//   if (!isAuthenticated || !user) {
-//     return null;
-//   }
-//   
-//   return <JitsiCallManager />;
-// }
-
 function App() {
   return (
     <Router>
       <AccountModeProvider>
         <ProfileProvider>
           <PermissionProvider>
-            {/* Global Toaster for all notifications */}
-            <Toaster />
-            {/* Global Jitsi Call Manager for all authenticated users */}
-            {/* <JitsiCallWrapper /> */}
+            <VideoCallManager />
             
             <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />

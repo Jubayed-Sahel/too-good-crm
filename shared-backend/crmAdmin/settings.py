@@ -42,6 +42,7 @@ else:
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # WebSocket support - must be first
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -53,6 +54,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',  # Token authentication
     'corsheaders',
+    'channels',  # WebSocket channels
     
     # Your apps
     'crmApp',
@@ -300,12 +302,34 @@ LINEAR_API_KEY = os.getenv('LINEAR_API_KEY', '')
 LINEAR_WEBHOOK_SECRET = os.getenv('LINEAR_WEBHOOK_SECRET', '')
 LINEAR_TEAM_ID = os.getenv('LINEAR_TEAM_ID', 'b95250db-8430-4dbc-88f8-9fc109369df0')  # Default team for new organizations
 
+# 8x8 Video (Jitsi) Integration Settings
+JITSI_8X8_APP_ID = os.getenv('JITSI_8X8_APP_ID', '')  # Your 8x8 AppID
+JITSI_8X8_API_KEY = os.getenv('JITSI_8X8_API_KEY', '')  # Your 8x8 API Key (Private Key)
+JITSI_8X8_KID = os.getenv('JITSI_8X8_KID', '')  # Key ID from 8x8 dashboard
+JITSI_SERVER = os.getenv('JITSI_SERVER', '8x8.vc')  # 8x8 video server domain
+JITSI_JWT_ALGORITHM = 'RS256'  # 8x8 uses RS256 for JWT signing
+JITSI_JWT_EXPIRES_IN = 3600  # JWT expiration time in seconds (1 hour)
+
 # Gemini AI Integration Settings
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 
 # Telegram Bot Integration Settings
 TG_BOT_TOKEN = os.getenv('TG_BOT_TOKEN', '')
 TG_WEBHOOK_SECRET = os.getenv('TG_WEBHOOK_SECRET', '')
+
+# Django Channels Configuration (WebSocket support for video calls)
+ASGI_APPLICATION = 'crmAdmin.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer'  # Simple in-memory for development
+        # For production, use Redis:
+        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        # 'CONFIG': {
+        #     "hosts": [('127.0.0.1', 6379)],
+        # },
+    }
+}
 
 # Security Settings (for production)
 if not DEBUG:

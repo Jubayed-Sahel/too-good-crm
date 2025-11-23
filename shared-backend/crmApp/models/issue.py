@@ -1,7 +1,7 @@
 """
 Issue management models for tracking vendor and order issues.
 """
-from django.db import models
+from django.db import models, IntegrityError
 from .base import TimestampedModel, CodeMixin
 
 

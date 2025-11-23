@@ -7,9 +7,11 @@ export * from './issue.types';
 export * from './order.types';
 export * from './payment.types';
 
+
 // Export activity types first (used by Customer interface below)
 export * from './activity.types';
 export * from './auth.types';  // This exports the correct User type with profiles
+export * from './video.types';
 
 // Import types for use in this file
 import type { Activity } from './activity.types';
@@ -46,7 +48,7 @@ export interface Customer {
   status: CustomerStatus;
   assigned_to?: number | null;
   assigned_to_name?: string;
-  user_id?: number | null;  // For Jitsi video calls
+  user_id?: number | null;  // For video calls
   total_value?: number;  // Total value from won deals
   address?: string;
   city?: string;

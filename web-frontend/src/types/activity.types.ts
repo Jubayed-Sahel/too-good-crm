@@ -47,6 +47,10 @@ export interface Activity {
   meeting_url?: string;
   attendees?: string[];
   
+  // Video call fields
+  video_call_room?: string;
+  video_call_url?: string;
+  
   // Task fields
   task_priority?: TaskPriority;
   task_due_date?: string | null;
@@ -82,6 +86,8 @@ export interface CreateActivityData {
   meeting_location?: string;
   meeting_url?: string;
   attendees?: string[];
+  video_call_room?: string;
+  video_call_url?: string;
   task_priority?: TaskPriority;
   task_due_date?: string | null;
   is_pinned?: boolean;

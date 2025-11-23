@@ -285,9 +285,21 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         
         customer = Customer(**validated_data)
         
+        # If user_id is provided, use it
         if user_id:
             from crmApp.models import User
             customer.user = User.objects.get(id=user_id)
+        # Otherwise, try to auto-link based on email
+        elif validated_data.get('email'):
+            from crmApp.models import User
+            try:
+                # Try to find a user with matching email
+                matching_user = User.objects.filter(email__iexact=validated_data['email']).first()
+                if matching_user:
+                    customer.user = matching_user
+            except Exception as e:
+                # If auto-linking fails, just continue without linking
+                pass
         
         if assigned_to_id:
             from crmApp.models import Employee
