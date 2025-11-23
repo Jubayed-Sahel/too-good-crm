@@ -358,7 +358,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         # === CUSTOMER TOOLS ===
         async def list_customers_tool(status: str = "active", limit: int = 10):
             """List customers in the organization"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def fetch():
                 if org_id:
                     customers = Customer.objects.filter(organization_id=org_id, status=status)[:limit]
@@ -380,7 +380,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def get_customer_count_tool():
             """Get total customer count"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def fetch():
                 if org_id:
                     return Customer.objects.filter(organization_id=org_id).count()
@@ -390,7 +390,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def create_customer_tool(name: str, email: str, phone: str = "", customer_type: str = "individual", company_name: str = ""):
             """Create a new customer"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def create():
                 customer = Customer.objects.create(
                     organization_id=org_id,
@@ -411,7 +411,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def get_customer_tool(customer_id: int):
             """Get detailed customer information"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def fetch():
                 try:
                     if org_id:
@@ -436,7 +436,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def update_customer_tool(customer_id: int, name: str = None, email: str = None, phone: str = None, status: str = None):
             """Update an existing customer"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def update():
                 try:
                     if org_id:
@@ -466,7 +466,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def delete_customer_tool(customer_id: int):
             """Delete a customer"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def delete():
                 try:
                     if org_id:
@@ -486,7 +486,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         # === LEAD TOOLS ===
         async def list_leads_tool(status: str = "all", limit: int = 10):
             """List leads in the organization. Leads are in any stage of the sales pipeline. Organization ID is automatically determined from the user context."""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def fetch():
                 # Ensure we have org_id (should always be set from user context)
                 if not org_id:
@@ -527,7 +527,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def create_lead_tool(name: str, email: str, phone: str = "", source: str = "website"):
             """Create a new lead"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def create():
                 lead = Lead.objects.create(
                     organization_id=org_id,
@@ -548,7 +548,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def update_lead_tool(lead_id: int, name: str = None, status: str = None, score: int = None):
             """Update an existing lead"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def update():
                 try:
                     lead = Lead.objects.get(id=lead_id, organization_id=org_id)
@@ -590,7 +590,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def convert_lead_to_customer_tool(lead_id: int):
             """Convert a lead to a customer"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def convert():
                 try:
                     lead = Lead.objects.get(id=lead_id, organization_id=org_id)
@@ -617,7 +617,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         # === DEAL TOOLS ===
         async def list_deals_tool(stage: str = "negotiation", limit: int = 10):
             """List deals in the organization"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def fetch():
                 deals = Deal.objects.filter(organization_id=org_id, stage=stage)[:limit]
                 return [
@@ -635,7 +635,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def create_deal_tool(title: str, value: float, customer_id: int = None, stage: str = "prospecting"):
             """Create a new deal"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def create():
                 deal = Deal.objects.create(
                     organization_id=org_id,
@@ -656,7 +656,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def update_deal_tool(deal_id: int, title: str = None, value: float = None, stage: str = None, status: str = None):
             """Update an existing deal"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def update():
                 try:
                     deal = Deal.objects.get(id=deal_id, organization_id=org_id)
@@ -722,7 +722,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def get_deal_stats_tool():
             """Get deal statistics"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def fetch():
                 from django.db.models import Sum, Count
                 deals = Deal.objects.filter(organization_id=org_id)
@@ -738,7 +738,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         # === ISSUE TOOLS ===
         async def list_issues_tool(status: str = None, priority: str = None, limit: int = 20):
             """List issues/tickets in the organization. If no status is specified, returns all issues."""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def fetch():
                 if not org_id:
                     return {"error": "No organization context found. Please ensure you're logged in."}
@@ -767,7 +767,8 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                         "priority": i.priority,
                         "status": i.status,
                         "category": i.category,
-                        "customer_name": i.customer.name if i.customer else None,
+                        "vendor_name": i.vendor.name if i.vendor else None,
+                        "customer_name": i.raised_by_customer.name if i.raised_by_customer else None,
                         "created_at": str(i.created_at) if hasattr(i, 'created_at') else None,
                     }
                     for i in issues
@@ -779,7 +780,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def create_issue_tool(title: str, description: str, priority: str = "medium", category: str = "other", customer_id: int = None):
             """Create a new issue/ticket"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def create():
                 if not org_id:
                     return {"error": "No organization context found. Please ensure you're logged in."}
@@ -821,7 +822,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def update_issue_tool(issue_id: int, status: str = None, priority: str = None, title: str = None, description: str = None):
             """Update an existing issue"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def update():
                 if not org_id:
                     return {"error": "No organization context found. Please ensure you're logged in."}
@@ -862,7 +863,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def get_issue_tool(issue_id: int):
             """Get detailed information about a specific issue"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def fetch():
                 if not org_id:
                     return {"error": "No organization context found. Please ensure you're logged in."}
@@ -917,7 +918,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         # === ANALYTICS TOOLS ===
         async def get_dashboard_stats_tool():
             """Get comprehensive dashboard statistics"""
-            @sync_to_async
+            @sync_to_async(thread_sensitive=False)
             def fetch():
                 from django.db.models import Sum, Count
                 return {
@@ -1322,6 +1323,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             logger.info(f"Sending message to Gemini with CRM tools (user: {user_context['user_id']}, org: {user_context.get('organization_id')}, history: {len(contents)-1} messages)")
             logger.info(f"Using model: {self.model_name}, API key length: {len(self.api_key) if self.api_key else 0}")
             logger.info(f"Number of CRM tools: {len(crm_tools)}")
+            logger.info(f"Number of function declarations in first tool: {len(crm_tools[0].function_declarations) if crm_tools else 0}")
             
             # Generate response with streaming and CRM tools
             try:
@@ -1379,8 +1381,13 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                 if hasattr(candidate, 'safety_ratings'):
                     logger.debug(f"Chunk {chunk_count} safety_ratings: {candidate.safety_ratings}")
                 
+                # Check if this is a final chunk with STOP but no content
                 if not candidate.content or not candidate.content.parts:
-                    logger.warning(f"Chunk {chunk_count} has no content or parts (finish_reason: {getattr(candidate, 'finish_reason', 'N/A')})")
+                    # If it's just a STOP marker, it's normal - previous chunks had content
+                    if hasattr(candidate, 'finish_reason') and candidate.finish_reason:
+                        logger.debug(f"Chunk {chunk_count} is a finish marker: {candidate.finish_reason}")
+                    else:
+                        logger.warning(f"Chunk {chunk_count} has no content or parts (finish_reason: {getattr(candidate, 'finish_reason', 'N/A')})")
                     continue
                 
                 for part in candidate.content.parts:
@@ -1429,7 +1436,8 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                         full_contents = contents + accumulated_parts + [function_response]
                         
                         # Get final response from Gemini with function result (streaming)
-                        final_response_stream = gemini_client.aio.models.generate_content_stream(
+                        logger.info("Sending function result back to Gemini...")
+                        final_response_stream = await gemini_client.aio.models.generate_content_stream(
                             model=self.model_name,
                             contents=full_contents,
                             config=genai.types.GenerateContentConfig(
@@ -1440,6 +1448,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                                 tools=crm_tools,
                             ),
                         )
+                        logger.info("Received final response stream from Gemini")
                         
                         # Stream the final response
                         async for chunk in final_response_stream:
