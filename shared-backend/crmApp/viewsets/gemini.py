@@ -66,21 +66,28 @@ class GeminiViewSet(viewsets.ViewSet):
         
         logger.info(
             f"Gemini chat request from user {user.id}: "
-            f"message_length={len(message)}, conversation_id={conversation_id}"
+            f"message_length={len(message)}, conversation_id={conversation_id}, "
+            f"history_length={len(history)}"
         )
+        logger.info(f"API key configured: {bool(self.gemini_service.api_key)}")
         
         async def event_stream():
             """Generate Server-Sent Events stream"""
             try:
+                logger.info("Starting SSE event stream")
                 # Send initial connection message
                 yield f"data: {json.dumps({'type': 'connected'})}\n\n"
                 
+                logger.info("Calling gemini_service.chat_stream")
                 # Stream Gemini responses
+                chunk_count = 0
                 async for chunk in self.gemini_service.chat_stream(
                     message=message,
                     user=user,
                     conversation_history=history
                 ):
+                    chunk_count += 1
+                    logger.debug(f"Received chunk {chunk_count}: {chunk[:50]}...")
                     # Send each chunk as SSE event
                     event_data = {
                         'type': 'message',
@@ -88,6 +95,7 @@ class GeminiViewSet(viewsets.ViewSet):
                     }
                     yield f"data: {json.dumps(event_data)}\n\n"
                 
+                logger.info(f"Stream completed after {chunk_count} chunks")
                 # Send completion message
                 yield f"data: {json.dumps({'type': 'completed'})}\n\n"
                 
@@ -153,7 +161,7 @@ class GeminiViewSet(viewsets.ViewSet):
         Response:
         {
             "available": true/false,
-            "model": "gemini-2.0-flash-exp",
+            "model": "gemini-2.5-flash",
             "user_context": {...}
         }
         """
@@ -167,10 +175,22 @@ class GeminiViewSet(viewsets.ViewSet):
             except Exception as e:
                 logger.warning(f"Could not get user context: {str(e)}")
             
+            # Test API key validity
+            api_key_valid = False
+            api_test_error = None
+            if api_key_configured:
+                try:
+                    # Quick validation - just check if key has reasonable format
+                    api_key_valid = len(self.gemini_service.api_key) > 20
+                except Exception as e:
+                    api_test_error = str(e)
+            
             return Response({
-                'available': api_key_configured,
+                'available': api_key_configured and api_key_valid,
                 'model': self.gemini_service.model_name,
                 'api_key_configured': api_key_configured,
+                'api_key_format_valid': api_key_valid,
+                'api_test_error': api_test_error,
                 'user_context': {
                     'user_id': user_context.get('user_id') if user_context else None,
                     'organization_id': user_context.get('organization_id') if user_context else None,

@@ -83,32 +83,71 @@ export const geminiService = {
     }
 
     try {
+      let buffer = '';
+      console.log('🎯 Starting SSE stream...');
+      
       while (true) {
         const { done, value } = await reader.read();
         
         if (done) {
+          console.log('✅ SSE stream completed');
           break;
         }
 
         // Decode the chunk
         const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
         
-        // Split by newlines to handle multiple events
-        const lines = chunk.split('\n');
+        // Split by double newline to handle complete events
+        const events = buffer.split('\n\n');
         
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.substring(6));
-              yield data as GeminiStreamEvent;
-            } catch (e) {
-              console.error('Error parsing SSE data:', e);
+        // Keep the last incomplete event in the buffer
+        buffer = events.pop() || '';
+        
+        for (const event of events) {
+          const lines = event.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonStr = line.substring(6).trim();
+                if (jsonStr) {
+                  const data = JSON.parse(jsonStr);
+                  console.log('📨 SSE Event:', data.type, data.content?.substring(0, 50));
+                  yield data as GeminiStreamEvent;
+                }
+              } catch (e) {
+                console.error('❌ Error parsing SSE data:', line, e);
+              }
             }
           }
         }
       }
+      
+      // Process any remaining buffered data
+      if (buffer.trim()) {
+        const lines = buffer.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.substring(6).trim();
+              if (jsonStr) {
+                const data = JSON.parse(jsonStr);
+                console.log('📨 SSE Event (final):', data.type);
+                yield data as GeminiStreamEvent;
+              }
+            } catch (e) {
+              console.error('❌ Error parsing final SSE data:', line, e);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('❌ SSE stream error:', error);
+      throw error;
     } finally {
       reader.releaseLock();
+      console.log('🔒 SSE reader released');
     }
   },
 

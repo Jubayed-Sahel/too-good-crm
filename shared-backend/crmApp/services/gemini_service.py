@@ -21,6 +21,10 @@ class GeminiService:
     def __init__(self):
         self.api_key = getattr(settings, 'GEMINI_API_KEY', None) or os.getenv('GEMINI_API_KEY')
         
+        # Ensure empty string is treated as None
+        if self.api_key and not self.api_key.strip():
+            self.api_key = None
+        
         if not self.api_key:
             logger.warning("GEMINI_API_KEY not configured. Gemini features will not be available.")
         
@@ -103,7 +107,8 @@ class GeminiService:
             Dictionary with user context (user_id, organization_id, role, permissions)
         """
         from asgiref.sync import sync_to_async
-        return await sync_to_async(self._get_user_context_sync)(user)
+        # Use thread_sensitive=False to avoid deadlocks in async context
+        return await sync_to_async(self._get_user_context_sync, thread_sensitive=False)(user)
     
     def get_user_context_sync(self, user) -> Dict[str, Any]:
         """
@@ -1179,17 +1184,6 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                 ),
             ),
             types.FunctionDeclaration(
-                name="get_issue",
-                description="Get detailed information about a specific issue by ID. Organization ID is automatically determined from user context.",
-                parameters=types.Schema(
-                    type=types.Type.OBJECT,
-                    properties={
-                        "issue_id": types.Schema(type=types.Type.INTEGER, description="Issue ID (required)"),
-                    },
-                    required=["issue_id"],
-                ),
-            ),
-            types.FunctionDeclaration(
                 name="update_issue",
                 description="Update an existing issue's status, priority, title, or description. Organization ID is automatically determined from user context.",
                 parameters=types.Schema(
@@ -1277,21 +1271,29 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         Yields:
             Response chunks from Gemini
         """
-        if not self.api_key:
-            yield "Error: Gemini API key not configured. Please set GEMINI_API_KEY in your environment."
+        if not self.api_key or not self.api_key.strip():
+            logger.error("Gemini chat attempted without API key configured")
+            yield "❌ Error: Gemini API key not configured. Please set GEMINI_API_KEY in your environment variables or .env file."
             return
         
         try:
             # Build user context (async operation)
+            logger.info("Building user context...")
             user_context = await self.get_user_context(user)
+            logger.info(f"User context built: {user_context.get('user_id')}")
             
             # Initialize Gemini client (sync)
+            logger.info("Initializing Gemini client...")
             gemini_client = genai.Client(api_key=self.api_key)
+            logger.info("Gemini client initialized")
             
             # Create CRM tools with user context
+            logger.info("Creating CRM tools...")
             crm_tools = self._create_crm_tools(user_context)
+            logger.info(f"CRM tools created: {len(crm_tools)} tools")
             
             # Build conversation contents with history
+            logger.info("Building conversation contents...")
             contents = []
             if conversation_history:
                 # Add conversation history (already in Gemini format from frontend)
@@ -1313,95 +1315,144 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             )
             
             # System instruction to guide Gemini
+            logger.info("Building system prompt...")
             system_instruction = self._build_system_prompt(user_context)
+            logger.info(f"System prompt built, length: {len(system_instruction)}")
             
             logger.info(f"Sending message to Gemini with CRM tools (user: {user_context['user_id']}, org: {user_context.get('organization_id')}, history: {len(contents)-1} messages)")
+            logger.info(f"Using model: {self.model_name}, API key length: {len(self.api_key) if self.api_key else 0}")
+            logger.info(f"Number of CRM tools: {len(crm_tools)}")
             
             # Generate response with streaming and CRM tools
-            response = await gemini_client.aio.models.generate_content(
-                model=self.model_name,
-                contents=contents,
-                config=genai.types.GenerateContentConfig(
-                    temperature=0.7,
-                    top_p=0.95,
-                    max_output_tokens=2048,
-                    system_instruction=system_instruction,
-                    tools=crm_tools,
-                    tool_config={"function_calling_config": {"mode": "AUTO"}},
+            try:
+                logger.info("About to call gemini_client.aio.models.generate_content_stream...")
+                # The generate_content_stream returns a coroutine that resolves to an async iterator
+                response_stream = await gemini_client.aio.models.generate_content_stream(
+                    model=self.model_name,
+                    contents=contents,
+                    config=genai.types.GenerateContentConfig(
+                        temperature=0.7,
+                        top_p=0.95,
+                        max_output_tokens=2048,
+                        system_instruction=system_instruction,
+                        tools=crm_tools,
+                        tool_config={"function_calling_config": {"mode": "AUTO"}},
+                    )
                 )
-            )
-            
-            # Check if Gemini wants to call a function
-            if response.candidates and response.candidates[0].content.parts:
-                first_part = response.candidates[0].content.parts[0]
+                logger.info("Successfully received response_stream from Gemini")
+            except Exception as stream_error:
+                logger.error(f"Failed to initiate Gemini stream: {stream_error}", exc_info=True)
+                error_type = type(stream_error).__name__
+                error_str = str(stream_error)
                 
-                # Check for function call
-                if hasattr(first_part, 'function_call') and first_part.function_call:
-                    function_call = first_part.function_call
-                    function_name = function_call.name
-                    function_args = dict(function_call.args)
-                    
-                    logger.info(f"Gemini called function: {function_name} with args: {function_args}")
-                    
-                    # Execute the tool
-                    if function_name in self._tool_handlers:
-                        try:
-                            tool_result = await self._tool_handlers[function_name](**function_args)
-                            logger.info(f"Tool result: {tool_result}")
-                            
-                            # Send function response back to Gemini
-                            function_response = types.Content(
-                                role="function",
-                                parts=[
-                                    types.Part(
-                                        function_response=types.FunctionResponse(
-                                            name=function_name,
-                                            response={"result": tool_result}
-                                        )
-                                    )
-                                ]
-                            )
-                            
-                            # Build full conversation with function call and response
-                            full_contents = contents + [response.candidates[0].content, function_response]
-                            
-                            # Get final response from Gemini with function result
-                            final_response = await gemini_client.aio.models.generate_content(
-                                model=self.model_name,
-                                contents=full_contents,
-                                config=genai.types.GenerateContentConfig(
-                                    temperature=0.7,
-                                    top_p=0.95,
-                                    max_output_tokens=2048,
-                                    system_instruction=system_instruction,
-                                    tools=crm_tools,
-                                ),
-                            )
-                            
-                            # Stream the final response
-                            if hasattr(final_response, 'text'):
-                                yield final_response.text
-                            else:
-                                async for chunk in final_response:
-                                    if hasattr(chunk, 'text'):
-                                        yield chunk.text
-                        
-                        except Exception as tool_error:
-                            logger.error(f"Error executing tool {function_name}: {tool_error}")
-                            yield f"Error executing {function_name}: {str(tool_error)}"
-                    else:
-                        yield f"Unknown function: {function_name}"
+                # Provide helpful error messages
+                if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                    yield "❌ Rate limit exceeded. Please wait a moment and try again. Free tier has limited requests per minute."
+                elif "401" in error_str or "UNAUTHENTICATED" in error_str:
+                    yield "❌ Authentication failed. Please check your GEMINI_API_KEY configuration."
+                elif "404" in error_str or "NOT_FOUND" in error_str:
+                    yield f"❌ Model '{self.model_name}' not found. Please check the model name."
                 else:
-                    # No function call, stream regular response
-                    if hasattr(response, 'text'):
-                        yield response.text
-                    else:
-                        async for chunk in response:
-                            if hasattr(chunk, 'text'):
-                                yield chunk.text
-            else:
-                # Empty response
-                yield "I'm sorry, I couldn't generate a response. Please try again."
+                    yield f"❌ Failed to connect to Gemini API ({error_type}): {error_str[:200]}"
+                return
+            
+            # Stream the response chunks
+            function_call_detected = False
+            function_call = None
+            accumulated_parts = []
+            
+            logger.info("Starting to iterate over response_stream chunks...")
+            chunk_count = 0
+            async for chunk in response_stream:
+                chunk_count += 1
+                logger.debug(f"Received chunk {chunk_count}")
+                
+                if not chunk.candidates:
+                    logger.debug(f"Chunk {chunk_count} has no candidates")
+                    continue
+                    
+                candidate = chunk.candidates[0]
+                
+                # Log finish reason and safety ratings
+                if hasattr(candidate, 'finish_reason'):
+                    logger.info(f"Chunk {chunk_count} finish_reason: {candidate.finish_reason}")
+                if hasattr(candidate, 'safety_ratings'):
+                    logger.debug(f"Chunk {chunk_count} safety_ratings: {candidate.safety_ratings}")
+                
+                if not candidate.content or not candidate.content.parts:
+                    logger.warning(f"Chunk {chunk_count} has no content or parts (finish_reason: {getattr(candidate, 'finish_reason', 'N/A')})")
+                    continue
+                
+                for part in candidate.content.parts:
+                    # Check for function call
+                    if hasattr(part, 'function_call') and part.function_call:
+                        function_call_detected = True
+                        function_call = part.function_call
+                        accumulated_parts.append(candidate.content)
+                        logger.info(f"Gemini called function: {function_call.name}")
+                        break
+                    
+                    # Stream text content
+                    if hasattr(part, 'text') and part.text:
+                        logger.debug(f"Yielding text: {part.text[:50]}...")
+                        yield part.text
+            
+            logger.info(f"Finished iterating over response_stream. Total chunks: {chunk_count}")
+            
+            # Handle function call if detected
+            if function_call_detected and function_call:
+                function_name = function_call.name
+                function_args = dict(function_call.args)
+                
+                logger.info(f"Executing function: {function_name} with args: {function_args}")
+                
+                # Execute the tool
+                if function_name in self._tool_handlers:
+                    try:
+                        tool_result = await self._tool_handlers[function_name](**function_args)
+                        logger.info(f"Tool result: {str(tool_result)[:200]}...")
+                        
+                        # Send function response back to Gemini
+                        function_response = types.Content(
+                            role="function",
+                            parts=[
+                                types.Part(
+                                    function_response=types.FunctionResponse(
+                                        name=function_name,
+                                        response={"result": tool_result}
+                                    )
+                                )
+                            ]
+                        )
+                        
+                        # Build full conversation with function call and response
+                        full_contents = contents + accumulated_parts + [function_response]
+                        
+                        # Get final response from Gemini with function result (streaming)
+                        final_response_stream = gemini_client.aio.models.generate_content_stream(
+                            model=self.model_name,
+                            contents=full_contents,
+                            config=genai.types.GenerateContentConfig(
+                                temperature=0.7,
+                                top_p=0.95,
+                                max_output_tokens=2048,
+                                system_instruction=system_instruction,
+                                tools=crm_tools,
+                            ),
+                        )
+                        
+                        # Stream the final response
+                        async for chunk in final_response_stream:
+                            if chunk.candidates and chunk.candidates[0].content:
+                                for part in chunk.candidates[0].content.parts:
+                                    if hasattr(part, 'text') and part.text:
+                                        yield part.text
+                    
+                    except Exception as tool_error:
+                        logger.error(f"Error executing tool {function_name}: {tool_error}")
+                        yield f"\n\n❌ Error executing {function_name}: {str(tool_error)}"
+                else:
+                    yield f"\n\n❌ Unknown function: {function_name}"
             
             logger.info("Gemini response completed")
                 
