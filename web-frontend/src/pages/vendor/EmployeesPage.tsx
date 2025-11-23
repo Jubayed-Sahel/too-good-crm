@@ -206,7 +206,7 @@ const EmployeesPage = () => {
   // Main content
   return (
     <DashboardLayout title="Team">
-      <RequirePermission resource="employees">
+      <RequirePermission resource="employee">
         <EmployeesPageContent
         employees={filteredEmployees}
         stats={stats}

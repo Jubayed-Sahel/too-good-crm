@@ -85,7 +85,7 @@ function App() {
             path="/customers"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="customers" action="read" redirectTo="/dashboard">
+                <PermissionRoute resource="customer" action="read" redirectTo="/dashboard">
                   <CustomersPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -95,7 +95,7 @@ function App() {
             path="/customers/:id"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="customers" action="read" redirectTo="/dashboard">
+                <PermissionRoute resource="customer" action="read" redirectTo="/dashboard">
                   <CustomerDetailPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -105,7 +105,7 @@ function App() {
             path="/customers/:id/edit"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="customers" action="update" redirectTo="/dashboard">
+                <PermissionRoute resource="customer" action="update" redirectTo="/dashboard">
                   <EditCustomerPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -115,7 +115,7 @@ function App() {
             path="/sales"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="deals" action="read" redirectTo="/dashboard">
+                <PermissionRoute resource="order" action="read" redirectTo="/dashboard">
                   <SalesPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -125,9 +125,7 @@ function App() {
             path="/deals/:id"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="deals" action="read" redirectTo="/dashboard">
-                  <DealDetailPage />
-                </PermissionRoute>
+                <DealDetailPage />
               </ProtectedRoute>
             }
           />
@@ -135,9 +133,7 @@ function App() {
             path="/deals/:id/edit"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="deals" action="update" redirectTo="/dashboard">
-                  <EditDealPage />
-                </PermissionRoute>
+                <EditDealPage />
               </ProtectedRoute>
             }
           />
@@ -145,9 +141,7 @@ function App() {
             path="/leads/:id"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="leads" action="read" redirectTo="/dashboard">
-                  <LeadDetailPage />
-                </PermissionRoute>
+                <LeadDetailPage />
               </ProtectedRoute>
             }
           />
@@ -155,9 +149,7 @@ function App() {
             path="/leads/:id/edit"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="leads" action="update" redirectTo="/dashboard">
-                  <EditLeadPage />
-                </PermissionRoute>
+                <EditLeadPage />
               </ProtectedRoute>
             }
           />
@@ -165,7 +157,7 @@ function App() {
             path="/activities"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="activities" action="read" redirectTo="/dashboard">
+                <PermissionRoute resource="activity" action="read" redirectTo="/dashboard">
                   <ActivitiesPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -175,7 +167,7 @@ function App() {
             path="/activities/:id"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="activities" action="read" redirectTo="/dashboard">
+                <PermissionRoute resource="activity" action="read" redirectTo="/dashboard">
                   <ActivityDetailPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -185,7 +177,7 @@ function App() {
             path="/activities/:id/edit"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="activities" action="update" redirectTo="/dashboard">
+                <PermissionRoute resource="activity" action="update" redirectTo="/dashboard">
                   <EditActivityPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -195,7 +187,7 @@ function App() {
             path="/issues"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="issues" action="read" redirectTo="/dashboard">
+                <PermissionRoute resource="issue" action="read" redirectTo="/dashboard">
                   <IssuesPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -205,7 +197,7 @@ function App() {
             path="/issues/:id"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="issues" action="read" redirectTo="/dashboard">
+                <PermissionRoute resource="issue" action="read" redirectTo="/dashboard">
                   <IssueDetailPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -215,7 +207,7 @@ function App() {
             path="/issues/:id/edit"
             element={
               <ProtectedRoute allowedProfiles={['vendor', 'employee']}>
-                <PermissionRoute resource="issues" action="update" redirectTo="/dashboard">
+                <PermissionRoute resource="issue" action="update" redirectTo="/dashboard">
                   <IssueDetailPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -225,7 +217,7 @@ function App() {
             path="/employees"
             element={
               <ProtectedRoute allowedProfiles={['vendor']}>
-                <PermissionRoute resource="employees" action="read" redirectTo="/dashboard">
+                <PermissionRoute resource="employee" action="read" redirectTo="/dashboard">
                   <EmployeesPage />
                 </PermissionRoute>
               </ProtectedRoute>
@@ -235,7 +227,7 @@ function App() {
             path="/team"
             element={
               <ProtectedRoute allowedProfiles={['vendor']}>
-                <PermissionRoute resource="employees" action="read" redirectTo="/dashboard">
+                <PermissionRoute resource="employee" action="read" redirectTo="/dashboard">
                   <TeamPage />
                 </PermissionRoute>
               </ProtectedRoute>

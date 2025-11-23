@@ -251,7 +251,7 @@ const IssuesPage = () => {
 
   return (
     <DashboardLayout title="Issues">
-      <RequirePermission resource="issues">
+      <RequirePermission resource="issue">
         <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <PageHeader

@@ -540,8 +540,8 @@ class RoleViewSet(viewsets.ModelViewSet):
                 'roles_updated': 0
             })
 
-        # Default basic permissions
-        basic_resources = ['customers', 'deals', 'leads', 'activities']
+        # Default basic permissions (using singular names)
+        basic_resources = ['customer', 'activity', 'issue']
         basic_actions = ['read', 'create', 'update']
 
         total_permissions_assigned = 0
@@ -947,10 +947,20 @@ class UserRoleViewSet(viewsets.ModelViewSet):
                 "roles": [...]
             }
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        logger.info(f"========== user_permissions API called ==========")
+        logger.info(f"Request user: {request.user.email} (ID: {request.user.id})")
+        logger.info(f"Query params: {request.query_params}")
+        
         user_id = request.query_params.get('user_id')
         organization_id = request.query_params.get('organization_id')
         
+        logger.info(f"user_id: {user_id}, organization_id: {organization_id}")
+        
         if not user_id or not organization_id:
+            logger.warning("Missing user_id or organization_id")
             return Response(
                 {'error': 'user_id and organization_id query parameters are required'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -960,28 +970,42 @@ class UserRoleViewSet(viewsets.ModelViewSet):
             from crmApp.models import Organization, User
             user = User.objects.get(id=user_id)
             organization = Organization.objects.get(id=organization_id)
+            
+            logger.info(f"Found user: {user.email}, organization: {organization.name}")
         except User.DoesNotExist:
+            logger.error(f"User not found: {user_id}")
             return Response(
                 {'error': 'User not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
         except Organization.DoesNotExist:
+            logger.error(f"Organization not found: {organization_id}")
             return Response(
                 {'error': 'Organization not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
         
         # Get permissions using RBACService
+        logger.info("Calling RBACService.get_user_permissions...")
         permissions = RBACService.get_user_permissions(user, organization)
+        logger.info(f"RBACService returned {len(permissions)} permissions")
+        logger.info(f"Permissions: {permissions}")
         
         # Get roles for the user
+        logger.info("Calling RBACService.get_user_roles...")
         roles = RBACService.get_user_roles(user, organization)
+        logger.info(f"RBACService returned {len(roles)} roles")
         
         # Serialize roles
         from crmApp.serializers import RoleSerializer
         roles_data = RoleSerializer(roles, many=True).data
         
-        return Response({
+        response_data = {
             'permissions': permissions,
             'roles': roles_data,
-        })
+        }
+        
+        logger.info(f"Returning response with {len(permissions)} permissions and {len(roles_data)} roles")
+        logger.info(f"========== user_permissions API complete ==========")
+        
+        return Response(response_data)

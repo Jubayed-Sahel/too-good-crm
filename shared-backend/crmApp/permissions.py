@@ -52,7 +52,13 @@ class IsOrganizationOwner(permissions.BasePermission):
 
 class HasResourcePermission(permissions.BasePermission):
     """
-    Permission class to check RBAC permissions for a resource.
+    DRF Permission class for strict RBAC enforcement.
+    
+    Best Practice Implementation:
+    - Enforces permissions for ALL HTTP methods (including GET)
+    - Vendors (org owners) have full access
+    - Employees need explicit role permissions
+    - Organization-scoped: users can only access their org's resources
     
     Usage in ViewSet:
         permission_classes = [IsAuthenticated, HasResourcePermission]
@@ -67,7 +73,7 @@ class HasResourcePermission(permissions.BasePermission):
     
     message = "You do not have permission to perform this action."
     
-    # Map HTTP methods to actions
+    # Map HTTP methods to RBAC actions
     method_action_map = {
         'GET': 'read',
         'POST': 'create',
@@ -77,67 +83,108 @@ class HasResourcePermission(permissions.BasePermission):
     }
     
     def has_permission(self, request, view):
-        # Must have organization context for permission checking
-        if not hasattr(request, 'organization') or request.organization is None:
+        """
+        Check if user has permission to access the resource.
+        Called for list and create operations.
+        """
+        # Get organization from middleware-set attribute or active profile
+        organization = self._get_organization(request)
+        if not organization:
+            self.message = "You must have an active profile with an organization."
             return False
-        
-        # Organization owners have all permissions
-        if hasattr(request, 'is_organization_owner') and request.is_organization_owner:
-            return True
         
         # Get resource name from view
         resource_name = getattr(view, 'resource_name', None)
         if not resource_name:
-            # If no resource name specified, allow (viewset should handle its own logic)
+            # If no resource name specified, skip RBAC (viewset handles its own logic)
             return True
         
         # Get action from HTTP method
         action = self.method_action_map.get(request.method)
         if not action:
+            self.message = f"Unsupported HTTP method: {request.method}"
             return False
         
-        # Check RBAC permission
+        # Check RBAC permission using RBACService
+        # This will automatically:
+        # 1. Grant full access to vendors (organization owners)
+        # 2. Check employee role permissions from database
+        # 3. Deny access if no permission found
         has_perm = RBACService.check_permission(
             user=request.user,
-            organization=request.organization,
+            organization=organization,
             resource=resource_name,
             action=action
         )
         
+        if not has_perm:
+            self.message = f"Permission denied. Required: {resource_name}:{action}"
+        
         return has_perm
     
     def has_object_permission(self, request, view, obj):
-        """Check permission for object-level access"""
-        # Must have organization context
-        if not hasattr(request, 'organization') or request.organization is None:
+        """
+        Check permission for object-level access.
+        Called for retrieve, update, partial_update, and destroy operations.
+        """
+        # Get organization from object or request
+        organization = self._get_organization_from_object(request, obj)
+        if not organization:
+            self.message = "You must have an active profile with an organization."
             return False
         
-        # Organization owners have all permissions
-        if hasattr(request, 'is_organization_owner') and request.is_organization_owner:
-            return True
-        
-        # Object must belong to the same organization
+        # CRITICAL: Ensure object belongs to user's organization
+        # This prevents cross-organization data access
         if hasattr(obj, 'organization'):
-            if obj.organization != request.organization:
+            if obj.organization_id != organization.id:
+                self.message = "You cannot access resources from other organizations."
                 return False
         
-        # Check RBAC permission (same as has_permission)
+        # Get resource name and action
         resource_name = getattr(view, 'resource_name', None)
         if not resource_name:
             return True
         
         action = self.method_action_map.get(request.method)
         if not action:
+            self.message = f"Unsupported HTTP method: {request.method}"
             return False
         
+        # Check RBAC permission
         has_perm = RBACService.check_permission(
             user=request.user,
-            organization=request.organization,
+            organization=organization,
             resource=resource_name,
             action=action
         )
         
+        if not has_perm:
+            self.message = f"Permission denied. Required: {resource_name}:{action}"
+        
         return has_perm
+    
+    def _get_organization(self, request):
+        """Get organization from request context"""
+        # Try middleware-set attributes first
+        if hasattr(request, 'organization') and request.organization:
+            return request.organization
+        
+        if hasattr(request.user, 'current_organization') and request.user.current_organization:
+            return request.user.current_organization
+        
+        if hasattr(request.user, 'active_profile') and request.user.active_profile:
+            return request.user.active_profile.organization
+        
+        return None
+    
+    def _get_organization_from_object(self, request, obj):
+        """Get organization from object or request"""
+        # Try to get from object first
+        if hasattr(obj, 'organization'):
+            return obj.organization
+        
+        # Fallback to request context
+        return self._get_organization(request)
 
 
 # Legacy permissions for backward compatibility

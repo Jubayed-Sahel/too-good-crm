@@ -23,10 +23,10 @@ interface PermissionRouteProps {
  * 
  * @example
  * <Route
- *   path="/deals"
+ *   path="/customers"
  *   element={
- *     <PermissionRoute resource="deals" action="read">
- *       <DealsPage />
+ *     <PermissionRoute resource="customer" action="read">
+ *       <CustomersPage />
  *     </PermissionRoute>
  *   }
  * />

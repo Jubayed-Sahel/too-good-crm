@@ -45,7 +45,26 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
   // Fetch user permissions from backend
   useEffect(() => {
     const fetchPermissions = async () => {
+      // ========== DIAGNOSTIC LOGGING ==========
+      console.log('[PermissionContext] ========== PERMISSION FETCH START ==========');
+      console.log('[PermissionContext] User:', user ? `${user.email} (ID: ${user.id})` : 'null');
+      console.log('[PermissionContext] activeOrganizationId:', activeOrganizationId);
+      console.log('[PermissionContext] activeProfile:', activeProfile);
+      
+      if (activeProfile) {
+        console.log('[PermissionContext] Active Profile Details:', {
+          id: activeProfile.id,
+          profile_type: activeProfile.profile_type,
+          organization: activeProfile.organization,
+          organization_name: activeProfile.organization_name,
+          roles: activeProfile.roles,
+          is_primary: activeProfile.is_primary
+        });
+      }
+      // ========================================
+      
       if (!user || !activeOrganizationId || !activeProfile) {
+        console.log('[PermissionContext] ❌ Missing required data - aborting permission fetch');
         setPermissions([]);
         setIsLoading(false);
         return;
@@ -56,46 +75,55 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
         
         // For employees, fetch actual permissions from backend
         if (activeProfile.profile_type === 'employee') {
+          console.log('[PermissionContext] ✅ Profile is EMPLOYEE');
           console.log('[PermissionContext] Fetching permissions for employee:', {
             userId: user.id,
             organizationId: activeOrganizationId,
-            profileId: activeProfile.id
+            profileId: activeProfile.id,
+            employeeRole: activeProfile.roles && activeProfile.roles.length > 0 ? activeProfile.roles[0].name : 'NO ROLE'
           });
           
           try {
+            console.log('[PermissionContext] Calling rbacService.getUserPermissions...');
             const userPermissions = await rbacService.getUserPermissions(user.id, activeOrganizationId);
             
-            console.log('[PermissionContext] Raw userPermissions response:', userPermissions);
+            console.log('[PermissionContext] ✅ Received userPermissions response:', userPermissions);
             
             // Convert permissions to simple strings like "customers:read", "customers:create"
             const permissionStrings = userPermissions.permissions.map((p: Permission) => 
               `${p.resource}:${p.action}`
             );
             
-            console.log('[PermissionContext] Employee permissions:', permissionStrings);
-            console.log('[PermissionContext] Permission count:', permissionStrings.length);
+            console.log('[PermissionContext] 📋 Employee permissions:', permissionStrings);
+            console.log('[PermissionContext] 🔢 Permission count:', permissionStrings.length);
             
             // If no permissions found, employee has no role assigned - restrict access
             if (permissionStrings.length === 0) {
-              console.warn('[PermissionContext] Employee has no permissions assigned. Access will be restricted.');
+              console.warn('[PermissionContext] ⚠️ Employee has no permissions assigned. Access will be restricted.');
               console.warn('[PermissionContext] This usually means the employee has no role assigned or the role has no permissions.');
+              console.warn('[PermissionContext] Check: Employee.role field in database');
               setPermissions([]); // Empty = no permissions (only dashboard, settings, customers allowed)
             } else {
+              console.log('[PermissionContext] ✅ Setting permissions:', permissionStrings);
               setPermissions(permissionStrings);
             }
           } catch (permError: any) {
-            console.error('[PermissionContext] Could not fetch employee permissions:', permError);
+            console.error('[PermissionContext] ❌ Could not fetch employee permissions:', permError);
             console.error('[PermissionContext] Error details:', {
               message: permError?.message,
               stack: permError?.stack,
               response: permError?.response
             });
             // If permission fetch fails, restrict access (don't grant full access)
+            console.warn('[PermissionContext] Setting empty permissions due to API error');
             setPermissions([]); // Empty = no permissions (only dashboard, settings, customers allowed)
           }
+          console.log('[PermissionContext] ========== PERMISSION FETCH COMPLETE (Employee) ==========\n');
         } else {
           // Vendors, customers, and owners have all permissions
+          console.log('[PermissionContext] ✅ Profile is VENDOR/CUSTOMER - granting full access');
           setPermissions(['*:*']); // Wildcard for full access
+          console.log('[PermissionContext] ========== PERMISSION FETCH COMPLETE (Vendor/Customer) ==========\n');
         }
       } catch (error) {
         console.error('[PermissionContext] Failed to fetch permissions:', error);
@@ -151,11 +179,13 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
      * Check if user can access a resource/action
      * Uses real permissions from backend
      * 
-     * Handles multiple permission naming conventions:
-     * - customers:read or customer:view (both mean "view customers")
-     * - customers:create or customer:create
-     * - customers:update or customer:edit
-     * - customers:delete or customer:delete
+     * Backend uses STANDARDIZED convention:
+     * - Resource names: SINGULAR (customer, employee, activity, issue, order, payment)
+     * - Actions: CRUD (read, create, update, delete)
+     * 
+     * Frontend normalizes for backward compatibility:
+     * - Accepts both singular and plural (customers → customer)
+     * - Accepts both old and new actions (view → read, edit → update)
      */
     const canAccess = (resource: string, action: string = 'read'): boolean => {
       // Vendors/Owners have full access
@@ -176,41 +206,35 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
         }
       }
 
-      // Normalize resource name (remove trailing 's' for singular form)
-      const singularResource = resource.endsWith('s') ? resource.slice(0, -1) : resource;
+      // Normalize resource name to singular (backend standard)
+      // customers → customer, employees → employee, activities → activity
+      const singularResource = resource.endsWith('s') && resource !== 'analytics' && resource !== 'settings'
+        ? resource.slice(0, -1) 
+        : resource;
       
-      // Map action aliases (read <-> view, update <-> edit)
-      const actionAliases: Record<string, string[]> = {
-        'read': ['read', 'view'],
-        'view': ['read', 'view'],
-        'create': ['create'],
-        'update': ['update', 'edit'],
-        'edit': ['update', 'edit'],
-        'delete': ['delete'],
+      // Normalize action to standard CRUD (backend standard)
+      // view → read, edit → update
+      const actionMap: Record<string, string> = {
+        'view': 'read',
+        'read': 'read',
+        'create': 'create',
+        'edit': 'update',
+        'update': 'update',
+        'delete': 'delete',
       };
       
-      const possibleActions = actionAliases[action] || [action];
+      const normalizedAction = actionMap[action] || action;
       
-      // Check all possible permission combinations
-      for (const possibleAction of possibleActions) {
-        // Check plural resource with action (e.g., "customers:read")
-        const pluralPerm = `${resource}:${possibleAction}`;
-        if (permissions.includes(pluralPerm)) {
-          return true;
-        }
-        
-        // Check singular resource with action (e.g., "customer:view")
-        const singularPerm = `${singularResource}:${possibleAction}`;
-        if (permissions.includes(singularPerm)) {
-          return true;
-        }
-        
-        // Check resource-level wildcard (e.g., "customers:*" or "customer:*")
-        const pluralWildcard = `${resource}:*`;
-        const singularWildcard = `${singularResource}:*`;
-        if (permissions.includes(pluralWildcard) || permissions.includes(singularWildcard)) {
-          return true;
-        }
+      // Check the standardized permission format (singular:action)
+      const standardPerm = `${singularResource}:${normalizedAction}`;
+      if (permissions.includes(standardPerm)) {
+        return true;
+      }
+      
+      // Check resource-level wildcard
+      const resourceWildcard = `${singularResource}:*`;
+      if (permissions.includes(resourceWildcard)) {
+        return true;
       }
 
       // No matching permission found

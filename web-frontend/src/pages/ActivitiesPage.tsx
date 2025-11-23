@@ -334,7 +334,7 @@ export const ActivitiesPage = () => {
 
   return (
     <DashboardLayout title="Activities">
-      <RequirePermission resource="activities">
+      <RequirePermission resource="activity">
         <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <PageHeader

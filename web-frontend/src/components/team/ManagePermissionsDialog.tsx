@@ -63,7 +63,44 @@ export const ManagePermissionsDialog = ({
         roleService.getRolePermissions(role.id),
       ]);
       
-      setAllPermissions(groupedPerms);
+      // Filter and deduplicate permissions
+      const filteredPerms: GroupedPermissions = {};
+      const standardActions = ['read', 'create', 'update', 'delete'];
+      
+      Object.entries(groupedPerms).forEach(([resource, permissions]) => {
+        // Normalize resource name to singular
+        const normalizedResource = resource.endsWith('s') && resource !== 'access'
+          ? resource.slice(0, -1)
+          : resource;
+        
+        // Filter to standard actions and remove duplicates
+        const uniquePerms = new Map<string, Permission>();
+        
+        permissions.forEach(perm => {
+          // Normalize action (view -> read, edit -> update)
+          let normalizedAction = perm.action;
+          if (perm.action === 'view') normalizedAction = 'read';
+          if (perm.action === 'edit') normalizedAction = 'update';
+          
+          // Only include standard CRUD actions
+          if (standardActions.includes(normalizedAction)) {
+            // Keep the first occurrence of each action
+            if (!uniquePerms.has(normalizedAction)) {
+              uniquePerms.set(normalizedAction, {
+                ...perm,
+                action: normalizedAction,
+                resource: normalizedResource
+              });
+            }
+          }
+        });
+        
+        if (uniquePerms.size > 0) {
+          filteredPerms[normalizedResource] = Array.from(uniquePerms.values());
+        }
+      });
+      
+      setAllPermissions(filteredPerms);
       setSelectedPermissionIds(rolePerms.map(p => p.id));
     } catch (error: any) {
       console.error('Error fetching permissions:', error);

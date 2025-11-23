@@ -33,7 +33,41 @@ export const PermissionsTab = () => {
     setIsLoading(true);
     try {
       const data = await permissionService.getPermissionsByResource();
-      setPermissions(data);
+      
+      // Filter to show only standardized permissions (singular resources + standard CRUD actions)
+      // This removes duplicates like:
+      // - Plural resources (customers vs customer)
+      // - Old actions (view/edit vs read/update)
+      const filteredData: GroupedPermissions = {};
+      
+      Object.entries(data).forEach(([resource, perms]) => {
+        // Only keep singular resource names and standard actions
+        const singularResource = resource.endsWith('s') && resource !== 'analytics' && resource !== 'settings'
+          ? resource.slice(0, -1)
+          : resource;
+        
+        // Filter to keep only standardized CRUD actions (read, create, update, delete)
+        const standardActions = ['read', 'create', 'update', 'delete'];
+        const standardPerms = perms.filter(p => standardActions.includes(p.action));
+        
+        // Use singular resource as key
+        if (standardPerms.length > 0) {
+          // If we already have this resource (e.g., both "customer" and "customers" exist)
+          // merge and deduplicate by action
+          if (filteredData[singularResource]) {
+            const existingActions = new Set(filteredData[singularResource].map(p => p.action));
+            standardPerms.forEach(p => {
+              if (!existingActions.has(p.action)) {
+                filteredData[singularResource].push(p);
+              }
+            });
+          } else {
+            filteredData[singularResource] = standardPerms;
+          }
+        }
+      });
+      
+      setPermissions(filteredData);
     } catch (error: any) {
       console.error('Error fetching permissions:', error);
       toaster.create({

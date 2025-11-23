@@ -173,72 +173,61 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
         from crmApp.models import Permission
         
         # Define default resources and actions
+        # Using singular resource names and standard CRUD actions (read, create, update, delete)
         default_permissions = [
             # Customers
-            {'resource': 'customer', 'action': 'view', 'description': 'View customers'},
+            {'resource': 'customer', 'action': 'read', 'description': 'View customers'},
             {'resource': 'customer', 'action': 'create', 'description': 'Create customers'},
-            {'resource': 'customer', 'action': 'edit', 'description': 'Edit customers'},
+            {'resource': 'customer', 'action': 'update', 'description': 'Update customers'},
             {'resource': 'customer', 'action': 'delete', 'description': 'Delete customers'},
             
-            # Deals
-            {'resource': 'deal', 'action': 'view', 'description': 'View deals'},
-            {'resource': 'deal', 'action': 'create', 'description': 'Create deals'},
-            {'resource': 'deal', 'action': 'edit', 'description': 'Edit deals'},
-            {'resource': 'deal', 'action': 'delete', 'description': 'Delete deals'},
-            
-            # Leads
-            {'resource': 'lead', 'action': 'view', 'description': 'View leads'},
-            {'resource': 'lead', 'action': 'create', 'description': 'Create leads'},
-            {'resource': 'lead', 'action': 'edit', 'description': 'Edit leads'},
-            {'resource': 'lead', 'action': 'delete', 'description': 'Delete leads'},
-            
             # Activities
-            {'resource': 'activity', 'action': 'view', 'description': 'View activities'},
+            {'resource': 'activity', 'action': 'read', 'description': 'View activities'},
             {'resource': 'activity', 'action': 'create', 'description': 'Create activities'},
-            {'resource': 'activity', 'action': 'edit', 'description': 'Edit activities'},
+            {'resource': 'activity', 'action': 'update', 'description': 'Update activities'},
             {'resource': 'activity', 'action': 'delete', 'description': 'Delete activities'},
             
             # Employees/Team
-            {'resource': 'employee', 'action': 'view', 'description': 'View team members'},
+            {'resource': 'employee', 'action': 'read', 'description': 'View team members'},
             {'resource': 'employee', 'action': 'create', 'description': 'Invite team members'},
-            {'resource': 'employee', 'action': 'edit', 'description': 'Edit team members'},
+            {'resource': 'employee', 'action': 'update', 'description': 'Update team members'},
             {'resource': 'employee', 'action': 'delete', 'description': 'Remove team members'},
             
             # Orders
-            {'resource': 'order', 'action': 'view', 'description': 'View orders'},
+            {'resource': 'order', 'action': 'read', 'description': 'View orders'},
             {'resource': 'order', 'action': 'create', 'description': 'Create orders'},
-            {'resource': 'order', 'action': 'edit', 'description': 'Edit orders'},
+            {'resource': 'order', 'action': 'update', 'description': 'Update orders'},
             {'resource': 'order', 'action': 'delete', 'description': 'Delete orders'},
             
             # Payments
-            {'resource': 'payment', 'action': 'view', 'description': 'View payments'},
+            {'resource': 'payment', 'action': 'read', 'description': 'View payments'},
             {'resource': 'payment', 'action': 'create', 'description': 'Create payments'},
-            {'resource': 'payment', 'action': 'edit', 'description': 'Edit payments'},
+            {'resource': 'payment', 'action': 'update', 'description': 'Update payments'},
             {'resource': 'payment', 'action': 'delete', 'description': 'Delete payments'},
             
             # Vendors
-            {'resource': 'vendor', 'action': 'view', 'description': 'View vendors'},
+            {'resource': 'vendor', 'action': 'read', 'description': 'View vendors'},
             {'resource': 'vendor', 'action': 'create', 'description': 'Create vendors'},
-            {'resource': 'vendor', 'action': 'edit', 'description': 'Edit vendors'},
+            {'resource': 'vendor', 'action': 'update', 'description': 'Update vendors'},
             {'resource': 'vendor', 'action': 'delete', 'description': 'Delete vendors'},
             
             # Issues
-            {'resource': 'issue', 'action': 'view', 'description': 'View issues'},
+            {'resource': 'issue', 'action': 'read', 'description': 'View issues'},
             {'resource': 'issue', 'action': 'create', 'description': 'Create issues'},
-            {'resource': 'issue', 'action': 'edit', 'description': 'Edit issues'},
+            {'resource': 'issue', 'action': 'update', 'description': 'Update issues'},
             {'resource': 'issue', 'action': 'delete', 'description': 'Delete issues'},
             
             # Analytics
-            {'resource': 'analytics', 'action': 'view', 'description': 'View analytics and reports'},
+            {'resource': 'analytics', 'action': 'read', 'description': 'View analytics and reports'},
             
             # Settings
-            {'resource': 'settings', 'action': 'view', 'description': 'View settings'},
-            {'resource': 'settings', 'action': 'edit', 'description': 'Edit settings'},
+            {'resource': 'settings', 'action': 'read', 'description': 'View settings'},
+            {'resource': 'settings', 'action': 'update', 'description': 'Update settings'},
             
             # Roles
-            {'resource': 'role', 'action': 'view', 'description': 'View roles'},
+            {'resource': 'role', 'action': 'read', 'description': 'View roles'},
             {'resource': 'role', 'action': 'create', 'description': 'Create roles'},
-            {'resource': 'role', 'action': 'edit', 'description': 'Edit roles'},
+            {'resource': 'role', 'action': 'update', 'description': 'Update roles'},
             {'resource': 'role', 'action': 'delete', 'description': 'Delete roles'},
         ]
         
