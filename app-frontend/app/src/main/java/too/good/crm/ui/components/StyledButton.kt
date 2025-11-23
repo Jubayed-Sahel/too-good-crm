@@ -33,7 +33,7 @@ fun PrimaryButton(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = DesignTokens.Typography.FontWeightSemiBold
         )
     }
@@ -61,7 +61,7 @@ fun SecondaryButton(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = DesignTokens.Typography.FontWeightSemiBold
         )
     }
@@ -110,7 +110,7 @@ fun ResponsivePrimaryButton(
             icon?.invoke()
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = DesignTokens.Typography.FontWeightMedium
             )
         }
@@ -159,7 +159,7 @@ fun ResponsiveOutlinedButton(
             icon?.invoke()
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = DesignTokens.Typography.FontWeightMedium
             )
         }
@@ -194,7 +194,7 @@ fun ResponsiveTextButton(
             icon?.invoke()
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = DesignTokens.Typography.FontWeightMedium
             )
         }

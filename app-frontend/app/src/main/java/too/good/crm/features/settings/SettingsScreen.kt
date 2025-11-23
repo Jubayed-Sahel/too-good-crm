@@ -36,10 +36,15 @@ fun SettingsScreen(
     val profileViewModel = remember { ProfileViewModel(context) }
     val profileState by profileViewModel.uiState.collectAsState()
     
+    val settingsViewModel = remember { SettingsViewModel(context) }
+    val settingsUiState by settingsViewModel.uiState.collectAsState()
+    val passwordChangeState by settingsViewModel.passwordChangeState.collectAsState()
+    
     var darkMode by remember { mutableStateOf(false) }
     var notificationsEnabled by remember { mutableStateOf(true) }
     var emailNotifications by remember { mutableStateOf(true) }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         if (profileState.profiles.isEmpty() && !profileState.isLoading) {
@@ -107,63 +112,119 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Profile Section
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Avatar
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
+            // Profile Section - Show loading, error, or content
+            when (val state = settingsUiState) {
+                is SettingsUiState.Loading -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
-                        Text(
-                            text = "JD",
-                            style = MaterialTheme.typography.headlineSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "John Doe",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "john.doe@company.com",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = DesignTokens.Colors.OnSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Sales Manager",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = DesignTokens.Colors.OnSurfaceVariant
-                        )
+                }
+                is SettingsUiState.Error -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Failed to load profile",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = DesignTokens.Colors.Error
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = state.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(onClick = { settingsViewModel.retry() }) {
+                                Text("Retry", style = MaterialTheme.typography.labelMedium)
+                            }
+                        }
                     }
+                }
+                is SettingsUiState.Success -> {
+                    val user = state.user
+                    val initials = "${user.firstName.firstOrNull() ?: ""}${user.lastName.firstOrNull() ?: ""}".uppercase()
+                    val fullName = "${user.firstName} ${user.lastName}".trim()
+                    
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Avatar
+                            Box(
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = initials,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
 
-                    IconButton(onClick = { /* Edit Profile */ }) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Edit Profile",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = fullName,
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = user.email,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = DesignTokens.Colors.OnSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = user.primaryProfile?.profileTypeDisplay ?: user.primaryProfile?.profileType?.capitalize() ?: "User",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = DesignTokens.Colors.OnSurfaceVariant
+                                )
+                            }
+
+                            IconButton(onClick = { /* Edit Profile - Future feature */ }) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Edit Profile",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -193,7 +254,7 @@ fun SettingsScreen(
                         icon = Icons.Default.Lock,
                         title = "Change Password",
                         subtitle = "Update your password",
-                        onClick = { /* Navigate to change password */ }
+                        onClick = { showChangePasswordDialog = true }
                     )
                 }
             }
@@ -364,6 +425,19 @@ fun SettingsScreen(
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
         }
+        
+        // Change Password Dialog
+        ChangePasswordDialog(
+            isOpen = showChangePasswordDialog,
+            passwordChangeState = passwordChangeState,
+            onDismiss = { showChangePasswordDialog = false },
+            onConfirm = { current, new, confirm ->
+                settingsViewModel.changePassword(current, new, confirm)
+            },
+            onResetState = {
+                settingsViewModel.resetPasswordChangeState()
+            }
+        )
     }
 }
 

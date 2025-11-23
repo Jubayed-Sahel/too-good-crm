@@ -77,12 +77,18 @@ fun ConfirmationDialog(
                     ButtonDefaults.buttonColors()
                 }
             ) {
-                Text(confirmText)
+                Text(
+                    text = confirmText,
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(cancelText)
+                Text(
+                    text = cancelText,
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         }
     )
@@ -126,7 +132,10 @@ fun InfoDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("OK")
+                Text(
+                    text = "OK",
+                    style = MaterialTheme.typography.labelMedium
+                )
             }
         }
     )

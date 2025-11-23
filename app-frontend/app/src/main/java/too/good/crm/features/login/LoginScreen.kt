@@ -137,7 +137,7 @@ fun LoginScreen(
                 } else {
                     Text(
                         text = "Login",
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelMedium,
                         fontWeight = DesignTokens.Typography.FontWeightSemiBold
                     )
                 }

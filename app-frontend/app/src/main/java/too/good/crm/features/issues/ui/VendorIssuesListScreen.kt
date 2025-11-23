@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
@@ -123,40 +124,87 @@ fun VendorIssuesListScreen(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
+            // Compact Stats Cards
+            val state = uiState
+            if (state is IssueUiState.Success) {
+                val totalCount = state.issues.size
+                val openCount = state.issues.count { it.status == "open" }
+                val inProgressCount = state.issues.count { it.status == "in_progress" }
+                val resolvedCount = state.issues.count { it.status == "resolved" }
+                
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = too.good.crm.ui.theme.DesignTokens.Spacing.Space4, vertical = too.good.crm.ui.theme.DesignTokens.Spacing.Space2),
+                    horizontalArrangement = Arrangement.spacedBy(too.good.crm.ui.theme.DesignTokens.Spacing.Space3)
+                ) {
+                    IssueStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Total",
+                        value = totalCount.toString(),
+                        color = too.good.crm.ui.theme.DesignTokens.Colors.Primary
+                    )
+                    IssueStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Open",
+                        value = openCount.toString(),
+                        color = too.good.crm.ui.theme.DesignTokens.Colors.Info
+                    )
+                    IssueStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "In Progress",
+                        value = inProgressCount.toString(),
+                        color = too.good.crm.ui.theme.DesignTokens.Colors.Warning
+                    )
+                    IssueStatCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Resolved",
+                        value = resolvedCount.toString(),
+                        color = too.good.crm.ui.theme.DesignTokens.Colors.Success
+                    )
+                }
+            }
+            
             // Filters
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(too.good.crm.ui.theme.DesignTokens.Spacing.Space4),
+                elevation = CardDefaults.cardElevation(defaultElevation = too.good.crm.ui.theme.DesignTokens.Elevation.Level1),
+                colors = CardDefaults.cardColors(containerColor = too.good.crm.ui.theme.DesignTokens.Colors.White),
+                shape = MaterialTheme.shapes.large,
+                border = androidx.compose.foundation.BorderStroke(1.dp, too.good.crm.ui.theme.DesignTokens.Colors.OutlineVariant)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(too.good.crm.ui.theme.DesignTokens.Spacing.Space4)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             Icons.Default.FilterList,
                             contentDescription = "Filters",
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = too.good.crm.ui.theme.DesignTokens.Colors.Primary
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(too.good.crm.ui.theme.DesignTokens.Spacing.Space2))
                         Text(
                             text = "Filters",
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = too.good.crm.ui.theme.DesignTokens.Typography.FontWeightBold,
+                            color = too.good.crm.ui.theme.DesignTokens.Colors.OnSurface
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(too.good.crm.ui.theme.DesignTokens.Spacing.Space3))
 
                     // Status Filter
                     Text(
                         text = "Status",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = too.good.crm.ui.theme.DesignTokens.Colors.OnSurfaceVariant,
+                        fontWeight = too.good.crm.ui.theme.DesignTokens.Typography.FontWeightSemiBold
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(too.good.crm.ui.theme.DesignTokens.Spacing.Space2))
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(too.good.crm.ui.theme.DesignTokens.Spacing.Space2)
                     ) {
                         item {
                             FilterChip(
@@ -174,17 +222,18 @@ fun VendorIssuesListScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(too.good.crm.ui.theme.DesignTokens.Spacing.Space3))
 
                     // Priority Filter
                     Text(
                         text = "Priority",
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = too.good.crm.ui.theme.DesignTokens.Colors.OnSurfaceVariant,
+                        fontWeight = too.good.crm.ui.theme.DesignTokens.Typography.FontWeightSemiBold
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(too.good.crm.ui.theme.DesignTokens.Spacing.Space2))
                     LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(too.good.crm.ui.theme.DesignTokens.Spacing.Space2)
                     ) {
                         item {
                             FilterChip(
@@ -221,8 +270,8 @@ fun VendorIssuesListScreen(
                             )
                         } else {
                             LazyColumn(
-                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                contentPadding = PaddingValues(horizontal = too.good.crm.ui.theme.DesignTokens.Spacing.Space4, vertical = too.good.crm.ui.theme.DesignTokens.Spacing.Space2),
+                                verticalArrangement = Arrangement.spacedBy(too.good.crm.ui.theme.DesignTokens.Spacing.Space3)
                             ) {
                                 items(state.issues) { issue ->
                                     VendorIssueCard(
@@ -255,10 +304,13 @@ fun VendorIssueCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = too.good.crm.ui.theme.DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(containerColor = too.good.crm.ui.theme.DesignTokens.Colors.White),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, too.good.crm.ui.theme.DesignTokens.Colors.OutlineVariant)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier.padding(too.good.crm.ui.theme.DesignTokens.Spacing.Space4)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -268,33 +320,34 @@ fun VendorIssueCard(
                 Text(
                     text = issue.issueNumber,
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold
+                    color = too.good.crm.ui.theme.DesignTokens.Colors.Primary,
+                    fontWeight = too.good.crm.ui.theme.DesignTokens.Typography.FontWeightBold
                 )
                 StatusChip(status = issue.status)
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(too.good.crm.ui.theme.DesignTokens.Spacing.Space2))
 
             Text(
                 text = issue.title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                fontWeight = too.good.crm.ui.theme.DesignTokens.Typography.FontWeightBold,
+                color = too.good.crm.ui.theme.DesignTokens.Colors.OnSurface,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(too.good.crm.ui.theme.DesignTokens.Spacing.Space2))
 
             Text(
                 text = issue.description,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                color = too.good.crm.ui.theme.DesignTokens.Colors.OnSurfaceVariant,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(too.good.crm.ui.theme.DesignTokens.Spacing.Space3))
 
             // Customer info
             issue.raisedByCustomerName?.let { customerName ->
@@ -302,17 +355,18 @@ fun VendorIssueCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Surface(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        color = too.good.crm.ui.theme.DesignTokens.Colors.SurfaceVariant,
                         shape = MaterialTheme.shapes.small
                     ) {
                         Text(
                             text = "Customer: $customerName",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelSmall
+                            modifier = Modifier.padding(horizontal = too.good.crm.ui.theme.DesignTokens.Spacing.Space2, vertical = too.good.crm.ui.theme.DesignTokens.Spacing.Space1),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = too.good.crm.ui.theme.DesignTokens.Colors.OnSurfaceVariant
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(too.good.crm.ui.theme.DesignTokens.Spacing.Space2))
             }
 
             Row(
@@ -377,6 +431,44 @@ fun EmptyIssuesVendorView(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+fun IssueStatCard(
+    modifier: Modifier = Modifier,
+    title: String,
+    value: String,
+    color: androidx.compose.ui.graphics.Color
+) {
+    Card(
+        modifier = modifier,
+        elevation = CardDefaults.cardElevation(defaultElevation = too.good.crm.ui.theme.DesignTokens.Elevation.Level1),
+        colors = CardDefaults.cardColors(containerColor = too.good.crm.ui.theme.DesignTokens.Colors.White),
+        shape = MaterialTheme.shapes.large,
+        border = androidx.compose.foundation.BorderStroke(1.dp, too.good.crm.ui.theme.DesignTokens.Colors.OutlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(too.good.crm.ui.theme.DesignTokens.Spacing.Space3),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                color = too.good.crm.ui.theme.DesignTokens.Colors.OnSurfaceVariant,
+                fontSize = 11.sp
+            )
+            Spacer(modifier = Modifier.height(too.good.crm.ui.theme.DesignTokens.Spacing.Space1))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = too.good.crm.ui.theme.DesignTokens.Typography.FontWeightBold,
+                color = color,
+                fontSize = 20.sp
+            )
+        }
     }
 }
 
