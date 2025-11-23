@@ -535,8 +535,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     email=email,
                     phone=phone or "",
                     source=source,
-                    status="new",
-                    score=0
+                    status="new"
                 )
                 return {
                     "success": True,
