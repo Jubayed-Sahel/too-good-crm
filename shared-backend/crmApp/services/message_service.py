@@ -282,33 +282,23 @@ class MessageService:
         recipients = []
         
         if sender_profile.profile_type == 'vendor':
-            # Vendors can message employees and customers
+            # Vendors can ONLY message employees (not customers)
             # Get employees in the organization
             employees = Employee.objects.filter(
                 organization=organization,
                 status='active'
             ).select_related('user')
             recipients.extend([emp.user for emp in employees if emp.user != sender])
-            
-            # Get customers in the organization
-            customers = Customer.objects.filter(
-                organization=organization,
-                status='active'
-            ).select_related('user')
-            recipients.extend([cust.user for cust in customers if cust.user and cust.user != sender])
         
         elif sender_profile.profile_type == 'employee':
-            # Employees can message their vendor (for initiating) and can reply to existing conversations
-            # Get vendor (owner) of the organization - employees can initiate with vendor
+            # Employees can ONLY message their vendor (not customers)
+            # Get vendor (owner) of the organization
             vendor_profiles = UserProfile.objects.filter(
                 organization=organization,
                 profile_type='vendor',
                 status='active'
             ).select_related('user')
             recipients.extend([prof.user for prof in vendor_profiles if prof.user != sender])
-            
-            # Note: Employees can reply to existing conversations with customers,
-            # but cannot initiate new ones. So we don't add customers to the recipients list.
         
         elif sender_profile.profile_type == 'customer':
             # Customers can message vendors and employees
