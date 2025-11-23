@@ -251,16 +251,17 @@ class PermissionMixin:
             )
     
     def check_permissions(self, request):
-        """Override to add RBAC check for list/create actions"""
+        """
+        Override to add RBAC check for ALL actions including read/list.
+        
+        IMPORTANT: This enforces permissions for ALL HTTP methods including GET.
+        Employees must have explicit read permission to view resources.
+        Only vendors (organization owners) bypass these checks.
+        """
         super().check_permissions(request)
         
         if not self.permission_resource:
             return  # Skip RBAC if not configured
-        
-        # Skip permission check for safe methods (GET, HEAD, OPTIONS) - employees can view
-        # Only enforce permissions for write operations (POST, PUT, PATCH, DELETE)
-        if request.method in ['GET', 'HEAD', 'OPTIONS']:
-            return
         
         # Get organization from active profile (set by middleware)
         organization = None
@@ -273,10 +274,14 @@ class PermissionMixin:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('User must have an active profile with an organization')
         
-        # Get the action to check
+        # Get the action to check (maps HTTP method to RBAC action)
         rbac_action = self.get_permission_action()
         
-        # Check permission
+        # Check permission using RBACService
+        # This will:
+        # 1. Allow vendors (owners) full access
+        # 2. Check employee role permissions
+        # 3. Deny access if no permission found
         has_permission = RBACService.check_permission(
             user=request.user,
             organization=organization,

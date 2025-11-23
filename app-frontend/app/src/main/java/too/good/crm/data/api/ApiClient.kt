@@ -59,9 +59,25 @@ object ApiClient {
             val requestBuilder = original.newBuilder()
                 .header("Content-Type", "application/json")
 
-            // Add authorization token if available
-            authToken?.let {
-                requestBuilder.header("Authorization", "Token $it")
+            // List of public endpoints that don't require authentication
+            val publicEndpoints = listOf(
+                "/api/auth/login/",
+                "/api/users/",  // Registration endpoint
+            )
+            
+            // Check if this is a public endpoint
+            val isPublicEndpoint = publicEndpoints.any { endpoint ->
+                original.url.encodedPath.endsWith(endpoint) || 
+                original.url.encodedPath.contains(endpoint)
+            }
+
+            // Only add authorization token if:
+            // 1. Token is available
+            // 2. Endpoint is NOT a public endpoint
+            if (!isPublicEndpoint) {
+                authToken?.let {
+                    requestBuilder.header("Authorization", "Token $it")
+                }
             }
 
             val request = requestBuilder

@@ -7,29 +7,37 @@ import type { Permission } from '@/types';
 
 /**
  * CRM Resource Types
- * Maps frontend resource names to backend permission resources
+ * Uses SINGULAR names to match backend standardized convention
+ * Backend uses: customer, employee, vendor, activity, issue, order, payment
  */
 export const CRM_RESOURCES = {
-  LEADS: 'leads',
-  DEALS: 'deals',
-  CUSTOMERS: 'customers',
-  CONTACTS: 'contacts',
-  COMPANIES: 'companies',
-  ACTIVITIES: 'activities',
-  TASKS: 'tasks',
-  NOTES: 'notes',
-  PIPELINES: 'pipelines',
-  STAGES: 'stages',
+  // Core resources (standardized - singular)
+  CUSTOMER: 'customer',
+  EMPLOYEE: 'employee',
+  VENDOR: 'vendor',
+  ACTIVITY: 'activity',
+  ISSUE: 'issue',
+  ORDER: 'order',
+  PAYMENT: 'payment',
+  
+  // Additional resources
+  CONTACT: 'contact',
+  COMPANY: 'company',
+  TASK: 'task',
+  NOTE: 'note',
+  PIPELINE: 'pipeline',
+  STAGE: 'stage',
+  ROLE: 'role',
   ANALYTICS: 'analytics',
-  EMPLOYEES: 'employees',
-  VENDORS: 'vendors',
-  ISSUES: 'issues',
-  ORDERS: 'orders',
-  PAYMENTS: 'payments',
+  SETTINGS: 'settings',
+  
+  // Aliases for common use cases
+  SALES: 'order',  // Sales = Orders in CRM context
 } as const;
 
 /**
  * Permission Actions
+ * Standardized CRUD actions: read, create, update, delete
  */
 export const PERMISSION_ACTIONS = {
   READ: 'read',

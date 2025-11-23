@@ -38,21 +38,9 @@ import { CRM_RESOURCES } from '@/utils/permissions';
  * Shows recent leads and quick actions
  */
 export const LeadsWidget = () => {
-  const navigate = useNavigate();
-  const { hasPermission, isLoading } = usePermissions();
-  const permissions = usePermissionActions(CRM_RESOURCES.LEADS);
-
-  // Don't render while permissions are loading
-  if (isLoading) {
-    return null;
-  }
-
-  // Check if user has read permission for leads
-  const canRead = hasPermission(CRM_RESOURCES.LEADS, 'read').hasPermission;
-
-  if (!canRead) {
-    return null;
-  }
+  // Leads functionality has been removed from the system
+  // This widget is kept for potential future re-implementation
+  return null;
 
   return (
     <Card p={6}>
@@ -110,20 +98,9 @@ export const LeadsWidget = () => {
  * Shows pipeline and deal statistics
  */
 export const DealsWidget = () => {
-  const navigate = useNavigate();
-  const { hasPermission, isLoading } = usePermissions();
-  const permissions = usePermissionActions(CRM_RESOURCES.DEALS);
-
-  // Don't render while permissions are loading
-  if (isLoading) {
-    return null;
-  }
-
-  const canRead = hasPermission(CRM_RESOURCES.DEALS, 'read').hasPermission;
-
-  if (!canRead) {
-    return null;
-  }
+  // Deals functionality has been removed from the system
+  // This widget is kept for potential future re-implementation
+  return null;
 
   return (
     <Card p={6}>
@@ -183,14 +160,14 @@ export const DealsWidget = () => {
 export const CustomersWidget = () => {
   const navigate = useNavigate();
   const { hasPermission, isLoading } = usePermissions();
-  const permissions = usePermissionActions(CRM_RESOURCES.CUSTOMERS);
+  const permissions = usePermissionActions(CRM_RESOURCES.CUSTOMER);
 
   // Don't render while permissions are loading
   if (isLoading) {
     return null;
   }
 
-  const canRead = hasPermission(CRM_RESOURCES.CUSTOMERS, 'read').hasPermission;
+  const canRead = hasPermission(CRM_RESOURCES.CUSTOMER, 'read').hasPermission;
 
   if (!canRead) {
     return null;
@@ -254,14 +231,14 @@ export const CustomersWidget = () => {
 export const ActivitiesWidget = () => {
   const navigate = useNavigate();
   const { hasPermission, isLoading } = usePermissions();
-  const permissions = usePermissionActions(CRM_RESOURCES.ACTIVITIES);
+  const permissions = usePermissionActions(CRM_RESOURCES.ACTIVITY);
 
   // Don't render while permissions are loading
   if (isLoading) {
     return null;
   }
 
-  const canRead = hasPermission(CRM_RESOURCES.ACTIVITIES, 'read').hasPermission;
+  const canRead = hasPermission(CRM_RESOURCES.ACTIVITY, 'read').hasPermission;
 
   if (!canRead) {
     return null;
@@ -325,14 +302,14 @@ export const ActivitiesWidget = () => {
 export const TasksWidget = () => {
   const navigate = useNavigate();
   const { hasPermission, isLoading } = usePermissions();
-  const permissions = usePermissionActions(CRM_RESOURCES.TASKS);
+  const permissions = usePermissionActions(CRM_RESOURCES.TASK);
 
   // Don't render while permissions are loading
   if (isLoading) {
     return null;
   }
 
-  const canRead = hasPermission(CRM_RESOURCES.TASKS, 'read').hasPermission;
+  const canRead = hasPermission(CRM_RESOURCES.TASK, 'read').hasPermission;
 
   if (!canRead) {
     return null;
@@ -394,20 +371,9 @@ export const TasksWidget = () => {
  * Shows pipeline overview
  */
 export const PipelinesWidget = () => {
-  const navigate = useNavigate();
-  const { hasPermission, isLoading } = usePermissions();
-  const permissions = usePermissionActions(CRM_RESOURCES.PIPELINES);
-
-  // Don't render while permissions are loading
-  if (isLoading) {
-    return null;
-  }
-
-  const canRead = hasPermission(CRM_RESOURCES.PIPELINES, 'read').hasPermission;
-
-  if (!canRead) {
-    return null;
-  }
+  // Pipelines are related to deals which have been removed
+  // This widget is kept for potential future re-implementation
+  return null;
 
   return (
     <Card p={6}>
@@ -448,63 +414,6 @@ export const PipelinesWidget = () => {
 };
 
 /**
- * Analytics Widget
- * Shows key metrics and trends
- */
-export const AnalyticsWidget = () => {
-  const navigate = useNavigate();
-  const { hasPermission, isLoading } = usePermissions();
-
-  // Don't render while permissions are loading
-  if (isLoading) {
-    return null;
-  }
-
-  const canRead = hasPermission(CRM_RESOURCES.ANALYTICS, 'read').hasPermission;
-
-  if (!canRead) {
-    return null;
-  }
-
-  return (
-    <Card p={6}>
-      <VStack align="stretch" gap={4}>
-        <HStack justify="space-between">
-          <HStack gap={2}>
-            <Icon as={FiTrendingUp} w={5} h={5} color="pink.600" />
-            <Heading size="md">Analytics</Heading>
-          </HStack>
-          <Badge colorPalette="pink">Live</Badge>
-        </HStack>
-
-        <VStack align="stretch" gap={2}>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Revenue Growth</Text>
-            <Text fontWeight="bold" color="green.600">+12.5%</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Conversion Rate</Text>
-            <Text fontWeight="bold">24.3%</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Avg. Deal Size</Text>
-            <Text fontWeight="bold">$52K</Text>
-          </HStack>
-        </VStack>
-
-        <Button
-          size="sm"
-          colorPalette="pink"
-          onClick={() => navigate('/analytics')}
-        >
-          View Full Report
-        </Button>
-      </VStack>
-    </Card>
-  );
-};
-
-/**
  * Dashboard Widgets Grid
  * Renders all available widgets based on permissions
  */
@@ -517,7 +426,6 @@ export const DashboardWidgetsGrid = () => {
       <ActivitiesWidget />
       <TasksWidget />
       <PipelinesWidget />
-      <AnalyticsWidget />
     </SimpleGrid>
   );
 };

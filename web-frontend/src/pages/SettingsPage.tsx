@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { VStack } from '@chakra-ui/react';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import {
@@ -10,9 +10,19 @@ import {
   SecuritySettings,
   BillingSettings,
 } from '../components/settings';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 const SettingsPage = () => {
-  const [activeTab, setActiveTab] = useState('profile');
+  const { isVendor } = usePermissions();
+  // Vendors default to organization tab, others default to profile
+  const [activeTab, setActiveTab] = useState(isVendor ? 'organization' : 'profile');
+
+  // Update tab when vendor status changes
+  useEffect(() => {
+    if (isVendor && activeTab === 'profile') {
+      setActiveTab('organization');
+    }
+  }, [isVendor, activeTab]);
 
   const renderTabContent = () => {
     switch (activeTab) {

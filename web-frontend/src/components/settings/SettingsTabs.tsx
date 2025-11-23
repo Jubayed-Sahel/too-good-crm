@@ -9,17 +9,31 @@ interface SettingsTab {
 interface SettingsTabsProps {
   activeTab: string;
   onTabChange: (tabId: string) => void;
+  tabs?: string[]; // Optional array of tab IDs to show
 }
 
-const tabs: SettingsTab[] = [
-  { id: 'profile', label: 'Profile' },
+// All available tabs with their labels
+const allTabs: Record<string, string> = {
+  profile: 'Profile',
+  organization: 'Organization',
+  team: 'Team',
+  roles: 'Roles',
+  notifications: 'Notifications',
+  security: 'Security',
+  billing: 'Billing',
+};
+
+// Default tabs (for backward compatibility)
+const defaultTabs: SettingsTab[] = [
   { id: 'organization', label: 'Organization' },
-  { id: 'notifications', label: 'Notifications' },
   { id: 'security', label: 'Security' },
-  { id: 'billing', label: 'Billing' },
 ];
 
-const SettingsTabs = ({ activeTab, onTabChange }: SettingsTabsProps) => {
+const SettingsTabs = ({ activeTab, onTabChange, tabs: tabIds }: SettingsTabsProps) => {
+  // If specific tabs are provided, use them; otherwise use default
+  const tabs: SettingsTab[] = tabIds
+    ? tabIds.map(id => ({ id, label: allTabs[id] || id }))
+    : defaultTabs;
   return (
     <Box
       overflowX="auto"

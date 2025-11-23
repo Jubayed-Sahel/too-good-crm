@@ -88,24 +88,18 @@ export const useSendMessage = () => {
   return useMutation({
     mutationFn: (data: SendMessageData) => 
       api.post<Message>('/api/messages/send/', data),
-    onSuccess: (newMessage, variables) => {
-      // Optimistically update the messages cache for the recipient
-      queryClient.setQueryData<Message[]>(
-        ['messages', 'with-user', variables.recipient_id],
-        (oldMessages = []) => {
-          // Check if message already exists
-          const exists = oldMessages.some(m => m.id === newMessage.id);
-          if (exists) {
-            return oldMessages;
-          }
-          return [...oldMessages, newMessage];
-        }
-      );
+    onSuccess: async (newMessage, variables) => {
+      // Instead of optimistic update, just refetch everything from server
+      // This ensures we get the complete message history without losing any messages
+      await queryClient.refetchQueries({ 
+        queryKey: ['messages', 'with-user', variables.recipient_id],
+        exact: true 
+      });
       
-      // Invalidate to ensure we have latest data
-      queryClient.invalidateQueries({ queryKey: ['messages', 'with-user', variables.recipient_id] });
-      queryClient.invalidateQueries({ queryKey: ['messages'] });
-      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      // Also refetch conversations to update last message
+      await queryClient.refetchQueries({ queryKey: ['conversations'] });
+      
+      // Invalidate unread count
       queryClient.invalidateQueries({ queryKey: ['message-unread-count'] });
     },
   });
@@ -128,17 +122,35 @@ export const useConversations = () => {
   const conversationsQuery = useQuery({
     queryKey: ['conversations'],
     queryFn: async () => {
-      const response = await api.get<Conversation[] | { results: Conversation[] }>('/api/conversations/');
-      // Handle paginated response or direct array
-      if (Array.isArray(response)) {
-        return response;
+      console.log('🔍 Fetching conversations...');
+      try {
+        const response = await api.get<Conversation[] | { results: Conversation[] }>('/api/conversations/');
+        console.log('📨 Conversations response:', response);
+        
+        // Handle paginated response or direct array
+        if (Array.isArray(response)) {
+          console.log(`✅ Loaded ${response.length} conversations (array format)`);
+          return response;
+        }
+        if (response && typeof response === 'object' && 'results' in response) {
+          const conversations = (response as { results: Conversation[] }).results;
+          console.log(`✅ Loaded ${conversations.length} conversations (paginated format)`);
+          return conversations;
+        }
+        console.warn('⚠️ Unexpected response format:', response);
+        return [];
+      } catch (error: any) {
+        console.error('❌ Error loading conversations:', error);
+        throw error;
       }
-      if (response && typeof response === 'object' && 'results' in response) {
-        return (response as { results: Conversation[] }).results;
-      }
-      return [];
     },
     enabled: !!user,
+    retry: 2,
+    staleTime: Infinity, // Data never becomes stale
+    gcTime: Infinity, // Keep in cache forever
+    refetchOnMount: false, // Never refetch on mount
+    refetchOnReconnect: false, // Never refetch on reconnect
+    refetchOnWindowFocus: false, // Never refetch on window focus
   });
   
   // Subscribe to real-time conversation updates
@@ -163,6 +175,9 @@ export const useConversations = () => {
   return conversationsQuery;
 };
 
+// AI Assistant constant
+const AI_ASSISTANT_ID = -1;
+
 export const useMessagesWithUser = (userId: number | null) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -170,20 +185,42 @@ export const useMessagesWithUser = (userId: number | null) => {
   const messagesQuery = useQuery({
     queryKey: ['messages', 'with-user', userId],
     queryFn: async () => {
-      if (!userId) return [];
-      try {
-        const response = await api.get<Message[]>(`/api/messages/with_user/?user_id=${userId}`);
-        console.log(`📨 Loaded ${response?.length || 0} messages for user ${userId}`, response);
-        return response || [];
-      } catch (error: any) {
-        console.error('❌ Error loading messages:', error);
-        // Return empty array on error instead of throwing
+      if (!userId) {
+        console.log('⏭️ Skipping message fetch - no userId');
         return [];
       }
+      
+      console.log(`🔍 Fetching messages for user ${userId}...`);
+      
+      try {
+        const response = await api.get<Message[]>(`/api/messages/with_user/?user_id=${userId}`);
+        console.log(`✅ Successfully loaded ${response?.length || 0} messages for user ${userId}`);
+        
+        if (response && Array.isArray(response)) {
+          console.log('📦 Message data sample:', response.slice(0, 2));
+          return response;
+        }
+        
+        console.warn('⚠️ Response is not an array:', response);
+        return [];
+      } catch (error: any) {
+        console.error('❌ Error loading messages:', {
+          userId,
+          error: error.message,
+          status: error.status,
+          response: error.response?.data,
+        });
+        // Throw error to show error state in UI
+        throw error;
+      }
     },
-    enabled: !!userId,
-    refetchInterval: false, // Disable polling - rely on Pusher for updates
-    staleTime: 30000, // Consider data fresh for 30 seconds
+    enabled: !!userId && userId !== AI_ASSISTANT_ID,
+    retry: 2,
+    staleTime: Infinity, // Data never becomes stale
+    gcTime: Infinity, // Keep in cache forever
+    refetchOnMount: false, // Never refetch on mount
+    refetchOnReconnect: false, // Never refetch on reconnect
+    refetchOnWindowFocus: false, // Never refetch on window focus
   });
   
   // Subscribe to real-time message updates for this conversation
@@ -216,6 +253,8 @@ export const useMessagesWithUser = (userId: number | null) => {
         
         // Update cache directly with new message - this triggers immediate re-render
         queryClient.setQueryData<Message[]>(['messages', 'with-user', userId], (oldMessages = []) => {
+          console.log('📦 Current messages in cache:', oldMessages?.length || 0);
+          
           // Check if message already exists
           const exists = oldMessages.some(m => m.id === message.id);
           if (exists) {
@@ -224,14 +263,20 @@ export const useMessagesWithUser = (userId: number | null) => {
           }
           
           console.log(`➕ Adding new message to cache (current count: ${oldMessages.length})`);
+          console.log('📨 Message data:', {
+            id: message.id,
+            content: message.content?.substring(0, 50) + '...',
+            sender_id: message.sender_id,
+            recipient_id: message.recipient_id,
+          });
           
           // Add new message to the list
           const newMessage: Message = {
             id: message.id,
-            sender: data.sender || { id: message.sender_id, email: '' },
-            recipient: { id: message.recipient_id, email: '' },
+            sender: data.sender || { id: message.sender_id, email: '', first_name: '', last_name: '' },
+            recipient: { id: message.recipient_id, email: '', first_name: '', last_name: '' },
             content: message.content,
-            subject: message.subject,
+            subject: message.subject || undefined,
             is_read: message.is_read || false,
             created_at: message.created_at,
             organization: message.organization_id,
@@ -239,16 +284,15 @@ export const useMessagesWithUser = (userId: number | null) => {
           
           // Add to end of array (messages are ordered oldest first, newest last)
           const updated = [...oldMessages, newMessage];
-          console.log(`✅ Cache updated with new message (new count: ${updated.length})`);
+          console.log(`✅ Cache updated! Old count: ${oldMessages.length}, New count: ${updated.length}`);
           return updated;
         });
         
-        // Invalidate queries to ensure consistency, but don't refetch immediately
-        // to avoid losing the real-time update
-        setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ['messages', 'with-user', userId] });
-          queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        }, 1000);
+        // Also update conversations list
+        queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        queryClient.invalidateQueries({ queryKey: ['message-unread-count'] });
+        
+        console.log('🔄 Invalidated conversations and unread count');
       }
     }, [userId, user?.id, queryClient])
   );
@@ -259,23 +303,10 @@ export const useMessagesWithUser = (userId: number | null) => {
     'conversation-updated',
     useCallback((data: any) => {
       console.log('💬 Pusher conversation-updated event:', data);
-      
-      if (data.message && userId) {
-        const message = data.message;
-        const isForThisConversation = 
-          (message.sender_id === userId && message.recipient_id === user?.id) ||
-          (message.sender_id === user?.id && message.recipient_id === userId);
-        
-        if (isForThisConversation) {
-          console.log('🔄 Conversation updated, invalidating queries');
-          queryClient.invalidateQueries({ queryKey: ['messages', 'with-user', userId] });
-          queryClient.invalidateQueries({ queryKey: ['conversations'] });
-        }
-      } else if (data.conversation_id) {
-        // If conversation was updated, refresh conversations list
-        queryClient.invalidateQueries({ queryKey: ['conversations'] });
-      }
-    }, [userId, user?.id, queryClient])
+      // Just invalidate - the new-message handler already does the cache update
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['message-unread-count'] });
+    }, [queryClient])
   );
   
   return messagesQuery;

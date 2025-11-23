@@ -130,10 +130,10 @@ class CustomersViewModel : ViewModel() {
     private fun ApiCustomer.toUiCustomer(): Customer {
         return Customer(
             id = this.id.toString(),
-            name = this.fullName.ifBlank { this.name },
+            name = this.fullName?.takeIf { it.isNotBlank() } ?: this.name,
             email = this.email,
             phone = this.phone,
-            company = this.companyName.ifBlank { this.company },
+            company = this.companyName?.takeIf { it.isNotBlank() } ?: this.company?.takeIf { it.isNotBlank() } ?: "",
             status = when (this.status.lowercase()) {
                 "active" -> CustomerStatus.ACTIVE
                 "inactive" -> CustomerStatus.INACTIVE
@@ -141,10 +141,10 @@ class CustomersViewModel : ViewModel() {
                 else -> CustomerStatus.ACTIVE
             },
             value = this.totalValue,
-            createdDate = this.createdAt,
-            lastContact = this.updatedAt,
+            createdDate = this.createdAt ?: "",
+            lastContact = this.updatedAt ?: "",
             industry = "",
-            website = this.website
+            website = this.website ?: ""
         )
     }
 }

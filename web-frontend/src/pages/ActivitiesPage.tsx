@@ -8,6 +8,7 @@ import { ConfirmDialog, PageHeader, StandardButton } from '../components/common'
 import { RequirePermission } from '../components/guards/RequirePermission';
 import { useAccountMode } from '@/contexts/AccountModeContext';
 import { useProfile } from '@/contexts/ProfileContext';
+import { usePermissions } from '@/contexts/PermissionContext';
 import { ActivityStatsCards } from '../components/activities/ActivityStatsCards';
 import { ActivityFiltersBar } from '../components/activities/ActivityFiltersBar';
 import { ActivitiesTable } from '../components/activities/ActivitiesTable';
@@ -22,6 +23,8 @@ export const ActivitiesPage = () => {
   const navigate = useNavigate();
   const { isClientMode } = useAccountMode();
   const { activeOrganizationId } = useProfile();
+  const { canAccess } = usePermissions();
+  const canCreate = canAccess('activity', 'create');
   const [activities, setActivities] = useState<Activity[]>([]);
   const [stats, setStats] = useState<ActivityStats>({
     total: 0,
@@ -334,20 +337,22 @@ export const ActivitiesPage = () => {
 
   return (
     <DashboardLayout title="Activities">
-      <RequirePermission resource="activities">
+      <RequirePermission resource="activity">
         <VStack align="stretch" gap={5}>
         {/* Page Header */}
         <PageHeader
           title="Activities"
           description="Manage calls, emails, Telegram messages, and other activities"
           actions={
-            <StandardButton
-              variant="primary"
-              leftIcon={<FiPlus />}
-              onClick={handleNewActivity}
-            >
-              New Activity
-            </StandardButton>
+            canCreate ? (
+              <StandardButton
+                variant="primary"
+                leftIcon={<FiPlus />}
+                onClick={handleNewActivity}
+              >
+                New Activity
+              </StandardButton>
+            ) : undefined
           }
         />
 
@@ -362,7 +367,7 @@ export const ActivitiesPage = () => {
           onSearchChange={handleSearch}
           onTypeChange={handleTypeChange}
           onStatusChange={handleStatusChange}
-          onAddActivity={handleNewActivity}
+          onAddActivity={canCreate ? handleNewActivity : undefined}
           onClearFilters={handleClearFilters}
         />
 

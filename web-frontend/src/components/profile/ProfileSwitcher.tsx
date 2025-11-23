@@ -101,6 +101,11 @@ export const ProfileSwitcher = () => {
                 {activeProfile.organization_name || 
                  (activeProfile.profile_type === 'customer' ? 'Independent Customer' : 'No Organization')}
               </Text>
+              {activeProfile.profile_type === 'employee' && activeProfile.roles && activeProfile.roles.length > 0 && (
+                <Text fontSize="xs" color="blue.600" lineHeight="1">
+                  {activeProfile.roles[0].name}
+                </Text>
+              )}
             </VStack>
             <FiChevronDown size={16} />
           </HStack>
@@ -231,9 +236,13 @@ export const ProfileSwitcher = () => {
                         <Text fontSize="sm" fontWeight="semibold" color="gray.900">
                           {profile.organization_name || 'No Organization'}
                         </Text>
-                        {profile.roles && profile.roles.length > 0 && (
+                        {profile.roles && profile.roles.length > 0 ? (
                           <Badge colorPalette="blue" size="xs" variant="subtle">
-                            {profile.roles[0].name}
+                            Role: {profile.roles[0].name}
+                          </Badge>
+                        ) : (
+                          <Badge colorPalette="orange" size="xs" variant="subtle">
+                            No Role Assigned
                           </Badge>
                         )}
                       </VStack>

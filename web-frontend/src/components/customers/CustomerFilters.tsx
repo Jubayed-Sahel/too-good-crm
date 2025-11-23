@@ -14,7 +14,7 @@ interface CustomerFiltersProps {
   onSearchChange: (value: string) => void;
   statusFilter: string;
   onStatusChange: (value: string) => void;
-  onAddCustomer: () => void;
+  onAddCustomer?: () => void; // Optional - only provided if user has create permission
 }
 
 const CustomerFilters = ({
@@ -24,7 +24,6 @@ const CustomerFilters = ({
   onStatusChange,
   onAddCustomer,
 }: CustomerFiltersProps) => {
-  const { canAccess } = usePermissions();
 
   return (
     <Stack
@@ -81,15 +80,16 @@ const CustomerFilters = ({
           <Box ml={2}>More Filters</Box>
         </Button>
 
-        <Button
-          colorPalette="purple"
-          h="40px"
-          onClick={onAddCustomer}
-          disabled={!canAccess('customers', 'create')}
-        >
-          <FiPlus />
-          <Box ml={2}>Add Customer</Box>
-        </Button>
+        {onAddCustomer && (
+          <Button
+            colorPalette="purple"
+            h="40px"
+            onClick={onAddCustomer}
+          >
+            <FiPlus />
+            <Box ml={2}>Add Customer</Box>
+          </Button>
+        )}
       </HStack>
     </Stack>
   );

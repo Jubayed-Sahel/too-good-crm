@@ -57,9 +57,9 @@ class Command(BaseCommand):
         else:
             self.stdout.write('⚠ Organization already exists')
         
-        # Create permissions
-        resources = ['customers', 'leads', 'deals', 'employees', 'vendors']
-        actions = ['create', 'read', 'update', 'delete']
+        # Create permissions (using singular names for consistency)
+        resources = ['customer', 'employee', 'vendor', 'activity', 'issue', 'order', 'payment']
+        actions = ['read', 'create', 'update', 'delete']
         
         created_count = 0
         for resource in resources:
@@ -68,7 +68,7 @@ class Command(BaseCommand):
                     organization=org,
                     resource=resource,
                     action=action,
-                    defaults={'description': f'{action.title()} permission for {resource}'}
+                    defaults={'description': f'{action.title()} {resource}'}
                 )
                 if created:
                     created_count += 1
@@ -101,13 +101,13 @@ class Command(BaseCommand):
             slug='sales',
             defaults={
                 'name': 'Sales',
-                'description': 'Access to customers, leads, and deals'
+                'description': 'Access to customers, orders, and activities'
             }
         )
         if created:
             self.stdout.write(self.style.SUCCESS('✓ Created role: Sales'))
-            # Assign relevant permissions to sales role
-            sales_resources = ['customers', 'leads', 'deals']
+            # Assign relevant permissions to sales role (using singular names)
+            sales_resources = ['customer', 'order', 'activity']
             for permission in Permission.objects.filter(organization=org, resource__in=sales_resources):
                 RolePermission.objects.get_or_create(
                     role=sales_role,

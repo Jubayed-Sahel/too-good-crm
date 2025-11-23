@@ -1,3 +1,4 @@
 // Shared contexts that manage global state
 export { AccountModeProvider, useAccountMode } from './AccountModeContext';
-export { PermissionProvider, usePermissions, Can } from './PermissionContext';
+// Note: PermissionContext has been moved to src/contexts/PermissionContext.tsx
+// This version fetches real permissions from the backend for employees

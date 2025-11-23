@@ -62,10 +62,10 @@ class Command(BaseCommand):
 
         # Define default permissions based on role name
         default_permission_sets = {
-            'sales': ['customers', 'deals', 'leads', 'activities'],
-            'support': ['customers', 'issues', 'activities'],
-            'manager': ['customers', 'deals', 'leads', 'activities', 'employees', 'analytics'],
-            'admin': ['customers', 'deals', 'leads', 'activities', 'employees', 'vendors', 'analytics', 'settings', 'roles'],
+            'sales': ['customer', 'activity', 'order'],
+            'support': ['customer', 'issue', 'activity'],
+            'manager': ['customer', 'activity', 'employee', 'issue', 'order'],
+            'admin': ['customer', 'activity', 'employee', 'vendor', 'issue', 'order', 'payment'],
         }
 
         assigned_count = 0
@@ -75,8 +75,8 @@ class Command(BaseCommand):
                 
                 # Determine which permissions to assign
                 if basic_only:
-                    # Basic read permissions only
-                    resources = ['customers', 'deals', 'leads', 'activities']
+                    # Basic read permissions only (using singular names)
+                    resources = ['customer', 'activity', 'issue']
                     actions = ['read']
                 else:
                     # Try to match role name to permission set
@@ -87,9 +87,9 @@ class Command(BaseCommand):
                             resources = res_list
                             break
                     
-                    # Default to basic permissions if no match
+                    # Default to basic permissions if no match (using singular names)
                     if not resources:
-                        resources = ['customers', 'deals', 'leads', 'activities']
+                        resources = ['customer', 'activity', 'issue']
                     
                     # Actions: read, create, update (no delete for basic roles)
                     actions = ['read', 'create', 'update']

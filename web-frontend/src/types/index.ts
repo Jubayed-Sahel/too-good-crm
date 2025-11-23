@@ -3,7 +3,6 @@
  */
 
 // Export new types modules
-export * from './analytics.types';
 export * from './issue.types';
 export * from './order.types';
 export * from './payment.types';

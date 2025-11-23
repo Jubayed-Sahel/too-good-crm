@@ -59,9 +59,6 @@ from .notification import NotificationPreferencesViewSet
 # Messaging
 from .message import MessageViewSet, ConversationViewSet
 
-# Analytics & Reporting
-from .analytics import AnalyticsViewSet
-
 # Gemini AI Assistant
 from .gemini import GeminiViewSet
 
@@ -113,9 +110,6 @@ __all__ = [
     # Messaging
     'MessageViewSet',
     'ConversationViewSet',
-    
-    # Analytics
-    'AnalyticsViewSet',
     
     # Gemini AI
     'GeminiViewSet',

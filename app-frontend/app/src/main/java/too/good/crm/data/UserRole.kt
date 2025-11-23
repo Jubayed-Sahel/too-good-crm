@@ -55,6 +55,15 @@ object UserSession {
         }
     }
 
+    /**
+     * Clear the current user session
+     * This should be called on logout
+     */
+    fun clearSession() {
+        _currentProfile = null
+        _activeMode = ActiveMode.VENDOR
+    }
+
     // Sample user with both roles for testing
     fun initializeSampleUser() {
         _currentProfile = AppUserProfile(

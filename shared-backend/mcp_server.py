@@ -22,7 +22,6 @@ from mcp_tools.customer_tools import register_customer_tools
 from mcp_tools.lead_tools import register_lead_tools
 from mcp_tools.deal_tools import register_deal_tools
 from mcp_tools.issue_tools import register_issue_tools
-from mcp_tools.analytics_tools import register_analytics_tools
 from mcp_tools.order_tools import register_order_tools
 from mcp_tools.employee_tools import register_employee_tools
 from mcp_tools.organization_tools import register_organization_tools
@@ -129,7 +128,6 @@ register_customer_tools(mcp)
 register_lead_tools(mcp)
 register_deal_tools(mcp)
 register_issue_tools(mcp)
-register_analytics_tools(mcp)
 register_order_tools(mcp)
 register_employee_tools(mcp)
 register_organization_tools(mcp)

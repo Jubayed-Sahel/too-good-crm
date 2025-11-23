@@ -1,5 +1,6 @@
 package too.good.crm.features.signup
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -9,13 +10,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
@@ -31,6 +35,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.text.ClickableText
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import too.good.crm.data.repository.AuthRepository
 import too.good.crm.ui.theme.DesignTokens
 
 @Composable
@@ -38,6 +45,10 @@ fun SignupScreen(
     onSignUpClicked: () -> Unit,
     onLoginClicked: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val authRepository = remember { AuthRepository(context) }
+    
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var firstName by remember { mutableStateOf("") }
@@ -46,6 +57,8 @@ fun SignupScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -191,8 +204,92 @@ fun SignupScreen(
         )
         Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space6))
 
+        // Show error message if any
+        errorMessage?.let { error ->
+            Text(
+                text = error,
+                color = DesignTokens.Colors.Error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
+        }
+
         Button(
-            onClick = onSignUpClicked,
+            onClick = {
+                // Validation (matching web frontend)
+                when {
+                    username.isBlank() -> {
+                        errorMessage = "Username is required"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    email.isBlank() -> {
+                        errorMessage = "Email is required"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    !android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() -> {
+                        errorMessage = "Please enter a valid email address"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    firstName.isBlank() -> {
+                        errorMessage = "First name is required"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    lastName.isBlank() -> {
+                        errorMessage = "Last name is required"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    password.isBlank() -> {
+                        errorMessage = "Password is required"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    password.length < 8 -> {
+                        errorMessage = "Password must be at least 8 characters"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    confirmPassword.isBlank() -> {
+                        errorMessage = "Please confirm your password"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    password != confirmPassword -> {
+                        errorMessage = "Passwords do not match"
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
+                    else -> {
+                        // All validation passed, call register API
+                        errorMessage = null
+                        isLoading = true
+                        
+                        scope.launch {
+                            authRepository.register(
+                                username = username,
+                                email = email,
+                                password = password,
+                                passwordConfirm = confirmPassword,
+                                firstName = firstName,
+                                lastName = lastName
+                            ).onSuccess {
+                                isLoading = false
+                                Toast.makeText(
+                                    context,
+                                    "Account created successfully!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                onSignUpClicked()
+                            }.onFailure { error ->
+                                isLoading = false
+                                errorMessage = error.message
+                                Toast.makeText(
+                                    context,
+                                    error.message ?: "Registration failed",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                }
+            },
+            enabled = !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(DesignTokens.Heights.ButtonStandard),
@@ -202,11 +299,19 @@ fun SignupScreen(
                 contentColor = DesignTokens.Colors.OnPrimary
             )
         ) {
-            Text(
-                text = "Sign Up",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = DesignTokens.Typography.FontWeightSemiBold
-            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.height(20.dp),
+                    color = DesignTokens.Colors.OnPrimary,
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Text(
+                    text = "Sign Up",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = DesignTokens.Typography.FontWeightSemiBold
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))

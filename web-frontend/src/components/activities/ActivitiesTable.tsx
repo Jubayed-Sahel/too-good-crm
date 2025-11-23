@@ -11,6 +11,7 @@ import {
 } from '@chakra-ui/react';
 import { Checkbox } from '../ui/checkbox';
 import { Card, ResponsiveTable } from '../common';
+import { usePermissions } from '@/contexts/PermissionContext';
 import {
   FiPhone,
   FiMail,
@@ -92,6 +93,12 @@ export const ActivitiesTable = ({
   onBulkComplete,
 }: ActivitiesTableProps) => {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const { canAccess } = usePermissions();
+  
+  // Check permissions for each action (using singular 'activity')
+  const canView = canAccess('activity', 'read');
+  const canUpdate = canAccess('activity', 'update');
+  const canDelete = canAccess('activity', 'delete');
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -232,7 +239,7 @@ export const ActivitiesTable = ({
 
               {/* Actions */}
               <HStack gap={2} pt={2} borderTopWidth="1px" borderColor="gray.100">
-                {onView && (
+                {onView && canView && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -244,7 +251,7 @@ export const ActivitiesTable = ({
                     <Box ml={2}>View</Box>
                   </Button>
                 )}
-                {onMarkComplete && (
+                {onMarkComplete && canUpdate && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -258,7 +265,7 @@ export const ActivitiesTable = ({
                     <Box ml={2}>{activity.status === 'completed' ? 'Completed' : 'Complete'}</Box>
                   </Button>
                 )}
-                {onDelete && (
+                {onDelete && canDelete && (
                   <IconButton
                     aria-label="Delete"
                     size="sm"
@@ -413,7 +420,7 @@ export const ActivitiesTable = ({
                   </Table.Cell>
                   <Table.Cell>
                     <HStack gap={1} justify="center">
-                      {onView && (
+                      {onView && canView && (
                         <IconButton
                           aria-label="View activity"
                           size="sm"
@@ -424,7 +431,7 @@ export const ActivitiesTable = ({
                           <FiEye size={16} />
                         </IconButton>
                       )}
-                      {onMarkComplete && (
+                      {onMarkComplete && canUpdate && (
                         <IconButton
                           aria-label="Mark as complete"
                           size="sm"
@@ -438,7 +445,7 @@ export const ActivitiesTable = ({
                           <FiCheckCircle size={16} />
                         </IconButton>
                       )}
-                      {onDelete && (
+                      {onDelete && canDelete && (
                         <IconButton
                           aria-label="Delete activity"
                           size="sm"

@@ -20,7 +20,6 @@ import androidx.navigation.compose.rememberNavController
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.features.activities.ActivitiesScreen
-import too.good.crm.features.analytics.AnalyticsScreen
 import too.good.crm.features.client.ClientDashboardScreen
 import too.good.crm.features.client.MyVendorsScreen
 import too.good.crm.features.client.orders.MyOrdersScreen
@@ -178,16 +177,6 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("activities") {
                             ActivitiesScreen(
-                                onNavigate = { route ->
-                                    navController.navigate(route)
-                                },
-                                onBack = {
-                                    navController.popBackStack()
-                                }
-                            )
-                        }
-                        composable("analytics") {
-                            AnalyticsScreen(
                                 onNavigate = { route ->
                                     navController.navigate(route)
                                 },

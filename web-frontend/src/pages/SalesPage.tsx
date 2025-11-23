@@ -233,9 +233,13 @@ interface SortableLeadCardProps {
   onDelete?: (lead: Lead) => void;
   onMoveToStage?: (lead: Lead, stageKey: string, stageId?: number) => void;
   availableStages?: Array<{ key: string; label: string; id?: number }>;
+  // Permission flags
+  canView?: boolean;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
-function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView, onEdit, onDelete, onMoveToStage, availableStages }: SortableLeadCardProps) {
+function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView, onEdit, onDelete, onMoveToStage, availableStages, canView = true, canEdit = true, canDelete = true }: SortableLeadCardProps) {
   const [movingStageId, setMovingStageId] = useState<number | null>(null);
   
   const {
@@ -324,7 +328,8 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
             onTouchStart={(e) => e.stopPropagation()}
             style={{ pointerEvents: 'auto', zIndex: 10 }}
           >
-            {onView && (
+            {/* Only show buttons if user has permission AND callback provided */}
+            {onView && canView && (
               <Button
                 size="xs"
                 variant="ghost"
@@ -348,7 +353,7 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
                 <FiEye size={14} />
               </Button>
             )}
-            {onEdit && (
+            {onEdit && canEdit && (
               <Button
                 size="xs"
                 variant="ghost"
@@ -372,7 +377,7 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
                 <FiEdit size={14} />
               </Button>
             )}
-            {onDelete && (
+            {onDelete && canDelete && (
               <Button
                 size="xs"
                 variant="ghost"
@@ -757,6 +762,9 @@ function StageColumn({ stage, deals, leads, formatCurrency, formatDate, onDealCl
                               onDelete={onLeadDelete}
                               onMoveToStage={onLeadMoveToStage}
                               availableStages={availableStages}
+                              canView={onLeadView !== undefined}
+                              canEdit={onLeadEdit !== undefined}
+                              canDelete={onLeadDelete !== undefined}
                             />
                   );
               }
@@ -772,11 +780,15 @@ const SalesPage = () => {
   const navigate = useNavigate();
   const { activeOrganizationId, activeProfile } = useProfile();
   const { isVendor, isLoading: permissionsLoading } = usePermissions();
-  const leadsPermissions = usePermissionActions('leads');
+  // Sales page uses 'order' permissions (mapped from sales functionality)
+  const orderPermissions = usePermissionActions('order');
   
-  // For vendors, always allow creating leads (even if permissions are still loading)
-  // This ensures the button is visible immediately for vendors
-  const canCreateLead = isVendor || leadsPermissions.canCreate;
+  // For vendors, always allow all actions (even if permissions are still loading)
+  // Employees need explicit permissions
+  const canViewOrder = isVendor || orderPermissions.canRead;
+  const canCreateOrder = isVendor || orderPermissions.canCreate;
+  const canUpdateOrder = isVendor || orderPermissions.canUpdate;
+  const canDeleteOrder = isVendor || orderPermissions.canDelete;
   const {
     deals,
     stats,
@@ -1771,7 +1783,7 @@ const SalesPage = () => {
               </Button>
 
               {/* Show New Lead button - vendors always have access, employees need permission */}
-              {canCreateLead && (
+              {canCreateOrder && (
               <Button
                 colorPalette="purple"
                 h="40px"
@@ -1863,9 +1875,9 @@ const SalesPage = () => {
                         formatDate={formatDate}
                         onDealClick={(deal) => navigate(`/deals/${deal.id}`)}
                         onLeadClick={(lead) => navigate(`/leads/${lead.id}`)}
-                        onLeadView={handleViewLead}
-                        onLeadEdit={handleEditLead}
-                        onLeadDelete={handleDeleteLead}
+                        onLeadView={canViewOrder ? handleViewLead : undefined}
+                        onLeadEdit={canUpdateOrder ? handleEditLead : undefined}
+                        onLeadDelete={canDeleteOrder ? handleDeleteLead : undefined}
                         onLeadMoveToStage={handleMoveLeadToStage}
                         availableStages={mappedStages}
                       />

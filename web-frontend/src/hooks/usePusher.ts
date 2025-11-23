@@ -23,7 +23,7 @@ export const getPusherInstance = () => {
     
     pusherInstance = new Pusher(PUSHER_KEY, {
       cluster: PUSHER_CLUSTER,
-      authEndpoint: '/api/pusher/auth/',
+      authEndpoint: 'http://localhost:8000/api/pusher/auth/',
       auth: {
         headers: token ? {
           'Authorization': `Token ${token}`,
@@ -62,8 +62,14 @@ export const usePusherChannel = (
   }, [callback]);
 
   useEffect(() => {
-    if (!channelName || !user) {
-      console.log('⏸️ Pusher: Skipping subscription - no channel or user', { channelName, userId: user?.id });
+    if (!channelName || !user || !user.id) {
+      if (import.meta.env.DEV) {
+        console.log('⏸️ Pusher: Skipping subscription', { 
+          channelName, 
+          hasUser: !!user, 
+          userId: user?.id 
+        });
+      }
       return;
     }
 

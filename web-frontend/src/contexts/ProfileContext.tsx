@@ -124,7 +124,12 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     profiles,
     activeProfile,
     activeProfileType: activeProfile?.profile_type || null,
-    activeOrganizationId: activeProfile?.organization || null,
+    // Fix: Extract ID from organization object if it's an object, otherwise use as-is
+    activeOrganizationId: activeProfile?.organization 
+      ? (typeof activeProfile.organization === 'object' 
+          ? activeProfile.organization.id 
+          : activeProfile.organization)
+      : null,
     isLoading,
     switchProfile,
     refreshProfiles,

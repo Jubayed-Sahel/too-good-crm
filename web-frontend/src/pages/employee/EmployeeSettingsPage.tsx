@@ -5,12 +5,7 @@ import {
   SettingsHeader,
   SettingsTabs,
   ProfileSettings,
-  OrganizationSettings,
-  TeamSettings,
-  RolesSettings,
-  NotificationSettings,
   SecuritySettings,
-  BillingSettings,
 } from '../../components/settings';
 
 const EmployeeSettingsPage = () => {
@@ -20,18 +15,8 @@ const EmployeeSettingsPage = () => {
     switch (activeTab) {
       case 'profile':
         return <ProfileSettings />;
-      case 'organization':
-        return <OrganizationSettings />;
-      case 'team':
-        return <TeamSettings />;
-      case 'roles':
-        return <RolesSettings />;
-      case 'notifications':
-        return <NotificationSettings />;
       case 'security':
         return <SecuritySettings />;
-      case 'billing':
-        return <BillingSettings />;
       default:
         return <ProfileSettings />;
     }
@@ -41,7 +26,11 @@ const EmployeeSettingsPage = () => {
     <DashboardLayout title="Settings">
       <VStack align="stretch" gap={5}>
         <SettingsHeader />
-        <SettingsTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <SettingsTabs 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          tabs={['profile', 'security']} // Only show profile and security tabs for employees
+        />
         {renderTabContent()}
       </VStack>
     </DashboardLayout>

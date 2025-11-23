@@ -4,7 +4,6 @@ import {
   FiHome, 
   FiUsers, 
   FiFileText, 
-  FiBarChart2, 
   FiSettings, 
   FiLogOut,
   FiUserPlus,
@@ -104,26 +103,23 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
   // Employees will see filtered items based on their permissions
   const vendorMenuItems: MenuItem[] = [
     { icon: FiHome, label: 'Dashboard', path: '/dashboard', alwaysShow: true },
-    { icon: FiUsers, label: 'Customers', path: '/customers', resource: CRM_RESOURCES.CUSTOMERS, action: 'read' },
-    { icon: FiTrendingUp, label: 'Sales', path: '/sales', resource: CRM_RESOURCES.DEALS, action: 'read' },
-    { icon: FiActivity, label: 'Activities', path: '/activities', resource: CRM_RESOURCES.ACTIVITIES, action: 'read' },
+    { icon: FiUsers, label: 'Customers', path: '/customers', resource: CRM_RESOURCES.CUSTOMER, action: 'read' },
+    { icon: FiTrendingUp, label: 'Sales', path: '/sales', resource: CRM_RESOURCES.ORDER, action: 'read' },
+    { icon: FiActivity, label: 'Activities', path: '/activities', resource: CRM_RESOURCES.ACTIVITY, action: 'read' },
     { icon: FiMessageSquare, label: 'Messages', path: '/messages', alwaysShow: true },
-    { icon: FiAlertCircle, label: 'Issues', path: '/issues', resource: CRM_RESOURCES.ISSUES, action: 'read' },
-    { icon: FiBarChart2, label: 'Analytics', path: '/analytics', resource: CRM_RESOURCES.ANALYTICS, action: 'read' },
-    { icon: HiUserGroup, label: 'Team', path: '/team', resource: CRM_RESOURCES.EMPLOYEES, action: 'read' },
+    { icon: FiAlertCircle, label: 'Issues', path: '/issues', resource: CRM_RESOURCES.ISSUE, action: 'read' },
+    { icon: HiUserGroup, label: 'Team', path: '/team', resource: CRM_RESOURCES.EMPLOYEE, action: 'read' },
     { icon: FiSettings, label: 'Settings', path: '/settings', alwaysShow: true },
   ];
 
   // Client menu items
   const clientMenuItems = [
-    { icon: FiHome, label: 'Dashboard', path: '/client/dashboard', resource: 'vendors' },
-    { icon: FiShoppingBag, label: 'My Vendors', path: '/client/vendors', resource: 'vendors' },
-    { icon: FiPackage, label: 'My Orders', path: '/client/orders', resource: 'orders' },
-    { icon: FiCreditCard, label: 'Payments', path: '/client/payments', resource: 'payments' },
+    { icon: FiHome, label: 'Dashboard', path: '/client/dashboard', alwaysShow: true },
+    { icon: FiShoppingBag, label: 'My Vendors', path: '/client/vendors', resource: CRM_RESOURCES.VENDOR, action: 'read' },
+    { icon: FiPackage, label: 'My Orders', path: '/client/orders', resource: CRM_RESOURCES.ORDER, action: 'read' },
     { icon: FiMessageSquare, label: 'Messages', path: '/messages', alwaysShow: true },
-    { icon: FiActivity, label: 'Activities', path: '/client/activities', resource: 'activities' },
-    { icon: FiAlertCircle, label: 'Issues', path: '/client/issues', resource: 'issues' },
-    { icon: FiSettings, label: 'Settings', path: '/client/settings', resource: 'settings' },
+    { icon: FiAlertCircle, label: 'Issues', path: '/client/issues', resource: CRM_RESOURCES.ISSUE, action: 'read' },
+    { icon: FiSettings, label: 'Settings', path: '/client/settings', alwaysShow: true },
   ];
 
   /**

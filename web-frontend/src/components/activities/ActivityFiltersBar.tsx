@@ -11,7 +11,7 @@ interface ActivityFiltersBarProps {
   onTypeChange: (value: string) => void;
   statusFilter: ActivityStatus | 'all';
   onStatusChange: (value: string) => void;
-  onAddActivity: () => void;
+  onAddActivity?: () => void; // Optional - only provided if user has create permission
   onClearFilters: () => void;
 }
 
@@ -125,17 +125,19 @@ export const ActivityFiltersBar = ({
         </HStack>
 
         {/* Right side - Action Buttons */}
-        <HStack gap={2}>
-          <Button
-            colorPalette={isClientMode ? "blue" : "purple"}
-            h="40px"
-            onClick={onAddActivity}
-            w={{ base: '100%', md: 'auto' }}
-          >
-            <FiPlus />
-            <Box ml={2}>New Activity</Box>
-          </Button>
-        </HStack>
+        {onAddActivity && (
+          <HStack gap={2}>
+            <Button
+              colorPalette={isClientMode ? "blue" : "purple"}
+              h="40px"
+              onClick={onAddActivity}
+              w={{ base: '100%', md: 'auto' }}
+            >
+              <FiPlus />
+              <Box ml={2}>New Activity</Box>
+            </Button>
+          </HStack>
+        )}
       </Stack>
     </Box>
   );

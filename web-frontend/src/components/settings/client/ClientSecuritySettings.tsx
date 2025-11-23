@@ -3,7 +3,8 @@ import { Box, Button, Input, VStack, HStack, Text } from '@chakra-ui/react';
 import { Card } from '../../common';
 import { Field } from '../../ui/field';
 import { toaster } from '../../ui/toaster';
-import { FiLock, FiShield } from 'react-icons/fi';
+import { FiLock } from 'react-icons/fi';
+import { useChangePassword } from '@/hooks/useUser';
 
 const ClientSecuritySettings = () => {
   const [passwords, setPasswords] = useState({
@@ -11,28 +12,60 @@ const ClientSecuritySettings = () => {
     new: '',
     confirm: '',
   });
+  const changePasswordMutation = useChangePassword();
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (passwords.new !== passwords.confirm) {
       toaster.create({
-        title: 'Password mismatch',
-        description: 'New password and confirm password do not match.',
+        title: 'Passwords Do Not Match',
+        description: 'The new password and confirmation password must be identical. Please re-enter them.',
         type: 'error',
-        duration: 3000,
+        duration: 4000,
       });
       return;
     }
 
-    toaster.create({
-      title: 'Password updated',
-      description: 'Your password has been changed successfully.',
-      type: 'success',
-      duration: 3000,
-    });
+    if (passwords.new.length < 6) {
+      toaster.create({
+        title: 'Password Too Short',
+        description: 'Your new password must be at least 6 characters long.',
+        type: 'error',
+        duration: 4000,
+      });
+      return;
+    }
 
-    setPasswords({ current: '', new: '', confirm: '' });
+    try {
+      await changePasswordMutation.mutateAsync({
+        old_password: passwords.current,
+        new_password: passwords.new,
+        new_password_confirm: passwords.confirm,
+      });
+
+      toaster.create({
+        title: 'Password Changed Successfully!',
+        description: 'Your password has been updated. Please use your new password for future logins.',
+        type: 'success',
+        duration: 5000,
+      });
+
+      setPasswords({ current: '', new: '', confirm: '' });
+    } catch (error: any) {
+      console.error('Failed to change password:', error);
+      const errorMsg = error.response?.data?.old_password?.[0] || 
+                       error.response?.data?.new_password?.[0] || 
+                       error.response?.data?.detail || 
+                       error.response?.data?.error || 
+                       'Failed to change password. Please verify your current password is correct.';
+      toaster.create({
+        title: 'Password Change Failed',
+        description: errorMsg,
+        type: 'error',
+        duration: 5000,
+      });
+    }
   };
 
   return (
@@ -72,20 +105,36 @@ const ClientSecuritySettings = () => {
             </Field>
 
             <Field label="New Password" required>
-              <Box>
-                <Input
-                  type="password"
-                  value={passwords.new}
-                  onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
-                  size="md"
-                  borderRadius="lg"
-                  placeholder="Enter new password"
-                />
-                <Text fontSize="xs" color="gray.500" mt={1}>
-                  Must be at least 8 characters with uppercase, lowercase, and numbers
+              <Input
+                type="password"
+                value={passwords.new}
+                onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+                size="md"
+                borderRadius="lg"
+                placeholder="Enter new password (min. 6 characters)"
+              />
+            </Field>
+
+            <Box p={4} bg="blue.50" borderRadius="md" borderLeft="4px solid" borderColor="blue.500">
+              <Text fontSize="sm" fontWeight="bold" color="blue.800" mb={3}>
+                Password Requirements:
+              </Text>
+              <VStack align="start" gap={2}>
+                <HStack gap={2}>
+                  <Box color="blue.600" fontSize="sm">✓</Box>
+                  <Text fontSize="sm" color="blue.700">Minimum 6 characters long</Text>
+                </HStack>
+                <HStack gap={2}>
+                  <Box color="blue.600" fontSize="sm">✓</Box>
+                  <Text fontSize="sm" color="blue.700">Must match the confirmation field</Text>
+                </HStack>
+              </VStack>
+              <Box mt={3} pt={3} borderTop="1px solid" borderColor="blue.200">
+                <Text fontSize="xs" color="blue.600" fontStyle="italic">
+                  Tip: Use a mix of letters, numbers, and special characters for a stronger password
                 </Text>
               </Box>
-            </Field>
+            </Box>
 
             <Field label="Confirm New Password" required>
               <Input
@@ -94,7 +143,7 @@ const ClientSecuritySettings = () => {
                 onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
                 size="md"
                 borderRadius="lg"
-                placeholder="Confirm new password"
+                placeholder="Re-enter your new password"
               />
             </Field>
 
@@ -103,83 +152,13 @@ const ClientSecuritySettings = () => {
                 type="submit"
                 colorPalette="blue"
                 size="md"
+                loading={changePasswordMutation.isPending}
               >
                 Update Password
               </Button>
             </Box>
           </VStack>
         </form>
-      </Card>
-
-      {/* Two-Factor Authentication */}
-      <Card variant="elevated">
-        <VStack align="stretch" gap={4}>
-          <HStack gap={2}>
-            <Box
-              p={2}
-              bg="green.100"
-              borderRadius="md"
-              color="green.600"
-            >
-              <FiShield size={20} />
-            </Box>
-            <VStack align="start" gap={0}>
-              <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-                Two-Factor Authentication
-              </Text>
-              <Text fontSize="xs" color="gray.600">
-                Add an extra layer of security to your account
-              </Text>
-            </VStack>
-          </HStack>
-
-          <Box p={4} bg="gray.50" borderRadius="lg">
-            <VStack align="start" gap={3}>
-              <Text fontSize="sm" color="gray.700">
-                Two-factor authentication is not enabled for your account.
-              </Text>
-              <Button size="sm" colorPalette="green">
-                Enable 2FA
-              </Button>
-            </VStack>
-          </Box>
-        </VStack>
-      </Card>
-
-      {/* Active Sessions */}
-      <Card variant="elevated">
-        <VStack align="stretch" gap={4}>
-          <VStack align="start" gap={0}>
-            <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-              Active Sessions
-            </Text>
-            <Text fontSize="xs" color="gray.600">
-              Manage your active sessions and sign out from other devices
-            </Text>
-          </VStack>
-
-          <Box p={4} bg="gray.50" borderRadius="lg">
-            <VStack align="stretch" gap={3}>
-              <HStack justify="space-between">
-                <VStack align="start" gap={0}>
-                  <Text fontSize="sm" fontWeight="medium" color="gray.900">
-                    Current Session
-                  </Text>
-                  <Text fontSize="xs" color="gray.600">
-                    Chrome on Windows • San Francisco, CA
-                  </Text>
-                </VStack>
-                <Text fontSize="xs" color="green.600" fontWeight="medium">
-                  Active Now
-                </Text>
-              </HStack>
-            </VStack>
-          </Box>
-
-          <Button variant="outline" colorPalette="red" size="sm">
-            Sign Out All Other Sessions
-          </Button>
-        </VStack>
       </Card>
     </VStack>
   );

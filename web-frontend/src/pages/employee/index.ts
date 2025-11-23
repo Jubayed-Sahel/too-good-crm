@@ -33,6 +33,5 @@ export { default as EmployeeActivitiesPage } from './EmployeeActivitiesPage';
 export { default as EmployeeActivityDetailPage } from './EmployeeActivityDetailPage';
 export { default as EmployeeIssuesPage } from './EmployeeIssuesPage';
 
-// Employee Analytics & Settings
-export { default as EmployeeAnalyticsPage } from './EmployeeAnalyticsPage';
+// Employee Settings
 export { default as EmployeePermissionDebugPage } from './EmployeePermissionDebugPage';
