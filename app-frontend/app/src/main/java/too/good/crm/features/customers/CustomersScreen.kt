@@ -379,12 +379,10 @@ fun CustomersScreen(
                             ResponsiveCustomerCard(
                                 customer = customer,
                                 onView = { 
-                                    Toast.makeText(context, "View customer: ${customer.name}", Toast.LENGTH_SHORT).show()
-                                    // TODO: Navigate to customer detail screen
+                                    onNavigate("customer-detail/${customer.id}")
                                 },
                                 onEdit = { 
-                                    Toast.makeText(context, "Edit customer: ${customer.name}", Toast.LENGTH_SHORT).show()
-                                    // TODO: Navigate to customer edit screen
+                                    onNavigate("customer-edit/${customer.id}")
                                 },
                                 onDelete = { 
                                     viewModel.showDeleteConfirmDialog(customer)

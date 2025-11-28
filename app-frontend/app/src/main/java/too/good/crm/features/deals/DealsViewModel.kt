@@ -305,6 +305,35 @@ class DealsViewModel : ViewModel() {
     }
     
     /**
+     * Update deal
+     */
+    fun updateDeal(dealId: Int, deal: CreateDealRequest, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isCreating = true, error = null)
+            
+            when (val result = repository.updateDeal(dealId, deal)) {
+                is NetworkResult.Success -> {
+                    _uiState.value = _uiState.value.copy(isCreating = false, error = null)
+                    loadDeals(refresh = true)
+                    onSuccess()
+                }
+                is NetworkResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isCreating = false,
+                        error = result.message
+                    )
+                }
+                is NetworkResult.Exception -> {
+                    _uiState.value = _uiState.value.copy(
+                        isCreating = false,
+                        error = result.exception.message ?: "Failed to update deal"
+                    )
+                }
+            }
+        }
+    }
+    
+    /**
      * Delete deal
      */
     fun deleteDeal(dealId: Int, onSuccess: () -> Unit) {

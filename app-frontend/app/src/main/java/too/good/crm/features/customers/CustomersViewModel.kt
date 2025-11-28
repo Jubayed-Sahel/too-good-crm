@@ -149,6 +149,71 @@ class CustomersViewModel : ViewModel() {
             customerToDelete = customer
         )
     }
+    
+    /**
+     * Update existing customer
+     * Uses PATCH method for partial updates
+     */
+    fun updateCustomer(
+        customerId: Int,
+        name: String,
+        email: String,
+        phone: String,
+        firstName: String = "",
+        lastName: String = "",
+        companyName: String = "",
+        customerType: String = "individual",
+        status: String = "active",
+        address: String = "",
+        city: String = "",
+        state: String = "",
+        country: String = "",
+        postalCode: String = "",
+        website: String = "",
+        notes: String = ""
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            
+            val request = CreateCustomerRequest(
+                name = name,
+                firstName = firstName.ifBlank { null },
+                lastName = lastName.ifBlank { null },
+                email = email,
+                phone = phone,
+                companyName = companyName.ifBlank { null },
+                customerType = customerType,
+                status = status,
+                address = address.ifBlank { null },
+                city = city.ifBlank { null },
+                state = state.ifBlank { null },
+                country = country.ifBlank { null },
+                postalCode = postalCode.ifBlank { null },
+                website = website.ifBlank { null },
+                notes = notes.ifBlank { null }
+            )
+            
+            repository.patchCustomer(customerId, request)
+                .onSuccess { updatedApiCustomer ->
+                    val updatedCustomer = updatedApiCustomer.toUiCustomer()
+                    _uiState.value = _uiState.value.copy(
+                        customers = _uiState.value.customers.map { 
+                            if (it.id == updatedCustomer.id) updatedCustomer else it 
+                        },
+                        isLoading = false,
+                        successMessage = "Customer updated successfully"
+                    )
+                    // Reload to ensure consistency with server
+                    loadCustomers()
+                }
+                .onFailure { error ->
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = error.message ?: "Failed to update customer"
+                    )
+                }
+        }
+    }
 
     fun hideDeleteConfirmDialog() {
         _uiState.value = _uiState.value.copy(

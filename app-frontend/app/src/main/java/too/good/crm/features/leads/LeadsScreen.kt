@@ -32,6 +32,9 @@ fun LeadsScreen(
     val profileViewModel = remember { ProfileViewModel(context) }
     val profileState by profileViewModel.uiState.collectAsState()
     
+    val viewModel: LeadsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    
     var searchQuery by remember { mutableStateOf("") }
     var selectedStatus by remember { mutableStateOf("All Statuses") }
     var selectedSource by remember { mutableStateOf("All Sources") }
@@ -289,35 +292,91 @@ fun LeadsScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Lead Cards
-            LeadCard(
-                name = "Sarah Johnson",
-                company = "TechCorp Solutions",
-                position = "VP of Sales",
-                email = "sarah.johnson@techcorp.com",
-                score = "85/100",
-                priority = "High",
-                estimatedValue = "$50,000",
-                source = "Website",
-                created = "Mar 15, 2024",
-                status = "Qualified",
-                statusColor = DesignTokens.Colors.Success
-            )
+            if (uiState.isLoading && uiState.leads.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                    ) {
+                        CircularProgressIndicator()
+                        Text(
+                            text = "Loading leads...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                    }
+                }
+            } else if (uiState.error != null) {
+                Surface(
+                    color = DesignTokens.Colors.ErrorLight,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = uiState.error ?: "Unknown error",
+                        color = DesignTokens.Colors.ErrorDark,
+                        modifier = Modifier.padding(DesignTokens.Spacing.Space3),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else if (uiState.leads.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                    ) {
+                        Icon(
+                            Icons.Default.SearchOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                        Text(
+                            text = "No leads found",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                        Text(
+                            text = "Try adjusting your filters or add a new lead",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                uiState.leads.forEach { lead ->
+                    LeadCard(
+                        leadId = lead.id.toString(),
+                        name = lead.name,
+                        company = lead.organizationName ?: "No company",
+                        position = lead.jobTitle ?: "",
+                        email = lead.email ?: "",
+                        score = "${lead.leadScore ?: 0}/100",
+                        estimatedValue = lead.estimatedValue ?: "$0",
+                        source = lead.source?.replace("_", " ")?.replaceFirstChar { it.uppercase() } ?: "Unknown",
+                        created = lead.createdAt,
+                        status = lead.qualificationStatus ?: lead.status,
+                        statusColor = when (lead.qualificationStatus?.lowercase()) {
+                            "new" -> DesignTokens.Colors.Info
+                            "contacted" -> DesignTokens.Colors.Warning
+                            "qualified" -> DesignTokens.Colors.Success
+                            "unqualified", "disqualified" -> DesignTokens.Colors.Error
+                            "converted" -> DesignTokens.Colors.Success
+                            else -> DesignTokens.Colors.OnSurfaceVariant
+                        },
+                        onView = { onNavigate("lead-detail/$it") },
+                        onEdit = { onNavigate("lead-edit/$it") }
+                    )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            LeadCard(
-                name = "Michael Chen",
-                company = "StartupXYZ",
-                position = "Founder & CEO",
-                email = "mchen@startupxyz.io",
-                score = "78/100",
-                priority = "High",
-                estimatedValue = "$25,000",
-                source = "Referral",
-                created = "Mar 10, 2024",
-                status = "Proposal",
-                statusColor = DesignTokens.Colors.Warning
-            )
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
         }
     }
 }
@@ -406,17 +465,19 @@ fun LeadMetricCard(
 
 @Composable
 fun LeadCard(
+    leadId: String,
     name: String,
     company: String,
     position: String,
     email: String,
     score: String,
-    priority: String,
     estimatedValue: String,
     source: String,
     created: String,
     status: String,
-    statusColor: Color
+    statusColor: Color,
+    onView: (String) -> Unit = {},
+    onEdit: (String) -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -523,26 +584,6 @@ fun LeadCard(
                         color = DesignTokens.Colors.OnSurface
                     )
                 }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Priority",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = DesignTokens.Colors.OnSurfaceVariant,
-                        fontWeight = DesignTokens.Typography.FontWeightMedium
-                    )
-                    Surface(
-                        shape = MaterialTheme.shapes.small,
-                        color = DesignTokens.Colors.ErrorLight
-                    ) {
-                        Text(
-                            text = priority,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = DesignTokens.Colors.ErrorDark,
-                            fontWeight = DesignTokens.Typography.FontWeightSemiBold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
-                    }
-                }
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = "Est. Value",
@@ -600,7 +641,7 @@ fun LeadCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { /* TODO: View lead */ },
+                    onClick = { onView(leadId) },
                     modifier = Modifier.weight(1f),
                     shape = MaterialTheme.shapes.medium,
                     border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.Outline)
@@ -610,7 +651,7 @@ fun LeadCard(
                     Text("View")
                 }
                 OutlinedButton(
-                    onClick = { /* TODO: Edit lead */ },
+                    onClick = { onEdit(leadId) },
                     modifier = Modifier.weight(1f),
                     shape = MaterialTheme.shapes.medium,
                     border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.Outline)
@@ -619,24 +660,6 @@ fun LeadCard(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Edit")
                 }
-                IconButton(
-                    onClick = { /* TODO: Delete lead */ }
-                ) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = DesignTokens.Colors.Error)
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Button(
-                onClick = { /* TODO: Convert to customer */ },
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DesignTokens.Colors.Success
-                ),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Text("Convert to Customer")
             }
         }
     }
