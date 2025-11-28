@@ -39,9 +39,11 @@ fun DealsScreen(
     val profileViewModel = remember { ProfileViewModel(context) }
     val profileState by profileViewModel.uiState.collectAsState()
     
+    val viewModel: DealsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val uiState by viewModel.uiState.collectAsState()
+    
     var searchQuery by remember { mutableStateOf("") }
-    var filterStage by remember { mutableStateOf<DealStage?>(null) }
-    val deals = remember { DealSampleData.getDeals() }
+    var filterStage by remember { mutableStateOf<String?>(null) }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     
     LaunchedEffect(Unit) {
@@ -49,13 +51,23 @@ fun DealsScreen(
             profileViewModel.loadProfiles()
         }
     }
-
-    val filteredDeals = deals.filter { deal ->
-        val matchesSearch = searchQuery.isEmpty() ||
-                deal.title.contains(searchQuery, ignoreCase = true) ||
-                deal.customerName.contains(searchQuery, ignoreCase = true)
-        val matchesFilter = filterStage == null || deal.stage == filterStage
-        matchesSearch && matchesFilter
+    
+    // Search with debounce
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotEmpty()) {
+            viewModel.searchDeals(searchQuery)
+        } else if (filterStage == null) {
+            viewModel.loadDeals()
+        }
+    }
+    
+    // Filter by stage
+    LaunchedEffect(filterStage) {
+        if (filterStage != null) {
+            viewModel.filterByStage(filterStage)
+        } else if (searchQuery.isEmpty()) {
+            viewModel.loadDeals()
+        }
     }
 
     AppScaffoldWithDrawer(
@@ -140,7 +152,7 @@ fun DealsScreen(
                 Box(modifier = Modifier.weight(1f)) {
                     StatCard(
                         title = "TOTAL DEALS",
-                        value = deals.size.toString(),
+                        value = uiState.totalCount.toString(),
                         icon = {
                             Icon(
                                 Icons.Default.Description,
@@ -158,7 +170,7 @@ fun DealsScreen(
                 Box(modifier = Modifier.weight(1f)) {
                     StatCard(
                         title = "ACTIVE",
-                        value = deals.count { it.status == DealStatus.ACTIVE }.toString(),
+                        value = uiState.deals.count { it.status == "open" }.toString(),
                         icon = {
                             Icon(
                                 Icons.AutoMirrored.Filled.TrendingUp,
@@ -176,7 +188,7 @@ fun DealsScreen(
                 Box(modifier = Modifier.weight(1f)) {
                     StatCard(
                         title = "WON",
-                        value = deals.count { it.status == DealStatus.WON }.toString(),
+                        value = uiState.deals.count { it.isWon }.toString(),
                         icon = {
                             Icon(
                                 Icons.Default.CheckCircle,
@@ -192,9 +204,12 @@ fun DealsScreen(
                     )
                 }
                 Box(modifier = Modifier.weight(1f)) {
+                    val pipelineValue = uiState.deals.filter { it.status == "open" }.sumOf { 
+                        it.value.toDoubleOrNull() ?: 0.0 
+                    }.toInt()
                     StatCard(
                         title = "PIPELINE VALUE",
-                        value = "$${deals.filter { it.status == DealStatus.ACTIVE }.sumOf { it.value }.toInt() / 1000}K",
+                        value = if (pipelineValue >= 1000) "$${pipelineValue / 1000}K" else "$$pipelineValue",
                         icon = {
                             Icon(
                                 Icons.Default.AttachMoney,
@@ -237,11 +252,74 @@ fun DealsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Deals List
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredDeals) { deal ->
-                    DealCard(deal = deal)
+            when {
+                uiState.isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                uiState.error != null -> {
+                    ResponsiveCard {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Error,
+                                contentDescription = null,
+                                tint = DesignTokens.Colors.Error,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = uiState.error ?: "Failed to load deals",
+                                color = DesignTokens.Colors.Error,
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
+                uiState.deals.isEmpty() -> {
+                    ResponsiveCard {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = DesignTokens.Colors.OnSurfaceVariant,
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Text(
+                                text = "No deals found",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(uiState.deals) { deal ->
+                            DealCard(
+                                deal = deal,
+                                onView = { onNavigate("deal-detail/${deal.id}") },
+                                onEdit = { onNavigate("deal-edit/${deal.id}") }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -249,11 +327,15 @@ fun DealsScreen(
 }
 
 @Composable
-fun DealCard(deal: Deal) {
+fun DealCard(
+    deal: too.good.crm.data.model.DealListItem,
+    onView: () -> Unit,
+    onEdit: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Navigate to detail */ },
+            .clickable { onView() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -285,7 +367,7 @@ fun DealCard(deal: Deal) {
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = deal.customerName,
+                            text = deal.customerName ?: "No customer",
                             style = MaterialTheme.typography.bodyMedium,
                             color = DesignTokens.Colors.OnSurfaceVariant
                         )
@@ -293,87 +375,132 @@ fun DealCard(deal: Deal) {
                 }
 
                 Column(horizontalAlignment = Alignment.End) {
+                    val dealValue = deal.value.toDoubleOrNull() ?: 0.0
                     Text(
-                        text = NumberFormat.getCurrencyInstance(Locale.US).format(deal.value),
+                        text = "${deal.currency} ${NumberFormat.getNumberInstance(Locale.US).format(dealValue)}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = DesignTokens.Colors.Success
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    DealStageBadge(stage = deal.stage)
+                    DealStatusBadge(
+                        status = deal.status,
+                        stageName = deal.stageName,
+                        isWon = deal.isWon,
+                        isLost = deal.isLost
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Progress Bar
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = "Probability",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = DesignTokens.Colors.OnSurfaceVariant
-                    )
-                    Text(
-                        text = "${deal.probability}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+            deal.probability?.let { probability ->
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Probability",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                        Text(
+                            text = "$probability%",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { probability / 100f },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
+                        color = when {
+                            probability >= 75 -> DesignTokens.Colors.Success
+                            probability >= 50 -> DesignTokens.Colors.Warning
+                            else -> DesignTokens.Colors.Error
+                        },
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
-                LinearProgressIndicator(
-                    progress = { deal.probability / 100f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
-                    color = when {
-                        deal.probability >= 75 -> DesignTokens.Colors.Success
-                        deal.probability >= 50 -> DesignTokens.Colors.Warning
-                        else -> DesignTokens.Colors.Error
-                    },
-                )
+                Spacer(modifier = Modifier.height(12.dp))
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             // Footer Info
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.CalendarToday,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = DesignTokens.Colors.OnSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Close: ${deal.expectedCloseDate}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = DesignTokens.Colors.OnSurfaceVariant
-                    )
+                deal.expectedCloseDate?.let { closeDate ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Close: $closeDate",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                    }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                deal.assignedToName?.let { assignedTo ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = assignedTo,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                    }
+                }
+            }
+            
+            // Action Buttons
+            Spacer(modifier = Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onView,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
                     Icon(
-                        Icons.Default.Person,
+                        Icons.Default.RemoveRedEye,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = DesignTokens.Colors.OnSurfaceVariant
+                        modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = deal.owner,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = DesignTokens.Colors.OnSurfaceVariant
+                    Text("View", style = MaterialTheme.typography.bodySmall)
+                }
+                Button(
+                    onClick = onEdit,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(vertical = 8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
                     )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Edit", style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -381,37 +508,27 @@ fun DealCard(deal: Deal) {
 }
 
 @Composable
-fun DealStageBadge(stage: DealStage) {
-    val (backgroundColor, textColor, text) = when (stage) {
-        DealStage.PROSPECTING -> Triple(
-            DesignTokens.Colors.Info.copy(alpha = 0.1f),
-            DesignTokens.Colors.Info,
-            "Prospecting"
-        )
-        DealStage.QUALIFICATION -> Triple(
-            DesignTokens.Colors.StatusScheduled.copy(alpha = 0.1f),
-            DesignTokens.Colors.StatusScheduled,
-            "Qualification"
-        )
-        DealStage.PROPOSAL -> Triple(
-            DesignTokens.Colors.Warning.copy(alpha = 0.1f),
-            DesignTokens.Colors.Warning,
-            "Proposal"
-        )
-        DealStage.NEGOTIATION -> Triple(
-            DesignTokens.Colors.PinkAccent.copy(alpha = 0.1f),
-            DesignTokens.Colors.PinkAccent,
-            "Negotiation"
-        )
-        DealStage.CLOSED_WON -> Triple(
+fun DealStatusBadge(status: String, stageName: String?, isWon: Boolean, isLost: Boolean) {
+    val (backgroundColor, textColor, text) = when {
+        isWon -> Triple(
             DesignTokens.Colors.Success.copy(alpha = 0.1f),
             DesignTokens.Colors.Success,
             "Won"
         )
-        DealStage.CLOSED_LOST -> Triple(
+        isLost -> Triple(
             DesignTokens.Colors.Error.copy(alpha = 0.1f),
             DesignTokens.Colors.Error,
             "Lost"
+        )
+        stageName != null -> Triple(
+            DesignTokens.Colors.Primary.copy(alpha = 0.1f),
+            DesignTokens.Colors.Primary,
+            stageName
+        )
+        else -> Triple(
+            DesignTokens.Colors.Info.copy(alpha = 0.1f),
+            DesignTokens.Colors.Info,
+            status.replaceFirstChar { it.uppercase() }
         )
     }
 

@@ -31,9 +31,17 @@ import too.good.crm.features.issues.ui.CustomerIssuesListScreen
 import too.good.crm.features.issues.ui.CustomerIssueDetailScreen
 import too.good.crm.features.issues.ui.CustomerCreateIssueScreen
 import too.good.crm.features.customers.CustomersScreen
+import too.good.crm.features.customers.CustomerDetailScreen
+import too.good.crm.features.customers.CustomersScreen
+import too.good.crm.features.customers.CustomerDetailScreen
+import too.good.crm.features.customers.CustomerEditScreen
 import too.good.crm.features.dashboard.DashboardScreen
 import too.good.crm.features.deals.DealsScreen
+import too.good.crm.features.deals.DealDetailScreen
+import too.good.crm.features.deals.DealEditScreen
 import too.good.crm.features.leads.LeadsScreen
+import too.good.crm.features.leads.LeadDetailScreen
+import too.good.crm.features.leads.LeadEditScreen
 import too.good.crm.features.login.LoginScreen
 import too.good.crm.features.sales.SalesScreen
 import too.good.crm.features.settings.SettingsScreen
@@ -169,6 +177,33 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        composable("lead-detail/{leadId}") { backStackEntry ->
+                            val leadId = backStackEntry.arguments?.getString("leadId") ?: ""
+                            LeadDetailScreen(
+                                leadId = leadId,
+                                onBack = {
+                                    navController.popBackStack()
+                                },
+                                onEdit = {
+                                    navController.navigate("lead-edit/$leadId")
+                                },
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                }
+                            )
+                        }
+                        composable("lead-edit/{leadId}") { backStackEntry ->
+                            val leadId = backStackEntry.arguments?.getString("leadId") ?: ""
+                            LeadEditScreen(
+                                leadId = leadId,
+                                onBack = {
+                                    navController.popBackStack()
+                                },
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                }
+                            )
+                        }
                         composable("customers") {
                             CustomersScreen(
                                 onNavigate = { route ->
@@ -179,8 +214,59 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        composable("customer-detail/{customerId}") { backStackEntry ->
+                            val customerId = backStackEntry.arguments?.getString("customerId") ?: ""
+                            CustomerDetailScreen(
+                                customerId = customerId,
+                                onBack = {
+                                    navController.popBackStack()
+                                },
+                                onEdit = {
+                                    navController.navigate("customer-edit/$customerId")
+                                },
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                }
+                            )
+                        }
+                        composable("customer-edit/{customerId}") { backStackEntry ->
+                            val customerId = backStackEntry.arguments?.getString("customerId") ?: ""
+                            CustomerEditScreen(
+                                customerId = customerId,
+                                onBack = {
+                                    navController.popBackStack()
+                                },
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                }
+                            )
+                        }
                         composable("deals") {
                             DealsScreen(
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("deal-detail/{dealId}") { backStackEntry ->
+                            val dealId = backStackEntry.arguments?.getString("dealId")?.toIntOrNull() ?: 0
+                            DealDetailScreen(
+                                dealId = dealId,
+                                onNavigate = { route ->
+                                    navController.navigate(route)
+                                },
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
+                        composable("deal-edit/{dealId}") { backStackEntry ->
+                            val dealId = backStackEntry.arguments?.getString("dealId")?.toIntOrNull() ?: 0
+                            DealEditScreen(
+                                dealId = dealId,
                                 onNavigate = { route ->
                                     navController.navigate(route)
                                 },
