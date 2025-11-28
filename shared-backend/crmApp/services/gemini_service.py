@@ -100,12 +100,16 @@ class GeminiService:
             'user_id': user.id,
             'organization_id': organization_id,
             'role': active_profile.profile_type,
-            'permissions': permissions
+            'permissions': permissions,
+            # CRITICAL: Include admin flags for MCP authorization
+            'is_superuser': user.is_superuser,
+            'is_staff': user.is_staff,
         }
         
         logger.info(
             f"Built user context: user={user.id}, org={organization_id}, "
-            f"role={active_profile.profile_type}, perms={len(permissions)}"
+            f"role={active_profile.profile_type}, perms={len(permissions)}, "
+            f"is_superuser={user.is_superuser}, is_staff={user.is_staff}"
         )
         
         return context
