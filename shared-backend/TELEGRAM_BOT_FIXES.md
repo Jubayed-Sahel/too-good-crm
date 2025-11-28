@@ -58,7 +58,7 @@ python update_webhook.py
 
 Or manually:
 ```powershell
-$token = "8339526073:AAFr2B1jvExqvr5YVrDbG7qHSP0yjxQQ9h4"
+$token = ""
 $webhookUrl = "https://YOUR-NGROK-URL.ngrok-free.app/api/telegram/webhook/"
 Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/setWebhook" -Method POST -Body (@{url=$webhookUrl} | ConvertTo-Json) -ContentType "application/json"
 ```
