@@ -30,10 +30,16 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor - Add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    // Try JWT access token first (new), fallback to legacy token
+    const jwtToken = localStorage.getItem('accessToken');
+    const legacyToken = localStorage.getItem('authToken');
     
-    if (token) {
-      config.headers.Authorization = `Token ${token}`;
+    if (jwtToken) {
+      // Use JWT with Bearer authentication (new standard)
+      config.headers.Authorization = `Bearer ${jwtToken}`;
+    } else if (legacyToken) {
+      // Fallback to legacy Token authentication
+      config.headers.Authorization = `Token ${legacyToken}`;
     }
 
     // Log request in development
@@ -41,6 +47,7 @@ apiClient.interceptors.request.use(
       console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,
         data: config.data,
+        authType: jwtToken ? 'JWT (Bearer)' : legacyToken ? 'Token' : 'None',
       });
     }
 
@@ -82,8 +89,35 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      // Token is invalid - clear auth data and redirect to login
-      localStorage.removeItem('authToken');
+      // Try to refresh JWT token
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (refreshToken) {
+        try {
+          // Attempt to refresh the access token
+          const response = await axios.post(
+            `${API_CONFIG.BASE_URL || ''}/api/auth/token/refresh/`,
+            { refresh: refreshToken }
+          );
+          
+          if (response.data.access) {
+            // Store new access token
+            localStorage.setItem('accessToken', response.data.access);
+            
+            // Retry original request with new token
+            originalRequest.headers.Authorization = `Bearer ${response.data.access}`;
+            return apiClient(originalRequest);
+          }
+        } catch (refreshError) {
+          // Refresh failed - clear all tokens and redirect to login
+          console.error('❌ Token refresh failed:', refreshError);
+        }
+      }
+
+      // Token refresh failed or no refresh token - clear auth data and redirect to login
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('authToken'); // Legacy token
       localStorage.removeItem('user');
       
       if (window.location.pathname !== '/login') {

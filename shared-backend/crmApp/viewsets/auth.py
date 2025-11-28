@@ -207,13 +207,21 @@ class UserProfileViewSet(viewsets.ModelViewSet):
 class LoginViewSet(viewsets.ViewSet):
     """
     ViewSet for user authentication.
+    Returns JWT tokens with embedded RBAC claims.
     """
     permission_classes = [AllowAny]
     serializer_class = LoginSerializer
     
     def create(self, request):
         """
-        Login endpoint - returns Token for authentication
+        Login endpoint - returns JWT tokens with RBAC claims
+        
+        Response includes:
+        - access: JWT access token (valid 1 day) with RBAC claims
+        - refresh: JWT refresh token (valid 7 days)
+        - user: User information
+        - token_type: 'Bearer'
+        - legacy_token: Old Token for backward compatibility
         """
         import logging
         logger = logging.getLogger(__name__)
@@ -234,14 +242,23 @@ class LoginViewSet(viewsets.ViewSet):
         user.last_login_at = timezone.now()
         user.save(update_fields=['last_login_at'])
         
-        # Get or create token
-        token, created = Token.objects.get_or_create(user=user)
+        # Generate JWT tokens with RBAC claims
+        from crmApp.services.jwt_service import JWTService
+        tokens = JWTService.generate_tokens_for_user(user)
+        
+        # Keep legacy token for backward compatibility (optional)
+        legacy_token, created = Token.objects.get_or_create(user=user)
         
         logger.info(f"Login successful for user: {user.email}")
         
         return Response({
             'user': UserSerializer(user).data,
-            'token': token.key,
+            'access': tokens['access'],
+            'refresh': tokens['refresh'],
+            'token_type': 'Bearer',
+            'access_expires_in': tokens['access_expires_in'],
+            'refresh_expires_in': tokens['refresh_expires_in'],
+            'legacy_token': legacy_token.key,  # For backward compatibility
             'message': 'Login successful'
         })
 

@@ -56,6 +56,9 @@ from crmApp.views.linear_webhook import LinearWebhookView
 from crmApp.views.client_issues import ClientRaiseIssueView, ClientIssueDetailView, ClientIssueCommentView
 from crmApp.views.pusher_auth import pusher_auth
 
+# Import JWT token views
+from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
+
 # Import Telegram webhook views
 from crmApp.viewsets.telegram import (
     telegram_webhook,
@@ -133,6 +136,10 @@ urlpatterns = [
     
     # Pusher authentication endpoint
     path('api/pusher/auth/', pusher_auth, name='pusher-auth'),
+    
+    # JWT token endpoints
+    path('api/auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('api/auth/token/verify/', TokenVerifyView.as_view(), name='token-verify'),
     
     # Telegram bot endpoints
     path('api/telegram/webhook/', telegram_webhook, name='telegram-webhook'),

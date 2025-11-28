@@ -13,12 +13,16 @@ let pusherInstance: Pusher | null = null;
 
 export const getPusherInstance = () => {
   if (!pusherInstance && PUSHER_KEY) {
-    const token = localStorage.getItem('authToken');
+    // Try JWT token first, fallback to legacy token
+    const jwtToken = localStorage.getItem('accessToken');
+    const legacyToken = localStorage.getItem('authToken');
+    const token = jwtToken || legacyToken;
     
     console.log('🔌 Initializing Pusher client...', {
       key: PUSHER_KEY.substring(0, 10) + '...',
       cluster: PUSHER_CLUSTER,
       hasToken: !!token,
+      authType: jwtToken ? 'JWT' : 'Legacy',
     });
     
     pusherInstance = new Pusher(PUSHER_KEY, {
@@ -26,7 +30,7 @@ export const getPusherInstance = () => {
       authEndpoint: 'http://localhost:8000/api/pusher/auth/',
       auth: {
         headers: token ? {
-          'Authorization': `Token ${token}`,
+          'Authorization': jwtToken ? `Bearer ${jwtToken}` : `Token ${legacyToken}`,
         } : {},
       },
       enabledTransports: ['ws', 'wss'],

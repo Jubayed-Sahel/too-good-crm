@@ -8,12 +8,23 @@ import type { AuthResponse, LoginCredentials, RegisterData, User, UserProfile } 
 
 // Storage keys
 const STORAGE_KEYS = {
-  AUTH_TOKEN: 'authToken',
+  AUTH_TOKEN: 'authToken',  // Legacy token (backward compatibility)
+  ACCESS_TOKEN: 'accessToken',  // JWT access token
+  REFRESH_TOKEN: 'refreshToken',  // JWT refresh token
   USER: 'user',
 } as const;
 
 interface LoginResponse {
-  token: string;
+  // JWT response (new)
+  access?: string;
+  refresh?: string;
+  token_type?: string;
+  access_expires_in?: number;
+  refresh_expires_in?: number;
+  // Legacy response
+  token?: string;
+  legacy_token?: string;
+  // Common
   user: User;
   message?: string;
 }
@@ -67,10 +78,26 @@ class AuthService {
 
       // Process user data and store
       const processedUser = this.processUserData(response.user);
-      this.setAuthData(response.token, processedUser);
+      
+      // Store JWT tokens (new) or legacy token
+      if (response.access && response.refresh) {
+        // JWT tokens
+        this.setJWTAuthData(response.access, response.refresh, processedUser);
+        
+        // Also store legacy token for backward compatibility
+        if (response.legacy_token) {
+          localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, response.legacy_token);
+        }
+        
+        console.log('✅ JWT authentication successful');
+      } else if (response.token) {
+        // Legacy token only
+        this.setAuthData(response.token, processedUser);
+        console.log('✅ Legacy token authentication successful');
+      }
 
       return {
-        token: response.token,
+        token: response.access || response.token || '',
         user: processedUser,
         message: response.message || 'Login successful',
       };
@@ -108,10 +135,25 @@ class AuthService {
   }
 
   /**
-   * Get auth token
+   * Get auth token (tries JWT first, falls back to legacy)
    */
   getAuthToken(): string | null {
-    return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN) 
+      || localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+  }
+  
+  /**
+   * Get JWT access token
+   */
+  getAccessToken(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
+  }
+  
+  /**
+   * Get JWT refresh token
+   */
+  getRefreshToken(): string | null {
+    return localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
   }
 
   /**
@@ -165,7 +207,16 @@ class AuthService {
   }
 
   /**
-   * Store authentication data
+   * Store JWT authentication data
+   */
+  private setJWTAuthData(accessToken: string, refreshToken: string, user: User): void {
+    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+    localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+  }
+  
+  /**
+   * Store authentication data (legacy)
    */
   private setAuthData(token: string, user: User): void {
     localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
@@ -176,6 +227,8 @@ class AuthService {
    * Clear authentication data
    */
   private clearAuthData(): void {
+    localStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
   }

@@ -41,7 +41,10 @@ export const geminiService = {
    * Returns an async iterator for Server-Sent Events
    */
   async* streamChat(request: GeminiChatRequest): AsyncGenerator<GeminiStreamEvent> {
-    const token = localStorage.getItem('authToken');
+    // Try JWT token first, fallback to legacy token
+    const jwtToken = localStorage.getItem('accessToken');
+    const legacyToken = localStorage.getItem('authToken');
+    const token = jwtToken || legacyToken;
     
     if (!token) {
       throw new Error('Not authenticated. Please log in to use the AI assistant.');
@@ -58,7 +61,7 @@ export const geminiService = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Token ${token}`,
+          'Authorization': jwtToken ? `Bearer ${jwtToken}` : `Token ${legacyToken}`,
         },
         body: JSON.stringify(request),
       });
