@@ -58,6 +58,7 @@ export interface User {
   is_active: boolean;
   is_verified: boolean;
   is_staff: boolean;
+  is_superuser: boolean;
   two_factor_enabled: boolean;
   last_login_at: string | null;
   email_verified_at: string | null;

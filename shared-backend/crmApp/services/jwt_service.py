@@ -19,6 +19,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     Custom JWT serializer that adds RBAC claims to tokens.
     
     Claims added:
+    - is_superuser: Django superuser flag (FULL access to everything)
+    - is_staff: Django staff flag (FULL access to everything)
     - profile_type: vendor, employee, or customer
     - profile_id: ID of active UserProfile
     - organization_id: User's organization
@@ -27,6 +29,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     - roles: List of role names (for employees)
     - role_ids: List of role IDs (for employees)
     - permissions: List of permissions (resource:action format)
+    
+    Authorization hierarchy:
+    1. is_superuser=true → ALL permissions everywhere
+    2. is_staff=true → ALL permissions everywhere
+    3. is_owner=true (vendor) → ALL permissions in their organization
+    4. Employee → permissions based on assigned roles
     """
     
     @classmethod
@@ -40,6 +48,10 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['username'] = user.username
         token['first_name'] = user.first_name
         token['last_name'] = user.last_name
+        
+        # Add admin/superuser flags - CRITICAL for authorization
+        token['is_superuser'] = user.is_superuser
+        token['is_staff'] = user.is_staff
         
         # Get active profile
         active_profile = get_user_active_profile(user)
@@ -57,7 +69,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                 # Determine if user is owner
                 token['is_owner'] = active_profile.profile_type == 'vendor'
                 
-                # Add roles and permissions for employees
+                # Add roles and permissions based on profile type
+                # NOTE: Superusers and staff already have full access via is_superuser/is_staff flags
                 if active_profile.profile_type == 'employee':
                     roles, permissions = cls._get_employee_roles_and_permissions(
                         user, 
@@ -67,7 +80,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     token['role_ids'] = list(roles.keys()) if isinstance(roles, dict) else []
                     token['permissions'] = permissions
                 elif active_profile.profile_type == 'vendor':
-                    # Vendors have all permissions
+                    # Vendors have all permissions in their organization
                     token['roles'] = ['owner']
                     token['role_ids'] = []
                     token['permissions'] = ['*:*']  # All permissions

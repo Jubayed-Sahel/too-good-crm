@@ -140,11 +140,19 @@ export function matchesPermission(
 /**
  * Check if user has permission for a resource and action
  * 
+ * Authorization hierarchy:
+ * 1. Superusers (is_superuser=true) → FULL access to everything
+ * 2. Staff users (is_staff=true) → FULL access to everything
+ * 3. Vendors/Owners → FULL access to their organization
+ * 4. Employees → Permissions based on assigned roles
+ * 
  * @param permissions - Array of permission strings (e.g., ["customers:read", "deals:create"])
  * @param resource - Resource name (e.g., "customers", "deals")
  * @param action - Action name (e.g., "read", "create", "update")
  * @param isVendor - Whether user is a vendor (vendors have all permissions)
  * @param isOwner - Whether user is an owner (owners have all permissions)
+ * @param isSuperuser - Whether user is a superuser (Django admin)
+ * @param isStaff - Whether user is a staff user (Django admin)
  * 
  * @returns PermissionCheckResult with hasPermission boolean and optional reason
  */
@@ -153,9 +161,27 @@ export function hasPermission(
   resource: string,
   action: string = PERMISSION_ACTIONS.READ,
   isVendor: boolean = false,
-  isOwner: boolean = false
+  isOwner: boolean = false,
+  isSuperuser: boolean = false,
+  isStaff: boolean = false
 ): PermissionCheckResult {
-  // Vendors and owners have full access
+  // Superusers have ALL permissions everywhere
+  if (isSuperuser) {
+    return {
+      hasPermission: true,
+      reason: 'User is a superuser (Django admin)',
+    };
+  }
+
+  // Staff users have ALL permissions everywhere
+  if (isStaff) {
+    return {
+      hasPermission: true,
+      reason: 'User is staff (Django admin)',
+    };
+  }
+
+  // Vendors and owners have full access to their organization
   if (isVendor || isOwner) {
     return {
       hasPermission: true,
@@ -202,9 +228,11 @@ export function hasAnyPermission(
   permissions: string[],
   checks: Array<{ resource: string; action?: string }>,
   isVendor: boolean = false,
-  isOwner: boolean = false
+  isOwner: boolean = false,
+  isSuperuser: boolean = false,
+  isStaff: boolean = false
 ): PermissionCheckResult {
-  if (isVendor || isOwner) {
+  if (isSuperuser || isStaff || isVendor || isOwner) {
     return { hasPermission: true, reason: 'User has full access' };
   }
 
@@ -214,7 +242,9 @@ export function hasAnyPermission(
       check.resource,
       check.action || PERMISSION_ACTIONS.READ,
       isVendor,
-      isOwner
+      isOwner,
+      isSuperuser,
+      isStaff
     );
     if (result.hasPermission) {
       return result;
@@ -234,9 +264,11 @@ export function hasAllPermissions(
   permissions: string[],
   checks: Array<{ resource: string; action?: string }>,
   isVendor: boolean = false,
-  isOwner: boolean = false
+  isOwner: boolean = false,
+  isSuperuser: boolean = false,
+  isStaff: boolean = false
 ): PermissionCheckResult {
-  if (isVendor || isOwner) {
+  if (isSuperuser || isStaff || isVendor || isOwner) {
     return { hasPermission: true, reason: 'User has full access' };
   }
 
@@ -246,7 +278,9 @@ export function hasAllPermissions(
       check.resource,
       check.action || PERMISSION_ACTIONS.READ,
       isVendor,
-      isOwner
+      isOwner,
+      isSuperuser,
+      isStaff
     );
     if (!result.hasPermission) {
       return {

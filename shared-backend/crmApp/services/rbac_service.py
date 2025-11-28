@@ -21,6 +21,8 @@ class RBACService:
         Check if user has permission for resource:action in organization.
         
         Rules:
+        - Superusers: Have ALL permissions across ALL organizations
+        - Staff Users: Have ALL permissions across ALL organizations
         - Vendors: Have all permissions in their organization
         - Employees: Have permissions based on their assigned role(s)
         - Customers: No permissions (read-only access to their own data)
@@ -34,6 +36,14 @@ class RBACService:
         Returns:
             bool: True if user has permission, False otherwise
         """
+        # SUPERUSER CHECK - Superusers have ALL permissions everywhere
+        if user.is_superuser:
+            return True
+        
+        # STAFF CHECK - Staff users (admins) have ALL permissions everywhere
+        if user.is_staff:
+            return True
+        
         from crmApp.models import UserProfile
         
         # Check if user is vendor - vendors have all permissions
@@ -129,6 +139,8 @@ class RBACService:
         Get all permissions for a user in an organization.
         
         Rules:
+        - Superusers: Return ALL permissions in the organization
+        - Staff Users: Return ALL permissions in the organization
         - Vendors: Return all permissions in the organization
         - Employees: Return permissions based on their assigned role(s)
         - Others: Return empty list
@@ -140,6 +152,13 @@ class RBACService:
         Returns:
             List of permission dictionaries
         """
+        # SUPERUSER or STAFF CHECK - Return all permissions
+        if user.is_superuser or user.is_staff:
+            permissions = Permission.objects.filter(
+                organization=organization
+            ).values('id', 'resource', 'action', 'description')
+            return list(permissions)
+        
         from crmApp.models import UserProfile
         
         # Check if user is vendor - vendors have all permissions

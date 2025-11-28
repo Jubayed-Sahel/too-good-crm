@@ -19,6 +19,12 @@ class PermissionChecker:
         """
         Check if user has permission for a specific resource and action.
         
+        Authorization hierarchy:
+        1. Superusers → ALL permissions everywhere
+        2. Staff users → ALL permissions everywhere
+        3. Organization owners → ALL permissions in their organization
+        4. Employees → Permissions based on assigned roles
+        
         Args:
             resource: Resource name (e.g., 'customer', 'deal', 'lead')
             action: Action name (e.g., 'create', 'read', 'update', 'delete')
@@ -26,14 +32,18 @@ class PermissionChecker:
         Returns:
             bool: True if user has permission, False otherwise
         """
-        if not self.organization_id:
-            return False
-        
-        # Superusers have all permissions
+        # Superusers have all permissions everywhere
         if self.user.is_superuser:
             return True
         
-        # Organization owners have all permissions
+        # Staff users (admins) have all permissions everywhere
+        if self.user.is_staff:
+            return True
+        
+        if not self.organization_id:
+            return False
+        
+        # Organization owners have all permissions in their organization
         if self.is_organization_owner():
             return True
         
