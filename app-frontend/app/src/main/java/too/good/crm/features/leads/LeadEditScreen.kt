@@ -79,8 +79,9 @@ fun LeadEditScreen(
                     error = result.message
                     isLoading = false
                 }
-                is NetworkResult.Loading -> {
-                    isLoading = true
+                is NetworkResult.Exception -> {
+                    error = result.exception.message ?: "Unknown error occurred"
+                    isLoading = false
                 }
             }
         } else {

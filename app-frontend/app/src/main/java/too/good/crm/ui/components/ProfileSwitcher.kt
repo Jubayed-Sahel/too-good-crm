@@ -37,19 +37,27 @@ fun ProfileSwitcher(
         }
     }
 
-    // Don't show switcher if only one profile or no profiles
-    if (validProfiles.size <= 1) {
+    // Log profile information for debugging
+    android.util.Log.d("ProfileSwitcher", "Total profiles: ${profiles.size}, Valid profiles: ${validProfiles.size}")
+    validProfiles.forEach { profile ->
+        android.util.Log.d("ProfileSwitcher", "Profile: ${profile.profileType} - ${profile.organizationName ?: "No Org"} (ID: ${profile.id}, Primary: ${profile.isPrimary})")
+    }
+
+    // Don't show switcher if no profiles
+    if (validProfiles.isEmpty()) {
         return
     }
 
-    // Group profiles by type
     val vendorProfiles = validProfiles.filter { it.profileType == "vendor" }
     val customerProfiles = validProfiles.filter { it.profileType == "customer" }
-    val employeeProfiles = validProfiles.filter { 
+    val employeeProfiles = validProfiles.filter {
         it.profileType == "employee" && (it.organization != null || it.organizationId != null)
     }
 
-    Box(
+    // Show switcher even with single profile (but make it non-interactive to show current profile)
+    val canSwitch = validProfiles.size > 1
+
+    Column(
         modifier = modifier
             .fillMaxWidth()
             .background(DesignTokens.Colors.Background)
@@ -58,16 +66,15 @@ fun ProfileSwitcher(
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = DesignTokens.Colors.Surface
+                containerColor = if (canSwitch) DesignTokens.Colors.Surface else DesignTokens.Colors.SurfaceVariant
             ),
             shape = MaterialTheme.shapes.medium,
             elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
-            onClick = { showMenu = true }
+            onClick = { if (canSwitch) showMenu = true }
         ) {
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(DesignTokens.Spacing.Space3),
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -327,4 +334,3 @@ private fun getProfileDisplayName(profile: UserProfile?): String? {
         else -> profile?.profileTypeDisplay ?: profile?.profileType
     }
 }
-

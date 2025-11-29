@@ -204,7 +204,7 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
                 borderRadius="xl"
                 fontSize="md"
                 fontWeight="bold"
-                onClick={handleReject}
+                onClick={handleEnd}
                 _hover={{
                   bg: 'red.600',
                   transform: 'translateY(-2px)',
