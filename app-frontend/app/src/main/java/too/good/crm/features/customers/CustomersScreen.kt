@@ -23,12 +23,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.*
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.*
 import too.good.crm.ui.video.VideoCallHelper
 import too.good.crm.ui.video.VideoCallPermissionHandler
+import too.good.crm.utils.LogoutHandler
 import too.good.crm.data.models.CallType
 import too.good.crm.data.Resource
 import android.widget.Toast
@@ -43,6 +45,8 @@ fun CustomersScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val authRepository = remember { AuthRepository(context) }
+    val scope = rememberCoroutineScope()
     val profileViewModel = remember { ProfileViewModel(context) }
     val profileState by profileViewModel.uiState.collectAsState()
     
@@ -188,7 +192,15 @@ fun CustomersScreen(
                 }
             },
             onNavigate = onNavigate,
-            onLogout = onBack
+            onLogout = {
+                LogoutHandler.performLogout(
+                    scope = scope,
+                    authRepository = authRepository,
+                    onComplete = {
+                        onNavigate("main")
+                    }
+                )
+            }
         ) { drawerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             Column(

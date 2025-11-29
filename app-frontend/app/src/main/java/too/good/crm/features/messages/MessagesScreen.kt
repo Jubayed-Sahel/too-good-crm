@@ -12,12 +12,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.data.model.UserProfile
+import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
+import too.good.crm.utils.LogoutHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,8 +29,10 @@ fun MessagesScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val authRepository = remember { AuthRepository(context) }
     val profileViewModel = remember { ProfileViewModel(context) }
     val profileState by profileViewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
     
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     
@@ -110,8 +115,14 @@ fun MessagesScreen(
         },
         onNavigate = onNavigate,
         onLogout = {
-            // Navigate to main/login screen
-            onNavigate("main")
+            // Perform proper logout using centralized handler
+            LogoutHandler.performLogout(
+                scope = scope,
+                authRepository = authRepository,
+                onComplete = {
+                    onNavigate("main")
+                }
+            )
         }
     ) { paddingValues ->
         Column(

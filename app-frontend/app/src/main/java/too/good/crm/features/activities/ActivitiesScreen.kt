@@ -18,11 +18,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
+import too.good.crm.utils.LogoutHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,8 +34,10 @@ fun ActivitiesScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val authRepository = remember { AuthRepository(context) }
     val profileViewModel = remember { ProfileViewModel(context) }
     val profileState by profileViewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
     
     var searchQuery by remember { mutableStateOf("") }
     var filterType by remember { mutableStateOf<ActivityType?>(null) }
@@ -90,7 +95,15 @@ fun ActivitiesScreen(
             }
         },
         onNavigate = onNavigate,
-        onLogout = onBack
+        onLogout = {
+            LogoutHandler.performLogout(
+                scope = scope,
+                authRepository = authRepository,
+                onComplete = {
+                    onNavigate("main")
+                }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
