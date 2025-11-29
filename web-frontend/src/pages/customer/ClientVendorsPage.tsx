@@ -31,7 +31,8 @@ const ClientVendorsPage = () => {
   }, [searchQuery, statusFilter]);
 
   // Fetch data from backend
-  const { data: vendorsData, isLoading, error } = useVendors(apiFilters);
+  // Don't filter by single organization - customers should see all their vendors
+  const { data: vendorsData, isLoading, error } = useVendors(apiFilters, { includeOrgFilter: false });
   const vendors = vendorsData?.results || [];
 
   // Get unique categories for filter - use placeholder since backend doesn't have category

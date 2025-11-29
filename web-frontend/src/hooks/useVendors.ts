@@ -11,14 +11,17 @@ import type { CreateVendorData, UpdateVendorData, VendorFilters } from '../types
 
 const VENDORS_QUERY_KEY = 'vendors';
 
-export const useVendors = (filters?: VendorFilters) => {
+export const useVendors = (filters?: VendorFilters, options?: { includeOrgFilter?: boolean }) => {
   const { activeOrganizationId } = useProfile();
   const organizationId = activeOrganizationId;
 
-  // Include organization ID in filters
+  // Include organization ID in filters only if includeOrgFilter is not explicitly false
+  // For customer "My Vendors" page, we want all vendors across all orgs they're linked to
+  const shouldIncludeOrg = options?.includeOrgFilter !== false;
+  
   const queryFilters: VendorFilters = {
     ...filters,
-    organization: organizationId || undefined,
+    ...(shouldIncludeOrg && { organization: organizationId || undefined }),
   };
 
   return useQuery({

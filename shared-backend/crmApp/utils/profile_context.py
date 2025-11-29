@@ -57,6 +57,7 @@ def get_active_profile_organization(user: User) -> Optional[Organization]:
 def get_customer_vendor_organizations(user: User) -> List[Organization]:
     """
     Get all vendor organizations where the user is a customer.
+    Uses the CustomerOrganization junction table for proper many-to-many support.
     
     Args:
         user: The user object
@@ -67,12 +68,20 @@ def get_customer_vendor_organizations(user: User) -> List[Organization]:
     if not user or not user.is_authenticated:
         return []
     
-    # Get customer records for this user
-    # Use values_list to get distinct organization IDs (MySQL-compatible)
+    # Get all organizations linked to customers for this user
+    # through the CustomerOrganization many-to-many relationship
+    from crmApp.models import Customer, Organization
+    
+    # Get organization IDs from CustomerOrganization (proper M2M)
     organization_ids = Customer.objects.filter(
-        user=user,
-        organization__isnull=False
-    ).values_list('organization_id', flat=True).distinct()
+        user=user
+    ).values_list('organizations__id', flat=True).distinct()
+    
+    # Filter out None values and get organization objects
+    organization_ids = [org_id for org_id in organization_ids if org_id is not None]
+    
+    if not organization_ids:
+        return []
     
     # Get organization objects
     organizations = Organization.objects.filter(id__in=organization_ids)

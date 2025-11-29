@@ -41,56 +41,6 @@ export const LeadsWidget = () => {
   // Leads functionality has been removed from the system
   // This widget is kept for potential future re-implementation
   return null;
-
-  return (
-    <Card p={6}>
-      <VStack align="stretch" gap={4}>
-        <HStack justify="space-between">
-          <HStack gap={2}>
-            <Icon as={FiUserPlus} w={5} h={5} color="green.600" />
-            <Heading size="md">Leads</Heading>
-          </HStack>
-          <Badge colorPalette="green">12 New</Badge>
-        </HStack>
-
-        <VStack align="stretch" gap={2}>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Total Leads</Text>
-            <Text fontWeight="bold">245</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Qualified</Text>
-            <Text fontWeight="bold" color="green.600">89</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Conversion Rate</Text>
-            <Text fontWeight="bold">36.3%</Text>
-          </HStack>
-        </VStack>
-
-        <HStack gap={2}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/leads')}
-            flex={1}
-          >
-            View All
-          </Button>
-          {permissions.canCreate && (
-            <Button
-              size="sm"
-              colorPalette="green"
-              onClick={() => navigate('/leads?action=create')}
-              flex={1}
-            >
-              New Lead
-            </Button>
-          )}
-        </HStack>
-      </VStack>
-    </Card>
-  );
 };
 
 /**
@@ -101,56 +51,6 @@ export const DealsWidget = () => {
   // Deals functionality has been removed from the system
   // This widget is kept for potential future re-implementation
   return null;
-
-  return (
-    <Card p={6}>
-      <VStack align="stretch" gap={4}>
-        <HStack justify="space-between">
-          <HStack gap={2}>
-            <Icon as={FiFileText} w={5} h={5} color="blue.600" />
-            <Heading size="md">Deals</Heading>
-          </HStack>
-          <Badge colorPalette="blue">$2.4M</Badge>
-        </HStack>
-
-        <VStack align="stretch" gap={2}>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Active Deals</Text>
-            <Text fontWeight="bold">34</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Won This Month</Text>
-            <Text fontWeight="bold" color="green.600">12</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Pipeline Value</Text>
-            <Text fontWeight="bold">$2.4M</Text>
-          </HStack>
-        </VStack>
-
-        <HStack gap={2}>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => navigate('/deals')}
-            flex={1}
-          >
-            View Pipeline
-          </Button>
-          {permissions.canCreate && (
-            <Button
-              size="sm"
-              colorPalette="blue"
-              onClick={() => navigate('/deals?action=create')}
-              flex={1}
-            >
-              New Deal
-            </Button>
-          )}
-        </HStack>
-      </VStack>
-    </Card>
-  );
 };
 
 /**
@@ -374,43 +274,6 @@ export const PipelinesWidget = () => {
   // Pipelines are related to deals which have been removed
   // This widget is kept for potential future re-implementation
   return null;
-
-  return (
-    <Card p={6}>
-      <VStack align="stretch" gap={4}>
-        <HStack justify="space-between">
-          <HStack gap={2}>
-            <Icon as={FiGrid} w={5} h={5} color="indigo.600" />
-            <Heading size="md">Pipelines</Heading>
-          </HStack>
-          <Badge colorPalette="indigo">3 Active</Badge>
-        </HStack>
-
-        <VStack align="stretch" gap={2}>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Active Pipelines</Text>
-            <Text fontWeight="bold">3</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Total Stages</Text>
-            <Text fontWeight="bold">15</Text>
-          </HStack>
-          <HStack justify="space-between">
-            <Text fontSize="sm" color="gray.600">Avg. Deal Value</Text>
-            <Text fontWeight="bold">$45K</Text>
-          </HStack>
-        </VStack>
-
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => navigate('/pipelines')}
-        >
-          Manage Pipelines
-        </Button>
-      </VStack>
-    </Card>
-  );
 };
 
 /**

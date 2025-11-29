@@ -15,12 +15,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.*
+import too.good.crm.utils.LogoutHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,8 +33,10 @@ fun EmployeeEditScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val authRepository = remember { AuthRepository(context) }
     val profileViewModel = remember { ProfileViewModel(context) }
     val profileState by profileViewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
     
     val viewModel = remember { EmployeeViewModel(context) }
     val uiState by viewModel.uiState.collectAsState()
@@ -123,7 +128,15 @@ fun EmployeeEditScreen(
             }
         },
         onNavigate = onNavigate,
-        onLogout = onBack
+        onLogout = {
+            LogoutHandler.performLogout(
+                scope = scope,
+                authRepository = authRepository,
+                onComplete = {
+                    onNavigate("main")
+                }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -251,10 +264,10 @@ fun EmployeeEditScreen(
                             readOnly = true,
                             label = { Text("Employment Type", fontSize = getResponsiveBodySize()) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = employmentTypeExpanded) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(),
-                            shape = RoundedCornerShape(getResponsiveCornerRadius())
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        shape = RoundedCornerShape(getResponsiveCornerRadius())
                         )
                         ExposedDropdownMenu(
                             expanded = employmentTypeExpanded,
@@ -285,10 +298,10 @@ fun EmployeeEditScreen(
                             readOnly = true,
                             label = { Text("Status", fontSize = getResponsiveBodySize()) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(),
-                            shape = RoundedCornerShape(getResponsiveCornerRadius())
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable),
+                        shape = RoundedCornerShape(getResponsiveCornerRadius())
                         )
                         ExposedDropdownMenu(
                             expanded = statusExpanded,

@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,11 +21,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
+import too.good.crm.utils.LogoutHandler
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,8 +37,10 @@ fun SettingsScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val authRepository = remember { AuthRepository(context) }
     val profileViewModel = remember { ProfileViewModel(context) }
     val profileState by profileViewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
     
     val settingsViewModel = remember { SettingsViewModel(context) }
     val settingsUiState by settingsViewModel.uiState.collectAsState()
@@ -84,7 +90,15 @@ fun SettingsScreen(
             }
         },
         onNavigate = onNavigate,
-        onLogout = onBack
+        onLogout = {
+            LogoutHandler.performLogout(
+                scope = scope,
+                authRepository = authRepository,
+                onComplete = {
+                    onNavigate("main")
+                }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -264,7 +278,7 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
-                    Icons.Default.Logout,
+                    Icons.AutoMirrored.Filled.Logout,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp)
                 )
