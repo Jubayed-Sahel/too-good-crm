@@ -437,7 +437,7 @@ private fun EmailFields(
         )
         OutlinedTextField(
             value = emailSubject,
-            onEmailSubjectChange = onEmailSubjectChange,
+            onValueChange = onEmailSubjectChange,
             label = { Text("Subject") },
             modifier = Modifier.fillMaxWidth()
         )

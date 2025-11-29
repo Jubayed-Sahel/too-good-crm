@@ -336,7 +336,7 @@ private fun getActivityTypeColor(activityType: String): Color {
         "email" -> Color(0xFF3B82F6) // Blue
         "telegram" -> Color(0xFF0088CC) // Telegram Blue
         "meeting" -> Color(0xFF8B5CF6) // Purple
-        "note" -> Color(0xFF F59E0B) // Amber
+        "note" -> Color(0xFFF59E0B) // Amber
         "task" -> Color(0xFFEC4899) // Pink
         else -> DesignTokens.Colors.TextSecondary
     }

@@ -99,22 +99,14 @@ fun MessagesScreen(
         uiState.conversations.sumOf { it.unreadCount }
     }
     
-    AppScaffoldWithDrawer(
-        title = "Messages",
-        activeMode = activeMode,
-        profiles = profileState.profiles,
-        activeProfile = profileState.activeProfile,
-        isSwitchingProfile = profileState.isSwitching,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showNewMessageDialog = true },
-                containerColor = DesignTokens.Colors.Primary,
-                contentColor = DesignTokens.Colors.OnPrimary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "New Message")
-            }
-        },
-        onProfileSelected = { profile ->
+    Box(modifier = Modifier.fillMaxSize()) {
+        AppScaffoldWithDrawer(
+            title = "Messages",
+            activeMode = activeMode,
+            profiles = profileState.profiles,
+            activeProfile = profileState.activeProfile,
+            isSwitchingProfile = profileState.isSwitching,
+            onProfileSelected = { profile ->
             profileViewModel.switchProfile(
                 profileId = profile.id,
                 onSuccess = { user ->
@@ -179,11 +171,11 @@ fun MessagesScreen(
             }
         },
         onNavigate = onNavigate,
-        onLogout = {
-            // Navigate to main/login screen
-            onNavigate("main")
-        }
-    ) { paddingValues ->
+            onLogout = {
+                // Navigate to main/login screen
+                onNavigate("main")
+            }
+        ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -215,7 +207,7 @@ fun MessagesScreen(
                             Text(
                                 text = totalUnreadCount.toString(),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = DesignTokens.Colors.OnError
+                                color = DesignTokens.Colors.White
                             )
                         }
                     }
@@ -357,11 +349,24 @@ fun MessagesScreen(
                 }
             }
         }
+        }
+        
+        // Floating Action Button
+        FloatingActionButton(
+            onClick = { showNewMessageDialog = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = DesignTokens.Colors.Primary,
+            contentColor = DesignTokens.Colors.OnPrimary
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "New Message")
+        }
     }
 }
 
 @Composable
-private fun ConversationItem(
+fun ConversationItem(
     conversation: Conversation,
     onClick: () -> Unit
 ) {
@@ -469,7 +474,7 @@ private fun ConversationItem(
                         Text(
                             text = conversation.unreadCount.toString(),
                             style = MaterialTheme.typography.labelSmall,
-                            color = DesignTokens.Colors.OnError,
+                            color = DesignTokens.Colors.White,
                             fontSize = 10.sp
                         )
                     }
@@ -479,7 +484,7 @@ private fun ConversationItem(
     }
 }
 
-private fun formatTimeAgo(timestamp: String, context: android.content.Context): String {
+fun formatTimeAgo(timestamp: String, context: android.content.Context): String {
     return try {
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
         val date = sdf.parse(timestamp) ?: return timestamp

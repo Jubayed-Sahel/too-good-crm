@@ -156,27 +156,27 @@ class ActivityRepository {
         assignedTo = employeeId,
         page = page,
         pageSize = pageSize
-    }
+    )
     
     /**
      * Get activities for a lead
      */
     suspend fun getLeadActivities(leadId: Int): NetworkResult<ActivitiesListResponse> {
-        return getActivitiesForEntity("lead", leadId)
+        return getActivities(lead = leadId)
     }
     
     /**
      * Get activities for a customer
      */
     suspend fun getCustomerActivities(customerId: Int): NetworkResult<ActivitiesListResponse> {
-        return getActivitiesForEntity("customer", customerId)
+        return getActivities(customer = customerId)
     }
     
     /**
      * Get activities for a deal
      */
     suspend fun getDealActivities(dealId: Int): NetworkResult<ActivitiesListResponse> {
-        return getActivitiesForEntity("deal", dealId)
+        return getActivities(deal = dealId)
     }
     
     /**

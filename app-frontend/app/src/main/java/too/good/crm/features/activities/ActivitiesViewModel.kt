@@ -70,7 +70,7 @@ class ActivitiesViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             
-            when (val result = repository.getUpcomingActivities(pageSize = 50)) {
+            when (val result = repository.getActivities(status = "pending", pageSize = 50)) {
                 is NetworkResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         activities = result.data.results,
@@ -102,7 +102,7 @@ class ActivitiesViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             
-            when (val result = repository.getOverdueActivities(pageSize = 50)) {
+            when (val result = repository.getActivities(status = "overdue", pageSize = 50)) {
                 is NetworkResult.Success -> {
                     _uiState.value = _uiState.value.copy(
                         activities = result.data.results,

@@ -200,7 +200,7 @@ fun DealDetailScreen(
                     onEdit = { onNavigate("deal-edit/$dealId") },
                     onDelete = { showDeleteDialog = true },
                     onMoveStage = { showStageDialog = true },
-                    onMarkWon = { showWinDialog = true },
+                    onMarkWon = { showWonDialog = true },
                     onMarkLost = { showLoseDialog = true },
                     onActivityClick = { /* TODO: Navigate to activity detail */ },
                     onRefreshActivities = { refreshActivities() },
@@ -334,9 +334,9 @@ fun DealDetailScreen(
     }
     
     // Mark Won Dialog
-    if (showWinDialog) {
+    if (showWonDialog) {
         AlertDialog(
-            onDismissRequest = { showWinDialog = false },
+            onDismissRequest = { showWonDialog = false },
             title = { Text("Mark as Won") },
             text = { Text("Mark this deal as won? This will update the deal status and record the win date.") },
             confirmButton = {
@@ -345,7 +345,7 @@ fun DealDetailScreen(
                         scope.launch {
                             when (repository.winDeal(dealId)) {
                                 is NetworkResult.Success -> {
-                                    showWinDialog = false
+                                    showWonDialog = false
                                     when (val result = repository.getDeal(dealId)) {
                                         is NetworkResult.Success -> deal = result.data
                                         else -> {}
@@ -353,11 +353,11 @@ fun DealDetailScreen(
                                     snackbarHostState.showSnackbar("Deal marked as won!")
                                 }
                                 is NetworkResult.Error -> {
-                                    showWinDialog = false
+                                    showWonDialog = false
                                     snackbarHostState.showSnackbar("Failed to mark deal as won")
                                 }
                                 is NetworkResult.Exception -> {
-                                    showWinDialog = false
+                                    showWonDialog = false
                                     snackbarHostState.showSnackbar("Network error")
                                 }
                             }
@@ -371,7 +371,7 @@ fun DealDetailScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showWinDialog = false }) {
+                TextButton(onClick = { showWonDialog = false }) {
                     Text("Cancel")
                 }
             }
@@ -442,7 +442,7 @@ fun DealDetailScreen(
     if (showActivityDialog) {
         LogActivityDialog(
             dealId = dealId,
-            customerId = deal?.customerId,
+            customerId = deal?.customer?.id,
             leadId = null,
             onDismiss = { showActivityDialog = false },
             onSave = { activityRequest ->
