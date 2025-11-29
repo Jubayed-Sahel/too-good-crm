@@ -117,7 +117,6 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiHome, label: 'Dashboard', path: '/client/dashboard', alwaysShow: true },
     { icon: FiShoppingBag, label: 'My Vendors', path: '/client/vendors', resource: CRM_RESOURCES.VENDOR, action: 'read' },
     { icon: FiPackage, label: 'My Orders', path: '/client/orders', resource: CRM_RESOURCES.ORDER, action: 'read' },
-    { icon: FiMessageSquare, label: 'Messages', path: '/messages', alwaysShow: true },
     { icon: FiAlertCircle, label: 'Issues', path: '/client/issues', resource: CRM_RESOURCES.ISSUE, action: 'read' },
     { icon: FiSettings, label: 'Settings', path: '/client/settings', alwaysShow: true },
   ];

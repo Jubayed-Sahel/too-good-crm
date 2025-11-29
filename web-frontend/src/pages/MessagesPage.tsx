@@ -28,7 +28,7 @@ import { useMessages, useConversations, useSendMessage, useRecipients, useMessag
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { toaster } from '@/components/ui/toaster';
-import { GeminiChatWindow } from '@/components/messages/GeminiChatWindow';
+import { VoiceGeminiChatWindow } from '@/components/messages/VoiceGeminiChatWindow';
 
 // Add CSS for select element
 const styles = document.createElement('style');
@@ -403,8 +403,8 @@ const MessagesPage = () => {
 
         {/* Chat Window */}
         {selectedUserId === AI_ASSISTANT_ID ? (
-          /* AI Assistant Chat Window */
-          <GeminiChatWindow />
+          /* AI Assistant Chat Window with Voice */
+          <VoiceGeminiChatWindow autoSpeak={true} defaultLanguage="en-US" />
         ) : (
           /* Regular User Chat Window */
           <Box
