@@ -46,6 +46,7 @@ from .customer import (
     CustomerSerializer,
     CustomerCreateSerializer,
     CustomerListSerializer,
+    CustomerOrganizationSerializer,
 )
 
 from .call import (
@@ -157,6 +158,7 @@ __all__ = [
     'CustomerSerializer',
     'CustomerCreateSerializer',
     'CustomerListSerializer',
+    'CustomerOrganizationSerializer',
     
     # Call
     'CallSerializer',

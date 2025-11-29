@@ -108,7 +108,9 @@ const OrganizationSettings = () => {
     try {
       setIsSaving(true);
       
-      await organizationService.updateOrganization(organization.id, {
+      console.log('About to call updateOrganization...');
+      
+      const result = await organizationService.updateOrganization(organization.id, {
         name: formData.organizationName,
         industry: formData.industry,
         website: formData.website,
@@ -125,6 +127,8 @@ const OrganizationSettings = () => {
           currency: formData.currency,
         },
       });
+      
+      console.log('Update successful:', result);
 
       toaster.create({
         title: 'Success',
@@ -134,13 +138,46 @@ const OrganizationSettings = () => {
       
       // Reload organization data
       await loadOrganization();
-    } catch (error) {
-      console.error('Failed to update organization:', error);
+      
+      // Refresh user profiles to update organization name in profile switcher
+      try {
+        if (refreshUser) {
+          await refreshUser();
+        }
+        if (refreshProfiles) {
+          await refreshProfiles();
+        }
+      } catch (refreshError) {
+        console.warn('Failed to refresh profiles after organization update:', refreshError);
+        // Non-critical error - profiles will refresh on next page load
+      }
+    } catch (error: any) {
+      console.log('CATCH BLOCK REACHED!');
+      
+      let errorMessage = 'Failed to update organization settings';
+      
+      // Try multiple ways to extract the error message
+      if (error.errors?.name) {
+        // DRF field error format
+        errorMessage = Array.isArray(error.errors.name) 
+          ? error.errors.name[0] 
+          : error.errors.name;
+      } else if (error.message) {
+        // Generic error message
+        errorMessage = error.message;
+      }
+      
+      console.log('About to show toast with message:', errorMessage);
+      
+      // Always show the toast
       toaster.create({
         title: 'Error',
-        description: 'Failed to update organization settings',
+        description: errorMessage,
         type: 'error',
+        duration: 5000,
       });
+      
+      console.log('Toast create called');
     } finally {
       setIsSaving(false);
     }

@@ -12,7 +12,10 @@ export const issueService = {
    * Get all issues with optional filters
    */
   getAll: async (filters?: IssueFilters): Promise<PaginatedResponse<Issue>> => {
-    return api.get<PaginatedResponse<Issue>>(API_CONFIG.ENDPOINTS.ISSUES.LIST, { params: filters });
+    console.log('🔍 [issueService.getAll] Calling API with filters:', filters);
+    const response = await api.get<PaginatedResponse<Issue>>(API_CONFIG.ENDPOINTS.ISSUES.LIST, { params: filters });
+    console.log('✅ [issueService.getAll] Response:', response);
+    return response;
   },
 
   /**

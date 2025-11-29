@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',  # Token authentication
     'corsheaders',
     'channels',  # WebSocket channels
+    'django_filters',  # Django filter backend
     
     # Your apps
     'crmApp',

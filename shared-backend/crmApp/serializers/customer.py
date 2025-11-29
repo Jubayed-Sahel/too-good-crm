@@ -3,9 +3,31 @@ Customer related serializers
 """
 
 from rest_framework import serializers
-from crmApp.models import Customer, UserProfile
+from crmApp.models import Customer, CustomerOrganization, UserProfile
 from .employee import EmployeeListSerializer
 from .auth import UserSerializer, UserProfileSerializer
+
+
+class CustomerOrganizationSerializer(serializers.ModelSerializer):
+    """Serializer for customer-organization relationships"""
+    organization_name = serializers.CharField(source='organization.name', read_only=True)
+    customer_name = serializers.CharField(source='customer.name', read_only=True)
+    assigned_employee_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = CustomerOrganization
+        fields = [
+            'id', 'customer', 'customer_name', 'organization', 'organization_name',
+            'relationship_status', 'assigned_employee', 'assigned_employee_name',
+            'vendor_notes', 'vendor_customer_code', 'credit_limit', 'payment_terms',
+            'relationship_started', 'last_interaction', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'relationship_started', 'created_at', 'updated_at']
+    
+    def get_assigned_employee_name(self, obj):
+        if obj.assigned_employee:
+            return f"{obj.assigned_employee.first_name} {obj.assigned_employee.last_name}"
+        return None
 
 
 class CustomerListSerializer(serializers.ModelSerializer):
@@ -78,12 +100,13 @@ class CustomerSerializer(serializers.ModelSerializer):
     customer_type_display = serializers.CharField(source='get_customer_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     zip_code = serializers.CharField(source='postal_code', required=False, allow_null=True)  # Alias for frontend compatibility
-    organization = serializers.IntegerField(source='organization_id', read_only=True)  # Organization should not be changed via API
+    organization = serializers.IntegerField(source='organization_id', read_only=True)  # Primary organization (backward compatibility)
+    vendor_organizations = CustomerOrganizationSerializer(source='customer_organizations', many=True, read_only=True)
     
     class Meta:
         model = Customer
         fields = [
-            'id', 'organization', 'user', 'user_profile', 'code',
+            'id', 'organization', 'vendor_organizations', 'user', 'user_profile', 'code',
             'name', 'first_name', 'last_name', 'full_name',
             'company_name', 'contact_person', 'email', 'phone',
             'website', 'customer_type', 'customer_type_display',

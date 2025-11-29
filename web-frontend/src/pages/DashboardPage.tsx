@@ -67,7 +67,7 @@ const DashboardPage = () => {
   // For employees, show employee-specific dashboard with permission checks
   if (isEmployee) {
     const { isLoading: permissionsLoading } = usePermissions();
-    const hasAnyResourceAccess = canAccess('deals') || canAccess('leads') || canAccess('customers') || canAccess('activities') || canAccess('analytics');
+    const hasAnyResourceAccess = canAccess('deals') || canAccess('leads') || canAccess('customers') || canAccess('activities');
 
     // Wait for permissions to load before showing content
     if (permissionsLoading) {

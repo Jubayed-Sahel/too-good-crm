@@ -123,8 +123,8 @@ const IssueFiltersPanel = ({
           accentColor="purple"
         />
 
-        {/* More Filters / Clear Filters Button */}
-        {hasActiveFilters ? (
+        {/* Clear Filters Button */}
+        {hasActiveFilters && (
           <Button
             variant="outline"
             h="40px"
@@ -133,15 +133,6 @@ const IssueFiltersPanel = ({
           >
             <FiX />
             <Box ml={2}>Clear</Box>
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            h="40px"
-            display={{ base: 'none', lg: 'flex' }}
-          >
-            <FiFilter />
-            <Box ml={2}>More Filters</Box>
           </Button>
         )}
       </HStack>

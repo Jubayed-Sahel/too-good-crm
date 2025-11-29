@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { VStack, Box, Spinner } from '@chakra-ui/react';
+import { VStack, Box, Spinner, Text, Heading, HStack, Badge } from '@chakra-ui/react';
+import { DialogRoot, DialogContent, DialogHeader, DialogBody, DialogCloseTrigger } from '../components/ui/dialog';
 import { FiPlus } from 'react-icons/fi';
 import DashboardLayout from '../components/dashboard/DashboardLayout';
 import { toaster } from '../components/ui/toaster';
@@ -29,6 +30,8 @@ export const ActivitiesPage = () => {
   const canCreate = canAccess('activity', 'create');
   const [activities, setActivities] = useState<Activity[]>([]);
   const [videoCalls, setVideoCalls] = useState<VideoCallSession[]>([]);
+  const [selectedCall, setSelectedCall] = useState<VideoCallSession | null>(null);
+  const [isCallDetailsOpen, setIsCallDetailsOpen] = useState(false);
   const [stats, setStats] = useState<ActivityStats>({
     total: 0,
     by_status: {
@@ -178,12 +181,42 @@ export const ActivitiesPage = () => {
     };
   });
 
-  // Merge and sort activities with video calls
-  const allActivities = [...activities, ...videoCallsAsActivities].sort(
+  // Merge activities with video calls
+  const mergedActivities = [...activities, ...videoCallsAsActivities];
+
+  // Apply client-side filtering to the merged list
+  const filteredActivities = mergedActivities.filter(activity => {
+    // Search filter
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      const matchesSearch = 
+        activity.title?.toLowerCase().includes(searchLower) ||
+        activity.description?.toLowerCase().includes(searchLower) ||
+        activity.customer_name?.toLowerCase().includes(searchLower);
+      
+      if (!matchesSearch) return false;
+    }
+
+    // Type filter
+    if (filters.activity_type && activity.activity_type !== filters.activity_type) {
+      return false;
+    }
+
+    // Status filter
+    if (filters.status && activity.status !== filters.status) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Sort by creation date (newest first)
+  const allActivities = filteredActivities.sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
   );
-  console.log('[ActivitiesPage] Total activities after merge:', allActivities.length, 
-    '(Regular:', activities.length, '+ Calls:', videoCallsAsActivities.length, ')');
+  
+  console.log('[ActivitiesPage] Total activities after merge and filter:', allActivities.length, 
+    '(Regular:', activities.length, '+ Calls:', videoCallsAsActivities.length, '→ Filtered:', allActivities.length, ')');
 
   // Filter handlers
   const handleSearch = (searchQuery: string) => {
@@ -324,6 +357,19 @@ export const ActivitiesPage = () => {
   };
 
   const handleDeleteActivity = (activity: Activity) => {
+    // Check if this is a video call
+    const isVideoCall = videoCallsAsActivities.some(vc => vc.id === activity.id);
+    
+    if (isVideoCall) {
+      toaster.create({
+        title: 'Cannot delete video calls',
+        description: 'Video call records cannot be deleted from the activities page.',
+        type: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+    
     setActivityToDelete(activity);
     setDeleteDialogOpen(true);
   };
@@ -361,12 +407,69 @@ export const ActivitiesPage = () => {
   };
 
   const handleViewActivity = (activity: Activity) => {
-    navigate(`/activities/${activity.id}`);
+    // Check if this is a video call (converted from videoCalls array)
+    const isVideoCall = videoCallsAsActivities.some(vc => vc.id === activity.id);
+    
+    console.log('[ActivitiesPage] View activity clicked:', activity.id, 'isVideoCall:', isVideoCall);
+    
+    if (isVideoCall) {
+      // Find the original video call
+      const videoCall = videoCalls.find(vc => vc.id === activity.id);
+      if (videoCall) {
+        console.log('[ActivitiesPage] Showing video call details:', videoCall);
+        
+        // Format the call details
+        const startTime = videoCall.started_at 
+          ? new Date(videoCall.started_at).toLocaleString()
+          : 'Not started';
+        const endTime = videoCall.ended_at 
+          ? new Date(videoCall.ended_at).toLocaleString()
+          : 'Not ended';
+        const duration = videoCall.duration_formatted || '00:00';
+        
+        // Determine customer and vendor names
+        const customerName = videoCall.recipient_name || 'Unknown';
+        const vendorName = videoCall.initiator_name || 'Unknown';
+        const callDate = new Date(videoCall.created_at).toLocaleString();
+        
+        console.log('[ActivitiesPage] Opening call details modal');
+        setSelectedCall(videoCall);
+        setIsCallDetailsOpen(true);
+      }
+    } else {
+      // For regular activities, navigate to detail page
+      console.log('[ActivitiesPage] Navigating to activity detail:', activity.id);
+      navigate(`/activities/${activity.id}`);
+    }
   };
   
   const handleBulkDelete = (activityIds: number[]) => {
     if (activityIds.length === 0) return;
-    setActivitiesToBulkDelete(activityIds);
+    
+    // Filter out video calls - they cannot be deleted
+    const videoCallIds = videoCallsAsActivities.map(vc => vc.id);
+    const regularActivityIds = activityIds.filter(id => !videoCallIds.includes(id));
+    
+    if (regularActivityIds.length === 0) {
+      toaster.create({
+        title: 'Cannot delete video calls',
+        description: 'Video call records cannot be deleted from the activities page.',
+        type: 'warning',
+        duration: 3000,
+      });
+      return;
+    }
+    
+    if (regularActivityIds.length < activityIds.length) {
+      toaster.create({
+        title: 'Some items skipped',
+        description: `${activityIds.length - regularActivityIds.length} video call(s) will not be deleted.`,
+        type: 'info',
+        duration: 3000,
+      });
+    }
+    
+    setActivitiesToBulkDelete(regularActivityIds);
     setBulkDeleteDialogOpen(true);
   };
   
@@ -388,6 +491,7 @@ export const ActivitiesPage = () => {
       setActivitiesToBulkDelete([]);
       loadActivities();
       loadStats();
+      loadVideoCalls();
     } catch (error) {
       toaster.create({
         title: 'Error deleting activities',
@@ -411,17 +515,6 @@ export const ActivitiesPage = () => {
         <PageHeader
           title="Activities"
           description="Manage calls, emails, Telegram messages, and other activities"
-          actions={
-            canCreate ? (
-              <StandardButton
-                variant="primary"
-                leftIcon={<FiPlus />}
-                onClick={handleNewActivity}
-              >
-                New Activity
-              </StandardButton>
-            ) : undefined
-          }
         />
 
         {/* Stats Cards */}
@@ -517,6 +610,106 @@ export const ActivitiesPage = () => {
         colorScheme="red"
         isLoading={false}
       />
+
+      {/* Call Details Modal */}
+      <DialogRoot 
+        open={isCallDetailsOpen} 
+        onOpenChange={(e: any) => !e.open && setIsCallDetailsOpen(false)}
+      >
+        <DialogContent maxW="600px">
+          <DialogHeader>
+            <Heading size="lg" color="gray.900">
+              {selectedCall?.call_type === 'video' ? 'Video' : 'Audio'} Call Details
+            </Heading>
+            <DialogCloseTrigger />
+          </DialogHeader>
+          
+          <DialogBody>
+            {selectedCall && (
+              <VStack align="stretch" gap={4} py={4}>
+                {/* Status Badge */}
+                <HStack justify="space-between">
+                  <Text fontWeight="semibold" color="gray.700">Status:</Text>
+                  <Badge
+                    colorPalette={
+                      selectedCall.status === 'completed' ? 'green' :
+                      selectedCall.status === 'pending' ? 'orange' :
+                      selectedCall.status === 'active' ? 'blue' : 'gray'
+                    }
+                    size="lg"
+                    px={3}
+                    py={1}
+                    textTransform="capitalize"
+                  >
+                    {selectedCall.status}
+                  </Badge>
+                </HStack>
+
+                {/* Date */}
+                <Box>
+                  <Text fontWeight="semibold" color="gray.700" mb={1}>Date:</Text>
+                  <Text color="gray.600">
+                    {new Date(selectedCall.created_at).toLocaleString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </Text>
+                </Box>
+
+                {/* Customer */}
+                <Box>
+                  <Text fontWeight="semibold" color="gray.700" mb={1}>Customer:</Text>
+                  <Text color="gray.600" fontSize="lg">
+                    {selectedCall.recipient_name || 'Unknown'}
+                  </Text>
+                </Box>
+
+                {/* Vendor */}
+                <Box>
+                  <Text fontWeight="semibold" color="gray.700" mb={1}>Vendor:</Text>
+                  <Text color="gray.600" fontSize="lg">
+                    {selectedCall.initiator_name || 'Unknown'}
+                  </Text>
+                </Box>
+
+                {/* Duration */}
+                {selectedCall.duration_formatted && selectedCall.duration_formatted !== '00:00' && (
+                  <Box>
+                    <Text fontWeight="semibold" color="gray.700" mb={1}>Duration:</Text>
+                    <Text color="gray.600" fontSize="lg">
+                      {selectedCall.duration_formatted}
+                    </Text>
+                  </Box>
+                )}
+
+                {/* Started At */}
+                {selectedCall.started_at && (
+                  <Box>
+                    <Text fontWeight="semibold" color="gray.700" mb={1}>Started:</Text>
+                    <Text color="gray.600">
+                      {new Date(selectedCall.started_at).toLocaleString()}
+                    </Text>
+                  </Box>
+                )}
+
+                {/* Ended At */}
+                {selectedCall.ended_at && (
+                  <Box>
+                    <Text fontWeight="semibold" color="gray.700" mb={1}>Ended:</Text>
+                    <Text color="gray.600">
+                      {new Date(selectedCall.ended_at).toLocaleString()}
+                    </Text>
+                  </Box>
+                )}
+              </VStack>
+            )}
+          </DialogBody>
+        </DialogContent>
+      </DialogRoot>
       </RequirePermission>
     </DashboardLayout>
   );

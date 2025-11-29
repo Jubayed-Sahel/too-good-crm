@@ -43,10 +43,6 @@ const WelcomeBanner = () => {
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good Morning' : currentHour < 18 ? 'Good Afternoon' : 'Good Evening';
 
-  const handleViewAnalytics = () => {
-    navigate('/analytics');
-  };
-
   const handleNewDeal = () => {
     navigate('/deals', { state: { openNewDeal: true } });
   };
@@ -106,21 +102,6 @@ const WelcomeBanner = () => {
         </VStack>
 
         <HStack gap={3} width={{ base: 'full', md: 'auto' }}>
-          <Button
-            colorPalette="whiteAlpha"
-            variant="outline"
-            size={{ base: 'sm', md: 'md' }}
-            color="white"
-            _hover={{
-              bg: 'whiteAlpha.200',
-            }}
-            borderWidth="2px"
-            onClick={handleViewAnalytics}
-            flex={{ base: 1, md: 'initial' }}
-          >
-            <FiTrendingUp />
-            <Text ml={2}>Analytics</Text>
-          </Button>
           <Button
             bg="white"
             color="purple.600"

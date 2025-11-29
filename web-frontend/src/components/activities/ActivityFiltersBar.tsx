@@ -18,11 +18,7 @@ interface ActivityFiltersBarProps {
 const typeOptions = [
   { value: 'all', label: 'All Types' },
   { value: 'call', label: 'Calls' },
-  { value: 'email', label: 'Emails' },
   { value: 'telegram', label: 'Telegram' },
-  { value: 'meeting', label: 'Meetings' },
-  { value: 'note', label: 'Notes' },
-  { value: 'task', label: 'Tasks' },
 ];
 
 const statusOptions = [
@@ -102,8 +98,8 @@ export const ActivityFiltersBar = ({
             accentColor={isClientMode ? "blue" : "purple"}
           />
 
-          {/* More Filters / Clear Filters Button */}
-          {hasActiveFilters ? (
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
             <Button
               variant="outline"
               h="40px"
@@ -111,15 +107,6 @@ export const ActivityFiltersBar = ({
               display={{ base: 'none', lg: 'flex' }}
             >
               <Box ml={2}>Clear Filters</Box>
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              h="40px"
-              display={{ base: 'none', lg: 'flex' }}
-            >
-              <FiFilter />
-              <Box ml={2}>More Filters</Box>
             </Button>
           )}
         </HStack>

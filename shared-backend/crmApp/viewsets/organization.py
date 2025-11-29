@@ -16,6 +16,11 @@ from crmApp.serializers import (
 )
 
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 class OrganizationViewSet(viewsets.ModelViewSet):
     """
     ViewSet for Organization management.
@@ -25,6 +30,43 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     queryset = Organization.objects.all()
     serializer_class = OrganizationSerializer
     permission_classes = [IsAuthenticated]
+    
+    def create(self, request, *args, **kwargs):
+        """Override create to add logging for duplicate name errors"""
+        logger.info(f"[OrganizationViewSet] Creating organization with data: {request.data}")
+        try:
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"[OrganizationViewSet] Error creating organization: {str(e)}")
+            raise
+    
+    def update(self, request, *args, **kwargs):
+        """Override update to add logging for duplicate name errors"""
+        organization = self.get_object()
+        logger.info(f"[OrganizationViewSet] Updating organization {organization.id} with data: {request.data}")
+        
+        # Check if user is owner of this organization
+        membership = UserOrganization.objects.filter(
+            organization=organization,
+            user=request.user,
+            is_owner=True,
+            is_active=True
+        ).first()
+        
+        if not membership:
+            return Response(
+                {
+                    'error': 'Permission denied',
+                    'detail': 'Only organization owners can update organization details. Employees can only view organizations.'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            return super().update(request, *args, **kwargs)
+        except Exception as e:
+            logger.error(f"[OrganizationViewSet] Error updating organization: {str(e)}")
+            raise
     
     def get_serializer_class(self):
         if self.action == 'create':
@@ -58,29 +100,6 @@ class OrganizationViewSet(viewsets.ModelViewSet):
             user_organizations__user=user,
             user_organizations__is_active=True
         ).distinct()
-    
-    def update(self, request, *args, **kwargs):
-        """Override update to ensure only owners can update organizations"""
-        organization = self.get_object()
-        
-        # Check if user is owner of this organization
-        membership = UserOrganization.objects.filter(
-            organization=organization,
-            user=request.user,
-            is_owner=True,
-            is_active=True
-        ).first()
-        
-        if not membership:
-            return Response(
-                {
-                    'error': 'Permission denied',
-                    'detail': 'Only organization owners can update organization details. Employees can only view organizations.'
-                },
-                status=status.HTTP_403_FORBIDDEN
-            )
-        
-        return super().update(request, *args, **kwargs)
     
     def partial_update(self, request, *args, **kwargs):
         """Override partial_update to ensure only owners can update organizations"""

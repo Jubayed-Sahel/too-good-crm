@@ -61,7 +61,7 @@ const EmployeeDashboardPage = () => {
   }
 
   // Check if employee has any relevant permissions
-  const hasAnyResourceAccess = canAccess('deals') || canAccess('leads') || canAccess('customers') || canAccess('activities') || canAccess('analytics');
+  const hasAnyResourceAccess = canAccess('deals') || canAccess('leads') || canAccess('customers') || canAccess('activities');
 
   return (
     <DashboardLayout title="Dashboard">

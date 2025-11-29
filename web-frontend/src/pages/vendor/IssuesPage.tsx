@@ -21,16 +21,23 @@ const IssuesPage = () => {
   const [categoryFilter, setCategoryFilter] = useState<IssueCategory | 'all'>('all');
 
   // Build filter object for API
-  const apiFilters = useMemo(() => ({
-    search: searchQuery || undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-    priority: priorityFilter !== 'all' ? priorityFilter : undefined,
-    category: categoryFilter !== 'all' ? categoryFilter : undefined,
-  }), [searchQuery, statusFilter, priorityFilter, categoryFilter]);
+  const apiFilters = useMemo(() => {
+    const filters = {
+      search: searchQuery || undefined,
+      status: statusFilter !== 'all' ? statusFilter : undefined,
+      priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+      category: categoryFilter !== 'all' ? categoryFilter : undefined,
+    };
+    console.log('[IssuesPage] API Filters:', filters);
+    return filters;
+  }, [searchQuery, statusFilter, priorityFilter, categoryFilter]);
 
   // Fetch data
   const { data: issuesData, isLoading, error, refetch } = useIssues(apiFilters);
   const issues = issuesData?.results || [];
+  
+  console.log('[IssuesPage] Issues data:', issuesData);
+  console.log('[IssuesPage] Issues count:', issues.length);
   const { data: statsData, refetch: refetchStats } = useIssueStats();
 
   // Mutations
