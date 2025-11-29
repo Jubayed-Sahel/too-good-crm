@@ -6,6 +6,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import too.good.crm.data.NetworkResult
 import too.good.crm.data.model.Conversation
 import too.good.crm.data.model.Message
 import too.good.crm.data.model.MessageUser
@@ -77,17 +78,21 @@ class MessagingViewModel : ViewModel() {
         viewModelScope.launch {
             _conversationsUiState.value = ConversationsUiState.Loading
             
-            val result = repository.getConversations()
-            result.fold(
-                onSuccess = { conversations ->
-                    _conversationsUiState.value = ConversationsUiState.Success(conversations)
-                },
-                onFailure = { error ->
+            when (val result = repository.getConversations()) {
+                is NetworkResult.Success -> {
+                    _conversationsUiState.value = ConversationsUiState.Success(result.data)
+                }
+                is NetworkResult.Error -> {
                     _conversationsUiState.value = ConversationsUiState.Error(
-                        error.message ?: "Failed to load conversations"
+                        result.message ?: "Failed to load conversations"
                     )
                 }
-            )
+                is NetworkResult.Exception -> {
+                    _conversationsUiState.value = ConversationsUiState.Error(
+                        result.exception.message ?: "Failed to load conversations"
+                    )
+                }
+            }
         }
     }
     
@@ -103,9 +108,9 @@ class MessagingViewModel : ViewModel() {
         viewModelScope.launch {
             _chatUiState.value = ChatUiState.Loading
             
-            val result = repository.getMessagesWithUser(userId)
-            result.fold(
-                onSuccess = { messages ->
+            when (val result = repository.getMessagesWithUser(userId)) {
+                is NetworkResult.Success -> {
+                    val messages = result.data
                     // Create MessageUser from conversation if available
                     val otherUser = messages.firstOrNull()?.let { message ->
                         if (message.sender.id == userId) message.sender else message.recipient
@@ -118,13 +123,18 @@ class MessagingViewModel : ViewModel() {
                     
                     // Start polling for new messages
                     startPolling(userId)
-                },
-                onFailure = { error ->
+                }
+                is NetworkResult.Error -> {
                     _chatUiState.value = ChatUiState.Error(
-                        error.message ?: "Failed to load messages"
+                        result.message ?: "Failed to load messages"
                     )
                 }
-            )
+                is NetworkResult.Exception -> {
+                    _chatUiState.value = ChatUiState.Error(
+                        result.exception.message ?: "Failed to load messages"
+                    )
+                }
+            }
         }
     }
     
@@ -149,17 +159,16 @@ class MessagingViewModel : ViewModel() {
             _isSendingMessage.value = true
             _errorMessage.value = null
             
-            val result = repository.sendMessage(
+            when (val result = repository.sendMessage(
                 recipientId = recipientId,
                 content = content,
                 subject = subject,
                 relatedLeadId = relatedLeadId,
                 relatedDealId = relatedDealId,
                 relatedCustomerId = relatedCustomerId
-            )
-            
-            result.fold(
-                onSuccess = { newMessage ->
+            )) {
+                is NetworkResult.Success -> {
+                    val newMessage = result.data
                     // Add message to current chat if we're viewing this conversation
                     if (currentChatUserId == recipientId) {
                         val currentState = _chatUiState.value
@@ -172,12 +181,16 @@ class MessagingViewModel : ViewModel() {
                     
                     _isSendingMessage.value = false
                     onSuccess()
-                },
-                onFailure = { error ->
-                    _errorMessage.value = error.message ?: "Failed to send message"
+                }
+                is NetworkResult.Error -> {
+                    _errorMessage.value = result.message ?: "Failed to send message"
                     _isSendingMessage.value = false
                 }
-            )
+                is NetworkResult.Exception -> {
+                    _errorMessage.value = result.exception.message ?: "Failed to send message"
+                    _isSendingMessage.value = false
+                }
+            }
         }
     }
     
@@ -196,15 +209,17 @@ class MessagingViewModel : ViewModel() {
      */
     fun loadUnreadCount() {
         viewModelScope.launch {
-            val result = repository.getUnreadCount()
-            result.fold(
-                onSuccess = { response ->
-                    _unreadCount.value = response.unreadCount
-                },
-                onFailure = {
+            when (val result = repository.getUnreadCount()) {
+                is NetworkResult.Success -> {
+                    _unreadCount.value = result.data.unreadCount
+                }
+                is NetworkResult.Error -> {
                     // Silently fail - not critical
                 }
-            )
+                is NetworkResult.Exception -> {
+                    // Silently fail - not critical
+                }
+            }
         }
     }
     
@@ -215,17 +230,20 @@ class MessagingViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoadingRecipients.value = true
             
-            val result = repository.getRecipients()
-            result.fold(
-                onSuccess = { users ->
-                    _recipients.value = users
-                    _isLoadingRecipients.value = false
-                },
-                onFailure = { error ->
-                    _errorMessage.value = error.message ?: "Failed to load recipients"
+            when (val result = repository.getRecipients()) {
+                is NetworkResult.Success -> {
+                    _recipients.value = result.data
                     _isLoadingRecipients.value = false
                 }
-            )
+                is NetworkResult.Error -> {
+                    _errorMessage.value = result.message ?: "Failed to load recipients"
+                    _isLoadingRecipients.value = false
+                }
+                is NetworkResult.Exception -> {
+                    _errorMessage.value = result.exception.message ?: "Failed to load recipients"
+                    _isLoadingRecipients.value = false
+                }
+            }
         }
     }
     
@@ -240,9 +258,9 @@ class MessagingViewModel : ViewModel() {
                 
                 // Only poll if we're still viewing this chat
                 if (currentChatUserId == userId) {
-                    val result = repository.getMessagesWithUser(userId)
-                    result.fold(
-                        onSuccess = { messages ->
+                    when (val result = repository.getMessagesWithUser(userId)) {
+                        is NetworkResult.Success -> {
+                            val messages = result.data
                             val currentState = _chatUiState.value
                             if (currentState is ChatUiState.Success) {
                                 // Only update if there are new messages
@@ -250,11 +268,14 @@ class MessagingViewModel : ViewModel() {
                                     _chatUiState.value = currentState.copy(messages = messages)
                                 }
                             }
-                        },
-                        onFailure = {
+                        }
+                        is NetworkResult.Error -> {
                             // Silently fail - don't interrupt user experience
                         }
-                    )
+                        is NetworkResult.Exception -> {
+                            // Silently fail - don't interrupt user experience
+                        }
+                    }
                 } else {
                     break // Exit polling if we've moved to a different chat
                 }

@@ -309,7 +309,7 @@ class MainActivity : ComponentActivity() {
                             val conversationId = backStackEntry.arguments?.getString("conversationId")?.toIntOrNull()
                             if (conversationId != null) {
                                 too.good.crm.features.messages.ChatScreen(
-                                    conversationId = conversationId,
+                                    userId = conversationId,
                                     onNavigateBack = {
                                         navController.popBackStack()
                                     }

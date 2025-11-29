@@ -28,7 +28,8 @@ interface IssueApiService {
     suspend fun getAllIssues(
         @Query("status") status: String? = null,
         @Query("priority") priority: String? = null,
-        @Query("is_client_issue") isClientIssue: Boolean? = null
+        @Query("is_client_issue") isClientIssue: Boolean? = null,
+        @Query("customer") customer: Int? = null
     ): Response<IssuesListResponse>
 
     @GET("issues/{issueId}/")
