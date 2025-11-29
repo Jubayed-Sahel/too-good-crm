@@ -41,13 +41,11 @@ class VendorViewSet(
     
     def get_queryset(self):
         """Filter vendors by user's organizations through user_profiles"""
-        # Use OrganizationFilterMixin to filter by accessible organizations
         queryset = super().get_queryset()
         
-        # Filter by organization
-        org_id = self.request.query_params.get('organization')
-        if org_id:
-            queryset = queryset.filter(organization_id=org_id)
+        # Use mixin to filter by accessible organizations
+        # This handles both vendor/employee (single org) and customer (multiple orgs)
+        queryset = self.filter_by_organization(queryset, self.request)
         
         # Filter by status
         status_filter = self.request.query_params.get('status')

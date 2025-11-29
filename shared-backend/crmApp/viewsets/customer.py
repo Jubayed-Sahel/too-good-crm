@@ -46,38 +46,63 @@ class CustomerViewSet(
     
     def perform_create(self, serializer):
         """
-        Create customer with optional organization.
-        Organization can come from:
-        1. Explicitly provided in request data
-        2. User's primary profile organization (fallback)
-        3. None (for independent customers)
+        Create customer or link to existing customer.
+        Multi-vendor support: If a customer with the same email exists,
+        create a CustomerOrganization link instead of a duplicate customer.
+        
+        Organization comes from user's active profile via middleware.
         """
         import logging
+        from crmApp.models import CustomerOrganization
         logger = logging.getLogger(__name__)
         
-        # Get organization from request (can be None/null for independent customers)
-        organization_id = self.request.data.get('organization')
+        # Get organization from user's active profile using mixin method
+        organization = self.get_organization_from_request(self.request)
         
-        # If not explicitly provided, try to use user's profile organization as default
-        if organization_id is None:
-            # Try to get from user's primary profile
-            primary_profile = self.request.user.user_profiles.filter(
-                is_primary=True,
-                status='active'
-            ).first()
+        if not organization:
+            logger.error(f"Cannot create customer - no organization context for user {self.request.user.username}")
+            raise ValueError('Organization context is required. Please ensure you have an active profile with an organization.')
+        
+        organization_id = organization.id
+        logger.info(f"Creating customer - org: {organization_id} ({organization.name}), user: {self.request.user.username}")
+        
+        # Check if customer with this email already exists (multi-vendor support)
+        email = serializer.validated_data.get('email')
+        if email:
+            # Look for existing customer with same email
+            existing_customer = Customer.objects.filter(email__iexact=email).first()
             
-            if primary_profile and primary_profile.organization_id:
-                organization_id = primary_profile.organization_id
-            else:
-                # If no primary, get first active profile
-                first_profile = self.request.user.user_profiles.filter(status='active').first()
-                if first_profile and first_profile.organization_id:
-                    organization_id = first_profile.organization_id
+            if existing_customer:
+                logger.info(f"Customer with email {email} exists (id={existing_customer.id}). Creating/updating CustomerOrganization link.")
+                
+                # Check if this customer is already linked to this vendor
+                customer_org, created = CustomerOrganization.objects.get_or_create(
+                    customer=existing_customer,
+                    organization=organization,
+                    defaults={
+                        'relationship_status': 'active',
+                        'vendor_notes': serializer.validated_data.get('notes', ''),
+                    }
+                )
+                
+                if not created:
+                    # Already linked - update the relationship
+                    logger.info(f"Customer already linked to organization. Updating relationship.")
+                    if serializer.validated_data.get('notes'):
+                        customer_org.vendor_notes = serializer.validated_data.get('notes')
+                        customer_org.save()
+                else:
+                    logger.info(f"Created new CustomerOrganization link (id={customer_org.id})")
+                
+                # Return the existing customer (don't create duplicate)
+                # Update the serializer instance to return existing customer data
+                serializer.instance = existing_customer
+                return existing_customer
         
-        logger.info(f"Creating customer - org: {organization_id}, user: {self.request.user.username}")
-        
-        # Save with organization_id (can be None)
-        serializer.save(organization_id=organization_id)
+        # No existing customer found - create new one
+        customer = serializer.save(organization=organization)
+        logger.info(f"Created new customer id={customer.id} for organization {organization.name}")
+        return customer
     
     def get_queryset(self):
         """
@@ -109,11 +134,15 @@ class CustomerViewSet(
             # User has no organization - show only customers without organization
             queryset = Customer.objects.filter(organization_id__isnull=True)
         
-        # Filter by organization
+        # Filter by organization query parameter
         org_id = self.request.query_params.get('organization')
         if org_id:
             try:
-                queryset = queryset.filter(organization_id=int(org_id))
+                # Filter by BOTH primary organization AND many-to-many relationship
+                queryset = queryset.filter(
+                    Q(organization_id=int(org_id)) |  # Primary organization
+                    Q(organizations__id=int(org_id))   # Many-to-many via CustomerOrganization
+                ).distinct()
             except (ValueError, TypeError):
                 pass  # Invalid org_id, skip this filter
         
@@ -146,18 +175,34 @@ class CustomerViewSet(
     
     def get_object(self):
         """Override get_object to ensure we can retrieve customers regardless of status"""
-        # Get the queryset without status filtering for retrieve/update/delete
-        user_orgs = self.request.user.user_profiles.filter(
-            status='active'
-        ).values_list('organization_id', flat=True)
+        from django.db.models import Q
         
-        queryset = Customer.objects.filter(organization_id__in=user_orgs)
+        # Get the queryset without status filtering for retrieve/update/delete
+        user_orgs = list(self.request.user.user_profiles.filter(
+            status='active'
+        ).values_list('organization_id', flat=True))
+        
+        # Filter out None values
+        user_orgs = [org_id for org_id in user_orgs if org_id is not None]
+        
+        if user_orgs:
+            # Show customers linked to user's organizations via primary OR M2M
+            queryset = Customer.objects.filter(
+                Q(organization_id__in=user_orgs) |
+                Q(organizations__id__in=user_orgs)
+            ).distinct()
+        else:
+            queryset = Customer.objects.filter(organization_id__isnull=True)
         
         # Filter by organization if specified
         org_id = self.request.query_params.get('organization')
         if org_id:
             try:
-                queryset = queryset.filter(organization_id=int(org_id))
+                # Filter by BOTH primary organization AND many-to-many relationship
+                queryset = queryset.filter(
+                    Q(organization_id=int(org_id)) |
+                    Q(organizations__id=int(org_id))
+                ).distinct()
             except (ValueError, TypeError):
                 pass  # Invalid org_id, skip this filter
         

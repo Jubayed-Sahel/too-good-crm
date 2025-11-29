@@ -186,28 +186,17 @@ class CustomerCreateSerializer(serializers.ModelSerializer):
         ]
     
     def validate_email(self, value):
-        """Validate email is unique within organization"""
+        """
+        Validate email format and handle multi-vendor scenarios.
+        
+        Note: Email is NOT unique per organization to support multi-vendor.
+        The same customer email can exist across multiple vendor organizations
+        through the CustomerOrganization junction table.
+        """
         if not value:
             return value
         
-        # Try to get organization from multiple sources
-        organization = self.initial_data.get('organization')
-        
-        # If organization is not in initial_data, try to get from context
-        if not organization:
-            request = self.context.get('request')
-            if request and hasattr(request.user, 'current_organization') and request.user.current_organization:
-                organization = request.user.current_organization.id
-        
-        if organization:
-            # Check if email exists for this organization
-            if Customer.objects.filter(
-                organization_id=organization,
-                email__iexact=value
-            ).exists():
-                raise serializers.ValidationError(
-                    "A customer with this email already exists in your organization."
-                )
+        # Just validate format and normalize - uniqueness handled in perform_create
         return value.lower() if value else value
     
     def validate_phone(self, value):
