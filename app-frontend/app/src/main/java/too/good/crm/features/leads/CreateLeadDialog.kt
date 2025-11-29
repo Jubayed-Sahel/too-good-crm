@@ -24,6 +24,7 @@ data class CreateLeadData(
     val jobTitle: String,
     val source: String,
     val estimatedValue: String,
+    val leadScore: String,
     val notes: String
 )
 
@@ -42,6 +43,7 @@ fun CreateLeadDialog(
     var jobTitle by remember { mutableStateOf("") }
     var source by remember { mutableStateOf("website") }
     var estimatedValue by remember { mutableStateOf("") }
+    var leadScore by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     
     var expanded by remember { mutableStateOf(false) }
@@ -272,6 +274,24 @@ fun CreateLeadDialog(
                         shape = RoundedCornerShape(DesignTokens.Radius.Medium)
                     )
 
+                    OutlinedTextField(
+                        value = leadScore,
+                        onValueChange = { newValue ->
+                            // Only allow numbers 0-100
+                            val filtered = newValue.filter { it.isDigit() }
+                            val intValue = filtered.toIntOrNull()
+                            if (filtered.isEmpty() || (intValue != null && intValue in 0..100)) {
+                                leadScore = filtered
+                            }
+                        },
+                        label = { Text("Lead Score") },
+                        placeholder = { Text("0-100") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        supportingText = { Text("Score between 0 and 100") },
+                        shape = RoundedCornerShape(DesignTokens.Radius.Medium)
+                    )
+
                     HorizontalDivider(modifier = Modifier.padding(vertical = DesignTokens.Spacing.Space2))
 
                     // Notes
@@ -320,6 +340,7 @@ fun CreateLeadDialog(
                                         jobTitle = jobTitle,
                                         source = source,
                                         estimatedValue = estimatedValue,
+                                        leadScore = leadScore,
                                         notes = notes
                                     )
                                 )

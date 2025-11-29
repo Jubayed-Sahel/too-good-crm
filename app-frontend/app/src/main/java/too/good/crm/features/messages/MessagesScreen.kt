@@ -1,26 +1,36 @@
 package too.good.crm.features.messages
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
-import too.good.crm.data.model.UserProfile
+import too.good.crm.data.model.Conversation
 import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.utils.LogoutHandler
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,22 +44,74 @@ fun MessagesScreen(
     val profileState by profileViewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     
-    var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    val viewModel: MessagesViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val uiState by viewModel.uiState.collectAsState()
     
-    // Load profiles on initial load if not already loaded
+    var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    var searchQuery by remember { mutableStateOf("") }
+    var showNewMessageDialog by remember { mutableStateOf(false) }
+    
+    // Load profiles on initial load
     LaunchedEffect(Unit) {
         if (profileState.profiles.isEmpty() && !profileState.isLoading) {
             profileViewModel.loadProfiles()
         }
     }
     
-    AppScaffoldWithDrawer(
-        title = "Messages",
-        activeMode = activeMode,
-        profiles = profileState.profiles,
-        activeProfile = profileState.activeProfile,
-        isSwitchingProfile = profileState.isSwitching,
-        onProfileSelected = { profile ->
+    // Load recipients for new message dialog
+    LaunchedEffect(Unit) {
+        viewModel.loadRecipients()
+    }
+    
+    // Poll for updates every 10 seconds
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(10000) // 10 seconds
+            viewModel.refresh()
+        }
+    }
+    
+    // Show new message dialog
+    if (showNewMessageDialog) {
+        NewMessageDialog(
+            recipients = uiState.recipients,
+            isLoading = uiState.isLoadingRecipients,
+            onDismiss = { showNewMessageDialog = false },
+            onSelectRecipient = { recipient ->
+                // Navigate to chat with selected recipient
+                onNavigate("chat/${recipient.id}")
+            }
+        )
+    }
+    
+    // Filter conversations by search query
+    val filteredConversations = remember(uiState.conversations, searchQuery) {
+        if (searchQuery.isEmpty()) {
+            uiState.conversations
+        } else {
+            uiState.conversations.filter { conversation ->
+                val participant = conversation.otherParticipant
+                val name = "${participant.firstName ?: ""} ${participant.lastName ?: ""}".trim()
+                val email = participant.email
+                name.contains(searchQuery, ignoreCase = true) ||
+                email.contains(searchQuery, ignoreCase = true)
+            }
+        }
+    }
+    
+    // Calculate total unread count
+    val totalUnreadCount = remember(uiState.conversations) {
+        uiState.conversations.sumOf { it.unreadCount }
+    }
+    
+    Box(modifier = Modifier.fillMaxSize()) {
+        AppScaffoldWithDrawer(
+            title = "Messages",
+            activeMode = activeMode,
+            profiles = profileState.profiles,
+            activeProfile = profileState.activeProfile,
+            isSwitchingProfile = profileState.isSwitching,
+            onProfileSelected = { profile ->
             profileViewModel.switchProfile(
                 profileId = profile.id,
                 onSuccess = { user ->
@@ -128,83 +190,304 @@ fun MessagesScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(DesignTokens.Spacing.Space4)
+                .background(DesignTokens.Colors.Background)
+                .padding(paddingValues)
+                .padding(DesignTokens.Spacing.Space4),
+            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space4)
         ) {
-            // Coming Soon Card
-            Card(
+            // Header with unread count
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor = DesignTokens.Colors.White
-                ),
-                shape = MaterialTheme.shapes.large,
-                elevation = CardDefaults.cardElevation(defaultElevation = DesignTokens.Elevation.Level1),
-                border = androidx.compose.foundation.BorderStroke(1.dp, DesignTokens.Colors.OutlineVariant)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(DesignTokens.Padding.CardPaddingComfortable),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Message,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = DesignTokens.Colors.Primary
-                    )
-                    Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
                     Text(
                         text = "Messages",
-                        style = MaterialTheme.typography.headlineSmall,
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = DesignTokens.Colors.OnSurface
                     )
-                    Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space2))
-                    Text(
-                        text = "Stay connected with your team and customers",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = DesignTokens.Colors.OnSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
-                    
-                    // Feature list
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
-                    ) {
-                        FeatureItem("Real-time messaging")
-                        FeatureItem("Group conversations")
-                        FeatureItem("File sharing")
-                        FeatureItem("Message history")
-                    }
-                    
-                    Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
-                    
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = DesignTokens.Colors.Info100
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(DesignTokens.Spacing.Space3),
-                            verticalAlignment = Alignment.CenterVertically
+                    if (totalUnreadCount > 0) {
+                        Badge(
+                            containerColor = DesignTokens.Colors.Error
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Info,
-                                contentDescription = null,
-                                tint = DesignTokens.Colors.Info,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space2))
                             Text(
-                                text = "This feature is coming soon! We're working hard to bring you an amazing messaging experience.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = DesignTokens.Colors.Info
+                                text = totalUnreadCount.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = DesignTokens.Colors.White
                             )
                         }
+                    }
+                }
+            }
+            
+            // Search Bar
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Search conversations...") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = "Search")
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = DesignTokens.Colors.Surface,
+                    unfocusedContainerColor = DesignTokens.Colors.Surface
+                ),
+                singleLine = true
+            )
+            
+            // Conversations List
+            Card(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = DesignTokens.Colors.Surface
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                when {
+                    uiState.isLoading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                CircularProgressIndicator()
+                                Text(
+                                    text = "Loading conversations...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = DesignTokens.Colors.OnSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    uiState.error != null -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Error,
+                                    contentDescription = null,
+                                    tint = DesignTokens.Colors.Error,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Text(
+                                    text = uiState.error ?: "Failed to load conversations",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = DesignTokens.Colors.Error
+                                )
+                                Button(
+                                    onClick = { viewModel.loadConversations() }
+                                ) {
+                                    Text("Retry")
+                                }
+                            }
+                        }
+                    }
+                    filteredConversations.isEmpty() -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Message,
+                                    contentDescription = null,
+                                    tint = DesignTokens.Colors.OnSurfaceVariant,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Text(
+                                    text = if (searchQuery.isEmpty()) "No conversations yet" else "No conversations found",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = DesignTokens.Colors.OnSurfaceVariant
+                                )
+                                Text(
+                                    text = if (searchQuery.isEmpty()) 
+                                        "Your conversations will appear here" 
+                                    else 
+                                        "Try a different search term",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = DesignTokens.Colors.OnSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(vertical = 8.dp)
+                        ) {
+                            items(filteredConversations) { conversation ->
+                                ConversationItem(
+                                    conversation = conversation,
+                                    onClick = {
+                                        onNavigate("chat/${conversation.otherParticipant.id}")
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        }
+        
+        // Floating Action Button
+        FloatingActionButton(
+            onClick = { showNewMessageDialog = true },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = DesignTokens.Colors.Primary,
+            contentColor = DesignTokens.Colors.OnPrimary
+        ) {
+            Icon(Icons.Default.Add, contentDescription = "New Message")
+        }
+    }
+}
+
+@Composable
+fun ConversationItem(
+    conversation: Conversation,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Avatar
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(DesignTokens.Colors.Primary.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            val participant = conversation.otherParticipant
+            val displayName = "${participant.firstName ?: ""} ${participant.lastName ?: ""}".trim()
+                .ifEmpty { participant.email }
+            val initial = displayName.firstOrNull()?.uppercaseChar()?.toString() ?: "?"
+            Text(
+                text = initial,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = DesignTokens.Colors.Primary
+            )
+        }
+        
+        // Content
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Name with pinned indicator
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    val participant = conversation.otherParticipant
+                    val displayName = "${participant.firstName ?: ""} ${participant.lastName ?: ""}".trim()
+                        .ifEmpty { participant.email }
+                    Text(
+                        text = displayName,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = DesignTokens.Colors.OnSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                
+                // Timestamp
+                conversation.lastMessage?.createdAt?.let { timestamp ->
+                    Text(
+                        text = formatTimeAgo(timestamp, context),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = DesignTokens.Colors.OnSurfaceVariant
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            // Last message with unread badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = conversation.lastMessage?.content ?: "No messages yet",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (conversation.unreadCount > 0) 
+                        DesignTokens.Colors.OnSurface 
+                    else 
+                        DesignTokens.Colors.OnSurfaceVariant,
+                    fontWeight = if (conversation.unreadCount > 0) 
+                        FontWeight.SemiBold 
+                    else 
+                        FontWeight.Normal,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                if (conversation.unreadCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(DesignTokens.Colors.Error),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = conversation.unreadCount.toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = DesignTokens.Colors.White,
+                            fontSize = 10.sp
+                        )
                     }
                 }
             }
@@ -212,23 +495,28 @@ fun MessagesScreen(
     }
 }
 
-@Composable
-fun FeatureItem(text: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Icon(
-            imageVector = Icons.Default.CheckCircle,
-            contentDescription = null,
-            tint = DesignTokens.Colors.Success,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space2))
-        Text(
-            text = text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = DesignTokens.Colors.OnSurface
-        )
+fun formatTimeAgo(timestamp: String, context: android.content.Context): String {
+    return try {
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val date = sdf.parse(timestamp) ?: return timestamp
+        
+        val now = Date()
+        val diffInMillis = now.time - date.time
+        val diffInMinutes = diffInMillis / (1000 * 60)
+        val diffInHours = diffInMillis / (1000 * 60 * 60)
+        val diffInDays = diffInMillis / (1000 * 60 * 60 * 24)
+        
+        when {
+            diffInMinutes < 1 -> "Just now"
+            diffInMinutes < 60 -> "${diffInMinutes}m ago"
+            diffInHours < 24 -> "${diffInHours}h ago"
+            diffInDays < 7 -> "${diffInDays}d ago"
+            else -> {
+                val displayFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+                displayFormat.format(date)
+            }
+        }
+    } catch (e: Exception) {
+        timestamp
     }
 }

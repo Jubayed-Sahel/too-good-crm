@@ -19,27 +19,23 @@ class ActivityRepository {
         page: Int? = null,
         pageSize: Int? = 20,
         activityType: String? = null,
-        relatedToType: String? = null,
-        relatedToId: Int? = null,
-        performedBy: Int? = null,
+        customer: Int? = null,
+        lead: Int? = null,
+        deal: Int? = null,
+        assignedTo: Int? = null,
         status: String? = null,
-        priority: String? = null,
-        dateFrom: String? = null,
-        dateTo: String? = null,
         search: String? = null,
-        ordering: String? = "-performed_at"
+        ordering: String? = "-created_at"
     ): NetworkResult<ActivitiesListResponse> = safeApiCall {
         apiService.getActivities(
             page = page,
             pageSize = pageSize,
             activityType = activityType,
-            relatedToType = relatedToType,
-            relatedToId = relatedToId,
-            performedBy = performedBy,
+            customer = customer,
+            lead = lead,
+            deal = deal,
+            assignedTo = assignedTo,
             status = status,
-            priority = priority,
-            dateFrom = dateFrom,
-            dateTo = dateTo,
             search = search,
             ordering = ordering
         )
@@ -98,75 +94,89 @@ class ActivityRepository {
     }
     
     /**
-     * Get activities for a specific entity (lead, customer, deal, order)
+     * Get activities for a customer
      */
-    suspend fun getActivitiesForEntity(
-        type: String,
-        id: Int,
+    suspend fun getCustomerActivities(
+        customerId: Int,
         page: Int? = null,
         pageSize: Int? = 20
-    ): NetworkResult<ActivitiesListResponse> = safeApiCall {
-        apiService.getActivitiesForEntity(
-            type = type,
-            id = id,
-            page = page,
-            pageSize = pageSize
-        )
-    }
+    ): NetworkResult<ActivitiesListResponse> = getActivities(
+        customer = customerId,
+        page = page,
+        pageSize = pageSize
+    )
     
     /**
-     * Get upcoming activities
+     * Get activities for a lead
      */
-    suspend fun getUpcomingActivities(
+    suspend fun getLeadActivities(
+        leadId: Int,
         page: Int? = null,
         pageSize: Int? = 20
-    ): NetworkResult<ActivitiesListResponse> = safeApiCall {
-        apiService.getUpcomingActivities(page = page, pageSize = pageSize)
-    }
+    ): NetworkResult<ActivitiesListResponse> = getActivities(
+        lead = leadId,
+        page = page,
+        pageSize = pageSize
+    )
     
     /**
-     * Get overdue activities
+     * Get activities for a deal
      */
-    suspend fun getOverdueActivities(
+    suspend fun getDealActivities(
+        dealId: Int,
         page: Int? = null,
         pageSize: Int? = 20
-    ): NetworkResult<ActivitiesListResponse> = safeApiCall {
-        apiService.getOverdueActivities(page = page, pageSize = pageSize)
-    }
+    ): NetworkResult<ActivitiesListResponse> = getActivities(
+        deal = dealId,
+        page = page,
+        pageSize = pageSize
+    )
     
     /**
      * Get activities by type
      */
-    suspend fun getActivitiesByType(activityType: String): NetworkResult<ActivitiesListResponse> {
-        return getActivities(activityType = activityType)
-    }
+    suspend fun getActivitiesByType(
+        activityType: String,
+        page: Int? = null,
+        pageSize: Int? = 20
+    ): NetworkResult<ActivitiesListResponse> = getActivities(
+        activityType = activityType,
+        page = page,
+        pageSize = pageSize
+    )
     
     /**
-     * Get my activities
+     * Get activities assigned to an employee
      */
-    suspend fun getMyActivities(employeeId: Int): NetworkResult<ActivitiesListResponse> {
-        return getActivities(performedBy = employeeId)
-    }
+    suspend fun getEmployeeActivities(
+        employeeId: Int,
+        page: Int? = null,
+        pageSize: Int? = 20
+    ): NetworkResult<ActivitiesListResponse> = getActivities(
+        assignedTo = employeeId,
+        page = page,
+        pageSize = pageSize
+    )
     
     /**
      * Get activities for a lead
      */
     suspend fun getLeadActivities(leadId: Int): NetworkResult<ActivitiesListResponse> {
-        return getActivitiesForEntity("lead", leadId)
+        return getActivities(lead = leadId)
     }
     
     /**
      * Get activities for a customer
      */
     suspend fun getCustomerActivities(customerId: Int): NetworkResult<ActivitiesListResponse> {
-        return getActivitiesForEntity("customer", customerId)
+        return getActivities(customer = customerId)
     }
     
     /**
      * Get activities for a deal
      */
     suspend fun getDealActivities(dealId: Int): NetworkResult<ActivitiesListResponse> {
-        return getActivitiesForEntity("deal", dealId)
+        return getActivities(deal = dealId)
     }
     
     /**

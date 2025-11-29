@@ -19,8 +19,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import too.good.crm.data.Resource
 import too.good.crm.data.models.CallType
+import too.good.crm.data.model.ActivityListItem
+import too.good.crm.data.model.CreateActivityRequest
+import too.good.crm.data.model.Deal
+import too.good.crm.data.model.Issue
+import too.good.crm.data.repository.ActivityRepository
+import too.good.crm.data.repository.DealRepository
+import too.good.crm.data.repository.IssueRepository
+import too.good.crm.features.activities.ActivityTimeline
+import too.good.crm.features.activities.LogActivityDialog
 import too.good.crm.ui.components.*
 import too.good.crm.ui.theme.DesignTokens
+import androidx.compose.ui.graphics.Color
 import too.good.crm.ui.utils.*
 import too.good.crm.ui.video.VideoCallHelper
 import too.good.crm.ui.video.VideoCallPermissionHandler
@@ -50,9 +60,97 @@ fun CustomerDetailScreen(
         uiState.customers.find { it.id == customerId }
     }
     
+    val activityRepository = remember { ActivityRepository() }
+    val dealRepository = remember { DealRepository() }
+    val issueRepository = remember { IssueRepository() }
+    
+    var activities by remember { mutableStateOf<List<ActivityListItem>>(emptyList()) }
+    var isActivitiesLoading by remember { mutableStateOf(false) }
+    var isCreatingActivity by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showActivityDialog by remember { mutableStateOf(false) }
+    
+    var relatedDeals by remember { mutableStateOf<List<too.good.crm.data.model.DealListItem>>(emptyList()) }
+    var isDealsLoading by remember { mutableStateOf(false) }
+    
+    var relatedIssues by remember { mutableStateOf<List<Issue>>(emptyList()) }
+    var isIssuesLoading by remember { mutableStateOf(false) }
+    
     val coroutineScope = rememberCoroutineScope()
     var isInitiatingCall by remember { mutableStateOf(false) }
+    
+    // Load customer activities
+    LaunchedEffect(customerId) {
+        isActivitiesLoading = true
+        val customerIdInt = customerId.toIntOrNull()
+        if (customerIdInt != null) {
+            when (val result = activityRepository.getCustomerActivities(customerIdInt)) {
+                is too.good.crm.data.NetworkResult.Success -> {
+                    activities = result.data.results
+                    isActivitiesLoading = false
+                }
+                else -> {
+                    isActivitiesLoading = false
+                }
+            }
+        }
+    }
+    
+    // Load related deals
+    LaunchedEffect(customerId) {
+        isDealsLoading = true
+        val customerIdInt = customerId.toIntOrNull()
+        if (customerIdInt != null) {
+            when (val result = dealRepository.getCustomerDeals(customerIdInt)) {
+                is too.good.crm.data.NetworkResult.Success -> {
+                    relatedDeals = result.data.results
+                    isDealsLoading = false
+                }
+                else -> {
+                    isDealsLoading = false
+                }
+            }
+        }
+    }
+    
+    // Load related issues
+    LaunchedEffect(customerId) {
+        isIssuesLoading = true
+        val customerIdInt = customerId.toIntOrNull()
+        if (customerIdInt != null) {
+            coroutineScope.launch {
+                issueRepository.getCustomerIssues(customerIdInt).fold(
+                    onSuccess = { issues ->
+                        relatedIssues = issues
+                        isIssuesLoading = false
+                    },
+                    onFailure = {
+                        isIssuesLoading = false
+                    }
+                )
+            }
+        }
+    }
+    
+    // Function to refresh activities
+    fun refreshActivities() {
+        coroutineScope.launch {
+            isActivitiesLoading = true
+            val customerIdInt = customerId.toIntOrNull()
+            if (customerIdInt != null) {
+                when (val result = activityRepository.getCustomerActivities(customerIdInt)) {
+                    is too.good.crm.data.NetworkResult.Success -> {
+                        activities = result.data.results
+                        isActivitiesLoading = false
+                    }
+                    else -> {
+                        isActivitiesLoading = false
+                        Toast.makeText(context, "Failed to load activities", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
     
     // Delete confirmation dialog
     if (showDeleteDialog && customer != null) {
@@ -113,14 +211,24 @@ fun CustomerDetailScreen(
                     containerColor = DesignTokens.Colors.Surface
                 )
             )
+        },
+        floatingActionButton = {
+            if (customer != null) {
+                FloatingActionButton(
+                    onClick = { showActivityDialog = true },
+                    containerColor = DesignTokens.Colors.Primary
+                ) {
+                    Icon(Icons.Default.Add, "Log Activity")
+                }
+            }
         }
-    ) { padding ->
+    ) { paddingValues ->
         if (customer == null) {
             // Customer not found
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -148,7 +256,7 @@ fun CustomerDetailScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(DesignTokens.Colors.Background)
-                    .padding(padding)
+                    .padding(paddingValues)
                     .verticalScroll(rememberScrollState())
                     .padding(
                         responsivePadding(
@@ -376,7 +484,7 @@ fun CustomerDetailScreen(
                     }
                 }
                 
-                // Activity History Card (Placeholder)
+                // Related Deals
                 ResponsiveCard {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
@@ -387,52 +495,279 @@ fun CustomerDetailScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Recent Activity",
+                                text = "Related Deals",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = DesignTokens.Colors.OnSurface
                             )
-                            TextButton(onClick = { /* TODO: View all activities */ }) {
-                                Text("View All")
+                            
+                            if (relatedDeals.isNotEmpty()) {
+                                Text(
+                                    text = "${relatedDeals.size} deals",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = DesignTokens.Colors.TextSecondary
+                                )
                             }
                         }
                         
                         HorizontalDivider()
                         
-                        // Last Contact Info
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
+                        if (isDealsLoading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = DesignTokens.Spacing.Space4),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    Icons.Default.Event,
-                                    contentDescription = null,
-                                    tint = DesignTokens.Colors.OnSurfaceVariant,
-                                    modifier = Modifier.size(20.dp)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    color = DesignTokens.Colors.Primary
                                 )
-                                Column {
-                                    Text(
-                                        text = "Last Contact",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = DesignTokens.Colors.OnSurfaceVariant
-                                    )
-                                    Text(
-                                        text = customer.lastContact,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = DesignTokens.Colors.OnSurface
-                                    )
+                            }
+                        } else if (relatedDeals.isEmpty()) {
+                            Text(
+                                text = "No deals found",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = DesignTokens.Colors.TextSecondary,
+                                modifier = Modifier.padding(vertical = DesignTokens.Spacing.Space2)
+                            )
+                        } else {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
+                            ) {
+                                relatedDeals.take(5).forEach { deal ->
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(DesignTokens.Radius.Medium),
+                                        color = DesignTokens.Colors.SurfaceVariant,
+                                        onClick = { onNavigate("deals/${deal.id}") }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(DesignTokens.Spacing.Space3),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = deal.title,
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = DesignTokens.Colors.OnSurface
+                                                )
+                                                Text(
+                                                    text = deal.stageName ?: "No stage",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = DesignTokens.Colors.TextSecondary
+                                                )
+                                            }
+                                            Column(
+                                                horizontalAlignment = Alignment.End
+                                            ) {
+                                                Text(
+                                                    text = deal.value ?: "-",
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = DesignTokens.Colors.Primary
+                                                )
+                                                StatusBadge(deal.status)
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if (relatedDeals.size > 5) {
+                                    TextButton(
+                                        onClick = { onNavigate("deals?customer=$customerId") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("View all ${relatedDeals.size} deals")
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                
+                // Related Issues
+                ResponsiveCard {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Related Issues",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = DesignTokens.Colors.OnSurface
+                            )
+                            
+                            if (relatedIssues.isNotEmpty()) {
+                                Text(
+                                    text = "${relatedIssues.size} issues",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = DesignTokens.Colors.TextSecondary
+                                )
+                            }
+                        }
+                        
+                        HorizontalDivider()
+                        
+                        if (isIssuesLoading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = DesignTokens.Spacing.Space4),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(32.dp),
+                                    color = DesignTokens.Colors.Primary
+                                )
+                            }
+                        } else if (relatedIssues.isEmpty()) {
+                            Text(
+                                text = "No issues found",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = DesignTokens.Colors.TextSecondary,
+                                modifier = Modifier.padding(vertical = DesignTokens.Spacing.Space2)
+                            )
+                        } else {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
+                            ) {
+                                relatedIssues.take(5).forEach { issue ->
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(DesignTokens.Radius.Medium),
+                                        color = DesignTokens.Colors.SurfaceVariant,
+                                        onClick = { onNavigate("issues/${issue.id}") }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(DesignTokens.Spacing.Space3),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = issue.title,
+                                                    style = MaterialTheme.typography.bodyLarge,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = DesignTokens.Colors.OnSurface
+                                                )
+                                                Row(
+                                                    horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
+                                                ) {
+                                                    Text(
+                                                        text = issue.priority.uppercase(),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = when (issue.priority.lowercase()) {
+                                                            "urgent", "high" -> DesignTokens.Colors.Error
+                                                            "medium" -> DesignTokens.Colors.Warning
+                                                            else -> DesignTokens.Colors.TextSecondary
+                                                        }
+                                                    )
+                                                    Text(
+                                                        text = "•",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = DesignTokens.Colors.TextSecondary
+                                                    )
+                                                    Text(
+                                                        text = issue.category,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = DesignTokens.Colors.TextSecondary
+                                                    )
+                                                }
+                                            }
+                                            IssueStatusBadge(issue.status)
+                                        }
+                                    }
+                                }
+                                
+                                if (relatedIssues.size > 5) {
+                                    TextButton(
+                                        onClick = { onNavigate("issues?customer=$customerId") },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text("View all ${relatedIssues.size} issues")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Activity History
+                ResponsiveCard {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Activities",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = DesignTokens.Colors.OnSurface
+                            )
+                            
+                            if (activities.isNotEmpty()) {
+                                Text(
+                                    text = "${activities.size} total",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = DesignTokens.Colors.TextSecondary
+                                )
+                            }
+                        }
+                        
+                        ActivityTimeline(
+                            activities = activities,
+                            isLoading = isActivitiesLoading,
+                            onActivityClick = { /* TODO: Activity detail */ },
+                            onRefresh = { refreshActivities() }
+                        )
+                    }
+                }
             }
         }
+    }
+    
+    // Log Activity Dialog
+    if (showActivityDialog) {
+        LogActivityDialog(
+            dealId = null,
+            customerId = customerId.toIntOrNull(),
+            leadId = null,
+            onDismiss = { showActivityDialog = false },
+            onSave = { activityRequest ->
+                coroutineScope.launch {
+                    isCreatingActivity = true
+                    when (activityRepository.createActivity(activityRequest)) {
+                        is too.good.crm.data.NetworkResult.Success -> {
+                            showActivityDialog = false
+                            isCreatingActivity = false
+                            refreshActivities()
+                            Toast.makeText(context, "Activity logged successfully", Toast.LENGTH_SHORT).show()
+                        }
+                        else -> {
+                            isCreatingActivity = false
+                            Toast.makeText(context, "Failed to log activity", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            },
+            isLoading = isCreatingActivity
+        )
     }
 }
 
@@ -488,6 +823,56 @@ private fun StatItem(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = color
+        )
+    }
+}
+
+@Composable
+private fun StatusBadge(status: String) {
+    val (backgroundColor, textColor) = when (status.lowercase()) {
+        "won" -> DesignTokens.Colors.Success to DesignTokens.Colors.White
+        "lost" -> DesignTokens.Colors.Error to DesignTokens.Colors.White
+        "active", "open" -> DesignTokens.Colors.Primary to DesignTokens.Colors.OnPrimary
+        else -> DesignTokens.Colors.SurfaceVariant to DesignTokens.Colors.OnSurfaceVariant
+    }
+    
+    Surface(
+        shape = RoundedCornerShape(DesignTokens.Radius.Full),
+        color = backgroundColor
+    ) {
+        Text(
+            text = status.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = textColor,
+            modifier = Modifier.padding(
+                horizontal = DesignTokens.Spacing.Space2,
+                vertical = 4.dp
+            )
+        )
+    }
+}
+
+@Composable
+private fun IssueStatusBadge(status: String) {
+    val (backgroundColor, textColor) = when (status.lowercase()) {
+        "resolved", "closed" -> DesignTokens.Colors.Success to DesignTokens.Colors.White
+        "in_progress", "in progress" -> DesignTokens.Colors.Warning to DesignTokens.Colors.White
+        "open" -> DesignTokens.Colors.Error to DesignTokens.Colors.White
+        else -> DesignTokens.Colors.SurfaceVariant to DesignTokens.Colors.OnSurfaceVariant
+    }
+    
+    Surface(
+        shape = RoundedCornerShape(DesignTokens.Radius.Full),
+        color = backgroundColor
+    ) {
+        Text(
+            text = status.replace("_", " ").uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            color = textColor,
+            modifier = Modifier.padding(
+                horizontal = DesignTokens.Spacing.Space2,
+                vertical = 4.dp
+            )
         )
     }
 }

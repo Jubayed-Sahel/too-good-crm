@@ -94,6 +94,13 @@ class DealRepository {
     }
     
     /**
+     * Get deals for a specific customer
+     */
+    suspend fun getCustomerDeals(customerId: Int): NetworkResult<DealsListResponse> = safeApiCall {
+        apiService.getDeals(customer = customerId, pageSize = 100)
+    }
+    
+    /**
      * Reopen closed deal
      */
     suspend fun reopenDeal(id: Int): NetworkResult<Deal> = safeApiCall {

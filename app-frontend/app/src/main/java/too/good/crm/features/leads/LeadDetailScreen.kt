@@ -18,7 +18,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import too.good.crm.data.NetworkResult
 import too.good.crm.data.model.Lead
+import too.good.crm.data.model.ActivityListItem
+import too.good.crm.data.model.CreateActivityRequest
 import too.good.crm.data.repository.LeadRepository
+import too.good.crm.data.repository.ActivityRepository
+import too.good.crm.features.activities.ActivityTimeline
+import too.good.crm.features.activities.LogActivityDialog
 import too.good.crm.ui.components.*
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.*
@@ -40,6 +45,7 @@ fun LeadDetailScreen(
 ) {
     val context = LocalContext.current
     val repository = remember { LeadRepository() }
+    val activityRepository = remember { ActivityRepository() }
     val coroutineScope = rememberCoroutineScope()
     
     var lead by remember { mutableStateOf<Lead?>(null) }
@@ -49,6 +55,12 @@ fun LeadDetailScreen(
     var showConvertDialog by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
     var isConverting by remember { mutableStateOf(false) }
+    
+    // Activity state
+    var activities by remember { mutableStateOf<List<ActivityListItem>>(emptyList()) }
+    var isActivitiesLoading by remember { mutableStateOf(false) }
+    var isCreatingActivity by remember { mutableStateOf(false) }
+    var showActivityDialog by remember { mutableStateOf(false) }
     
     // Load lead data
     LaunchedEffect(leadId) {
@@ -73,6 +85,23 @@ fun LeadDetailScreen(
         } else {
             error = "Invalid lead ID"
             isLoading = false
+        }
+    }
+    
+    // Load activities
+    LaunchedEffect(leadId) {
+        isActivitiesLoading = true
+        val leadIdInt = leadId.toIntOrNull()
+        if (leadIdInt != null) {
+            when (val result = activityRepository.getLeadActivities(leadIdInt)) {
+                is NetworkResult.Success -> {
+                    activities = result.data.results
+                    isActivitiesLoading = false
+                }
+                else -> {
+                    isActivitiesLoading = false
+                }
+            }
         }
     }
     
@@ -235,6 +264,16 @@ fun LeadDetailScreen(
                     containerColor = DesignTokens.Colors.Surface
                 )
             )
+        },
+        floatingActionButton = {
+            if (lead != null) {
+                FloatingActionButton(
+                    onClick = { showActivityDialog = true },
+                    containerColor = DesignTokens.Colors.Primary
+                ) {
+                    Icon(Icons.Default.Add, "Log Activity")
+                }
+            }
         }
     ) { padding ->
         when {
@@ -510,6 +549,46 @@ fun LeadDetailScreen(
                         }
                     }
                     
+                    // Activities Card
+                    ResponsiveCard {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                        ) {
+                            Text(
+                                text = "Activity History",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = DesignTokens.Colors.OnSurface
+                            )
+                            
+                            HorizontalDivider()
+                            
+                            ActivityTimeline(
+                                activities = activities,
+                                isLoading = isActivitiesLoading,
+                                onActivityClick = { /* TODO: Activity detail */ },
+                                onRefresh = { 
+                                    coroutineScope.launch {
+                                        isActivitiesLoading = true
+                                        val leadIdInt = leadId.toIntOrNull()
+                                        if (leadIdInt != null) {
+                                            when (val result = activityRepository.getLeadActivities(leadIdInt)) {
+                                                is NetworkResult.Success -> {
+                                                    activities = result.data.results
+                                                    isActivitiesLoading = false
+                                                }
+                                                else -> {
+                                                    isActivitiesLoading = false
+                                                    Toast.makeText(context, "Failed to load activities", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                    
                     // Additional Details Card
                     if (lead!!.notes != null || lead!!.assignedToName != null) {
                         ResponsiveCard {
@@ -556,6 +635,47 @@ fun LeadDetailScreen(
                 }
             }
         }
+    }
+    
+    // Log Activity Dialog
+    if (showActivityDialog) {
+        LogActivityDialog(
+            dealId = null,
+            customerId = null,
+            leadId = leadId.toIntOrNull(),
+            onDismiss = { showActivityDialog = false },
+            onSave = { activityRequest ->
+                coroutineScope.launch {
+                    isCreatingActivity = true
+                    when (activityRepository.createActivity(activityRequest)) {
+                        is NetworkResult.Success -> {
+                            showActivityDialog = false
+                            isCreatingActivity = false
+                            // Refresh activities
+                            isActivitiesLoading = true
+                            val leadIdInt = leadId.toIntOrNull()
+                            if (leadIdInt != null) {
+                                when (val result = activityRepository.getLeadActivities(leadIdInt)) {
+                                    is NetworkResult.Success -> {
+                                        activities = result.data.results
+                                        isActivitiesLoading = false
+                                    }
+                                    else -> {
+                                        isActivitiesLoading = false
+                                    }
+                                }
+                            }
+                            Toast.makeText(context, "Activity logged successfully", Toast.LENGTH_SHORT).show()
+                        }
+                        else -> {
+                            isCreatingActivity = false
+                            Toast.makeText(context, "Failed to log activity", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            },
+            isLoading = isCreatingActivity
+        )
     }
 }
 

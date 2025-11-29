@@ -305,6 +305,17 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        composable("chat/{conversationId}") { backStackEntry ->
+                            val conversationId = backStackEntry.arguments?.getString("conversationId")?.toIntOrNull()
+                            if (conversationId != null) {
+                                too.good.crm.features.messages.ChatScreen(
+                                    userId = conversationId,
+                                    onNavigateBack = {
+                                        navController.popBackStack()
+                                    }
+                                )
+                            }
+                        }
                         composable("settings") {
                             SettingsScreen(
                                 onNavigate = { route ->

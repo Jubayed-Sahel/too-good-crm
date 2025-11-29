@@ -165,6 +165,106 @@ class LeadsViewModel : ViewModel() {
     }
     
     /**
+     * Apply advanced filters to leads
+     */
+    fun applyFilters(
+        statuses: Set<String> = emptySet(),
+        sources: Set<String> = emptySet(),
+        leadScoreMin: Int? = null,
+        leadScoreMax: Int? = null,
+        qualificationStatus: String? = null,
+        createdAfter: String? = null,
+        createdBefore: String? = null
+    ) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                error = null,
+                activeFilters = FilterState(
+                    statuses = statuses,
+                    sources = sources,
+                    leadScoreMin = leadScoreMin,
+                    leadScoreMax = leadScoreMax,
+                    qualificationStatus = qualificationStatus,
+                    createdAfter = createdAfter,
+                    createdBefore = createdBefore
+                )
+            )
+            
+            // Build filter parameters
+            val status = if (statuses.size == 1) statuses.first() else null
+            val source = if (sources.size == 1) sources.first() else null
+            
+            when (val result = repository.getLeads(
+                status = status,
+                source = source,
+                qualificationStatus = qualificationStatus,
+                pageSize = 50
+            )) {
+                is NetworkResult.Success -> {
+                    var filteredLeads = result.data.results
+                    
+                    // Apply client-side filters for multi-select and ranges
+                    if (statuses.size > 1) {
+                        filteredLeads = filteredLeads.filter { lead ->
+                            lead.status in statuses
+                        }
+                    }
+                    
+                    if (sources.size > 1) {
+                        filteredLeads = filteredLeads.filter { lead ->
+                            lead.source in sources
+                        }
+                    }
+                    
+                    if (leadScoreMin != null || leadScoreMax != null) {
+                        filteredLeads = filteredLeads.filter { lead ->
+                            val score = lead.leadScore ?: 0
+                            (leadScoreMin == null || score >= leadScoreMin) &&
+                            (leadScoreMax == null || score <= leadScoreMax)
+                        }
+                    }
+                    
+                    if (createdAfter != null || createdBefore != null) {
+                        filteredLeads = filteredLeads.filter { lead ->
+                            val createdDate = lead.createdAt
+                            (createdAfter == null || createdDate >= createdAfter) &&
+                            (createdBefore == null || createdDate <= createdBefore)
+                        }
+                    }
+                    
+                    _uiState.value = _uiState.value.copy(
+                        leads = filteredLeads,
+                        totalCount = filteredLeads.size,
+                        isLoading = false,
+                        error = null
+                    )
+                }
+                is NetworkResult.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = result.message
+                    )
+                }
+                is NetworkResult.Exception -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = result.exception.message ?: "Unknown error occurred"
+                    )
+                }
+            }
+        }
+    }
+    
+    /**
+     * Clear all filters
+     */
+    fun clearFilters() {
+        _uiState.value = _uiState.value.copy(activeFilters = FilterState())
+        loadLeads()
+    }
+    
+    /**
      * Create new lead
      */
     fun createLead(lead: CreateLeadRequest, onSuccess: () -> Unit) {
@@ -267,6 +367,40 @@ data class LeadsUiState(
     val searchQuery: String = "",
     val selectedStatus: String? = null,
     val selectedSource: String? = null,
-    val selectedPriority: String? = null
+    val selectedPriority: String? = null,
+    val activeFilters: FilterState = FilterState()
 )
+
+/**
+ * Filter State for Advanced Filtering
+ */
+data class FilterState(
+    val statuses: Set<String> = emptySet(),
+    val sources: Set<String> = emptySet(),
+    val leadScoreMin: Int? = null,
+    val leadScoreMax: Int? = null,
+    val qualificationStatus: String? = null,
+    val createdAfter: String? = null,
+    val createdBefore: String? = null
+) {
+    fun hasActiveFilters(): Boolean {
+        return statuses.isNotEmpty() ||
+                sources.isNotEmpty() ||
+                leadScoreMin != null ||
+                leadScoreMax != null ||
+                qualificationStatus != null ||
+                createdAfter != null ||
+                createdBefore != null
+    }
+    
+    fun activeFilterCount(): Int {
+        var count = 0
+        if (statuses.isNotEmpty()) count++
+        if (sources.isNotEmpty()) count++
+        if (leadScoreMin != null || leadScoreMax != null) count++
+        if (qualificationStatus != null) count++
+        if (createdAfter != null || createdBefore != null) count++
+        return count
+    }
+}
 

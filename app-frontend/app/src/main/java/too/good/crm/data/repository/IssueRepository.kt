@@ -71,10 +71,11 @@ class IssueRepository {
     fun getAllIssues(
         status: String? = null,
         priority: String? = null,
-        isClientIssue: Boolean? = null
+        isClientIssue: Boolean? = null,
+        customer: Int? = null
     ): Flow<List<Issue>> = flow {
         try {
-            val response = apiService.getAllIssues(status, priority, isClientIssue)
+            val response = apiService.getAllIssues(status, priority, isClientIssue, customer)
             if (response.isSuccessful && response.body() != null) {
                 emit(response.body()!!.results)
             } else {
@@ -82,6 +83,22 @@ class IssueRepository {
             }
         } catch (e: Exception) {
             emit(emptyList())
+        }
+    }
+    
+    /**
+     * Get issues for a specific customer
+     */
+    suspend fun getCustomerIssues(customerId: Int): Result<List<Issue>> {
+        return try {
+            val response = apiService.getAllIssues(customer = customerId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.results)
+            } else {
+                Result.failure(Exception(response.message() ?: "Failed to get customer issues"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
         }
     }
 
