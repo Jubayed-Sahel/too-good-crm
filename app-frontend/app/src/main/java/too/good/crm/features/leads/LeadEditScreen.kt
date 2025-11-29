@@ -43,7 +43,7 @@ fun LeadEditScreen(
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     
-    // Form state
+    // Form state - matching web EditLeadPage.tsx
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -51,6 +51,12 @@ fun LeadEditScreen(
     var jobTitle by remember { mutableStateOf("") }
     var source by remember { mutableStateOf("website") }
     var estimatedValue by remember { mutableStateOf("") }
+    var leadScore by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    var state by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
+    var postalCode by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     
     var isSaving by remember { mutableStateOf(false) }
@@ -72,6 +78,12 @@ fun LeadEditScreen(
                     jobTitle = result.data.jobTitle ?: ""
                     source = result.data.source ?: "website"
                     estimatedValue = result.data.estimatedValue ?: ""
+                    leadScore = result.data.leadScore?.toString() ?: ""
+                    address = result.data.address ?: ""
+                    city = result.data.city ?: ""
+                    state = result.data.state ?: ""
+                    country = result.data.country ?: ""
+                    postalCode = result.data.postalCode ?: ""
                     notes = result.data.notes ?: ""
                     isLoading = false
                 }
@@ -288,6 +300,107 @@ fun LeadEditScreen(
                             }
                         }
                         
+                        // Address Information Card
+                        ResponsiveCard {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                            ) {
+                                Text(
+                                    text = "Address Information",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = DesignTokens.Colors.OnSurface
+                                )
+                                
+                                HorizontalDivider()
+                                
+                                // Street Address Field
+                                FormField(
+                                    label = "Street Address",
+                                    required = false
+                                ) {
+                                    OutlinedTextField(
+                                        value = address,
+                                        onValueChange = { address = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("123 Main Street") },
+                                        singleLine = true,
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Home, contentDescription = null)
+                                        }
+                                    )
+                                }
+                                
+                                // City Field
+                                FormField(
+                                    label = "City",
+                                    required = false
+                                ) {
+                                    OutlinedTextField(
+                                        value = city,
+                                        onValueChange = { city = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("San Francisco") },
+                                        singleLine = true,
+                                        leadingIcon = {
+                                            Icon(Icons.Default.LocationCity, contentDescription = null)
+                                        }
+                                    )
+                                }
+                                
+                                // State Field
+                                FormField(
+                                    label = "State/Province",
+                                    required = false
+                                ) {
+                                    OutlinedTextField(
+                                        value = state,
+                                        onValueChange = { state = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("CA") },
+                                        singleLine = true,
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Map, contentDescription = null)
+                                        }
+                                    )
+                                }
+                                
+                                // Postal Code Field
+                                FormField(
+                                    label = "Postal Code",
+                                    required = false
+                                ) {
+                                    OutlinedTextField(
+                                        value = postalCode,
+                                        onValueChange = { postalCode = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("94105") },
+                                        singleLine = true,
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Pin, contentDescription = null)
+                                        }
+                                    )
+                                }
+                                
+                                // Country Field
+                                FormField(
+                                    label = "Country",
+                                    required = false
+                                ) {
+                                    OutlinedTextField(
+                                        value = country,
+                                        onValueChange = { country = it },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("USA") },
+                                        singleLine = true,
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Public, contentDescription = null)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        
                         // Additional Information Card
                         ResponsiveCard {
                             Column(
@@ -354,6 +467,33 @@ fun LeadEditScreen(
                                     )
                                 }
                                 
+                                // Lead Score Field
+                                FormField(
+                                    label = "Lead Score",
+                                    required = false
+                                ) {
+                                    OutlinedTextField(
+                                        value = leadScore,
+                                        onValueChange = { newValue ->
+                                            // Only allow numbers 0-100
+                                            val filtered = newValue.filter { it.isDigit() }
+                                            val intValue = filtered.toIntOrNull()
+                                            if (filtered.isEmpty() || (intValue != null && intValue in 0..100)) {
+                                                leadScore = filtered
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        placeholder = { Text("0-100") },
+                                        singleLine = true,
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Star, contentDescription = null)
+                                        },
+                                        supportingText = {
+                                            Text("Score between 0 and 100")
+                                        }
+                                    )
+                                }
+                                
                                 // Notes Field
                                 FormField(
                                     label = "Notes",
@@ -407,6 +547,12 @@ fun LeadEditScreen(
                                                 jobTitle = jobTitle.ifBlank { null },
                                                 source = source,
                                                 estimatedValue = estimatedValue.ifBlank { null },
+                                                leadScore = leadScore.toIntOrNull(),
+                                                address = address.ifBlank { null },
+                                                city = city.ifBlank { null },
+                                                state = state.ifBlank { null },
+                                                postalCode = postalCode.ifBlank { null },
+                                                country = country.ifBlank { null },
                                                 notes = notes.ifBlank { null }
                                             )
                                             

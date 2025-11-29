@@ -39,22 +39,39 @@ fun CustomerEditScreen(
         uiState.customers.find { it.id == customerId }
     }
     
-    // Form state
-    var name by remember { mutableStateOf(customer?.name ?: "") }
+    // Form state - matching web frontend structure
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf(customer?.email ?: "") }
     var phone by remember { mutableStateOf(customer?.phone ?: "") }
-    var company by remember { mutableStateOf(customer?.company ?: "") }
-    var status by remember { mutableStateOf(customer?.status ?: CustomerStatus.ACTIVE) }
+    var companyName by remember { mutableStateOf(customer?.company ?: "") }
+    var jobTitle by remember { mutableStateOf("") }
     var website by remember { mutableStateOf(customer?.website ?: "") }
+    var status by remember { mutableStateOf(customer?.status ?: CustomerStatus.ACTIVE) }
+    var address by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf("") }
+    var state by remember { mutableStateOf("") }
+    var postalCode by remember { mutableStateOf("") }
+    var country by remember { mutableStateOf("") }
     var industry by remember { mutableStateOf(customer?.industry ?: "") }
+    var notes by remember { mutableStateOf("") }
+    
+    // Split customer name into first/last on initial load
+    LaunchedEffect(customer?.name) {
+        customer?.name?.let { fullName ->
+            val parts = fullName.split(" ", limit = 2)
+            firstName = parts.getOrNull(0) ?: ""
+            lastName = parts.getOrNull(1) ?: ""
+        }
+    }
     
     var isSaving by remember { mutableStateOf(false) }
     
-    // Validation
-    val isFormValid = name.isNotBlank() && 
+    // Validation - matching web frontend requirements
+    val isFormValid = firstName.isNotBlank() && 
+                      lastName.isNotBlank() &&
                       email.isNotBlank() && 
-                      android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches() &&
-                      company.isNotBlank()
+                      android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
     
     Scaffold(
         topBar = {
@@ -120,13 +137,13 @@ fun CustomerEditScreen(
                         ),
                     verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space4)
                 ) {
-                    // Basic Information Card
+                    // Personal Information Card
                     ResponsiveCard {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
                         ) {
                             Text(
-                                text = "Basic Information",
+                                text = "Personal Information",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = DesignTokens.Colors.OnSurface
@@ -134,17 +151,35 @@ fun CustomerEditScreen(
                             
                             HorizontalDivider()
                             
-                            // Name Field
+                            // First Name Field
                             FormField(
-                                label = "Full Name",
+                                label = "First Name",
                                 required = true,
-                                error = if (name.isBlank()) "Name is required" else null
+                                error = if (firstName.isBlank()) "First name is required" else null
                             ) {
                                 OutlinedTextField(
-                                    value = name,
-                                    onValueChange = { name = it },
+                                    value = firstName,
+                                    onValueChange = { firstName = it },
                                     modifier = Modifier.fillMaxWidth(),
-                                    placeholder = { Text("John Doe") },
+                                    placeholder = { Text("John") },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Person, contentDescription = null)
+                                    }
+                                )
+                            }
+                            
+                            // Last Name Field
+                            FormField(
+                                label = "Last Name",
+                                required = true,
+                                error = if (lastName.isBlank()) "Last name is required" else null
+                            ) {
+                                OutlinedTextField(
+                                    value = lastName,
+                                    onValueChange = { lastName = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("Doe") },
                                     singleLine = true,
                                     leadingIcon = {
                                         Icon(Icons.Default.Person, contentDescription = null)
@@ -189,16 +224,31 @@ fun CustomerEditScreen(
                                     }
                                 )
                             }
+                        }
+                    }
+                    
+                    // Organization Information Card
+                    ResponsiveCard {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                        ) {
+                            Text(
+                                text = "Organization Information",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = DesignTokens.Colors.OnSurface
+                            )
                             
-                            // Company Field
+                            HorizontalDivider()
+                            
+                            // Company Name Field
                             FormField(
-                                label = "Company",
-                                required = true,
-                                error = if (company.isBlank()) "Company is required" else null
+                                label = "Company Name",
+                                required = false
                             ) {
                                 OutlinedTextField(
-                                    value = company,
-                                    onValueChange = { company = it },
+                                    value = companyName,
+                                    onValueChange = { companyName = it },
                                     modifier = Modifier.fillMaxWidth(),
                                     placeholder = { Text("Acme Corporation") },
                                     singleLine = true,
@@ -207,16 +257,50 @@ fun CustomerEditScreen(
                                     }
                                 )
                             }
+                            
+                            // Job Title Field
+                            FormField(
+                                label = "Job Title",
+                                required = false
+                            ) {
+                                OutlinedTextField(
+                                    value = jobTitle,
+                                    onValueChange = { jobTitle = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("Sales Manager") },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Work, contentDescription = null)
+                                    }
+                                )
+                            }
+                            
+                            // Website Field
+                            FormField(
+                                label = "Website",
+                                required = false
+                            ) {
+                                OutlinedTextField(
+                                    value = website,
+                                    onValueChange = { website = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("https://example.com") },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Language, contentDescription = null)
+                                    }
+                                )
+                            }
                         }
                     }
                     
-                    // Additional Information Card
+                    // Customer Status Card
                     ResponsiveCard {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
                         ) {
                             Text(
-                                text = "Additional Information",
+                                text = "Customer Status",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = DesignTokens.Colors.OnSurface
@@ -258,23 +342,123 @@ fun CustomerEditScreen(
                                     }
                                 }
                             }
+                        }
+                    }
+                    
+                    // Address Information Card
+                    ResponsiveCard {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                        ) {
+                            Text(
+                                text = "Address Information",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = DesignTokens.Colors.OnSurface
+                            )
                             
-                            // Website Field
+                            HorizontalDivider()
+                            
+                            // Street Address Field
                             FormField(
-                                label = "Website",
+                                label = "Street Address",
                                 required = false
                             ) {
                                 OutlinedTextField(
-                                    value = website,
-                                    onValueChange = { website = it },
+                                    value = address,
+                                    onValueChange = { address = it },
                                     modifier = Modifier.fillMaxWidth(),
-                                    placeholder = { Text("https://example.com") },
+                                    placeholder = { Text("123 Main Street") },
                                     singleLine = true,
                                     leadingIcon = {
-                                        Icon(Icons.Default.Language, contentDescription = null)
+                                        Icon(Icons.Default.Home, contentDescription = null)
                                     }
                                 )
                             }
+                            
+                            // City Field
+                            FormField(
+                                label = "City",
+                                required = false
+                            ) {
+                                OutlinedTextField(
+                                    value = city,
+                                    onValueChange = { city = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("New York") },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(Icons.Default.LocationCity, contentDescription = null)
+                                    }
+                                )
+                            }
+                            
+                            // State Field
+                            FormField(
+                                label = "State",
+                                required = false
+                            ) {
+                                OutlinedTextField(
+                                    value = state,
+                                    onValueChange = { state = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("NY") },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Map, contentDescription = null)
+                                    }
+                                )
+                            }
+                            
+                            // Postal Code Field
+                            FormField(
+                                label = "Postal Code",
+                                required = false
+                            ) {
+                                OutlinedTextField(
+                                    value = postalCode,
+                                    onValueChange = { postalCode = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("10001") },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Pin, contentDescription = null)
+                                    }
+                                )
+                            }
+                            
+                            // Country Field
+                            FormField(
+                                label = "Country",
+                                required = false
+                            ) {
+                                OutlinedTextField(
+                                    value = country,
+                                    onValueChange = { country = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("United States") },
+                                    singleLine = true,
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Public, contentDescription = null)
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    // Additional Information Card
+                    ResponsiveCard {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                        ) {
+                            Text(
+                                text = "Additional Information",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = DesignTokens.Colors.OnSurface
+                            )
+                            
+                            HorizontalDivider()
                             
                             // Industry Field
                             FormField(
@@ -289,6 +473,24 @@ fun CustomerEditScreen(
                                     singleLine = true,
                                     leadingIcon = {
                                         Icon(Icons.Default.Work, contentDescription = null)
+                                    }
+                                )
+                            }
+                            
+                            // Notes Field
+                            FormField(
+                                label = "Notes",
+                                required = false
+                            ) {
+                                OutlinedTextField(
+                                    value = notes,
+                                    onValueChange = { notes = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("Additional notes about this customer...") },
+                                    minLines = 4,
+                                    maxLines = 6,
+                                    leadingIcon = {
+                                        Icon(Icons.Default.Notes, contentDescription = null)
                                     }
                                 )
                             }
@@ -321,15 +523,27 @@ fun CustomerEditScreen(
                                 isSaving = true
                                 val customerIdInt = customerId.toIntOrNull()
                                 if (customerIdInt != null) {
+                                    // Combine first and last name for the name field
+                                    val fullName = "$firstName $lastName".trim()
+                                    
                                     viewModel.updateCustomer(
                                         customerId = customerIdInt,
-                                        name = name,
+                                        name = fullName,
+                                        firstName = firstName,
+                                        lastName = lastName,
                                         email = email,
                                         phone = phone,
-                                        companyName = company,
+                                        companyName = companyName,
+                                        jobTitle = jobTitle,
                                         status = status.name.lowercase(),
+                                        address = address,
+                                        city = city,
+                                        state = state,
+                                        postalCode = postalCode,
+                                        country = country,
                                         website = website,
-                                        notes = industry  // Using industry field as notes for now
+                                        industry = industry,
+                                        notes = notes
                                     )
                                     Toast.makeText(
                                         context,

@@ -22,7 +22,12 @@ import kotlinx.coroutines.launch
 import too.good.crm.data.NetworkResult
 import too.good.crm.data.model.Deal
 import too.good.crm.data.model.PipelineStage
+import too.good.crm.data.model.ActivityListItem
+import too.good.crm.data.model.CreateActivityRequest
 import too.good.crm.data.repository.DealRepository
+import too.good.crm.data.repository.ActivityRepository
+import too.good.crm.features.activities.ActivityTimeline
+import too.good.crm.features.activities.LogActivityDialog
 import too.good.crm.ui.components.ResponsiveCard
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.responsivePadding
@@ -39,17 +44,22 @@ fun DealDetailScreen(
     onBack: () -> Unit
 ) {
     val repository = remember { DealRepository() }
+    val activityRepository = remember { ActivityRepository() }
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     
     var deal by remember { mutableStateOf<Deal?>(null) }
     var stages by remember { mutableStateOf<List<PipelineStage>>(emptyList()) }
+    var activities by remember { mutableStateOf<List<ActivityListItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var isActivitiesLoading by remember { mutableStateOf(false) }
+    var isCreatingActivity by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showStageDialog by remember { mutableStateOf(false) }
-    var showWinDialog by remember { mutableStateOf(false) }
+    var showWonDialog by remember { mutableStateOf(false) }
     var showLoseDialog by remember { mutableStateOf(false) }
+    var showActivityDialog by remember { mutableStateOf(false) }
     var lossReason by remember { mutableStateOf("") }
     
     // Load deal details
@@ -78,6 +88,44 @@ fun DealDetailScreen(
         }
     }
     
+    // Load activities
+    LaunchedEffect(dealId) {
+        isActivitiesLoading = true
+        when (val result = activityRepository.getDealActivities(dealId)) {
+            is NetworkResult.Success -> {
+                activities = result.data.results
+                isActivitiesLoading = false
+            }
+            is NetworkResult.Error -> {
+                isActivitiesLoading = false
+            }
+            is NetworkResult.Exception -> {
+                isActivitiesLoading = false
+            }
+        }
+    }
+    
+    // Function to refresh activities
+    fun refreshActivities() {
+        scope.launch {
+            isActivitiesLoading = true
+            when (val result = activityRepository.getDealActivities(dealId)) {
+                is NetworkResult.Success -> {
+                    activities = result.data.results
+                    isActivitiesLoading = false
+                }
+                is NetworkResult.Error -> {
+                    isActivitiesLoading = false
+                    snackbarHostState.showSnackbar("Failed to load activities")
+                }
+                is NetworkResult.Exception -> {
+                    isActivitiesLoading = false
+                    snackbarHostState.showSnackbar("Network error")
+                }
+            }
+        }
+    }
+    
     Scaffold(
         topBar = {
             TopAppBar(
@@ -91,6 +139,16 @@ fun DealDetailScreen(
                     containerColor = DesignTokens.Colors.Surface
                 )
             )
+        },
+        floatingActionButton = {
+            if (deal != null) {
+                FloatingActionButton(
+                    onClick = { showActivityDialog = true },
+                    containerColor = DesignTokens.Colors.Primary
+                ) {
+                    Icon(Icons.Default.Add, "Log Activity")
+                }
+            }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
@@ -137,11 +195,15 @@ fun DealDetailScreen(
                 DealDetailContent(
                     deal = deal!!,
                     stages = stages,
+                    activities = activities,
+                    isActivitiesLoading = isActivitiesLoading,
                     onEdit = { onNavigate("deal-edit/$dealId") },
                     onDelete = { showDeleteDialog = true },
                     onMoveStage = { showStageDialog = true },
                     onMarkWon = { showWinDialog = true },
                     onMarkLost = { showLoseDialog = true },
+                    onActivityClick = { /* TODO: Navigate to activity detail */ },
+                    onRefreshActivities = { refreshActivities() },
                     paddingValues = paddingValues
                 )
             }
@@ -375,17 +437,53 @@ fun DealDetailScreen(
             }
         )
     }
+    
+    // Log Activity Dialog
+    if (showActivityDialog) {
+        LogActivityDialog(
+            dealId = dealId,
+            customerId = deal?.customerId,
+            leadId = null,
+            onDismiss = { showActivityDialog = false },
+            onSave = { activityRequest ->
+                scope.launch {
+                    isCreatingActivity = true
+                    when (activityRepository.createActivity(activityRequest)) {
+                        is NetworkResult.Success -> {
+                            showActivityDialog = false
+                            isCreatingActivity = false
+                            refreshActivities()
+                            snackbarHostState.showSnackbar("Activity logged successfully")
+                        }
+                        is NetworkResult.Error -> {
+                            isCreatingActivity = false
+                            snackbarHostState.showSnackbar("Failed to log activity")
+                        }
+                        is NetworkResult.Exception -> {
+                            isCreatingActivity = false
+                            snackbarHostState.showSnackbar("Network error")
+                        }
+                    }
+                }
+            },
+            isLoading = isCreatingActivity
+        )
+    }
 }
 
 @Composable
 private fun DealDetailContent(
     deal: Deal,
     stages: List<PipelineStage>,
+    activities: List<ActivityListItem>,
+    isActivitiesLoading: Boolean,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onMoveStage: () -> Unit,
     onMarkWon: () -> Unit,
     onMarkLost: () -> Unit,
+    onActivityClick: (Int) -> Unit,
+    onRefreshActivities: () -> Unit,
     paddingValues: PaddingValues
 ) {
     LazyColumn(
@@ -699,6 +797,45 @@ private fun DealDetailContent(
                             }
                         }
                     }
+                }
+            }
+        }
+        
+        // Activities
+        item {
+            ResponsiveCard {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(DesignTokens.Spacing.Space4),
+                    verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Activities",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        if (activities.isNotEmpty()) {
+                            Text(
+                                text = "${activities.size} total",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = DesignTokens.Colors.TextSecondary
+                            )
+                        }
+                    }
+                    
+                    ActivityTimeline(
+                        activities = activities,
+                        isLoading = isActivitiesLoading,
+                        onActivityClick = onActivityClick,
+                        onRefresh = onRefreshActivities
+                    )
                 }
             }
         }

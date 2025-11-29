@@ -19,8 +19,11 @@ import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
 import too.good.crm.features.profile.ProfileViewModel
+import too.good.crm.features.leads.components.FilterDrawer
+import too.good.crm.features.leads.components.LeadFilters
 import too.good.crm.ui.components.AppScaffoldWithDrawer
 import too.good.crm.ui.theme.DesignTokens
+import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,6 +43,8 @@ fun LeadsScreen(
     var selectedSource by remember { mutableStateOf("All Sources") }
     var selectedPriority by remember { mutableStateOf("All Priorities") }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    var showFilterDrawer by remember { mutableStateOf(false) }
+    var currentFilters by remember { mutableStateOf(LeadFilters()) }
     
     LaunchedEffect(Unit) {
         if (profileState.profiles.isEmpty() && !profileState.isLoading) {
@@ -155,120 +160,108 @@ fun LeadsScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Search
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
+            // Search and Filter Row
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text("Search leads...") },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, contentDescription = "Search")
-                },
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Filters
-            var statusExpanded by remember { mutableStateOf(false) }
-            var sourceExpanded by remember { mutableStateOf(false) }
-            var priorityExpanded by remember { mutableStateOf(false) }
-
-            // Status Filter
-            ExposedDropdownMenuBox(
-                expanded = statusExpanded,
-                onExpandedChange = { statusExpanded = it }
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Search
                 OutlinedTextField(
-                    value = selectedStatus,
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = {
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    value = searchQuery,
+                    onValueChange = { 
+                        searchQuery = it
+                        if (it.isNotBlank()) {
+                            viewModel.searchLeads(it)
+                        } else {
+                            viewModel.loadLeads()
+                        }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(type = androidx.compose.material3.MenuAnchorType.PrimaryNotEditable)
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Search leads...") },
+                    leadingIcon = {
+                        Icon(Icons.Default.Search, contentDescription = "Search")
+                    },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium
                 )
-                ExposedDropdownMenu(
-                    expanded = statusExpanded,
-                    onDismissRequest = { statusExpanded = false }
-                ) {
-                    listOf("All Statuses", "New", "Contacted", "Qualified", "Proposal", "Negotiation", "Converted", "Lost").forEach { status ->
-                        DropdownMenuItem(
-                            text = { Text(status) },
-                            onClick = {
-                                selectedStatus = status
-                                statusExpanded = false
-                            }
+                
+                // Filter Button with Badge
+                Box {
+                    FilledIconButton(
+                        onClick = { showFilterDrawer = true },
+                        modifier = Modifier.size(56.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = if (currentFilters.hasActiveFilters()) 
+                                DesignTokens.Colors.Primary 
+                            else 
+                                DesignTokens.Colors.SurfaceVariant,
+                            contentColor = if (currentFilters.hasActiveFilters())
+                                DesignTokens.Colors.White
+                            else
+                                DesignTokens.Colors.OnSurfaceVariant
                         )
+                    ) {
+                        Icon(
+                            Icons.Default.FilterList,
+                            contentDescription = "Filter leads",
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    
+                    if (currentFilters.hasActiveFilters()) {
+                        Badge(
+                            modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 4.dp),
+                            containerColor = DesignTokens.Colors.Error,
+                            contentColor = DesignTokens.Colors.White
+                        ) {
+                            Text(
+                                text = currentFilters.activeFilterCount().toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Source Filter
-            ExposedDropdownMenuBox(
-                expanded = sourceExpanded,
-                onExpandedChange = { sourceExpanded = it }
-            ) {
-                OutlinedTextField(
-                    value = selectedSource,
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = {
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(type = androidx.compose.material3.MenuAnchorType.PrimaryNotEditable)
-                )
-                ExposedDropdownMenu(
-                    expanded = sourceExpanded,
-                    onDismissRequest = { sourceExpanded = false }
+            
+            // Active Filters Display
+            if (currentFilters.hasActiveFilters()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    listOf("All Sources", "Website", "Referral", "Cold Call", "Email", "Social Media", "Trade Show", "Partner").forEach { source ->
-                        DropdownMenuItem(
-                            text = { Text(source) },
-                            onClick = {
-                                selectedSource = source
-                                sourceExpanded = false
-                            }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = DesignTokens.Colors.Primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "${currentFilters.activeFilterCount()} filter(s) active",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = DesignTokens.Colors.Primary,
+                            fontWeight = FontWeight.Medium
                         )
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Priority Filter
-            ExposedDropdownMenuBox(
-                expanded = priorityExpanded,
-                onExpandedChange = { priorityExpanded = it }
-            ) {
-                OutlinedTextField(
-                    value = selectedPriority,
-                    onValueChange = {},
-                    readOnly = true,
-                    trailingIcon = {
-                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(type = androidx.compose.material3.MenuAnchorType.PrimaryNotEditable)
-                )
-                ExposedDropdownMenu(
-                    expanded = priorityExpanded,
-                    onDismissRequest = { priorityExpanded = false }
-                ) {
-                    listOf("All Priorities", "Low", "Medium", "High","Urgent").forEach { priority ->
-                        DropdownMenuItem(
-                            text = { Text(priority) },
-                            onClick = {
-                                selectedPriority = priority
-                                priorityExpanded = false
-                            }
+                    
+                    TextButton(
+                        onClick = {
+                            currentFilters = LeadFilters()
+                            viewModel.clearFilters()
+                        },
+                        contentPadding = PaddingValues(horizontal = 12.dp)
+                    ) {
+                        Text(
+                            "Clear All",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = DesignTokens.Colors.Error
                         )
                     }
                 }
@@ -379,6 +372,32 @@ fun LeadsScreen(
             }
         }
     }
+    
+    // Filter Drawer
+    FilterDrawer(
+        showFilters = showFilterDrawer,
+        onDismissRequest = { showFilterDrawer = false },
+        currentFilters = currentFilters,
+        onApplyFilters = { filters ->
+            currentFilters = filters
+            
+            // Convert LocalDate to ISO string format
+            val dateFormatter = DateTimeFormatter.ISO_LOCAL_DATE
+            val createdAfter = filters.dateRange.first?.format(dateFormatter)
+            val createdBefore = filters.dateRange.second?.format(dateFormatter)
+            
+            // Apply filters to ViewModel
+            viewModel.applyFilters(
+                statuses = filters.statuses,
+                sources = filters.sources,
+                leadScoreMin = filters.leadScoreRange.start.toInt(),
+                leadScoreMax = filters.leadScoreRange.endInclusive.toInt(),
+                qualificationStatus = filters.qualificationStatus,
+                createdAfter = createdAfter,
+                createdBefore = createdBefore
+            )
+        }
+    )
 }
 
 @Composable
