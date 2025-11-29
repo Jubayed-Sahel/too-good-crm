@@ -138,7 +138,11 @@ class CustomerViewSet(
         if customer_type:
             queryset = queryset.filter(customer_type=customer_type)
         
-        return queryset.select_related('organization', 'assigned_to')
+        return queryset.select_related('organization', 'assigned_to').prefetch_related(
+            'customer_organizations',
+            'customer_organizations__organization',
+            'customer_organizations__assigned_employee'
+        )
     
     def get_object(self):
         """Override get_object to ensure we can retrieve customers regardless of status"""
@@ -158,7 +162,11 @@ class CustomerViewSet(
                 pass  # Invalid org_id, skip this filter
         
         # Don't apply status filter for get_object - allow viewing any customer
-        queryset = queryset.select_related('organization', 'assigned_to')
+        queryset = queryset.select_related('organization', 'assigned_to').prefetch_related(
+            'customer_organizations',
+            'customer_organizations__organization',
+            'customer_organizations__assigned_employee'
+        )
         
         # Use the standard DRF get_object logic
         lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field

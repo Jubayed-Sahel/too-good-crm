@@ -85,15 +85,6 @@ export const LeadFilters = ({ filters, onFilterChange, onAddLead }: LeadFiltersP
           accentColor="purple"
         />
 
-        {/* More Filters Button */}
-        <Button
-          variant="outline"
-          h="40px"
-          display={{ base: 'none', lg: 'flex' }}
-        >
-          <FiFilter />
-          <Box ml={2}>More Filters</Box>
-        </Button>
       </HStack>
 
       {/* Right side - Action Buttons */}
