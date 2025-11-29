@@ -84,6 +84,7 @@ class CustomersViewModel : ViewModel() {
         firstName: String = "",
         lastName: String = "",
         companyName: String = "",
+        jobTitle: String = "",
         customerType: String = "individual",
         address: String = "",
         city: String = "",
@@ -91,6 +92,7 @@ class CustomersViewModel : ViewModel() {
         country: String = "",
         postalCode: String = "",
         website: String = "",
+        industry: String = "",
         notes: String = ""
     ) {
         viewModelScope.launch {
@@ -103,6 +105,7 @@ class CustomersViewModel : ViewModel() {
                 email = email,
                 phone = phone,
                 companyName = companyName.ifBlank { null },
+                jobTitle = jobTitle.ifBlank { null },
                 customerType = customerType,
                 status = "active",
                 address = address.ifBlank { null },
@@ -111,6 +114,7 @@ class CustomersViewModel : ViewModel() {
                 country = country.ifBlank { null },
                 postalCode = postalCode.ifBlank { null },
                 website = website.ifBlank { null },
+                industry = industry.ifBlank { null },
                 notes = notes.ifBlank { null }
             )
 
@@ -162,6 +166,7 @@ class CustomersViewModel : ViewModel() {
         firstName: String = "",
         lastName: String = "",
         companyName: String = "",
+        jobTitle: String = "",
         customerType: String = "individual",
         status: String = "active",
         address: String = "",
@@ -170,6 +175,7 @@ class CustomersViewModel : ViewModel() {
         country: String = "",
         postalCode: String = "",
         website: String = "",
+        industry: String = "",
         notes: String = ""
     ) {
         viewModelScope.launch {
@@ -182,6 +188,7 @@ class CustomersViewModel : ViewModel() {
                 email = email,
                 phone = phone,
                 companyName = companyName.ifBlank { null },
+                jobTitle = jobTitle.ifBlank { null },
                 customerType = customerType,
                 status = status,
                 address = address.ifBlank { null },
@@ -190,6 +197,7 @@ class CustomersViewModel : ViewModel() {
                 country = country.ifBlank { null },
                 postalCode = postalCode.ifBlank { null },
                 website = website.ifBlank { null },
+                industry = industry.ifBlank { null },
                 notes = notes.ifBlank { null }
             )
             

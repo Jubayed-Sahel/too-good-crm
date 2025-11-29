@@ -13,19 +13,18 @@ interface ActivityApiService {
     /**
      * Get all activities (with pagination)
      * GET /api/activities/
+     * Backend filters: customer, lead, deal, activity_type, status, assigned_to
      */
     @GET("activities/")
     suspend fun getActivities(
         @Query("page") page: Int? = null,
         @Query("page_size") pageSize: Int? = null,
         @Query("activity_type") activityType: String? = null,
-        @Query("related_to_type") relatedToType: String? = null,
-        @Query("related_to_id") relatedToId: Int? = null,
-        @Query("performed_by") performedBy: Int? = null,
+        @Query("customer") customer: Int? = null,
+        @Query("lead") lead: Int? = null,
+        @Query("deal") deal: Int? = null,
+        @Query("assigned_to") assignedTo: Int? = null,
         @Query("status") status: String? = null,
-        @Query("priority") priority: String? = null,
-        @Query("date_from") dateFrom: String? = null,
-        @Query("date_to") dateTo: String? = null,
         @Query("search") search: String? = null,
         @Query("ordering") ordering: String? = null
     ): ActivitiesListResponse
@@ -85,36 +84,5 @@ interface ActivityApiService {
     @POST("activities/{id}/cancel/")
     suspend fun cancelActivity(@Path("id") id: Int): Activity
     
-    /**
-     * Get activities for a specific entity (lead, customer, deal)
-     * GET /api/activities/for_entity/?type={type}&id={id}
-     */
-    @GET("activities/for_entity/")
-    suspend fun getActivitiesForEntity(
-        @Query("type") type: String, // lead, customer, deal, order
-        @Query("id") id: Int,
-        @Query("page") page: Int? = null,
-        @Query("page_size") pageSize: Int? = null
-    ): ActivitiesListResponse
-    
-    /**
-     * Get upcoming activities
-     * GET /api/activities/upcoming/
-     */
-    @GET("activities/upcoming/")
-    suspend fun getUpcomingActivities(
-        @Query("page") page: Int? = null,
-        @Query("page_size") pageSize: Int? = null
-    ): ActivitiesListResponse
-    
-    /**
-     * Get overdue activities
-     * GET /api/activities/overdue/
-     */
-    @GET("activities/overdue/")
-    suspend fun getOverdueActivities(
-        @Query("page") page: Int? = null,
-        @Query("page_size") pageSize: Int? = null
-    ): ActivitiesListResponse
 }
 

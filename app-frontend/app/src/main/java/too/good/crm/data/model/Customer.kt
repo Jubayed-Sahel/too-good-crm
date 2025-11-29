@@ -30,6 +30,9 @@ data class Customer(
     @SerializedName("zip_code")
     val zipCode: String? = null,
     val website: String? = null,
+    @SerializedName("job_title")
+    val jobTitle: String? = null,
+    val industry: String? = null,
     val notes: String? = null,
     @SerializedName("assigned_to")
     val assignedTo: Int? = null,
@@ -65,6 +68,9 @@ data class CreateCustomerRequest(
     @SerializedName("postal_code")
     val postalCode: String? = null,
     val website: String? = null,
+    @SerializedName("job_title")
+    val jobTitle: String? = null,
+    val industry: String? = null,
     val notes: String? = null
 )
 

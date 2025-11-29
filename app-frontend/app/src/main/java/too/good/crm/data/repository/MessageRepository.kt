@@ -8,167 +8,85 @@ import too.good.crm.data.safeApiCall
 /**
  * Message Repository
  * Handles all messaging-related data operations
+ * Simplified to match backend user-to-user messaging structure
  */
 class MessageRepository {
     private val apiService = ApiClient.messageApiService
     
-    // ========== Conversation Operations ==========
-    
-    /**
-     * Get all conversations
-     */
-    suspend fun getConversations(
-        page: Int? = null,
-        pageSize: Int? = 20,
-        conversationType: String? = null,
-        isArchived: Boolean? = null,
-        search: String? = null
-    ): NetworkResult<ConversationsListResponse> = safeApiCall {
-        apiService.getConversations(
-            page = page,
-            pageSize = pageSize,
-            conversationType = conversationType,
-            isArchived = isArchived,
-            search = search
-        )
-    }
-    
-    /**
-     * Get single conversation
-     */
-    suspend fun getConversation(id: Int): NetworkResult<Conversation> = safeApiCall {
-        apiService.getConversation(id)
-    }
-    
-    /**
-     * Create new conversation
-     */
-    suspend fun createConversation(
-        conversation: CreateConversationRequest
-    ): NetworkResult<Conversation> = safeApiCall {
-        apiService.createConversation(conversation)
-    }
-    
-    /**
-     * Archive conversation
-     */
-    suspend fun archiveConversation(id: Int): NetworkResult<Conversation> = safeApiCall {
-        apiService.archiveConversation(id)
-    }
-    
-    /**
-     * Unarchive conversation
-     */
-    suspend fun unarchiveConversation(id: Int): NetworkResult<Conversation> = safeApiCall {
-        apiService.unarchiveConversation(id)
-    }
-    
-    /**
-     * Pin conversation
-     */
-    suspend fun pinConversation(id: Int): NetworkResult<Conversation> = safeApiCall {
-        apiService.pinConversation(id)
-    }
-    
-    /**
-     * Unpin conversation
-     */
-    suspend fun unpinConversation(id: Int): NetworkResult<Conversation> = safeApiCall {
-        apiService.unpinConversation(id)
-    }
-    
-    /**
-     * Add participant to conversation
-     */
-    suspend fun addParticipant(conversationId: Int, userId: Int): NetworkResult<Conversation> = safeApiCall {
-        apiService.addParticipant(conversationId, mapOf("user_id" to userId))
-    }
-    
-    /**
-     * Remove participant from conversation
-     */
-    suspend fun removeParticipant(conversationId: Int, userId: Int): NetworkResult<Conversation> = safeApiCall {
-        apiService.removeParticipant(conversationId, mapOf("user_id" to userId))
-    }
-    
     // ========== Message Operations ==========
     
     /**
-     * Get messages for a conversation
+     * Send a message to another user
+     * 
+     * @param recipientId User ID of message recipient
+     * @param content Message content
+     * @param subject Optional subject line
+     * @param relatedLeadId Optional related lead
+     * @param relatedDealId Optional related deal
+     * @param relatedCustomerId Optional related customer
      */
-    suspend fun getMessages(
-        conversationId: Int,
-        page: Int? = null,
-        pageSize: Int? = 20
-    ): NetworkResult<MessagesListResponse> = safeApiCall {
-        apiService.getMessages(
-            conversationId = conversationId,
-            page = page,
-            pageSize = pageSize
+    suspend fun sendMessage(
+        recipientId: Int,
+        content: String,
+        subject: String? = null,
+        relatedLeadId: Int? = null,
+        relatedDealId: Int? = null,
+        relatedCustomerId: Int? = null
+    ): NetworkResult<Message> = safeApiCall {
+        apiService.sendMessage(
+            SendMessageRequest(
+                recipientId = recipientId,
+                content = content,
+                subject = subject,
+                relatedLeadId = relatedLeadId,
+                relatedDealId = relatedDealId,
+                relatedCustomerId = relatedCustomerId
+            )
         )
     }
     
     /**
-     * Get single message
+     * Mark a message as read
+     * 
+     * @param messageId ID of the message to mark as read
      */
-    suspend fun getMessage(id: Int): NetworkResult<Message> = safeApiCall {
-        apiService.getMessage(id)
+    suspend fun markMessageRead(messageId: Int): NetworkResult<Message> = safeApiCall {
+        apiService.markMessageRead(messageId)
     }
     
     /**
-     * Send a message
+     * Get unread message count for current user
      */
-    suspend fun sendMessage(message: CreateMessageRequest): NetworkResult<Message> = safeApiCall {
-        apiService.sendMessage(message)
+    suspend fun getUnreadCount(): NetworkResult<UnreadCountResponse> = safeApiCall {
+        apiService.getUnreadCount()
     }
     
     /**
-     * Mark message as read
+     * Get list of users that current user can message
+     * Returns users from the same organization
      */
-    suspend fun markMessageRead(id: Int): NetworkResult<Message> = safeApiCall {
-        apiService.markMessageRead(id)
+    suspend fun getRecipients(): NetworkResult<List<MessageUser>> = safeApiCall {
+        apiService.getRecipients()
     }
     
     /**
-     * Mark all messages in conversation as read
+     * Get messages with a specific user
+     * Also marks unread messages from that user as read
+     * 
+     * @param userId ID of the other user
      */
-    suspend fun markAllRead(conversationId: Int): NetworkResult<Conversation> = safeApiCall {
-        apiService.markAllRead(conversationId)
+    suspend fun getMessagesWithUser(userId: Int): NetworkResult<List<Message>> = safeApiCall {
+        apiService.getMessagesWithUser(userId)
     }
     
-    /**
-     * Delete message
-     */
-    suspend fun deleteMessage(id: Int): NetworkResult<Unit> = safeApiCall {
-        apiService.deleteMessage(id)
-    }
+    // ========== Conversation Operations ==========
     
     /**
-     * Edit message
+     * Get all conversations for current user
+     * Returns list of conversations ordered by last message time
      */
-    suspend fun editMessage(id: Int, content: String): NetworkResult<Message> = safeApiCall {
-        apiService.editMessage(id, mapOf("content" to content))
-    }
-    
-    /**
-     * Get active conversations (not archived)
-     */
-    suspend fun getActiveConversations(): NetworkResult<ConversationsListResponse> {
-        return getConversations(isArchived = false)
-    }
-    
-    /**
-     * Get archived conversations
-     */
-    suspend fun getArchivedConversations(): NetworkResult<ConversationsListResponse> {
-        return getConversations(isArchived = true)
-    }
-    
-    /**
-     * Search conversations
-     */
-    suspend fun searchConversations(query: String): NetworkResult<ConversationsListResponse> {
-        return getConversations(search = query)
+    suspend fun getConversations(): NetworkResult<List<Conversation>> = safeApiCall {
+        apiService.getConversations()
     }
 }
 

@@ -2,6 +2,8 @@ package too.good.crm.features.messages
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +14,7 @@ import too.good.crm.data.repository.MessageRepository
 
 /**
  * ViewModel for Messages Screen
- * Handles conversations and messaging
+ * Handles conversations and messaging using simplified user-to-user structure
  */
 class MessagesViewModel : ViewModel() {
     private val repository = MessageRepository()
@@ -20,8 +22,12 @@ class MessagesViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(MessagesUiState())
     val uiState: StateFlow<MessagesUiState> = _uiState.asStateFlow()
     
+    private var pollingJob: Job? = null
+    private var currentChatUserId: Int? = null
+    
     init {
         loadConversations()
+        loadUnreadCount()
     }
     
     /**
@@ -35,11 +41,10 @@ class MessagesViewModel : ViewModel() {
                 _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             }
             
-            when (val result = repository.getConversations(pageSize = 50)) {
+            when (val result = repository.getConversations()) {
                 is NetworkResult.Success -> {
                     _uiState.value = _uiState.value.copy(
-                        conversations = result.data.results,
-                        totalCount = result.data.count,
+                        conversations = result.data,
                         isLoading = false,
                         isRefreshing = false,
                         error = null
@@ -64,23 +69,38 @@ class MessagesViewModel : ViewModel() {
     }
     
     /**
-     * Load messages for a conversation
+     * Load messages with a specific user
      */
-    fun loadMessages(conversationId: Int) {
+    fun loadMessages(userId: Int) {
+        // Stop previous polling
+        pollingJob?.cancel()
+        currentChatUserId = userId
+        
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(
                 isLoadingMessages = true,
                 messagesError = null,
-                selectedConversationId = conversationId
+                selectedUserId = userId
             )
             
-            when (val result = repository.getMessages(conversationId, pageSize = 100)) {
+            when (val result = repository.getMessagesWithUser(userId)) {
                 is NetworkResult.Success -> {
+                    val messages = result.data
+                    val otherUser = messages.firstOrNull()?.let { message ->
+                        if (message.sender.id == userId) message.sender else message.recipient
+                    }
+                    
                     _uiState.value = _uiState.value.copy(
-                        messages = result.data.results,
+                        messages = messages,
+                        selectedUserName = otherUser?.let {
+                            "${it.firstName ?: ""} ${it.lastName ?: ""}".trim().ifEmpty { it.email }
+                        },
                         isLoadingMessages = false,
                         messagesError = null
                     )
+                    
+                    // Start polling
+                    startPolling(userId)
                 }
                 is NetworkResult.Error -> {
                     _uiState.value = _uiState.value.copy(
@@ -99,24 +119,31 @@ class MessagesViewModel : ViewModel() {
     }
     
     /**
-     * Send a message
+     * Send a message to a user
      */
-    fun sendMessage(conversationId: Int, content: String, onSuccess: () -> Unit) {
+    fun sendMessage(recipientId: Int, content: String, onSuccess: () -> Unit = {}) {
         if (content.isBlank()) return
         
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSending = true, messagesError = null)
             
-            val request = CreateMessageRequest(
-                conversation = conversationId,
-                content = content,
-                messageType = "text"
-            )
-            
-            when (val result = repository.sendMessage(request)) {
+            when (val result = repository.sendMessage(
+                recipientId = recipientId,
+                content = content
+            )) {
                 is NetworkResult.Success -> {
-                    _uiState.value = _uiState.value.copy(isSending = false)
-                    loadMessages(conversationId)
+                    // Add message optimistically to current chat
+                    if (currentChatUserId == recipientId) {
+                        _uiState.value = _uiState.value.copy(
+                            messages = _uiState.value.messages + result.data,
+                            isSending = false
+                        )
+                    } else {
+                        _uiState.value = _uiState.value.copy(isSending = false)
+                    }
+                    
+                    // Refresh conversations list to update last message
+                    loadConversations(refresh = true)
                     onSuccess()
                 }
                 is NetworkResult.Error -> {
@@ -136,39 +163,29 @@ class MessagesViewModel : ViewModel() {
     }
     
     /**
-     * Create new conversation
+     * Load available recipients
      */
-    fun createConversation(
-        title: String?,
-        conversationType: String,
-        participantIds: List<Int>,
-        onSuccess: (Conversation) -> Unit
-    ) {
+    fun loadRecipients() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isCreating = true, error = null)
+            _uiState.value = _uiState.value.copy(isLoadingRecipients = true)
             
-            val request = CreateConversationRequest(
-                title = title,
-                conversationType = conversationType,
-                participantIds = participantIds
-            )
-            
-            when (val result = repository.createConversation(request)) {
+            when (val result = repository.getRecipients()) {
                 is NetworkResult.Success -> {
-                    _uiState.value = _uiState.value.copy(isCreating = false)
-                    loadConversations(refresh = true)
-                    onSuccess(result.data)
+                    _uiState.value = _uiState.value.copy(
+                        recipients = result.data,
+                        isLoadingRecipients = false
+                    )
                 }
                 is NetworkResult.Error -> {
                     _uiState.value = _uiState.value.copy(
-                        isCreating = false,
+                        isLoadingRecipients = false,
                         error = result.message
                     )
                 }
                 is NetworkResult.Exception -> {
                     _uiState.value = _uiState.value.copy(
-                        isCreating = false,
-                        error = result.exception.message ?: "Failed to create conversation"
+                        isLoadingRecipients = false,
+                        error = result.exception.message ?: "Failed to load recipients"
                     )
                 }
             }
@@ -176,98 +193,53 @@ class MessagesViewModel : ViewModel() {
     }
     
     /**
-     * Archive conversation
+     * Load unread message count
      */
-    fun archiveConversation(conversationId: Int) {
+    fun loadUnreadCount() {
         viewModelScope.launch {
-            when (val result = repository.archiveConversation(conversationId)) {
+            when (val result = repository.getUnreadCount()) {
                 is NetworkResult.Success -> {
-                    loadConversations(refresh = true)
-                }
-                is NetworkResult.Error -> {
-                    _uiState.value = _uiState.value.copy(error = result.message)
-                }
-                is NetworkResult.Exception -> {
                     _uiState.value = _uiState.value.copy(
-                        error = result.exception.message ?: "Failed to archive conversation"
+                        unreadCount = result.data.unreadCount
                     )
-                }
-            }
-        }
-    }
-    
-    /**
-     * Pin conversation
-     */
-    fun pinConversation(conversationId: Int) {
-        viewModelScope.launch {
-            when (val result = repository.pinConversation(conversationId)) {
-                is NetworkResult.Success -> {
-                    loadConversations(refresh = true)
-                }
-                is NetworkResult.Error -> {
-                    _uiState.value = _uiState.value.copy(error = result.message)
-                }
-                is NetworkResult.Exception -> {
-                    _uiState.value = _uiState.value.copy(
-                        error = result.exception.message ?: "Failed to pin conversation"
-                    )
-                }
-            }
-        }
-    }
-    
-    /**
-     * Mark all messages as read
-     */
-    fun markAllRead(conversationId: Int) {
-        viewModelScope.launch {
-            when (repository.markAllRead(conversationId)) {
-                is NetworkResult.Success -> {
-                    loadConversations(refresh = true)
                 }
                 is NetworkResult.Error, is NetworkResult.Exception -> {
-                    // Silently fail
+                    // Silently fail - not critical
                 }
             }
         }
     }
     
     /**
-     * Search conversations
+     * Start polling for new messages
      */
-    fun searchConversations(query: String) {
-        if (query.isBlank()) {
-            loadConversations()
-            return
-        }
-        
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null, searchQuery = query)
-            
-            when (val result = repository.searchConversations(query)) {
-                is NetworkResult.Success -> {
-                    _uiState.value = _uiState.value.copy(
-                        conversations = result.data.results,
-                        totalCount = result.data.count,
-                        isLoading = false,
-                        error = null
-                    )
-                }
-                is NetworkResult.Error -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = result.message
-                    )
-                }
-                is NetworkResult.Exception -> {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = result.exception.message ?: "Unknown error occurred"
-                    )
+    private fun startPolling(userId: Int) {
+        pollingJob = viewModelScope.launch {
+            while (true) {
+                delay(5000) // Poll every 5 seconds
+                
+                if (currentChatUserId == userId) {
+                    val result = repository.getMessagesWithUser(userId)
+                    if (result is NetworkResult.Success) {
+                        val currentMessages = _uiState.value.messages
+                        if (result.data.size != currentMessages.size) {
+                            _uiState.value = _uiState.value.copy(messages = result.data)
+                        }
+                    }
+                } else {
+                    break
                 }
             }
         }
+    }
+    
+    /**
+     * Stop polling
+     */
+    fun stopPolling() {
+        pollingJob?.cancel()
+        pollingJob = null
+        currentChatUserId = null
     }
     
     /**
@@ -282,21 +254,30 @@ class MessagesViewModel : ViewModel() {
      */
     fun refresh() {
         loadConversations(refresh = true)
+        loadUnreadCount()
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        stopPolling()
     }
 }
 
 /**
  * UI State for Messages Screen
+ * Simplified to match user-to-user messaging structure
  */
 data class MessagesUiState(
     val conversations: List<Conversation> = emptyList(),
     val messages: List<Message> = emptyList(),
-    val selectedConversationId: Int? = null,
-    val totalCount: Int = 0,
+    val recipients: List<MessageUser> = emptyList(),
+    val selectedUserId: Int? = null,
+    val selectedUserName: String? = null,
+    val unreadCount: Int = 0,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val isLoadingMessages: Boolean = false,
-    val isCreating: Boolean = false,
+    val isLoadingRecipients: Boolean = false,
     val isSending: Boolean = false,
     val error: String? = null,
     val messagesError: String? = null,
