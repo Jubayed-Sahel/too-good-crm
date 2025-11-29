@@ -56,17 +56,17 @@ class AuthRepository(context: Context) {
             ))
         } catch (e: java.net.SocketTimeoutException) {
             Result.failure(Exception(
-                "Connection timeout after 60 seconds.\n\n" +
+                "Connection timeout after 15 seconds.\n\n" +
                 "Possible causes:\n" +
-                "1. Server is not responding (check if backend is running)\n" +
-                "2. Network is very slow or unstable\n" +
-                "3. Server is overloaded\n" +
-                "4. Firewall blocking connection\n\n" +
-                "Troubleshooting:\n" +
-                "• Test backend: curl http://10.0.2.2:8000/api/\n" +
-                "• Check server logs for errors\n" +
-                "• Verify network connectivity\n" +
-                "• Try restarting the backend server"
+                "1. Backend server is not running\n" +
+                "2. Wrong IP address configured\n" +
+                "3. Firewall blocking connection\n" +
+                "4. Network is unstable\n\n" +
+                "Quick Fix:\n" +
+                "• Start backend: python manage.py runserver 0.0.0.0:8000\n" +
+                "• For Emulator: Use 10.0.2.2:8000 in gradle.properties\n" +
+                "• For Device: Use your PC's IP (e.g., 192.168.x.x:8000)\n" +
+                "• Check firewall allows port 8000"
             ))
         } catch (e: java.net.UnknownHostException) {
             Result.failure(Exception(

@@ -62,112 +62,47 @@ class LoginViewModel(
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
 
+            android.util.Log.d("LoginViewModel", "Attempting login for user: ${_username.value}")
+
             val result = authRepository.login(_username.value, _password.value)
 
             result.fold(
                 onSuccess = { loginResponse ->
-                    // Refresh user data from backend to get latest profiles and primary profile
-                    val refreshResult = authRepository.refreshUser()
-                    refreshResult.fold(
-                        onSuccess = { refreshedUser ->
-                            // Use refreshed user data (has latest profiles and primaryProfile)
-                            val user = refreshedUser
-                            val profiles = user.profiles ?: emptyList()
-                            
-                            // Get primary profile from backend response (most up-to-date)
-                            val primaryProfile = user.primaryProfile 
-                                ?: profiles.find { it.isPrimary }
-                                ?: profiles.firstOrNull()
-
-                            // Determine user role based on profiles
-                            val hasCustomerProfile = profiles.any { it.profileType == "customer" }
-                            val hasVendorProfile = profiles.any {
-                                it.profileType == "employee" || it.profileType == "vendor"
-                            }
-
-                            val userRole = when {
-                                hasCustomerProfile && hasVendorProfile -> too.good.crm.data.UserRole.BOTH
-                                hasCustomerProfile -> too.good.crm.data.UserRole.CLIENT
-                                hasVendorProfile -> too.good.crm.data.UserRole.VENDOR
-                                else -> too.good.crm.data.UserRole.CLIENT // Default to client
-                            }
-
-                            // Set active mode based on primary profile type
-                            val activeMode = when (primaryProfile?.profileType) {
-                                "vendor", "employee" -> ActiveMode.VENDOR
-                                "customer" -> ActiveMode.CLIENT
-                                else -> if (hasVendorProfile) ActiveMode.VENDOR else ActiveMode.CLIENT
-                            }
-
-                            if (primaryProfile != null) {
-                                // Set user session with AppUserProfile
-                                UserSession.currentProfile = too.good.crm.data.AppUserProfile(
-                                    id = user.id,
-                                    name = "${user.firstName} ${user.lastName}",
-                                    email = user.email,
-                                    role = userRole,
-                                    organizationId = primaryProfile.organizationId ?: 0,
-                                    organizationName = primaryProfile.organizationName 
-                                        ?: primaryProfile.organization?.name 
-                                        ?: "Unknown",
-                                    activeMode = activeMode
-                                )
-                                UserSession.activeMode = activeMode
-                            }
-
-                            _uiState.value = LoginUiState.Success("Login successful")
-                            onSuccess()
-                        },
-                        onFailure = { refreshError ->
-                            // Fallback to login response if refresh fails
-                            val user = loginResponse.user
-                            val profiles = user.profiles ?: emptyList()
-                            val primaryProfile = user.primaryProfile 
-                                ?: profiles.find { it.isPrimary }
-                                ?: profiles.firstOrNull()
-
-                            val hasCustomerProfile = profiles.any { it.profileType == "customer" }
-                            val hasVendorProfile = profiles.any {
-                                it.profileType == "employee" || it.profileType == "vendor"
-                            }
-
-                            val userRole = when {
-                                hasCustomerProfile && hasVendorProfile -> too.good.crm.data.UserRole.BOTH
-                                hasCustomerProfile -> too.good.crm.data.UserRole.CLIENT
-                                hasVendorProfile -> too.good.crm.data.UserRole.VENDOR
-                                else -> too.good.crm.data.UserRole.CLIENT
-                            }
-
-                            val activeMode = when (primaryProfile?.profileType) {
-                                "vendor", "employee" -> ActiveMode.VENDOR
-                                "customer" -> ActiveMode.CLIENT
-                                else -> if (hasVendorProfile) ActiveMode.VENDOR else ActiveMode.CLIENT
-                            }
-
-                            if (primaryProfile != null) {
-                                UserSession.currentProfile = too.good.crm.data.AppUserProfile(
-                                    id = user.id,
-                                    name = "${user.firstName} ${user.lastName}",
-                                    email = user.email,
-                                    role = userRole,
-                                    organizationId = primaryProfile.organizationId ?: 0,
-                                    organizationName = primaryProfile.organizationName 
-                                        ?: primaryProfile.organization?.name 
-                                        ?: "Unknown",
-                                    activeMode = activeMode
-                                )
-                                UserSession.activeMode = activeMode
-                            }
-
-                            _uiState.value = LoginUiState.Success("Login successful")
-                            onSuccess()
-                        }
-                    )
+                    android.util.Log.d("LoginViewModel", "Login successful: token=${loginResponse.token}, user=${loginResponse.user.username}")
+                    val user = loginResponse.user
+                    val profiles = user.profiles ?: emptyList()
+                    val primaryProfile = user.primaryProfile ?: profiles.find { it.isPrimary } ?: profiles.firstOrNull()
+                    val hasCustomerProfile = profiles.any { it.profileType == "customer" }
+                    val hasVendorProfile = profiles.any { it.profileType == "employee" || it.profileType == "vendor" }
+                    val userRole = when {
+                        hasCustomerProfile && hasVendorProfile -> too.good.crm.data.UserRole.BOTH
+                        hasCustomerProfile -> too.good.crm.data.UserRole.CLIENT
+                        hasVendorProfile -> too.good.crm.data.UserRole.VENDOR
+                        else -> too.good.crm.data.UserRole.CLIENT
+                    }
+                    val activeMode = when (primaryProfile?.profileType) {
+                        "vendor", "employee" -> ActiveMode.VENDOR
+                        "customer" -> ActiveMode.CLIENT
+                        else -> if (hasVendorProfile) ActiveMode.VENDOR else ActiveMode.CLIENT
+                    }
+                    if (primaryProfile != null) {
+                        UserSession.currentProfile = too.good.crm.data.AppUserProfile(
+                            id = user.id,
+                            name = "${user.firstName} ${user.lastName}",
+                            email = user.email,
+                            role = userRole,
+                            organizationId = primaryProfile.organizationId ?: 0,
+                            organizationName = primaryProfile.organizationName ?: primaryProfile.organization?.name ?: "Unknown",
+                            activeMode = activeMode
+                        )
+                        UserSession.activeMode = activeMode
+                    }
+                    _uiState.value = LoginUiState.Success("Login successful")
+                    onSuccess()
                 },
                 onFailure = { error ->
-                    _uiState.value = LoginUiState.Error(
-                        error.message ?: "Login failed"
-                    )
+                    android.util.Log.e("LoginViewModel", "Login failed: ${error.message}")
+                    _uiState.value = LoginUiState.Error(error.message ?: "Login failed")
                 }
             )
         }
@@ -179,4 +114,3 @@ class LoginViewModel(
         }
     }
 }
-

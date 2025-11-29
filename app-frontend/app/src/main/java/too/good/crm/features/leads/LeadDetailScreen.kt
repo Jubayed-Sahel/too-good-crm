@@ -24,8 +24,6 @@ import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.*
 import android.widget.Toast
 import kotlinx.coroutines.launch
-import java.text.NumberFormat
-import java.util.*
 
 /**
  * Lead Detail Screen
@@ -67,8 +65,9 @@ fun LeadDetailScreen(
                     error = result.message
                     isLoading = false
                 }
-                is NetworkResult.Loading -> {
-                    isLoading = true
+                is NetworkResult.Exception -> {
+                    error = result.exception.message ?: "Unknown error occurred"
+                    isLoading = false
                 }
             }
         } else {

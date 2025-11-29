@@ -258,7 +258,8 @@ class LoginViewSet(viewsets.ViewSet):
             'token_type': 'Bearer',
             'access_expires_in': tokens['access_expires_in'],
             'refresh_expires_in': tokens['refresh_expires_in'],
-            'legacy_token': legacy_token.key,  # For backward compatibility
+            'token': legacy_token.key,  # Mobile app compatibility
+            'legacy_token': legacy_token.key,  # Web frontend compatibility
             'message': 'Login successful'
         })
 

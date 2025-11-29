@@ -29,6 +29,7 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
     queryset = JitsiCallSession.objects.all()
     serializer_class = JitsiCallSessionSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None  # Disable pagination for call history
     
     def get_queryset(self):
         """Filter calls by user's organizations or user involvement"""

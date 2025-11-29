@@ -190,4 +190,50 @@ export const videoService = {
 
     return response;
   },
+
+  /**
+   * Get call history (all calls - active, completed, missed, etc.)
+   * @param filters - Optional filters (status, my_calls, etc.)
+   * @returns Array of call sessions
+   */
+  async getCallHistory(filters?: { status?: string; my_calls?: boolean }): Promise<VideoCallSession[]> {
+    try {
+      console.log('[VideoService] Fetching call history with filters:', filters);
+      const response = await apiClient.get<VideoCallSession[]>(
+        `${JITSI_BASE_URL}/`,
+        { params: filters }
+      );
+
+      console.log('[VideoService] Raw response:', response);
+      console.log('[VideoService] Response type:', typeof response);
+      console.log('[VideoService] Is array?', Array.isArray(response));
+      console.log('[VideoService] Response keys:', response ? Object.keys(response) : 'null');
+      console.log('[VideoService] Response as JSON:', JSON.stringify(response).substring(0, 500));
+
+      // Handle different response formats
+      if (Array.isArray(response)) {
+        console.log('[VideoService] Returning', response.length, 'calls (direct array)');
+        return response;
+      } else if (response && typeof response === 'object') {
+        // Check for common pagination formats
+        if ('results' in response && Array.isArray(response.results)) {
+          console.log('[VideoService] Returning', response.results.length, 'calls (from results)');
+          return response.results;
+        } else if ('data' in response && Array.isArray(response.data)) {
+          console.log('[VideoService] Returning', response.data.length, 'calls (from data)');
+          return response.data;
+        } else {
+          // Response is an object but not paginated - might be a single item or error
+          console.warn('[VideoService] Response is object but no array found:', response);
+          return [];
+        }
+      } else {
+        console.warn('[VideoService] Invalid response:', response);
+        return [];
+      }
+    } catch (error) {
+      console.error('[VideoService] Error fetching call history:', error);
+      return [];
+    }
+  },
 };

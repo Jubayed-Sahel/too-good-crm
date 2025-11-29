@@ -17,7 +17,9 @@ import { CreateCallDialog, type CallData } from '../components/activities/Create
 import { SendEmailDialog, type EmailData } from '../components/activities/SendEmailDialog';
 import { SendTelegramDialog, type TelegramData } from '../components/activities/SendTelegramDialog';
 import { activityService } from '../services/activity.service';
+import { videoService } from '../services/video.service';
 import type { Activity, ActivityType, ActivityStatus, ActivityFilters, ActivityStats } from '../types/activity.types';
+import type { VideoCallSession } from '../types/video.types';
 
 export const ActivitiesPage = () => {
   const navigate = useNavigate();
@@ -26,6 +28,7 @@ export const ActivitiesPage = () => {
   const { canAccess } = usePermissions();
   const canCreate = canAccess('activity', 'create');
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [videoCalls, setVideoCalls] = useState<VideoCallSession[]>([]);
   const [stats, setStats] = useState<ActivityStats>({
     total: 0,
     by_status: {
@@ -44,11 +47,11 @@ export const ActivitiesPage = () => {
     },
   });
 
-  // Compute display stats from backend stats
+  // Compute display stats from backend stats (includes video calls)
   const displayStats = {
-    totalActivities: stats.total,
-    completedActivities: stats.by_status.completed,
-    pendingActivities: stats.by_status.in_progress,
+    totalActivities: stats.total + videoCalls.length,
+    completedActivities: stats.by_status.completed + videoCalls.filter(c => c.status === 'completed').length,
+    pendingActivities: stats.by_status.in_progress + videoCalls.filter(c => c.status === 'pending' || c.status === 'ringing').length,
     scheduledActivities: stats.by_status.scheduled,
   };
   const [isLoading, setIsLoading] = useState(true);
@@ -95,6 +98,20 @@ export const ActivitiesPage = () => {
     }
   };
 
+  // Load video calls
+  const loadVideoCalls = async () => {
+    try {
+      console.log('[ActivitiesPage] Loading video calls...');
+      const calls = await videoService.getCallHistory({ my_calls: true });
+      console.log('[ActivitiesPage] Loaded video calls:', calls);
+      console.log('[ActivitiesPage] Video calls count:', calls.length);
+      setVideoCalls(calls || []);
+    } catch (error) {
+      console.error('[ActivitiesPage] Error loading video calls:', error);
+      setVideoCalls([]);
+    }
+  };
+
   // Load stats
   const loadStats = async () => {
     try {
@@ -116,6 +133,57 @@ export const ActivitiesPage = () => {
       loadStats();
     }
   }, [filters, activeOrganizationId]);
+
+  // Load video calls separately (doesn't depend on filters)
+  useEffect(() => {
+    if (activeOrganizationId) {
+      loadVideoCalls();
+    }
+  }, [activeOrganizationId]);
+
+  // Convert video calls to Activity format for display
+  console.log('[ActivitiesPage] Converting video calls to activities. Count:', videoCalls.length);
+  const videoCallsAsActivities: Activity[] = videoCalls.map(call => {
+    const callStatusMap: Record<string, ActivityStatus> = {
+      'pending': 'scheduled',
+      'ringing': 'scheduled',
+      'active': 'in_progress',
+      'completed': 'completed',
+      'missed': 'cancelled',
+      'rejected': 'cancelled',
+      'cancelled': 'cancelled',
+      'failed': 'cancelled',
+    };
+
+    return {
+      id: call.id,
+      activity_type: 'call' as ActivityType,
+      title: `${call.call_type === 'video' ? 'Video' : 'Audio'} Call ${call.status === 'completed' ? 'with' : 'to'} ${call.recipient_name || call.initiator_name}`,
+      description: call.notes || `${call.call_type} call - ${call.status}${call.duration_formatted ? ` (${call.duration_formatted})` : ''}`,
+      customer_name: call.recipient_name || call.initiator_name || 'Unknown',
+      status: callStatusMap[call.status] || 'completed',
+      created_at: call.created_at,
+      updated_at: call.updated_at,
+      scheduled_at: call.started_at || call.created_at,
+      completed_at: call.ended_at,
+      created_by: call.initiator,
+      assigned_to: call.recipient || undefined,
+      organization: call.organization,
+      customer: undefined,
+      lead: undefined,
+      phone_number: undefined,
+      email_subject: undefined,
+      email_body: undefined,
+      telegram_username: undefined,
+    };
+  });
+
+  // Merge and sort activities with video calls
+  const allActivities = [...activities, ...videoCallsAsActivities].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+  console.log('[ActivitiesPage] Total activities after merge:', allActivities.length, 
+    '(Regular:', activities.length, '+ Calls:', videoCallsAsActivities.length, ')');
 
   // Filter handlers
   const handleSearch = (searchQuery: string) => {
@@ -378,9 +446,9 @@ export const ActivitiesPage = () => {
           </Box>
         ) : (
           <>
-            {/* Activities Table */}
+            {/* Activities Table - showing both activities and video calls */}
             <ActivitiesTable
-              activities={activities}
+              activities={allActivities}
               isLoading={isLoading}
               onView={handleViewActivity}
               onMarkComplete={handleMarkComplete}
