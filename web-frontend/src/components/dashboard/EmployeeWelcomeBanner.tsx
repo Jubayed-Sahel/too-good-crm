@@ -81,13 +81,6 @@ export const EmployeeWelcomeBanner = () => {
       visible: customersPermissions.canCreate,
       color: 'white',
     },
-    {
-      label: 'Analytics',
-      icon: FiTrendingUp,
-      path: '/analytics',
-      visible: canAccess('analytics'),
-      color: 'whiteAlpha',
-    },
   ].filter(action => action.visible);
 
   return (

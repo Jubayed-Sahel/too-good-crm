@@ -5,6 +5,83 @@ from django.db import models
 from .base import TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, StatusMixin
 
 
+class CustomerOrganization(TimestampedModel):
+    """
+    Junction table linking customers to multiple vendor organizations.
+    Allows one customer to work with multiple vendors.
+    Each vendor can maintain their own relationship data with the customer.
+    """
+    RELATIONSHIP_STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('inactive', 'Inactive'),
+        ('prospect', 'Prospect'),
+    ]
+    
+    customer = models.ForeignKey('Customer', on_delete=models.CASCADE, related_name='customer_organizations')
+    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='organization_customers')
+    
+    # Vendor-specific relationship metadata
+    relationship_status = models.CharField(
+        max_length=20,
+        choices=RELATIONSHIP_STATUS_CHOICES,
+        default='active',
+        help_text='Status of this customer-vendor relationship'
+    )
+    assigned_employee = models.ForeignKey(
+        'Employee',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_customer_orgs',
+        help_text='Employee assigned to manage this customer for this vendor'
+    )
+    vendor_notes = models.TextField(
+        null=True,
+        blank=True,
+        help_text='Vendor-specific notes about this customer'
+    )
+    vendor_customer_code = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        help_text='Customer code/ID used by this specific vendor'
+    )
+    
+    # Vendor-specific financial terms
+    credit_limit = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text='Credit limit for this customer with this vendor'
+    )
+    payment_terms = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        help_text='Payment terms for this customer with this vendor'
+    )
+    
+    # Relationship tracking
+    relationship_started = models.DateTimeField(auto_now_add=True)
+    last_interaction = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        db_table = 'customer_organizations'
+        verbose_name = 'Customer-Organization Relationship'
+        verbose_name_plural = 'Customer-Organization Relationships'
+        unique_together = [('customer', 'organization')]
+        indexes = [
+            models.Index(fields=['customer', 'organization']),
+            models.Index(fields=['organization', 'relationship_status']),
+            models.Index(fields=['assigned_employee']),
+        ]
+        ordering = ['-relationship_started']
+    
+    def __str__(self):
+        return f"{self.customer.name} - {self.organization.name}"
+
+
 class Customer(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, StatusMixin):
     """
     Customer model for managing clients and accounts.
@@ -23,7 +100,24 @@ class Customer(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
         ('vip', 'VIP'),
     ]
     
-    organization = models.ForeignKey('Organization', on_delete=models.CASCADE, related_name='customers', null=True, blank=True)
+    # Primary organization (backward compatibility - first vendor the customer signed up with)
+    organization = models.ForeignKey(
+        'Organization',
+        on_delete=models.CASCADE,
+        related_name='primary_customers',
+        null=True,
+        blank=True,
+        help_text='Primary/original vendor organization'
+    )
+    
+    # Many-to-many relationship with organizations through CustomerOrganization
+    organizations = models.ManyToManyField(
+        'Organization',
+        through='CustomerOrganization',
+        related_name='shared_customers',
+        help_text='All vendor organizations this customer works with'
+    )
+    
     user = models.ForeignKey('User', on_delete=models.SET_NULL, null=True, blank=True, related_name='customer_profiles')
     user_profile = models.ForeignKey('UserProfile', on_delete=models.SET_NULL, null=True, blank=True, related_name='customer_records')
     
@@ -63,15 +157,13 @@ class Customer(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
         db_table = 'customers'
         verbose_name = 'Customer'
         verbose_name_plural = 'Customers'
-        unique_together = [
-            ('organization', 'code'),
-            ('organization', 'user'),
-        ]
         indexes = [
             models.Index(fields=['organization', 'status']),
             models.Index(fields=['organization', 'customer_type']),
             models.Index(fields=['assigned_to']),
             models.Index(fields=['user', 'organization']),
+            models.Index(fields=['email']),
+            models.Index(fields=['name']),
         ]
         ordering = ['-created_at']  # Default ordering to prevent pagination warnings
     

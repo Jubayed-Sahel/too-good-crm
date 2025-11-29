@@ -28,20 +28,6 @@ const InfoCardsGrid = () => {
     });
   }
 
-  // Analytics card - only if employee has access
-  if (canAccess('analytics')) {
-    quickAccessCards.push({
-      title: 'Analytics',
-      icon: <FiTrendingUp />,
-      iconBg: 'orange.100',
-      iconColor: 'orange.600',
-      description: 'View performance metrics and insights.',
-      actionLabel: 'View Analytics',
-      actionPath: '/analytics',
-      canCreate: false,
-    });
-  }
-
   // Activities card - only if employee has access
   if (canAccess('activities')) {
     quickAccessCards.push({

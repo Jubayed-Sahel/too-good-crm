@@ -36,7 +36,7 @@ from .employee import Employee
 from .vendor import Vendor
 
 # Customer model
-from .customer import Customer
+from .customer import Customer, CustomerOrganization
 
 # Call model
 from .call import Call
@@ -103,6 +103,7 @@ __all__ = [
     'Employee',
     'Vendor',
     'Customer',
+    'CustomerOrganization',
     'Call',
     'JitsiCallSession',
     'UserPresence',

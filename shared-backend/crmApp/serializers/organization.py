@@ -37,6 +37,14 @@ class OrganizationCreateSerializer(serializers.ModelSerializer):
             'zip_code', 'country'
         ]
     
+    def validate_name(self, value):
+        """Validate that organization name is unique"""
+        if Organization.objects.filter(name__iexact=value).exists():
+            raise serializers.ValidationError(
+                "An organization with this name already exists. Please choose a different name."
+            )
+        return value
+    
     def create(self, validated_data):
         # The slug will be auto-generated in the model's save method
         organization = Organization.objects.create(**validated_data)
@@ -290,6 +298,25 @@ class OrganizationUpdateSerializer(serializers.ModelSerializer):
             'phone', 'email', 'address', 'city', 'state',
             'zip_code', 'country', 'settings', 'linear_team_id', 'is_active'
         ]
+    
+    def validate_name(self, value):
+        """Validate that organization name is unique when updating"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        instance = self.instance
+        logger.info(f"[OrganizationUpdateSerializer] Validating name '{value}' for organization {instance.id}")
+        
+        # Check if another organization (not this one) has the same name
+        duplicate = Organization.objects.filter(name__iexact=value).exclude(id=instance.id).first()
+        if duplicate:
+            logger.warning(f"[OrganizationUpdateSerializer] Duplicate name found: '{value}' already used by organization {duplicate.id}")
+            raise serializers.ValidationError(
+                "An organization with this name already exists. Please choose a different name."
+            )
+        
+        logger.info(f"[OrganizationUpdateSerializer] Name '{value}' is unique")
+        return value
 
 
 class UserOrganizationSerializer(serializers.ModelSerializer):

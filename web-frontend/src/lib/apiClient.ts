@@ -153,10 +153,38 @@ apiClient.interceptors.response.use(
       error.message || 
       'An error occurred';
     
+    // Extract field-specific errors from DRF response
+    // DRF returns field errors at the root level: {name: ["error"], email: ["error"]}
+    let fieldErrors: Record<string, string[]> = {};
+    
+    if (error.response?.data) {
+      const responseData = error.response.data as any;
+      
+      // Check if data has 'errors' or 'details' wrapper
+      if (responseData.errors) {
+        fieldErrors = responseData.errors;
+      } else if (responseData.details) {
+        fieldErrors = responseData.details;
+      } else {
+        // Extract field-level errors directly from response (DRF format)
+        // Skip non-field keys like 'detail', 'error', 'message'
+        Object.keys(responseData).forEach(key => {
+          if (!['detail', 'error', 'message'].includes(key) && Array.isArray(responseData[key])) {
+            fieldErrors[key] = responseData[key];
+          }
+        });
+      }
+      
+      // If we have a 'detail' string, add it as an error
+      if (responseData.detail && typeof responseData.detail === 'string') {
+        fieldErrors.detail = [responseData.detail];
+      }
+    }
+    
     const apiError: APIError = {
       message: errorMessage,
       status: error.response?.status || 0,
-      errors: error.response?.data?.errors || error.response?.data?.details || (error.response?.data?.detail ? { detail: [error.response.data.detail] } : {}),
+      errors: fieldErrors,
     };
 
     return Promise.reject(apiError);

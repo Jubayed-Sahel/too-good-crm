@@ -77,39 +77,6 @@ export const ActivityTypeMenu = ({
               </HStack>
             </Box>
 
-            {/* Email Option */}
-            <Box
-              p={4}
-              bg="green.50"
-              borderRadius="lg"
-              cursor="pointer"
-              _hover={{ bg: 'green.100' }}
-              onClick={() => {
-                onSelectEmail();
-                onClose();
-              }}
-              transition="all 0.2s"
-            >
-              <HStack gap={3}>
-                <Box
-                  p={3}
-                  bg="green.100"
-                  borderRadius="md"
-                  color="green.600"
-                >
-                  <FiMail size={24} />
-                </Box>
-                <Box flex="1">
-                  <Text fontSize="md" fontWeight="semibold" color="gray.900" mb={1}>
-                    Send Email
-                  </Text>
-                  <Text fontSize="sm" color="gray.600">
-                    Compose and send an email message
-                  </Text>
-                </Box>
-              </HStack>
-            </Box>
-
             {/* Telegram Option */}
             <Box
               p={4}

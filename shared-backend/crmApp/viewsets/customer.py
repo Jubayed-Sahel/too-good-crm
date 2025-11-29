@@ -81,9 +81,13 @@ class CustomerViewSet(
     
     def get_queryset(self):
         """
-        Filter customers by user's organizations through user_profiles.
-        If user has no organization, show customers without organization.
+        Filter customers by user's organizations.
+        Shows customers that are linked to the vendor's organization(s) through:
+        1. Primary organization (backward compatibility)
+        2. Many-to-many relationship through CustomerOrganization
         """
+        from django.db.models import Q
+        
         # Get organization IDs from user's active profiles
         user_orgs = list(self.request.user.user_profiles.filter(
             status='active'
@@ -93,11 +97,14 @@ class CustomerViewSet(
         user_orgs = [org_id for org_id in user_orgs if org_id is not None]
         
         if user_orgs:
-            # User has organizations - show customers in those orgs OR customers with no org
-            from django.db.models import Q
+            # Show customers that are linked to user's organization(s) either through:
+            # - Primary organization (organization field)
+            # - OR through many-to-many relationship (organizations field)
             queryset = Customer.objects.filter(
-                Q(organization_id__in=user_orgs) | Q(organization_id__isnull=True)
-            )
+                Q(organization_id__in=user_orgs) |  # Primary organization
+                Q(organizations__id__in=user_orgs) |  # Many-to-many
+                Q(organization_id__isnull=True)  # No organization
+            ).distinct()
         else:
             # User has no organization - show only customers without organization
             queryset = Customer.objects.filter(organization_id__isnull=True)
@@ -290,4 +297,104 @@ class CustomerViewSet(
         customer = self.get_object()
         activities_data = self.get_customer_activities(customer)
         return Response(activities_data)
+    
+    @action(detail=True, methods=['post'])
+    def add_vendor(self, request, pk=None):
+        """
+        Add this customer to another vendor organization.
+        Creates a CustomerOrganization relationship.
+        """
+        from crmApp.models import CustomerOrganization, Organization
+        from crmApp.serializers import CustomerOrganizationSerializer
+        
+        customer = self.get_object()
+        organization_id = request.data.get('organization_id')
+        
+        if not organization_id:
+            return Response(
+                {'error': 'organization_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if organization exists
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            return Response(
+                {'error': 'Organization not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if relationship already exists
+        if CustomerOrganization.objects.filter(customer=customer, organization=organization).exists():
+            return Response(
+                {'error': 'Customer is already linked to this vendor'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create the relationship
+        customer_org = CustomerOrganization.objects.create(
+            customer=customer,
+            organization=organization,
+            relationship_status=request.data.get('relationship_status', 'active'),
+            assigned_employee_id=request.data.get('assigned_employee_id'),
+            vendor_notes=request.data.get('vendor_notes', ''),
+            vendor_customer_code=request.data.get('vendor_customer_code', ''),
+            credit_limit=request.data.get('credit_limit'),
+            payment_terms=request.data.get('payment_terms', '')
+        )
+        
+        return Response(
+            CustomerOrganizationSerializer(customer_org).data,
+            status=status.HTTP_201_CREATED
+        )
+    
+    @action(detail=True, methods=['delete'])
+    def remove_vendor(self, request, pk=None):
+        """
+        Remove this customer from a vendor organization.
+        Deletes the CustomerOrganization relationship.
+        """
+        from crmApp.models import CustomerOrganization
+        
+        customer = self.get_object()
+        organization_id = request.data.get('organization_id')
+        
+        if not organization_id:
+            return Response(
+                {'error': 'organization_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Find and delete the relationship
+        try:
+            customer_org = CustomerOrganization.objects.get(
+                customer=customer,
+                organization_id=organization_id
+            )
+            customer_org.delete()
+            
+            return Response(
+                {'message': 'Customer removed from vendor successfully'},
+                status=status.HTTP_200_OK
+            )
+        except CustomerOrganization.DoesNotExist:
+            return Response(
+                {'error': 'Customer-vendor relationship not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=True, methods=['get'])
+    def vendors(self, request, pk=None):
+        """
+        Get all vendors (organizations) this customer works with.
+        """
+        from crmApp.serializers import CustomerOrganizationSerializer
+        
+        customer = self.get_object()
+        customer_orgs = customer.customer_organizations.all()
+        
+        return Response(
+            CustomerOrganizationSerializer(customer_orgs, many=True).data
+        )
 

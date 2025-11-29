@@ -301,10 +301,31 @@ class EmployeeViewSet(viewsets.ModelViewSet, PermissionCheckMixin):
                 employee_id = instance.id
                 employee_name = f"{instance.first_name} {instance.last_name}"
                 
-                # 1. Delete the Employee record
-                instance.delete()
+                # Safety check: Prevent vendor from deleting themselves
+                if employee_user and employee_user == request.user:
+                    raise PermissionDenied('You cannot delete your own employee record.')
                 
-                # 2. Deactivate UserOrganization link for this organization
+                # Safety check: Ensure we're only deleting an Employee, not affecting Vendor records
+                # This is redundant but added for extra safety
+                if active_profile and active_profile.profile_type == 'vendor':
+                    from crmApp.models import Vendor
+                    # Verify the user being deleted is not the vendor themselves
+                    vendor_record = Vendor.objects.filter(
+                        user=request.user,
+                        organization=employee_organization
+                    ).first()
+                    if vendor_record and vendor_record.user == employee_user:
+                        raise PermissionDenied('Cannot delete your own vendor account through employee deletion.')
+                
+                # 1. Delete the Employee record (this will NOT delete the User due to SET_NULL)
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.info(f"[Employee Delete] Deleting employee {employee_name} (ID: {employee_id}) from organization {employee_organization.name}")
+                
+                instance.delete()
+                logger.info(f"[Employee Delete] Employee record deleted. User account preserved: {employee_user.email if employee_user else 'N/A'}")
+                
+                # 2. Deactivate UserOrganization link for this organization ONLY
                 if employee_user:
                     user_org_link = UserOrganization.objects.filter(
                         user=employee_user,
@@ -315,10 +336,10 @@ class EmployeeViewSet(viewsets.ModelViewSet, PermissionCheckMixin):
                         user_org_link.is_active = False
                         user_org_link.left_at = timezone.now()
                         user_org_link.save()
+                        logger.info(f"[Employee Delete] Deactivated UserOrganization link for user {employee_user.email}")
                     
-                    # 3. Deactivate UserProfile (employee type) for this organization
-                    # Note: UserProfile has unique constraint on (user, profile_type)
-                    # So there's only one employee profile per user, but it can be linked to different orgs
+                    # 3. Deactivate UserProfile (employee type) for this organization ONLY
+                    # Note: We only touch the employee profile, NOT vendor profiles
                     employee_profile = UserProfile.objects.filter(
                         user=employee_user,
                         profile_type='employee',
@@ -331,6 +352,20 @@ class EmployeeViewSet(viewsets.ModelViewSet, PermissionCheckMixin):
                         # Clear the organization link so they can't access it
                         employee_profile.organization = None
                         employee_profile.save()
+                        logger.info(f"[Employee Delete] Deactivated employee UserProfile for user {employee_user.email}")
+                    
+                    # 4. Safety verification: Ensure vendor profiles are untouched
+                    from crmApp.models import Vendor
+                    vendor_profile = UserProfile.objects.filter(
+                        user=employee_user,
+                        profile_type='vendor'
+                    ).first()
+                    vendor_record = Vendor.objects.filter(user=employee_user).first()
+                    
+                    if vendor_profile or vendor_record:
+                        logger.info(f"[Employee Delete] VERIFIED: Vendor profile/record for user {employee_user.email} remains intact")
+                    
+                    logger.info(f"[Employee Delete] Cleanup complete. User {employee_user.email} can still access system with other profiles.")
                 
                 return Response({
                     'message': f'Employee {employee_name} has been deleted and removed from the organization.',

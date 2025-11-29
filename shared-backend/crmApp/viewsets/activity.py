@@ -29,13 +29,27 @@ class ActivityViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter activities by user's organizations"""
-        user_orgs = self.request.user.user_organizations.filter(
-            is_active=True
-        ).values_list('organization_id', flat=True)
+        user = self.request.user
         
-        return Activity.objects.filter(
-            organization_id__in=user_orgs
-        ).select_related('customer', 'lead', 'deal', 'assigned_to', 'created_by')
+        # Get active profile
+        active_profile = getattr(user, 'active_profile', None)
+        
+        # Fallback to user_organizations for backward compatibility
+        if active_profile and active_profile.organization:
+            logger.debug(f"[ActivityViewSet] Filtering by organization: {active_profile.organization.id}")
+            return Activity.objects.filter(
+                organization_id=active_profile.organization.id
+            ).select_related('customer', 'lead', 'deal', 'assigned_to', 'created_by')
+        else:
+            # Fallback to old method
+            user_orgs = user.user_organizations.filter(
+                is_active=True
+            ).values_list('organization_id', flat=True)
+            
+            logger.debug(f"[ActivityViewSet] Filtering by user organizations: {list(user_orgs)}")
+            return Activity.objects.filter(
+                organization_id__in=user_orgs
+            ).select_related('customer', 'lead', 'deal', 'assigned_to', 'created_by')
     
     def get_serializer_class(self):
         """Return appropriate serializer based on action"""

@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
 from django.db import transaction
 from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 
 from crmApp.models import Issue, Employee, IssueComment
 from crmApp.serializers import (
@@ -38,7 +39,7 @@ class IssueViewSet(
     QueryFilterMixin,
 ):
     """ViewSet for Issue model"""
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['vendor', 'order', 'priority', 'category', 'status', 'assigned_to']
     search_fields = ['issue_number', 'title', 'description']
     ordering_fields = ['created_at', 'updated_at', 'priority', 'status']
@@ -149,6 +150,9 @@ class IssueViewSet(
     
     def list(self, request, *args, **kwargs):
         """Override list to add debug logging"""
+        # Debug filter parameters
+        logger.debug(f"[IssueViewSet] Query params: {dict(request.query_params)}")
+        
         queryset = self.filter_queryset(self.get_queryset())
         
         # Debug logging
