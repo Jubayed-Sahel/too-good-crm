@@ -56,6 +56,7 @@ const EmployeeCustomerDetailPage = () => {
       email: customerData.email || '',
       phone: customerData.phone || '',
       organization: customerData.organization || '',
+      vendor_organizations: customerData.vendor_organizations || [],
       website: customerData.website || '',
       address: customerData.address || '',
       city: customerData.city || '',

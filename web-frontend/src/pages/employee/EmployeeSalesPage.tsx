@@ -476,14 +476,7 @@ const EmployeeSalesPage = () => {
 
           {/* Action Buttons */}
           <HStack gap={2}>
-            <Button
-              variant="outline"
-              h="40px"
-              display={{ base: 'none', sm: 'inline-flex' }}
-            >
-              <FiFilter />
-              <Box ml={2}>More Filters</Box>
-            </Button>
+
 
             <Button
               colorPalette="purple"

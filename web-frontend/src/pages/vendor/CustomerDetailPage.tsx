@@ -50,12 +50,22 @@ const CustomerDetailPage = () => {
   const customer = useMemo(() => {
     if (!customerData) return null;
     
+    console.log('[CustomerDetailPage] ========================================');
+    console.log('[CustomerDetailPage] Customer ID:', customerData.id);
+    console.log('[CustomerDetailPage] Customer Name:', customerData.full_name);
+    console.log('[CustomerDetailPage] Customer Email:', customerData.email);
+    console.log('[CustomerDetailPage] vendor_organizations array:');
+    console.log(customerData.vendor_organizations);
+    console.log('[CustomerDetailPage] vendor_organizations count:', customerData.vendor_organizations?.length);
+    console.log('[CustomerDetailPage] ========================================');
+    
     return {
       id: customerData.id.toString(),
       name: customerData.full_name || '',
       email: customerData.email || '',
       phone: customerData.phone || '',
       organization: customerData.organization || '',
+      vendor_organizations: customerData.vendor_organizations || [],
       website: customerData.website || '',
       address: customerData.address || '',
       city: customerData.city || '',
@@ -430,34 +440,93 @@ const CustomerDetailPage = () => {
                   </VStack>
                 </HStack>
 
-                {customer.organization && (
-                  <HStack
-                    p={4}
-                    bg="gray.50"
-                    borderRadius="lg"
-                    borderWidth="1px"
-                    borderColor="gray.200"
-                  >
-                    <Box
-                      p={3}
-                      bg="orange.100"
-                      borderRadius="lg"
-                      color="orange.600"
-                    >
-                      <FiBriefcase size={20} />
-                    </Box>
-                    <VStack align="start" gap={0.5} flex={1}>
-                      <Text fontSize="sm" fontWeight="semibold" color="gray.600">
-                        Organization
-                      </Text>
-                      <Text fontSize="md" fontWeight="medium" color="gray.900">
-                        {customer.organization}
-                      </Text>
-                    </VStack>
-                  </HStack>
-                )}
               </VStack>
             </Box>
+
+            {/* Vendor Organizations Card */}
+            {customer.vendor_organizations && customer.vendor_organizations.length > 0 && (
+              <Box
+                bg="white"
+                borderRadius="xl"
+                p={{ base: 5, md: 6 }}
+                boxShadow="sm"
+                borderWidth="1px"
+                borderColor="gray.200"
+              >
+                <Heading size="lg" mb={4} color="gray.800">
+                  Vendor Organizations
+                </Heading>
+                <VStack align="stretch" gap={3}>
+                  {customer.vendor_organizations.map((vendorOrg: any) => (
+                    <Box
+                      key={vendorOrg.id}
+                      p={4}
+                      bg="purple.50"
+                      borderRadius="lg"
+                      borderWidth="1px"
+                      borderColor="purple.200"
+                    >
+                      <HStack gap={3} mb={2}>
+                        <Box
+                          p={2}
+                          bg="purple.100"
+                          borderRadius="lg"
+                          color="purple.600"
+                        >
+                          <FiBriefcase size={20} />
+                        </Box>
+                        <VStack align="start" gap={0} flex={1}>
+                          <Text fontSize="md" fontWeight="bold" color="gray.900">
+                            {vendorOrg.organization_name}
+                          </Text>
+                          <HStack gap={2}>
+                            <Badge
+                              colorScheme={
+                                vendorOrg.relationship_status === 'active' ? 'green' :
+                                vendorOrg.relationship_status === 'inactive' ? 'gray' : 'orange'
+                              }
+                              fontSize="xs"
+                            >
+                              {vendorOrg.relationship_status}
+                            </Badge>
+                            {vendorOrg.assigned_employee_name && (
+                              <Text fontSize="xs" color="gray.600">
+                                Assigned: {vendorOrg.assigned_employee_name}
+                              </Text>
+                            )}
+                          </HStack>
+                        </VStack>
+                      </HStack>
+                      
+                      {(vendorOrg.credit_limit || vendorOrg.payment_terms) && (
+                        <VStack align="stretch" gap={1} mt={2} pt={2} borderTopWidth="1px" borderColor="purple.200">
+                          {vendorOrg.credit_limit && (
+                            <Text fontSize="xs" color="gray.700">
+                              Credit Limit: {formatCurrency(parseFloat(vendorOrg.credit_limit))}
+                            </Text>
+                          )}
+                          {vendorOrg.payment_terms && (
+                            <Text fontSize="xs" color="gray.700">
+                              Payment Terms: {vendorOrg.payment_terms}
+                            </Text>
+                          )}
+                        </VStack>
+                      )}
+                      
+                      {vendorOrg.vendor_notes && (
+                        <Text fontSize="xs" color="gray.600" mt={2} fontStyle="italic">
+                          Note: {vendorOrg.vendor_notes}
+                        </Text>
+                      )}
+                    </Box>
+                  ))}
+                </VStack>
+              </Box>
+            )}
+          </VStack>
+
+          {/* Right Column - Move Business Metrics here */}
+          <VStack align="stretch" gap={5}>
 
             {/* Business Metrics Card */}
             <Box

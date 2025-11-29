@@ -196,7 +196,18 @@ class Customer(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
                 self.company_name = self.name
         
         is_new = self.pk is None
+        creating_org = self.organization if is_new else None
         super().save(*args, **kwargs)
+        
+        # Create CustomerOrganization entry if this is a new customer with an organization
+        if is_new and creating_org:
+            # Check if CustomerOrganization doesn't already exist
+            if not CustomerOrganization.objects.filter(customer=self, organization=creating_org).exists():
+                CustomerOrganization.objects.create(
+                    customer=self,
+                    organization=creating_org,
+                    relationship_status='active'
+                )
         
         # Link to existing user profile or create one if it doesn't exist
         # Note: UserProfile has unique constraint on (user, profile_type), not (user, organization, profile_type)

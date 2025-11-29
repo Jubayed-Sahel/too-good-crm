@@ -1,56 +1,47 @@
+#!/usr/bin/env python
 """
-Test API response for user profiles
+Test API endpoint response for customer
 """
 import os
+import sys
 import django
 
+# Setup Django
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'crmAdmin.settings')
 django.setup()
 
-from crmApp.models import User
-from crmApp.serializers import UserSerializer, UserProfileSerializer
+from crmApp.models import Customer
+from crmApp.serializers import CustomerSerializer
+import json
 
-def test_api_response():
-    """Test what the API actually returns"""
-    # Test with a vendor who owns an organization
-    try:
-        user = User.objects.get(email='jubayedsahel@gmail.com')
-        print(f"\n{'='*80}")
-        print(f"TESTING API RESPONSE FOR: {user.email}")
-        print(f"{'='*80}\n")
-        
-        # Simulate what UserSerializer returns
-        user_serializer = UserSerializer(user)
-        user_data = user_serializer.data
-        
-        print("UserSerializer.profiles:")
-        for profile in user_data.get('profiles', []):
-            print(f"  Profile ID: {profile.get('id')}")
-            print(f"    Type: {profile.get('profile_type')}")
-            print(f"    Organization Name: {profile.get('organization_name', 'NOT FOUND')}")
-            print(f"    Organization ID: {profile.get('organization')}")
-            print(f"    Is Owner: {profile.get('is_owner')}")
-            print()
-        
-        # Test direct UserProfileSerializer
-        from crmApp.models import UserProfile
-        vendor_profile = UserProfile.objects.filter(
-            user=user,
-            profile_type='vendor',
-            status='active'
-        ).first()
-        
-        if vendor_profile:
-            print("Direct UserProfileSerializer:")
-            profile_serializer = UserProfileSerializer(vendor_profile)
-            profile_data = profile_serializer.data
-            print(f"  Organization Name: {profile_data.get('organization_name', 'NOT FOUND')}")
-            print(f"  Organization ID: {profile_data.get('organization')}")
-            print()
-            
-    except User.DoesNotExist:
-        print("User not found")
+print("=" * 80)
+print("TESTING API RESPONSE FOR CUSTOMER ID 56")
+print("=" * 80)
 
-if __name__ == '__main__':
-    test_api_response()
+customer = Customer.objects.prefetch_related(
+    'customer_organizations',
+    'customer_organizations__organization',
+    'customer_organizations__assigned_employee'
+).get(id=56)
+
+print(f"\nCustomer: {customer.name} (ID: {customer.id})")
+print(f"Email: {customer.email}")
+
+# Serialize the customer
+serializer = CustomerSerializer(customer)
+data = serializer.data
+
+print(f"\nSerialized data keys: {list(data.keys())}")
+print(f"\nvendor_organizations field:")
+print(json.dumps(data.get('vendor_organizations'), indent=2))
+
+print("\n" + "=" * 80)
+print("DIRECT QUERY CHECK")
+print("=" * 80)
+
+vendor_orgs = customer.customer_organizations.all()
+print(f"\nDirect query count: {vendor_orgs.count()}")
+for vo in vendor_orgs:
+    print(f"  - {vo.organization.name} (ID: {vo.id})")
 
