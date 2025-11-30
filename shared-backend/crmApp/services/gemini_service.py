@@ -1466,6 +1466,44 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     return {"error": f"Failed to resolve issue: {str(e)}"}
             return await resolve()
         
+        async def delete_issue_tool(issue_id: int):
+            """Delete an issue permanently. Only vendors and employees can delete issues."""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('issue', 'delete')
+            if auth_error:
+                return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def delete():
+                if not org_id:
+                    return {"error": "No organization context found. Please ensure you're logged in."}
+                
+                logger.info(f"Deleting issue {issue_id} for organization_id={org_id}")
+                
+                try:
+                    issue = Issue.objects.get(id=issue_id, organization_id=org_id)
+                    issue_title = issue.title
+                    issue_number = issue.issue_number if hasattr(issue, 'issue_number') else issue.id
+                    
+                    # Delete the issue
+                    issue.delete()
+                    
+                    logger.info(f"Issue {issue_number} ('{issue_title}') deleted successfully")
+                    
+                    return {
+                        "success": True,
+                        "id": issue_id,
+                        "title": issue_title,
+                        "message": f"Issue '{issue_title}' (ID: {issue_id}) has been permanently deleted ✓"
+                    }
+                except Issue.DoesNotExist:
+                    logger.warning(f"Issue {issue_id} not found in org {org_id}")
+                    return {"error": f"Issue with ID {issue_id} not found in your organization"}
+                except Exception as e:
+                    logger.error(f"Error deleting issue: {e}", exc_info=True)
+                    return {"error": f"Failed to delete issue: {str(e)}"}
+            return await delete()
+        
         # === ANALYTICS TOOLS ===
         async def get_dashboard_stats_tool():
             """Get comprehensive dashboard statistics"""
@@ -2004,6 +2042,17 @@ Use this function when user says things like:
                     required=["issue_id"],
                 ),
             ),
+            types.FunctionDeclaration(
+                name="delete_issue",
+                description="Permanently delete an issue. Only vendors and employees with delete permissions can delete issues. Customers cannot delete issues.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "issue_id": types.Schema(type=types.Type.INTEGER, description="Issue ID to delete (required)"),
+                    },
+                    required=["issue_id"],
+                ),
+            ),
             # Analytics functions
             types.FunctionDeclaration(
                 name="get_dashboard_stats",
@@ -2099,6 +2148,7 @@ Use this function when user says things like:
             "create_issue": create_issue_tool,
             "update_issue": update_issue_tool,
             "resolve_issue": resolve_issue_tool,
+            "delete_issue": delete_issue_tool,
             # Analytics tools
             "get_dashboard_stats": get_dashboard_stats_tool,
             # Vendor tools
