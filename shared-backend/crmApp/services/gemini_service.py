@@ -69,8 +69,10 @@ class GeminiService:
         # Get organization
         organization_id = active_profile.organization_id if active_profile.organization else None
         
-        if not organization_id:
-            logger.error(f"No organization for profile {active_profile.id}, user {user.id}")
+        # For customers, organization_id can be None since they're associated with multiple orgs
+        # They access organizations through CustomerOrganization table
+        if not organization_id and active_profile.profile_type not in ['customer']:
+            logger.error(f"No organization for profile {active_profile.id}, user {user.id}, role {active_profile.profile_type}")
             raise ValueError(f"Profile has no organization assigned. Please assign an organization to your profile.")
         
         # Get user permissions
@@ -78,10 +80,14 @@ class GeminiService:
         
         try:
             # Get all permissions for user's role
-            user_roles = user.user_roles.filter(
-                organization_id=organization_id,
-                is_active=True
-            )
+            if organization_id:
+                user_roles = user.user_roles.filter(
+                    organization_id=organization_id,
+                    is_active=True
+                )
+            else:
+                # For customers without single org, skip role-based permissions
+                user_roles = []
             
             for user_role in user_roles:
                 role = user_role.role
@@ -160,33 +166,47 @@ class GeminiService:
         # Role-specific capabilities and restrictions
         role_capabilities = {
             'vendor': """
-You have FULL ACCESS to all CRM data and operations within your organization:
-- View, create, update, and delete customers, leads, deals, and issues
+You have FULL ACCESS to most CRM data and operations within your organization:
+- View, create, update, and delete customers, leads, and deals
+- View, update, resolve, and manage issues (but CANNOT create new issues)
 - Assign tasks to employees
 - Access all analytics and reports
 - Manage orders and payments
 - View employee information
 
-You can perform any CRM operation within your organization's boundaries.""",
+IMPORTANT: You CANNOT create issues. Issues are submitted by customers or created by employees on behalf of customers. As a vendor, you manage and resolve existing issues.""",
             
             'employee': """
 You have LIMITED ACCESS to CRM data within your vendor's organization:
 - View all customers, leads, deals, and issues in the organization
-- Create new records (customers, leads, deals, issues)
+- Create new records (customers, leads, deals)
+- View, update, and resolve issues (but CANNOT create new issues - only customers can create issues)
 - Update records that are assigned to you
 - Access analytics and reports
 - View your colleagues' information
 
-You CANNOT delete records or modify data that's not assigned to you.""",
+You CANNOT delete records or modify data that's not assigned to you.
+You CANNOT create issues - only customers can submit support tickets.""",
             
             'customer': """
 You have RESTRICTED ACCESS to your own data only:
+- View vendors you are associated with (use list_vendors, get_vendor)
 - View your own customer profile
 - View your orders and payment history
-- Create and view support issues/tickets
+- Create and view support issues/tickets (this is how you get help)
 - Track your interactions with the company
 
-You CANNOT access other customers' data or company-wide information."""
+You CANNOT access other customers' data or company-wide information.
+You CANNOT update or resolve issues - only create and view them.
+You CANNOT create, update, or delete vendors - only view them.
+
+IMPORTANT: 
+- When asked about vendors, use list_vendors to show accessible vendors
+- When creating an issue, ALWAYS call list_my_vendors_for_issues FIRST to see ALL available vendors in the system
+- The list shows both vendor names and organization names - present these clearly to the customer
+- Customers can create issues for ANY vendor/organization in the system
+- Use vendor_name, organization_name, or organization_id in create_issue
+- PREFER using organization_name as it's clearer and more reliable than vendor_name"""
         }
         
         capabilities = role_capabilities.get(role, "You have standard user access.")
@@ -265,12 +285,20 @@ Available tools:
 - `get_deal_stats`: Get deal statistics and revenue metrics
 
 ### Issue/Support Management
-- `list_issues`: Search and filter support issues
-- `get_issue`: Get issue details
-- `create_issue`: Create new support tickets
-- `update_issue`: Update issue information
-- `resolve_issue` / `reopen_issue`: Change issue status
-- `assign_issue`: Assign issue to support staff
+
+**CRITICAL AUTHORIZATION RULES:**
+- **Customers ONLY** can: create_issue (submit support tickets)
+- **Vendors** can: list_issues, get_issue, update_issue (resolve/manage), assign_issue, add comments - BUT CANNOT create_issue
+- **Employees** can: list_issues, get_issue, update_issue (resolve), assign_issue, add comments - BUT CANNOT create_issue
+
+**IMPORTANT: Only customers can create issues. Vendors and employees can only manage existing issues.**
+
+Available tools:
+- `list_issues`: Search and filter support issues (all roles can view)
+- `get_issue`: Get issue details (all roles can view)
+- `create_issue`: Create new support tickets (ONLY customers can create)
+- `update_issue`: Update issue information, resolve, change status (vendors and employees only)
+- `assign_issue`: Assign issue to support staff (vendors and employees only)
 - `add_issue_comment`: Add comments to issues
 - `get_issue_comments`: Retrieve issue comment history
 - `get_issue_stats`: Get support metrics
@@ -397,9 +425,61 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         org_id = user_context.get('organization_id')
         role = user_context.get('role')
         
+        # ===== AUTHORIZATION HELPER =====
+        def check_role_permission(resource: str, action: str) -> dict:
+            """
+            Check if current role can perform action on resource.
+            Returns error dict if denied, None if allowed.
+            """
+            # Superusers and staff always allowed
+            if user_context.get('is_superuser') or user_context.get('is_staff'):
+                return None
+            
+            # Vendors have full access to their org EXCEPT creating issues
+            # Vendors can: read, update (resolve/change status), delete issues
+            # Vendors CANNOT: create issues
+            if role == 'vendor':
+                if resource == 'issue' and action == 'create':
+                    return {"error": "Permission denied: Vendors cannot create issues. Only customers can create issues."}
+                # Vendors can read, update, delete issues (to manage/resolve them)
+                return None
+            
+            # Employees have read access, limited write access
+            if role == 'employee':
+                if action == 'read':
+                    return None
+                # Employees can manage issues (read/update) but CANNOT create them
+                if resource == 'issue':
+                    if action == 'create':
+                        return {"error": "Permission denied: Only customers can create issues. Employees can view and manage existing issues."}
+                    if action in ['update', 'delete']:
+                        return None
+                # Check if they have explicit permission for other actions
+                permissions = user_context.get('permissions', [])
+                if f"{resource}:{action}" in permissions or f"{resource}:*" in permissions:
+                    return None
+                return {"error": f"Permission denied: Employees cannot {action} {resource} records without explicit permission"}
+            
+            # Customers have very limited access
+            # Customers can ONLY: create issues, view their own issue status, and view their vendors
+            if role == 'customer':
+                if resource == 'issue' and action in ['create', 'read']:
+                    return None
+                if resource in ['customer', 'order', 'payment', 'vendor'] and action == 'read':
+                    # They can only read their own records (enforced in tool logic)
+                    return None
+                return {"error": f"Permission denied: Customers cannot {action} {resource} records"}
+            
+            return {"error": f"Permission denied: Role '{role}' cannot {action} {resource}"}
+        
         # === CUSTOMER TOOLS ===
         async def list_customers_tool(status: str = "active", limit: int = 10):
             """List customers in the organization"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('customer', 'read')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def fetch():
                 if org_id:
@@ -432,6 +512,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def create_customer_tool(name: str, email: str, phone: str = "", customer_type: str = "individual", company_name: str = ""):
             """Create a new customer"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('customer', 'create')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def create():
                 customer = Customer.objects.create(
@@ -478,6 +563,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def update_customer_tool(customer_id: int, name: str = None, email: str = None, phone: str = None, status: str = None):
             """Update an existing customer"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('customer', 'update')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def update():
                 try:
@@ -508,6 +598,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def delete_customer_tool(customer_id: int):
             """Delete a customer"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('customer', 'delete')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def delete():
                 try:
@@ -528,6 +623,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         # === LEAD TOOLS ===
         async def list_leads_tool(status: str = "all", limit: int = 10):
             """List leads in the organization. Leads are in any stage of the sales pipeline. Organization ID is automatically determined from the user context."""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('lead', 'read')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def fetch():
                 # Ensure we have org_id (should always be set from user context)
@@ -569,6 +669,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def create_lead_tool(name: str, email: str, phone: str = "", source: str = "website"):
             """Create a new lead"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('lead', 'create')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def create():
                 lead = Lead.objects.create(
@@ -729,6 +834,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def update_lead_tool(lead_id: int, name: str = None, status: str = None, score: int = None):
             """Update an existing lead"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('lead', 'update')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def update():
                 try:
@@ -771,6 +881,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def convert_lead_to_customer_tool(lead_id: int):
             """Convert a lead to a customer and automatically move to Closed Won stage"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('lead', 'update')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def convert():
                 try:
@@ -961,6 +1076,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         # === ISSUE TOOLS ===
         async def list_issues_tool(status: str = None, priority: str = None, limit: int = 20):
             """List issues/tickets in the organization. If no status is specified, returns all issues."""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('issue', 'read')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def fetch():
                 if not org_id:
@@ -1001,50 +1121,258 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                 return result if result else []
             return await fetch()
         
-        async def create_issue_tool(title: str, description: str, priority: str = "medium", category: str = "other", customer_id: int = None):
-            """Create a new issue/ticket"""
+        async def list_my_vendors_for_issues_tool():
+            """List all vendors/organizations available in the system. Customers can create issues for any vendor."""
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                from crmApp.models import Vendor, Organization
+                
+                # Get all active vendors/organizations
+                vendors = []
+                
+                # Try to get vendors first
+                vendor_list = Vendor.objects.filter(status='active').select_related('organization')
+                
+                if vendor_list.exists():
+                    for vendor in vendor_list:
+                        org_name = vendor.organization.name if vendor.organization else f"Organization {vendor.organization_id}"
+                        vendors.append({
+                            "organization_id": vendor.organization_id,
+                            "organization_name": org_name,
+                            "vendor_name": vendor.name,
+                            "display_name": f"{vendor.name} ({org_name})",
+                            "vendor_email": vendor.email or "",
+                            "vendor_phone": vendor.phone or "",
+                            "contact_person": vendor.contact_person or "",
+                        })
+                else:
+                    # Fallback: get all organizations if no vendors exist
+                    orgs = Organization.objects.all()
+                    for org in orgs:
+                        org_name = org.name if hasattr(org, 'name') else f"Organization {org.id}"
+                        vendors.append({
+                            "organization_id": org.id,
+                            "organization_name": org_name,
+                            "vendor_name": org_name,
+                            "display_name": org_name,
+                            "vendor_email": "",
+                            "vendor_phone": "",
+                            "contact_person": "",
+                        })
+                
+                if not vendors:
+                    return {"error": "No vendors found in the system. Please contact support."}
+                
+                return {
+                    "vendors": vendors,
+                    "count": len(vendors),
+                    "message": f"You can create issues for any of these {len(vendors)} vendor(s). Use the vendor_name or organization_name when creating an issue."
+                }
+            return await fetch()
+        
+        async def create_issue_tool(title: str, description: str, priority: str = "medium", category: str = "other", vendor_name: str = None, organization_name: str = None, organization_id: int = None, customer_id: int = None):
+            """Create a new issue/ticket. For customers: provide vendor_name, organization_name, OR organization_id to specify which vendor/organization to create issue for."""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('issue', 'create')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def create():
-                if not org_id:
-                    return {"error": "No organization context found. Please ensure you're logged in."}
+                target_org_id = None
                 
-                logger.info(f"Creating issue for organization_id={org_id}: {title}")
+                # Handle customers differently - they can create issues for ANY vendor
+                if role == 'customer':
+                    from crmApp.models import Vendor, Organization
+                    
+                    # Find target organization
+                    if organization_id:
+                        # Use provided organization_id directly
+                        target_org_id = organization_id
+                    elif organization_name:
+                        # Find organization by organization name
+                        try:
+                            org = Organization.objects.get(name__iexact=organization_name)
+                            target_org_id = org.id
+                        except Organization.DoesNotExist:
+                            # Try partial match
+                            orgs = Organization.objects.filter(name__icontains=organization_name)
+                            if orgs.count() == 1:
+                                target_org_id = orgs.first().id
+                            elif orgs.count() > 1:
+                                org_names = [o.name for o in orgs]
+                                return {"error": f"Multiple organizations found matching '{organization_name}': {', '.join(org_names)}. Please be more specific."}
+                            else:
+                                return {"error": f"Organization '{organization_name}' not found. Use list_my_vendors_for_issues to see available organizations."}
+                        except Organization.MultipleObjectsReturned:
+                            orgs = Organization.objects.filter(name__iexact=organization_name)
+                            org_names = [f"{o.name} (ID: {o.id})" for o in orgs]
+                            return {"error": f"Multiple organizations found with exact name '{organization_name}': {', '.join(org_names)}. Please use organization_id instead."}
+                    elif vendor_name:
+                        # Find organization by vendor name (search all vendors)
+                        try:
+                            vendor = Vendor.objects.get(
+                                name__iexact=vendor_name,
+                                status='active'
+                            )
+                            target_org_id = vendor.organization_id
+                        except Vendor.DoesNotExist:
+                            # Try partial match
+                            vendors = Vendor.objects.filter(
+                                name__icontains=vendor_name,
+                                status='active'
+                            )
+                            if vendors.count() == 1:
+                                target_org_id = vendors.first().organization_id
+                            elif vendors.count() > 1:
+                                vendor_names = [v.name for v in vendors]
+                                return {"error": f"Multiple vendors found matching '{vendor_name}': {', '.join(vendor_names)}. Please be more specific."}
+                            else:
+                                return {"error": f"Vendor '{vendor_name}' not found. Use list_my_vendors_for_issues to see available vendors."}
+                        except Vendor.MultipleObjectsReturned:
+                            vendors = Vendor.objects.filter(name__iexact=vendor_name, status='active')
+                            vendor_names = [f"{v.name} (ID: {v.organization_id})" for v in vendors]
+                            return {"error": f"Multiple vendors found with exact name '{vendor_name}': {', '.join(vendor_names)}. Please use organization_id instead."}
+                    else:
+                        # No vendor specified - list available vendors
+                        vendors = Vendor.objects.filter(status='active')
+                        vendor_names = [v.name for v in vendors[:10]]  # Show first 10
+                        return {
+                            "error": "Please specify which vendor/organization to create the issue for.",
+                            "available_vendors": vendor_names,
+                            "instruction": "Use vendor_name, organization_name, or use list_my_vendors_for_issues for full list."
+                        }
+                else:
+                    # Vendors and employees use their organization context
+                    if not org_id:
+                        return {"error": "No organization context found. Please ensure you're logged in."}
+                    target_org_id = org_id
+                
+                logger.info(f"Creating issue for organization_id={target_org_id}: {title}")
                 
                 try:
                     # Get customer if customer_id provided
-                    customer = None
+                    raised_by_customer = None
+                    is_client_issue = False
+                    
+                    # For customers creating issues, mark as client issue
+                    if role == 'customer':
+                        is_client_issue = True
+                        from crmApp.models import Customer, User
+                        
+                        # Find or create customer record for this user
+                        try:
+                            user = User.objects.get(id=user_context.get('user_id'))
+                            
+                            # Try to find existing customer record
+                            raised_by_customer = Customer.objects.filter(user=user).first()
+                            
+                            # If no customer record exists, create one
+                            if not raised_by_customer:
+                                logger.info(f"Creating Customer record for user {user.email}")
+                                raised_by_customer = Customer.objects.create(
+                                    organization_id=target_org_id,
+                                    user=user,
+                                    name=f"{user.first_name} {user.last_name}".strip() or user.email,
+                                    first_name=user.first_name,
+                                    last_name=user.last_name,
+                                    email=user.email,
+                                    customer_type='individual',
+                                    status='active'
+                                )
+                                logger.info(f"Created Customer record {raised_by_customer.id} for user {user.email}")
+                        except Exception as e:
+                            logger.error(f"Error creating/finding customer record: {e}", exc_info=True)
+                    
+                    # If customer_id provided explicitly (for vendors/employees)
                     if customer_id:
                         from crmApp.models import Customer
                         try:
-                            customer = Customer.objects.get(id=customer_id, organization_id=org_id)
+                            raised_by_customer = Customer.objects.get(id=customer_id, organization_id=target_org_id)
+                            is_client_issue = True
                         except Customer.DoesNotExist:
-                            return {"error": f"Customer with ID {customer_id} not found in your organization"}
+                            return {"error": f"Customer with ID {customer_id} not found in the organization"}
                     
                     issue = Issue.objects.create(
-                        organization_id=org_id,
+                        organization_id=target_org_id,
                         title=title,
                         description=description,
                         priority=priority.lower() if priority else "medium",
                         category=category.lower() if category else "other",
-                        customer=customer,
+                        raised_by_customer=raised_by_customer,
+                        is_client_issue=is_client_issue,
                         status="open"
                     )
                     
                     logger.info(f"Issue {issue.id} created successfully")
                     
-                    return {
+                    # Automatically sync to Linear
+                    linear_synced = False
+                    linear_url = None
+                    try:
+                        from crmApp.services.issue_linear_service import IssueLinearService
+                        from crmApp.models import Organization
+                        
+                        linear_service = IssueLinearService()
+                        organization = Organization.objects.get(id=target_org_id)
+                        
+                        # Get Linear team ID
+                        team_id = linear_service.get_team_id(None, organization, issue)
+                        
+                        if team_id:
+                            logger.info(f"Syncing issue {issue.id} to Linear (team_id: {team_id})")
+                            success, linear_data, error = linear_service.sync_issue_to_linear(
+                                issue=issue,
+                                team_id=team_id,
+                                update_existing=False
+                            )
+                            
+                            if success and linear_data:
+                                linear_synced = True
+                                linear_url = linear_data.get('url')
+                                logger.info(f"Issue {issue.id} synced to Linear: {linear_url}")
+                            else:
+                                logger.warning(f"Failed to sync issue {issue.id} to Linear: {error}")
+                        else:
+                            logger.warning(f"No Linear team ID found for organization {target_org_id}")
+                    except Exception as e:
+                        logger.error(f"Error syncing issue {issue.id} to Linear: {e}", exc_info=True)
+                    
+                    # Get vendor name for response
+                    vendor_name_display = "the vendor"
+                    try:
+                        from crmApp.models import Vendor
+                        vendor = Vendor.objects.get(organization_id=target_org_id)
+                        vendor_name_display = vendor.name
+                    except:
+                        pass
+                    
+                    response = {
                         "success": True,
                         "id": issue.id,
                         "title": issue.title,
-                        "message": f"Issue '{title}' created successfully"
+                        "vendor": vendor_name_display,
+                        "message": f"Issue '{title}' created successfully for {vendor_name_display}. Issue ID: {issue.id}"
                     }
+                    
+                    if linear_synced and linear_url:
+                        response["linear_synced"] = True
+                        response["linear_url"] = linear_url
+                        response["message"] += f" and synced to Linear: {linear_url}"
+                    
+                    return response
                 except Exception as e:
                     logger.error(f"Error creating issue: {e}", exc_info=True)
                     return {"error": f"Failed to create issue: {str(e)}"}
             return await create()
         
         async def update_issue_tool(issue_id: int, status: str = None, priority: str = None, title: str = None, description: str = None):
-            """Update an existing issue"""
+            """Update an existing issue (change status, priority, resolve, etc.)"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('issue', 'update')
+            if auth_error:
+                return auth_error
+            
             @sync_to_async(thread_sensitive=False)
             def update():
                 if not org_id:
@@ -1223,6 +1551,96 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     }
                 except Exception as e:
                     return {"error": f"Employee not found: {str(e)}"}
+            return await fetch()
+        
+        # === VENDOR TOOLS ===
+        async def list_vendors_tool(status: str = "active", limit: int = 20):
+            """List vendors accessible to the user"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('vendor', 'read')
+            if auth_error:
+                return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                from crmApp.models import Vendor
+                
+                # For customers, get vendors they are associated with through CustomerOrganization
+                if role == 'customer':
+                    # Get all organizations the customer belongs to
+                    from crmApp.models import CustomerOrganization
+                    customer_orgs = CustomerOrganization.objects.filter(
+                        customer_id=user_context.get('user_id')
+                    ).values_list('organization_id', flat=True)
+                    
+                    # Get vendors from those organizations
+                    queryset = Vendor.objects.filter(organization_id__in=customer_orgs)
+                else:
+                    # For vendors/employees, use organization filter
+                    if not org_id:
+                        return {"error": "No organization context found"}
+                    queryset = Vendor.objects.filter(organization_id=org_id)
+                
+                # Apply status filter
+                if status and status.lower() != "all":
+                    queryset = queryset.filter(status=status.lower())
+                
+                vendors = queryset.order_by('name')[:limit]
+                
+                return [
+                    {
+                        "id": v.id,
+                        "name": v.name,
+                        "email": v.email or "",
+                        "phone": v.phone or "",
+                        "contact_person": v.contact_person or "",
+                        "vendor_type": v.vendor_type or "",
+                        "status": v.status,
+                    }
+                    for v in vendors
+                ]
+            return await fetch()
+        
+        async def get_vendor_tool(vendor_id: int):
+            """Get detailed information about a specific vendor"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('vendor', 'read')
+            if auth_error:
+                return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                from crmApp.models import Vendor
+                try:
+                    # For customers, verify they have access to this vendor's organization
+                    if role == 'customer':
+                        from crmApp.models import CustomerOrganization
+                        customer_orgs = CustomerOrganization.objects.filter(
+                            customer_id=user_context.get('user_id')
+                        ).values_list('organization_id', flat=True)
+                        vendor = Vendor.objects.get(id=vendor_id, organization_id__in=customer_orgs)
+                    else:
+                        # For vendors/employees
+                        if org_id:
+                            vendor = Vendor.objects.get(id=vendor_id, organization_id=org_id)
+                        else:
+                            vendor = Vendor.objects.get(id=vendor_id)
+                    
+                    return {
+                        "id": vendor.id,
+                        "name": vendor.name,
+                        "email": vendor.email or "",
+                        "phone": vendor.phone or "",
+                        "contact_person": vendor.contact_person or "",
+                        "vendor_type": vendor.vendor_type or "",
+                        "status": vendor.status,
+                        "address": vendor.address or "",
+                        "city": vendor.city or "",
+                        "country": vendor.country or "",
+                        "website": vendor.website or "",
+                    }
+                except Exception as e:
+                    return {"error": f"Vendor not found or access denied: {str(e)}"}
             return await fetch()
         
         async def get_current_user_context_tool():
@@ -1538,8 +1956,13 @@ Use this function when user says things like:
                 ),
             ),
             types.FunctionDeclaration(
+                name="list_my_vendors_for_issues",
+                description="List ALL available vendors/organizations in the system. Customers can create issues for any vendor. IMPORTANT: Call this BEFORE creating an issue to see all available vendors.",
+                parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+            ),
+            types.FunctionDeclaration(
                 name="create_issue",
-                description="Create a new issue/support ticket in the CRM. Organization ID is automatically determined from user context.",
+                description="Create a new issue/support ticket for ANY vendor/organization. FOR CUSTOMERS: Specify vendor_name, organization_name, or organization_id (get list from list_my_vendors_for_issues).",
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
@@ -1547,6 +1970,9 @@ Use this function when user says things like:
                         "description": types.Schema(type=types.Type.STRING, description="Issue description (required)"),
                         "priority": types.Schema(type=types.Type.STRING, description="Priority: low, medium, high, critical (default: medium)"),
                         "category": types.Schema(type=types.Type.STRING, description="Category: quality, delivery, payment, communication, other (default: other)"),
+                        "vendor_name": types.Schema(type=types.Type.STRING, description="Vendor name (for customers - which vendor the issue is for)"),
+                        "organization_name": types.Schema(type=types.Type.STRING, description="Organization name (for customers - which organization the issue is for)"),
+                        "organization_id": types.Schema(type=types.Type.INTEGER, description="Organization ID (for customers - alternative to vendor_name/organization_name)"),
                         "customer_id": types.Schema(type=types.Type.INTEGER, description="Associated customer ID (optional)"),
                     },
                     required=["title", "description"],
@@ -1583,6 +2009,29 @@ Use this function when user says things like:
                 name="get_dashboard_stats",
                 description="Get comprehensive dashboard statistics for customers, leads, deals, and issues",
                 parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+            ),
+            # Vendor functions
+            types.FunctionDeclaration(
+                name="list_vendors",
+                description="List vendors accessible to the user. For customers, shows vendors they are associated with. For vendors/employees, shows vendors in their organization.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "status": types.Schema(type=types.Type.STRING, description="Filter by status: active, inactive (default: active)"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 20)"),
+                    },
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="get_vendor",
+                description="Get detailed information about a specific vendor by ID. Customers can only access vendors they are associated with.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "vendor_id": types.Schema(type=types.Type.INTEGER, description="Vendor ID (required)"),
+                    },
+                    required=["vendor_id"],
+                ),
             ),
             # Employee functions
             types.FunctionDeclaration(
@@ -1646,11 +2095,15 @@ Use this function when user says things like:
             # Issue tools
             "list_issues": list_issues_tool,
             "get_issue": get_issue_tool,
+            "list_my_vendors_for_issues": list_my_vendors_for_issues_tool,
             "create_issue": create_issue_tool,
             "update_issue": update_issue_tool,
             "resolve_issue": resolve_issue_tool,
             # Analytics tools
             "get_dashboard_stats": get_dashboard_stats_tool,
+            # Vendor tools
+            "list_vendors": list_vendors_tool,
+            "get_vendor": get_vendor_tool,
             # Employee tools
             "list_employees": list_employees_tool,
             "get_employee": get_employee_tool,
@@ -1859,7 +2312,7 @@ Use this function when user says things like:
                         
                         # Stream the final response
                         async for chunk in final_response_stream:
-                            if chunk.candidates and chunk.candidates[0].content:
+                            if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
                                 for part in chunk.candidates[0].content.parts:
                                     if hasattr(part, 'text') and part.text:
                                         yield part.text

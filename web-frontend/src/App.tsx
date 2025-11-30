@@ -41,6 +41,7 @@ import EmployeeDashboardPage from './pages/employee/EmployeeDashboardPage'
 import EmployeeTasksPage from './pages/employee/EmployeeTasksPage'
 import EmployeeSettingsPage from './pages/employee/EmployeeSettingsPage'
 import MessagesPage from './pages/MessagesPage'
+import ClientMessagesPage from './pages/ClientMessagesPage'
 import './App.css'
 
 function App() {
@@ -346,6 +347,14 @@ function App() {
             element={
               <ProtectedRoute allowedProfiles={['customer']}>
                 <ClientIssueDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/client/messages"
+            element={
+              <ProtectedRoute allowedProfiles={['customer']}>
+                <ClientMessagesPage />
               </ProtectedRoute>
             }
           />
