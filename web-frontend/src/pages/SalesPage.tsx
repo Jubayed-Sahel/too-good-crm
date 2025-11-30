@@ -304,9 +304,14 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onView
         {/* Header with Badge and Action Buttons */}
         <HStack justify="space-between" align="start">
           <VStack align="start" gap={1} style={{ flex: 1 }}>
-            <Badge colorPalette="blue" size="sm" w="fit-content">
-              Lead
-            </Badge>
+            <HStack gap={2}>
+              <Badge colorPalette="blue" size="sm" w="fit-content">
+                Lead
+              </Badge>
+              <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                ID: {lead.id}
+              </Text>
+            </HStack>
             {/* Current Stage Display */}
             {lead.stage_name && (
               <Badge

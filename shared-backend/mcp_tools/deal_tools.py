@@ -15,8 +15,8 @@ def register_deal_tools(mcp):
     @mcp.tool()
     def list_deals(
         status: str = "active",
-        stage_id: Optional[int] = None,
-        pipeline_id: Optional[int] = None,
+        stage: Optional[str] = None,
+        pipeline_id: Optional[str] = None,
         priority: Optional[str] = None,
         is_won: Optional[bool] = None,
         is_lost: Optional[bool] = None,
@@ -29,8 +29,8 @@ def register_deal_tools(mcp):
         
         Args:
             status: Filter by status (active, closed, all)
-            stage_id: Filter by pipeline stage ID
-            pipeline_id: Filter by pipeline ID
+            stage: Filter by stage name or ID (e.g., "lead", "qualified", "proposal", "negotiation", "closed-won", "closed-lost", "prospecting")
+            pipeline_id: Filter by pipeline ID or name
             priority: Filter by priority (low, medium, high, urgent)
             is_won: Filter by won status
             is_lost: Filter by lost status
@@ -49,10 +49,25 @@ def register_deal_tools(mcp):
             
             if status and status.lower() != 'all':
                 queryset = queryset.filter(status=status)
-            if stage_id:
-                queryset = queryset.filter(stage_id=stage_id)
+            
+            # Handle stage filter - can be ID or name
+            if stage:
+                # Try as integer ID first
+                try:
+                    stage_id = int(stage)
+                    queryset = queryset.filter(stage_id=stage_id)
+                except (ValueError, TypeError):
+                    # It's a stage name, filter by name
+                    queryset = queryset.filter(stage__name__iexact=stage)
+            
+            # Handle pipeline_id filter - can be ID or name
             if pipeline_id:
-                queryset = queryset.filter(pipeline_id=pipeline_id)
+                try:
+                    pid = int(pipeline_id)
+                    queryset = queryset.filter(pipeline_id=pid)
+                except (ValueError, TypeError):
+                    # It's a pipeline name, filter by name
+                    queryset = queryset.filter(pipeline__name__iexact=pipeline_id)
             if priority:
                 queryset = queryset.filter(priority=priority)
             if is_won is not None:

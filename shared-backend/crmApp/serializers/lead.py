@@ -10,8 +10,10 @@ from .employee import EmployeeListSerializer
 class LeadListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for lead lists"""
     assigned_to_name = serializers.SerializerMethodField()
-    stage_id = serializers.IntegerField(source='stage.id', read_only=True)
-    stage_name = serializers.CharField(source='stage.name', read_only=True)
+    stage_id = serializers.IntegerField(source='stage.id', read_only=True, allow_null=True)
+    stage_name = serializers.CharField(source='stage.name', read_only=True, allow_null=True)
+    pipeline_name = serializers.SerializerMethodField()
+    stage_info = serializers.SerializerMethodField()
     
     class Meta:
         model = Lead
@@ -19,13 +21,26 @@ class LeadListSerializer(serializers.ModelSerializer):
             'id', 'code', 'name', 'email', 'phone', 'organization_name',
             'job_title', 'status', 'source', 'qualification_status',
             'lead_score', 'estimated_value', 'assigned_to_name',
-            'is_converted', 'stage_id', 'stage_name', 'created_at'
+            'is_converted', 'stage_id', 'stage_name', 'pipeline_name', 
+            'stage_info', 'created_at'
         ]
     
     def get_assigned_to_name(self, obj):
         if obj.assigned_to:
             return obj.assigned_to.full_name
         return None
+    
+    def get_pipeline_name(self, obj):
+        if obj.stage and obj.stage.pipeline:
+            return obj.stage.pipeline.name
+        return None
+    
+    def get_stage_info(self, obj):
+        """Provide comprehensive stage information"""
+        if obj.stage:
+            stage = obj.stage
+            return f"{stage.pipeline.name} - {stage.name}"
+        return "No stage assigned"
 
 
 class LeadStageHistorySerializer(serializers.ModelSerializer):
@@ -52,8 +67,10 @@ class LeadSerializer(serializers.ModelSerializer):
     """Full lead serializer"""
     assigned_to = EmployeeListSerializer(read_only=True)
     converted_by_name = serializers.SerializerMethodField()
-    stage_id = serializers.IntegerField(source='stage.id', read_only=True)
-    stage_name = serializers.CharField(source='stage.name', read_only=True)
+    stage_id = serializers.IntegerField(source='stage.id', read_only=True, allow_null=True)
+    stage_name = serializers.CharField(source='stage.name', read_only=True, allow_null=True)
+    pipeline_name = serializers.SerializerMethodField()
+    stage_info = serializers.SerializerMethodField()
     stage_history = serializers.SerializerMethodField()
     
     class Meta:
@@ -66,7 +83,8 @@ class LeadSerializer(serializers.ModelSerializer):
             'converted_by', 'converted_by_name', 'tags', 'notes',
             'campaign', 'referrer', 'address', 'city', 'state',
             'postal_code', 'country', 'stage', 'stage_id', 'stage_name',
-            'stage_history', 'created_at', 'updated_at'
+            'pipeline_name', 'stage_info', 'stage_history', 
+            'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'code', 'created_at', 'updated_at', 'converted_at', 'stage']
     
@@ -74,6 +92,24 @@ class LeadSerializer(serializers.ModelSerializer):
         if obj.converted_by:
             return obj.converted_by.full_name
         return None
+    
+    def get_pipeline_name(self, obj):
+        if obj.stage and obj.stage.pipeline:
+            return obj.stage.pipeline.name
+        return None
+    
+    def get_stage_info(self, obj):
+        """Provide comprehensive stage information for AI to understand"""
+        if obj.stage:
+            stage = obj.stage
+            pipeline = stage.pipeline
+            info = f"{pipeline.name} - {stage.name}"
+            if stage.is_closed_won:
+                info += " (Closed Won)"
+            elif stage.is_closed_lost:
+                info += " (Closed Lost)"
+            return info
+        return "No stage assigned - lead not yet in sales pipeline"
     
     def get_stage_history(self, obj):
         """Get stage history for the lead"""
@@ -429,6 +465,38 @@ class ConvertLeadSerializer(serializers.Serializer):
             notes=lead.notes,
             converted_from_lead=lead,
         )
+        
+        # Move lead to "Closed Won" stage in pipeline
+        from crmApp.models import PipelineStage, LeadStageHistory
+        try:
+            closed_won_stage = PipelineStage.objects.filter(
+                pipeline__organization=lead.organization,
+                is_closed_won=True,
+                is_active=True
+            ).first()
+            
+            if closed_won_stage:
+                previous_stage = lead.stage
+                lead.stage = closed_won_stage
+                
+                # Create stage history entry
+                changed_by = self.context['request'].user.employee_profiles.filter(
+                    organization=lead.organization
+                ).first()
+                
+                LeadStageHistory.objects.create(
+                    lead=lead,
+                    organization=lead.organization,
+                    stage=closed_won_stage,
+                    previous_stage=previous_stage,
+                    changed_by=changed_by,
+                    notes='Automatically moved to Closed Won after conversion to customer'
+                )
+        except Exception as e:
+            # Log but don't fail the conversion if stage update fails
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to update lead stage to Closed Won: {str(e)}")
         
         # Update lead
         lead.is_converted = True

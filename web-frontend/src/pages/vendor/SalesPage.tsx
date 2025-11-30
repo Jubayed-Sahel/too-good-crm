@@ -257,9 +257,14 @@ function SortableLeadCard({ lead, stageColor, formatCurrency, formatDate, onClic
       onClick={onClick}
     >
       <VStack align="stretch" gap={3}>
-        <Badge colorPalette="blue" size="sm" w="fit-content">
-          Lead
-        </Badge>
+        <HStack justify="space-between">
+          <Badge colorPalette="blue" size="sm" w="fit-content">
+            Lead
+          </Badge>
+          <Text fontSize="xs" color="gray.500" fontWeight="medium">
+            ID: {lead.id}
+          </Text>
+        </HStack>
         
         {/* Lead Name */}
         <Text

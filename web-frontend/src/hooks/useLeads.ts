@@ -42,6 +42,7 @@ export function useLeads(filters?: LeadFilters) {
     queryKey: leadKeys.list(filtersWithOrg),
     queryFn: () => leadService.getLeads(filtersWithOrg),
     enabled: !!activeOrganizationId,
+    refetchInterval: 10000, // Refetch every 10 seconds to pick up MCP chatbot changes
   });
 }
 
