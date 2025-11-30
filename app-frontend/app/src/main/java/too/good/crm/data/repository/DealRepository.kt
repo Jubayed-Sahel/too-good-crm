@@ -53,8 +53,15 @@ class DealRepository {
     /**
      * Create new deal
      */
-    suspend fun createDeal(deal: CreateDealRequest): NetworkResult<Deal> = safeApiCall {
-        apiService.createDeal(deal)
+    suspend fun createDeal(deal: CreateDealRequest): NetworkResult<Deal> {
+        android.util.Log.d("DealRepository", "📤 POST /api/deals/")
+        android.util.Log.d("DealRepository", "Request body: $deal")
+        
+        return safeApiCall {
+            val result = apiService.createDeal(deal)
+            android.util.Log.d("DealRepository", "✅ Deal created: ${result.id} - ${result.title}")
+            result
+        }
     }
     
     /**

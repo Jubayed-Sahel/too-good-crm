@@ -2,6 +2,7 @@ package too.good.crm.data.api
 
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import okio.Buffer
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import too.good.crm.BuildConfig
@@ -80,6 +81,9 @@ object ApiClient {
             if (!isPublicEndpoint) {
                 authToken?.let {
                     requestBuilder.header("Authorization", "Token $it")
+                    android.util.Log.d("ApiClient", "🔐 Added Authorization header (token length: ${it.length})")
+                } ?: run {
+                    android.util.Log.w("ApiClient", "⚠️ No auth token available for ${original.url.encodedPath}")
                 }
             }
 
@@ -87,7 +91,63 @@ object ApiClient {
                 .method(original.method, original.body)
                 .build()
 
-            chain.proceed(request)
+            // Debug logging for customer update requests
+            if (request.url.encodedPath.contains("customers") && 
+                (request.method == "PATCH" || request.method == "PUT")) {
+                android.util.Log.d("ApiClient", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                android.util.Log.d("ApiClient", "🔄 CUSTOMER UPDATE REQUEST DEBUG")
+                android.util.Log.d("ApiClient", "Method: ${request.method}")
+                android.util.Log.d("ApiClient", "URL: ${request.url}")
+                android.util.Log.d("ApiClient", "Path: ${request.url.encodedPath}")
+                android.util.Log.d("ApiClient", "Has Auth Token: ${authToken != null}")
+                request.headers.names().forEach { headerName ->
+                    if (headerName.equals("Authorization", ignoreCase = true)) {
+                        android.util.Log.d("ApiClient", "Header: $headerName = Token [REDACTED]")
+                    } else {
+                        android.util.Log.d("ApiClient", "Header: $headerName = ${request.header(headerName)}")
+                    }
+                }
+                // Try to log request body (if available)
+                request.body?.let { body ->
+                    try {
+                        val buffer = okio.Buffer()
+                        body.writeTo(buffer)
+                        val bodyString = buffer.readUtf8()
+                        android.util.Log.d("ApiClient", "Request Body: $bodyString")
+                    } catch (e: Exception) {
+                        android.util.Log.d("ApiClient", "Request Body: [Could not read]")
+                    }
+                }
+                android.util.Log.d("ApiClient", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            }
+
+            val response = chain.proceed(request)
+            
+            // Debug logging for customer update responses
+            if (request.url.encodedPath.contains("customers") && 
+                (request.method == "PATCH" || request.method == "PUT")) {
+                android.util.Log.d("ApiClient", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                android.util.Log.d("ApiClient", "📥 CUSTOMER UPDATE RESPONSE DEBUG")
+                android.util.Log.d("ApiClient", "Status Code: ${response.code}")
+                android.util.Log.d("ApiClient", "Status Message: ${response.message}")
+                android.util.Log.d("ApiClient", "Is Successful: ${response.isSuccessful}")
+                response.headers.names().forEach { headerName ->
+                    android.util.Log.d("ApiClient", "Response Header: $headerName = ${response.header(headerName)}")
+                }
+                
+                // Log error body for failed requests
+                if (!response.isSuccessful) {
+                    try {
+                        val errorBody = response.peekBody(2048).string()
+                        android.util.Log.e("ApiClient", "Error Response Body: $errorBody")
+                    } catch (e: Exception) {
+                        android.util.Log.e("ApiClient", "Could not read error body: ${e.message}")
+                    }
+                }
+                android.util.Log.d("ApiClient", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            }
+            
+            response
         }
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
@@ -129,6 +189,14 @@ object ApiClient {
      */
     val roleSelectionApiService: RoleSelectionApiService by lazy {
         retrofit.create(RoleSelectionApiService::class.java)
+    }
+
+    /**
+     * User Context API Service instance (for permissions)
+     * Matches web frontend: /api/user-context/permissions/
+     */
+    val userContextApiService: UserContextApiService by lazy {
+        retrofit.create(UserContextApiService::class.java)
     }
 
     /**

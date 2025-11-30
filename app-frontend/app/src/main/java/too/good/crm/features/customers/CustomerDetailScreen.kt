@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import too.good.crm.ui.utils.*
 import too.good.crm.ui.video.VideoCallHelper
 import too.good.crm.ui.video.VideoCallPermissionHandler
+import too.good.crm.data.rbac.PermissionManager
 import android.widget.Toast
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
@@ -56,8 +58,14 @@ fun CustomerDetailScreen(
     val viewModel: CustomersViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
     
+    // Refresh customer when list updates
     val customer = remember(uiState.customers, customerId) {
         uiState.customers.find { it.id == customerId }
+    }
+    
+    // Reload customers when screen appears to get latest updates (e.g., after editing)
+    LaunchedEffect(customerId) {
+        viewModel.loadCustomers()
     }
     
     val activityRepository = remember { ActivityRepository() }
@@ -188,23 +196,29 @@ fun CustomerDetailScreen(
                 title = { Text("Customer Details") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = onEdit) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = DesignTokens.Colors.Primary
-                        )
+                    // Edit button - only show if user has update permission
+                    if (PermissionManager.canUpdate("customer")) {
+                        IconButton(onClick = onEdit) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit",
+                                tint = DesignTokens.Colors.Primary
+                            )
+                        }
                     }
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = DesignTokens.Colors.Error
-                        )
+                    // Delete button - only show if user has delete permission
+                    if (PermissionManager.canDelete("customer")) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = DesignTokens.Colors.Error
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -388,17 +402,33 @@ fun CustomerDetailScreen(
                         }
                     }
                     
-                    // Edit Button
-                    Button(
-                        onClick = onEdit,
-                        modifier = Modifier.weight(if (customer.email.isNotEmpty()) 1f else 2f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = DesignTokens.Colors.Primary
-                        )
-                    ) {
-                        Icon(Icons.Default.Edit, "Edit")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Edit")
+                    // Edit Button - Show only if user has update permission
+                    if (PermissionManager.canUpdate("customer")) {
+                        Button(
+                            onClick = onEdit,
+                            modifier = Modifier.weight(if (customer.email.isNotEmpty()) 1f else 2f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = DesignTokens.Colors.Primary
+                            )
+                        ) {
+                            Icon(Icons.Default.Edit, "Edit")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Edit")
+                        }
+                    }
+                    
+                    // Delete Button - Show only if user has delete permission
+                    if (PermissionManager.canDelete("customer")) {
+                        IconButton(
+                            onClick = { showDeleteDialog = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                "Delete",
+                                tint = DesignTokens.Colors.Error
+                            )
+                        }
                     }
                 }
                 

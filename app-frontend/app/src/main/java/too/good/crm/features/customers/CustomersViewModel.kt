@@ -289,7 +289,7 @@ class CustomersViewModel : ViewModel() {
             value = this.totalValue ?: 0.0,
             createdDate = this.createdAt ?: "",
             lastContact = this.updatedAt ?: "",
-            industry = "",
+            industry = this.industry?.takeIf { it.isNotBlank() } ?: "",
             website = this.website ?: "",
             userId = this.userId
         )

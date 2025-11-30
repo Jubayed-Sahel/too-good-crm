@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -132,7 +133,7 @@ fun DealDetailScreen(
                 title = { Text("Deal Details") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -1017,7 +1018,7 @@ private fun StatusBadge(status: String, isWon: Boolean, isLost: Boolean) {
         else -> Triple(
             DesignTokens.Colors.OnSurfaceVariant.copy(alpha = 0.1f),
             DesignTokens.Colors.OnSurfaceVariant,
-            status.capitalize(Locale.getDefault())
+            status.replaceFirstChar { it.uppercase() }
         )
     }
     
@@ -1065,7 +1066,7 @@ private fun PriorityBadge(priority: String) {
         color = backgroundColor
     ) {
         Text(
-            text = priority.capitalize(Locale.getDefault()),
+            text = priority.replaceFirstChar { it.uppercase() },
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.bodySmall,
             color = textColor,

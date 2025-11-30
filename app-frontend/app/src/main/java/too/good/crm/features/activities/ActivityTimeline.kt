@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Note
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -319,9 +321,9 @@ private fun getActivityTypeIcon(activityType: String): ImageVector {
     return when (activityType.lowercase()) {
         "call" -> Icons.Default.Phone
         "email" -> Icons.Default.Email
-        "telegram" -> Icons.Default.Send
+        "telegram" -> Icons.AutoMirrored.Filled.Send
         "meeting" -> Icons.Default.Event
-        "note" -> Icons.Default.Note
+        "note" -> Icons.AutoMirrored.Filled.Note
         "task" -> Icons.Default.CheckCircle
         else -> Icons.Default.EventNote
     }

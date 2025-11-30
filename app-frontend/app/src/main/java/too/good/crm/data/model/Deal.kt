@@ -103,18 +103,20 @@ data class PipelineStage(
 
 /**
  * Request for creating a deal
+ * Matches web frontend: web-frontend/src/services/deal.service.ts DealCreateData
  */
 data class CreateDealRequest(
-    val organization: Int? = null,
+    val organization: Int,  // Required - organization ID from active profile
     val title: String,
     val description: String? = null,
-    @SerializedName("customer_id") val customerId: Int,
-    val value: String,
+    val customer: Int,  // Customer ID (not customer_id for POST)
+    val value: Double,  // Backend expects number, not string
     val currency: String = "USD",
-    @SerializedName("pipeline_id") val pipelineId: Int? = null,
+    val pipeline: Int? = null,  // Pipeline ID (not pipeline_id for POST)
+    val stage: Int? = null,  // Optional - Pipeline stage ID (backend may handle default)
     val probability: Int? = null,
     @SerializedName("expected_close_date") val expectedCloseDate: String? = null,
-    @SerializedName("assigned_to_id") val assignedToId: Int? = null,
+    @SerializedName("assigned_to") val assignedTo: Int? = null,  // assigned_to not assigned_to_id
     val priority: String = "medium",
     val tags: List<String>? = null,
     val notes: String? = null,

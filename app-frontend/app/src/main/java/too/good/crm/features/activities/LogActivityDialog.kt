@@ -5,6 +5,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Note
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -59,7 +61,7 @@ fun LogActivityDialog(
     val isTitleValid = title.isNotBlank()
     val canSave = isTitleValid && !isLoading
     
-    AlertDialog(
+    BasicAlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier
             .fillMaxWidth()
@@ -92,7 +94,7 @@ fun LogActivityDialog(
                     }
                 }
                 
-                Divider()
+                HorizontalDivider()
                 
                 // Content
                 Column(
@@ -146,7 +148,7 @@ fun LogActivityDialog(
                             ActivityTypeChip(
                                 type = "telegram",
                                 label = "Telegram",
-                                icon = Icons.Default.Send,
+                                icon = Icons.AutoMirrored.Filled.Send,
                                 isSelected = activityType == "telegram",
                                 onClick = { activityType = "telegram" },
                                 modifier = Modifier.weight(1f)
@@ -154,7 +156,7 @@ fun LogActivityDialog(
                             ActivityTypeChip(
                                 type = "note",
                                 label = "Note",
-                                icon = Icons.Default.Note,
+                                icon = Icons.AutoMirrored.Filled.Note,
                                 isSelected = activityType == "note",
                                 onClick = { activityType = "note" },
                                 modifier = Modifier.weight(1f)
@@ -282,7 +284,7 @@ fun LogActivityDialog(
                 }
                 
                 // Actions
-                Divider()
+                HorizontalDivider()
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -465,7 +467,7 @@ private fun TelegramFields(
             value = telegramUsername,
             onValueChange = onTelegramUsernameChange,
             label = { Text("Telegram Username") },
-            leadingIcon = { Icon(Icons.Default.Send, null) },
+            leadingIcon = { Icon(Icons.AutoMirrored.Filled.Send, null) },
             modifier = Modifier.fillMaxWidth()
         )
         OutlinedTextField(

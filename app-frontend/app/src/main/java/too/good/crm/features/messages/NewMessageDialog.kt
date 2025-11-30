@@ -92,7 +92,7 @@ fun NewMessageDialog(
                     }
                 }
                 
-                Divider(color = DesignTokens.Colors.OutlineVariant)
+                HorizontalDivider(color = DesignTokens.Colors.OutlineVariant)
                 
                 // Search bar
                 OutlinedTextField(
