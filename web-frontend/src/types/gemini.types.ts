@@ -42,5 +42,6 @@ export interface GeminiStreamEvent {
   type: 'connected' | 'message' | 'completed' | 'error';
   content?: string;
   error?: string;
+  conversation_id?: string;
 }
 

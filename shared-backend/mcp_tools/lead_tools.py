@@ -5,7 +5,7 @@ Provides tools for lead operations with RBAC
 
 import logging
 from typing import Optional, List, Dict, Any
-from crmApp.models import Lead, Employee
+from crmApp.models import Lead, Employee, PipelineStage, LeadStageHistory
 from crmApp.serializers import LeadSerializer, LeadListSerializer
 
 logger = logging.getLogger(__name__)
@@ -429,6 +429,227 @@ def register_lead_tools(mcp):
         except Exception as e:
             logger.error(f"Error assigning lead {lead_id}: {str(e)}", exc_info=True)
             return {"error": f"Failed to assign lead: {str(e)}"}
+    
+    @mcp.tool()
+    def move_lead_stage(
+        lead_id: int,
+        stage: str,
+        notes: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Move a lead to a different pipeline stage.
+        
+        Args:
+            lead_id: ID of the lead to move
+            stage: Stage name or stage ID to move the lead to
+            notes: Optional notes about the stage change
+        
+        Returns:
+            Success message with updated lead
+        """
+        try:
+            mcp.check_permission('lead', 'update')
+            org_id = mcp.get_organization_id()
+            user_id = mcp.get_user_id()
+            
+            # Get the lead
+            lead = Lead.objects.select_related('stage').get(
+                id=lead_id,
+                organization_id=org_id
+            )
+            
+            # Parse stage parameter - can be ID or name
+            new_stage = None
+            try:
+                # Try to parse as integer ID first
+                stage_id = int(stage)
+                new_stage = PipelineStage.objects.get(
+                    id=stage_id,
+                    pipeline__organization_id=org_id
+                )
+            except (ValueError, TypeError):
+                # If not an integer, treat as stage name
+                new_stage = PipelineStage.objects.filter(
+                    name__iexact=stage,
+                    pipeline__organization_id=org_id
+                ).first()
+            
+            if not new_stage:
+                return {"error": f"Pipeline stage '{stage}' not found in your organization"}
+            
+            # Store previous stage for history
+            previous_stage = lead.stage
+            
+            # Update lead stage
+            lead.stage = new_stage
+            lead.save()
+            
+            # Create stage history entry
+            try:
+                employee = Employee.objects.get(user_id=user_id, organization_id=org_id)
+                LeadStageHistory.objects.create(
+                    lead=lead,
+                    organization_id=org_id,
+                    stage=new_stage,
+                    previous_stage=previous_stage,
+                    changed_by=employee,
+                    notes=notes
+                )
+            except Employee.DoesNotExist:
+                # If employee not found, still create history without changed_by
+                LeadStageHistory.objects.create(
+                    lead=lead,
+                    organization_id=org_id,
+                    stage=new_stage,
+                    previous_stage=previous_stage,
+                    notes=notes
+                )
+            
+            serializer = LeadSerializer(lead)
+            prev_stage_name = previous_stage.name if previous_stage else 'None'
+            
+            logger.info(f"Moved lead {lead_id} from '{prev_stage_name}' to '{new_stage.name}' in org {org_id}")
+            return {
+                "success": True,
+                "message": f"Lead '{lead.name}' moved from '{prev_stage_name}' to '{new_stage.name}'",
+                "lead": serializer.data,
+                "stage_change": {
+                    "from": prev_stage_name,
+                    "to": new_stage.name,
+                    "pipeline": new_stage.pipeline.name
+                }
+            }
+            
+        except PermissionError as e:
+            return {"error": str(e)}
+        except Lead.DoesNotExist:
+            return {"error": f"Lead with ID {lead_id} not found"}
+        except Exception as e:
+            logger.error(f"Error moving lead {lead_id} to stage: {str(e)}", exc_info=True)
+            return {"error": f"Failed to move lead stage: {str(e)}"}
+    
+    @mcp.tool()
+    def get_pipeline_stages() -> Dict[str, Any]:
+        """
+        Get all available pipeline stages for leads in the organization.
+        
+        Returns:
+            List of pipeline stages grouped by pipeline
+        """
+        try:
+            mcp.check_permission('lead', 'read')
+            org_id = mcp.get_organization_id()
+            
+            if not org_id:
+                return {"error": "No organization context found"}
+            
+            from crmApp.models import Pipeline
+            pipelines = Pipeline.objects.filter(
+                organization_id=org_id,
+                is_active=True
+            ).prefetch_related('stages')
+            
+            result = []
+            stage_names_list = []  # For easy reference
+            
+            for pipeline in pipelines:
+                stages = pipeline.stages.filter(is_active=True).order_by('order')
+                stage_list = []
+                
+                for stage in stages:
+                    stage_info = {
+                        'id': stage.id,
+                        'name': stage.name,
+                        'full_name': f"{pipeline.name} - {stage.name}",
+                        'order': stage.order,
+                        'probability': float(stage.probability),
+                        'is_closed_won': stage.is_closed_won,
+                        'is_closed_lost': stage.is_closed_lost,
+                        'description': stage.description or ''
+                    }
+                    
+                    # Add human-readable status
+                    if stage.is_closed_won:
+                        stage_info['status'] = 'Closed Won (Deal successful)'
+                    elif stage.is_closed_lost:
+                        stage_info['status'] = 'Closed Lost (Deal failed)'
+                    else:
+                        stage_info['status'] = f'Active stage (Win probability: {stage.probability}%)'
+                    
+                    stage_list.append(stage_info)
+                    stage_names_list.append(stage.name)
+                
+                result.append({
+                    'pipeline_id': pipeline.id,
+                    'pipeline_name': pipeline.name,
+                    'description': pipeline.description or '',
+                    'stages': stage_list,
+                    'total_stages': len(stage_list)
+                })
+            
+            logger.info(f"Retrieved pipeline stages for org {org_id}")
+            return {
+                "success": True,
+                "pipelines": result,
+                "total_pipelines": len(result),
+                "all_stage_names": stage_names_list,
+                "note": "Use stage 'name' or 'id' when moving leads. For example: 'Qualified', 'Contacted', 'Closed Won', etc."
+            }
+            
+        except PermissionError as e:
+            return {"error": str(e)}
+        except Exception as e:
+            logger.error(f"Error getting pipeline stages: {str(e)}", exc_info=True)
+            return {"error": f"Failed to get pipeline stages: {str(e)}"}
+    
+    @mcp.tool()
+    def get_lead_stage_history(lead_id: int) -> Dict[str, Any]:
+        """
+        Get the stage change history for a specific lead.
+        
+        Args:
+            lead_id: ID of the lead
+        
+        Returns:
+            List of stage changes with timestamps
+        """
+        try:
+            mcp.check_permission('lead', 'read')
+            org_id = mcp.get_organization_id()
+            
+            lead = Lead.objects.get(id=lead_id, organization_id=org_id)
+            
+            history = LeadStageHistory.objects.filter(
+                lead=lead
+            ).select_related(
+                'stage', 'previous_stage', 'changed_by'
+            ).order_by('-created_at')
+            
+            result = []
+            for entry in history:
+                result.append({
+                    'timestamp': entry.created_at.isoformat(),
+                    'from_stage': entry.previous_stage.name if entry.previous_stage else None,
+                    'to_stage': entry.stage.name if entry.stage else None,
+                    'changed_by': entry.changed_by.full_name if entry.changed_by else 'System',
+                    'notes': entry.notes
+                })
+            
+            logger.info(f"Retrieved stage history for lead {lead_id}")
+            return {
+                "success": True,
+                "lead_name": lead.name,
+                "current_stage": lead.stage.name if lead.stage else None,
+                "history": result
+            }
+            
+        except PermissionError as e:
+            return {"error": str(e)}
+        except Lead.DoesNotExist:
+            return {"error": f"Lead with ID {lead_id} not found"}
+        except Exception as e:
+            logger.error(f"Error getting lead stage history: {str(e)}", exc_info=True)
+            return {"error": f"Failed to get stage history: {str(e)}"}
     
     @mcp.tool()
     def get_lead_stats() -> Dict[str, Any]:

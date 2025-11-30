@@ -6,13 +6,17 @@ Provides endpoints for AI-powered CRM assistance
 import json
 import asyncio
 import logging
+import uuid
 from django.http import StreamingHttpResponse
+from django.utils import timezone
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from asgiref.sync import sync_to_async
 
 from crmApp.services.gemini_service import GeminiService
+from crmApp.models import GeminiConversation
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +61,45 @@ class GeminiViewSet(viewsets.ViewSet):
                 )
             
             user = request.user
+            
+            # Get organization from user's active profile
+            org_id = None
+            active_profile = user.user_profiles.filter(status='active', is_primary=True).first()
+            if not active_profile:
+                active_profile = user.user_profiles.filter(status='active').first()
+            if active_profile:
+                org_id = active_profile.organization_id
+            
+            # Get or create conversation
+            if not conversation_id:
+                conversation_id = str(uuid.uuid4())
+            
+            conversation, created = GeminiConversation.objects.get_or_create(
+                conversation_id=conversation_id,
+                defaults={
+                    'user': user,
+                    'organization_id': org_id,
+                    'messages': []
+                }
+            )
+            
+            # If conversation exists but belongs to different user, reject
+            if not created and conversation.user != user:
+                return Response(
+                    {'error': 'Conversation not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Load history from database if not provided
+            if not history and conversation.messages:
+                history = [
+                    {'role': msg['role'], 'content': msg['content']}
+                    for msg in conversation.messages
+                ]
+            
+            # Add user message to conversation
+            conversation.add_message('user', message)
+            
         except Exception as e:
             logger.error(f"Error parsing request: {str(e)}", exc_info=True)
             return Response(
@@ -73,10 +116,11 @@ class GeminiViewSet(viewsets.ViewSet):
         
         async def event_stream():
             """Generate Server-Sent Events stream"""
+            assistant_response = ""
             try:
                 logger.info("Starting SSE event stream")
-                # Send initial connection message
-                yield f"data: {json.dumps({'type': 'connected'})}\n\n"
+                # Send initial connection message with conversation_id
+                yield f"data: {json.dumps({'type': 'connected', 'conversation_id': conversation_id})}\n\n"
                 
                 logger.info("Calling gemini_service.chat_stream")
                 # Stream Gemini responses
@@ -88,6 +132,7 @@ class GeminiViewSet(viewsets.ViewSet):
                 ):
                     chunk_count += 1
                     logger.debug(f"Received chunk {chunk_count}: {chunk[:50]}...")
+                    assistant_response += chunk
                     # Send each chunk as SSE event
                     event_data = {
                         'type': 'message',
@@ -96,8 +141,13 @@ class GeminiViewSet(viewsets.ViewSet):
                     yield f"data: {json.dumps(event_data)}\n\n"
                 
                 logger.info(f"Stream completed after {chunk_count} chunks")
+                
+                # Save assistant response to conversation (use sync_to_async to avoid database errors)
+                if assistant_response:
+                    await sync_to_async(conversation.add_message, thread_sensitive=False)('assistant', assistant_response)
+                
                 # Send completion message
-                yield f"data: {json.dumps({'type': 'completed'})}\n\n"
+                yield f"data: {json.dumps({'type': 'completed', 'conversation_id': conversation_id})}\n\n"
                 
             except Exception as e:
                 error_msg = f"Error in stream: {str(e)}"
@@ -150,6 +200,118 @@ class GeminiViewSet(viewsets.ViewSet):
         response['X-Accel-Buffering'] = 'no'
         
         return response
+    
+    @action(detail=False, methods=['get'], url_path='conversations')
+    def list_conversations(self, request):
+        """
+        List user's Gemini conversation history.
+        
+        GET /api/gemini/conversations/
+        
+        Response:
+        [
+            {
+                "conversation_id": "uuid",
+                "title": "First message...",
+                "last_message_at": "2025-11-30T10:00:00Z",
+                "message_count": 10
+            }
+        ]
+        """
+        try:
+            conversations = GeminiConversation.objects.filter(
+                user=request.user
+            ).order_by('-last_message_at')[:50]  # Last 50 conversations
+            
+            data = []
+            for conv in conversations:
+                data.append({
+                    'conversation_id': conv.conversation_id,
+                    'title': conv.title or 'New Conversation',
+                    'last_message_at': conv.last_message_at.isoformat(),
+                    'message_count': len(conv.messages),
+                    'created_at': conv.created_at.isoformat()
+                })
+            
+            return Response(data)
+            
+        except Exception as e:
+            logger.error(f"Error listing conversations: {str(e)}", exc_info=True)
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='conversations/(?P<conversation_id>[^/.]+)')
+    def get_conversation(self, request, conversation_id=None):
+        """
+        Get a specific conversation with full message history.
+        
+        GET /api/gemini/conversations/{conversation_id}/
+        
+        Response:
+        {
+            "conversation_id": "uuid",
+            "title": "First message...",
+            "messages": [
+                {"role": "user", "content": "...", "timestamp": "..."},
+                {"role": "assistant", "content": "...", "timestamp": "..."}
+            ]
+        }
+        """
+        try:
+            conversation = GeminiConversation.objects.get(
+                conversation_id=conversation_id,
+                user=request.user
+            )
+            
+            return Response({
+                'conversation_id': conversation.conversation_id,
+                'title': conversation.title or 'New Conversation',
+                'messages': conversation.messages,
+                'last_message_at': conversation.last_message_at.isoformat(),
+                'created_at': conversation.created_at.isoformat()
+            })
+            
+        except GeminiConversation.DoesNotExist:
+            return Response(
+                {'error': 'Conversation not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error getting conversation: {str(e)}", exc_info=True)
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['delete'], url_path='conversations/(?P<conversation_id>[^/.]+)')
+    def delete_conversation(self, request, conversation_id=None):
+        """
+        Delete a conversation.
+        
+        DELETE /api/gemini/conversations/{conversation_id}/
+        """
+        try:
+            conversation = GeminiConversation.objects.get(
+                conversation_id=conversation_id,
+                user=request.user
+            )
+            conversation.delete()
+            
+            return Response({'message': 'Conversation deleted'})
+            
+        except GeminiConversation.DoesNotExist:
+            return Response(
+                {'error': 'Conversation not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Error deleting conversation: {str(e)}", exc_info=True)
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False, methods=['get'], url_path='status')
     def status_check(self, request):

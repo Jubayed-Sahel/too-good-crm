@@ -157,7 +157,10 @@ export const useVideoCallWebSocket = ({
   }, [userId, enabled, onCallInitiated, onCallAnswered, onCallRejected, onCallEnded]);
 
   const disconnect = useCallback(() => {
-    console.log('[VideoCallWS] Disconnecting...');
+    // Only log if there was an active connection
+    if (wsRef.current) {
+      console.log('[VideoCallWS] Disconnecting...');
+    }
     shouldReconnectRef.current = false;
 
     // Clear timers

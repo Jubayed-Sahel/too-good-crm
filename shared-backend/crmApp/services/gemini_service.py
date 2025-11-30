@@ -222,15 +222,37 @@ You are an intelligent AI assistant for a Customer Relationship Management (CRM)
 - `deactivate_customer`: Deactivate a customer (soft delete)
 - `get_customer_stats`: Get customer statistics
 
-### Lead Management
+### Lead Management & Sales Pipeline
+Leads progress through pipeline stages: **Lead → Qualified → Proposal → Negotiation → Closed Won/Closed Lost**
+
+**IMPORTANT:** When a lead reaches **Closed Won** stage, they are automatically converted to a customer and will appear in the customers page.
+
+**CRITICAL RULE:** Users can move leads between ANY stages at any time, including:
+- Moving Closed Lost leads back to active stages (Lead, Qualified, Proposal, Negotiation)
+- Moving Closed Won leads back to earlier stages
+- Jumping forward or backward in the pipeline as needed
+- There are NO restrictions on stage transitions - always allow the movement the user requests
+
+Available tools:
 - `list_leads`: Search and filter leads (qualification status, source, conversion status)
-- `get_lead`: Get detailed lead information
-- `create_lead`: Create new lead records
+- `get_lead`: Get detailed lead information with current pipeline stage
+- `create_lead`: Create new lead records (starts in Lead stage)
 - `update_lead`: Update lead information
+- `move_lead_stage`: Move lead through pipeline stages - ALWAYS allow any stage transition requested by the user
+- `get_pipeline_stages`: View all available pipeline stages with their order and status
 - `qualify_lead` / `disqualify_lead`: Change lead qualification status
 - `update_lead_score`: Update lead scoring
 - `assign_lead`: Assign lead to an employee
+- `convert_lead_to_customer`: Manually convert qualified lead to customer (or use Closed Won stage)
 - `get_lead_stats`: Get lead statistics and conversion rates
+
+**Pipeline Stage Definitions:**
+1. **Lead** - Initial contact/inquiry (starting stage)
+2. **Qualified** - Lead meets qualification criteria
+3. **Proposal** - Proposal/quote sent to lead
+4. **Negotiation** - Terms and pricing being discussed
+5. **Closed Won** - Deal successful → Lead becomes Customer (auto-conversion)
+6. **Closed Lost** - Deal unsuccessful (lead can be reopened by moving to another stage)
 
 ### Deal Management
 - `list_deals`: Search and filter deals (stage, priority, status)
@@ -566,6 +588,145 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                 }
             return await create()
         
+        async def get_lead_tool(lead_id: int):
+            """Get detailed information about a specific lead with pipeline stage details"""
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                try:
+                    lead = Lead.objects.select_related('stage', 'stage__pipeline', 'assigned_to').get(
+                        id=lead_id,
+                        organization_id=org_id
+                    )
+                    
+                    # Build stage information
+                    stage_info = "No stage assigned"
+                    stage_status = ""
+                    if lead.stage:
+                        stage_info = f"{lead.stage.pipeline.name} - {lead.stage.name}" if lead.stage.pipeline else lead.stage.name
+                        if lead.stage.is_closed_won:
+                            stage_status = " (CLOSED WON - Lead is now a customer!)"
+                        elif lead.stage.is_closed_lost:
+                            stage_status = " (CLOSED LOST - Deal not won)"
+                    
+                    return {
+                        "id": lead.id,
+                        "name": lead.name,
+                        "email": lead.email or "",
+                        "phone": lead.phone or "",
+                        "organization_name": lead.organization_name or "",
+                        "current_stage": lead.stage.name if lead.stage else "No stage",
+                        "stage_info": stage_info + stage_status,
+                        "pipeline": lead.stage.pipeline.name if lead.stage and lead.stage.pipeline else "No pipeline",
+                        "qualification_status": lead.qualification_status,
+                        "status": lead.status,
+                        "source": lead.source,
+                        "is_converted": lead.is_converted,
+                        "converted_to_customer": "Yes - This lead has been converted to a customer" if lead.is_converted else "No - Still a lead",
+                        "lead_score": lead.lead_score,
+                        "estimated_value": float(lead.estimated_value) if lead.estimated_value else 0,
+                        "assigned_to": lead.assigned_to.full_name if lead.assigned_to else "Unassigned",
+                        "notes": lead.notes or "",
+                    }
+                except Lead.DoesNotExist:
+                    return {"error": f"Lead with ID {lead_id} not found"}
+            return await fetch()
+        
+        async def move_lead_stage_tool(lead_id: int, stage: str, notes: str = None):
+            """Move a lead to a different pipeline stage. When moved to Closed Won, lead automatically becomes a customer."""
+            @sync_to_async(thread_sensitive=False)
+            def move():
+                try:
+                    from crmApp.models import PipelineStage, LeadStageHistory, Employee
+                    lead = Lead.objects.select_related('stage').get(id=lead_id, organization_id=org_id)
+                    
+                    # Find stage by name or ID
+                    new_stage = None
+                    try:
+                        stage_id = int(stage)
+                        new_stage = PipelineStage.objects.get(id=stage_id, pipeline__organization_id=org_id)
+                    except (ValueError, TypeError):
+                        new_stage = PipelineStage.objects.filter(name__iexact=stage, pipeline__organization_id=org_id).first()
+                    
+                    if not new_stage:
+                        # Provide helpful error with available stages
+                        available_stages = PipelineStage.objects.filter(
+                            pipeline__organization_id=org_id,
+                            is_active=True
+                        ).values_list('name', flat=True)
+                        return {
+                            "error": f"Pipeline stage '{stage}' not found",
+                            "available_stages": list(available_stages),
+                            "hint": "Available stages: " + ", ".join(available_stages)
+                        }
+                    
+                    previous_stage = lead.stage
+                    lead.stage = new_stage
+                    lead.save()
+                    
+                    # Create history entry
+                    LeadStageHistory.objects.create(
+                        lead=lead,
+                        organization_id=org_id,
+                        stage=new_stage,
+                        previous_stage=previous_stage,
+                        notes=notes or f"Moved by AI assistant"
+                    )
+                    
+                    prev_name = previous_stage.name if previous_stage else 'None'
+                    
+                    # Build response message
+                    message = f"✅ Lead '{lead.name}' moved from '{prev_name}' to '{new_stage.name}'"
+                    
+                    # Special handling for Closed Won
+                    if new_stage.is_closed_won:
+                        message += "\n\n🎉 DEAL WON! This lead will be automatically converted to a customer and will appear in the Customers page."
+                        message += "\n📊 The lead will remain visible in the sales pipeline history."
+                    elif new_stage.is_closed_lost:
+                        message += "\n\n❌ Deal marked as lost. The lead remains in the system for future follow-up."
+                    
+                    return {
+                        "success": True,
+                        "message": message,
+                        "from_stage": prev_name,
+                        "to_stage": new_stage.name,
+                        "pipeline": new_stage.pipeline.name,
+                        "is_closed_won": new_stage.is_closed_won,
+                        "is_closed_lost": new_stage.is_closed_lost,
+                        "lead_id": lead.id,
+                        "lead_name": lead.name
+                    }
+                except Lead.DoesNotExist:
+                    return {"error": f"Lead with ID {lead_id} not found in your organization"}
+            return await move()
+        
+        async def get_pipeline_stages_tool():
+            """Get all available pipeline stages for leads in the organization"""
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                from crmApp.models import Pipeline
+                pipelines = Pipeline.objects.filter(organization_id=org_id, is_active=True).prefetch_related('stages')
+                
+                result = []
+                for pipeline in pipelines:
+                    stages = pipeline.stages.filter(is_active=True).order_by('order')
+                    result.append({
+                        'pipeline_id': pipeline.id,
+                        'pipeline_name': pipeline.name,
+                        'stages': [
+                            {
+                                'id': stage.id,
+                                'name': stage.name,
+                                'order': stage.order,
+                                'probability': float(stage.probability),
+                                'is_closed_won': stage.is_closed_won,
+                                'is_closed_lost': stage.is_closed_lost
+                            }
+                            for stage in stages
+                        ]
+                    })
+                return {"success": True, "pipelines": result}
+            return await fetch()
+        
         async def update_lead_tool(lead_id: int, name: str = None, status: str = None, score: int = None):
             """Update an existing lead"""
             @sync_to_async(thread_sensitive=False)
@@ -609,29 +770,71 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             return await qualify()
         
         async def convert_lead_to_customer_tool(lead_id: int):
-            """Convert a lead to a customer"""
+            """Convert a lead to a customer and automatically move to Closed Won stage"""
             @sync_to_async(thread_sensitive=False)
             def convert():
                 try:
+                    from crmApp.models import PipelineStage, LeadStageHistory
                     lead = Lead.objects.get(id=lead_id, organization_id=org_id)
+                    
+                    # Create customer
                     customer = Customer.objects.create(
                         organization_id=org_id,
                         name=lead.name,
                         email=lead.email,
                         phone=lead.phone,
+                        company_name=lead.organization_name,
                         status="active",
-                        customer_type="individual"
+                        customer_type="business" if lead.organization_name else "individual",
+                        source=lead.source,
+                        address=lead.address,
+                        city=lead.city,
+                        state=lead.state,
+                        postal_code=lead.postal_code,
+                        country=lead.country,
+                        converted_from_lead=lead,
                     )
-                    lead.status = "converted"
+                    
+                    # Move lead to "Closed Won" stage
+                    closed_won_stage = PipelineStage.objects.filter(
+                        pipeline__organization_id=org_id,
+                        is_closed_won=True,
+                        is_active=True
+                    ).first()
+                    
+                    stage_info = ""
+                    if closed_won_stage:
+                        previous_stage = lead.stage
+                        lead.stage = closed_won_stage
+                        
+                        # Create stage history
+                        LeadStageHistory.objects.create(
+                            lead=lead,
+                            organization_id=org_id,
+                            stage=closed_won_stage,
+                            previous_stage=previous_stage,
+                            notes='Automatically moved to Closed Won after conversion to customer via AI assistant'
+                        )
+                        stage_info = f" Lead moved to '{closed_won_stage.name}' stage."
+                    
+                    # Mark lead as converted
+                    lead.is_converted = True
+                    lead.qualification_status = "converted"
                     lead.save()
+                    
                     return {
                         "success": True,
                         "customer_id": customer.id,
                         "customer_name": customer.name,
-                        "message": f"Lead '{lead.name}' converted to customer successfully"
+                        "message": f"Lead '{lead.name}' converted to customer successfully.{stage_info}"
                     }
                 except Lead.DoesNotExist:
                     return {"error": "Lead not found"}
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Error converting lead to customer: {str(e)}")
+                    return {"error": f"Failed to convert lead: {str(e)}"}
             return await convert()
         
         # === DEAL TOOLS ===
@@ -1106,7 +1309,23 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             # Lead functions
             types.FunctionDeclaration(
                 name="list_leads",
-                description="List leads in the user's organization. IMPORTANT: Organization ID is automatically determined from the user context - you do NOT need to pass any organization ID. This function will automatically filter leads based on the authenticated user's organization. Leads are any records in the Lead model, regardless of their pipeline stage (Lead, Qualified, Proposal, Negotiation, Closed Won, Closed Lost). When a lead reaches 'Closed Won' stage, they become both a lead and a customer. Use this function whenever the user asks about 'my leads', 'show leads', 'list leads', etc.",
+                description="""List leads in the user's organization with their current pipeline stage.
+
+IMPORTANT: Organization ID is automatically determined from user context.
+
+Leads move through pipeline stages: Lead → Qualified → Proposal → Negotiation → Closed Won/Closed Lost
+
+Each lead will show:
+- Current pipeline stage (Lead, Qualified, Proposal, Negotiation, Closed Won, Closed Lost)
+- Qualification status (new, contacted, qualified, etc.)
+- Conversion status (is_converted = true when lead reaches Closed Won and becomes customer)
+
+Use this function whenever the user asks about:
+- "my leads", "show leads", "list leads"
+- "leads in [stage name]"
+- "what leads are in negotiation?"
+- "show qualified leads"
+""",
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
@@ -1163,6 +1382,66 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                         "lead_id": types.Schema(type=types.Type.INTEGER, description="Lead ID to convert"),
                     },
                     required=["lead_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="get_lead",
+                description="Get detailed information about a specific lead by ID",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "lead_id": types.Schema(type=types.Type.INTEGER, description="Lead ID to retrieve"),
+                    },
+                    required=["lead_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="move_lead_stage",
+                description="""Move a lead through the sales pipeline stages. 
+                
+CRITICAL: ALWAYS allow the stage movement the user requests - there are NO restrictions!
+- Users can move leads to ANY stage from ANY other stage
+- Closed Lost leads CAN be moved back to active stages (reopening deals)
+- Closed Won leads CAN be moved back if needed
+- Users can jump forward or backward in the pipeline freely
+
+The pipeline stages are in order:
+1. Lead (initial stage)
+2. Qualified (lead meets criteria)
+3. Proposal (quote/proposal sent)
+4. Negotiation (discussing terms)
+5. Closed Won (deal won - lead automatically becomes a customer!)
+6. Closed Lost (deal lost)
+
+When you move a lead to 'Closed Won', the system will automatically:
+- Convert the lead to a customer
+- The customer will appear in the customers page
+- Lead history is preserved
+
+Use this function when user says things like:
+- "Move lead to qualified"
+- "Move closed lost lead back to qualified" (ALWAYS ALLOW THIS)
+- "Reopen this lead" (move from Closed Lost to active stage)
+- "Mark lead as proposal sent"
+- "Lead won the deal" (use Closed Won)
+- "Lead is in negotiation"
+- "We lost this lead" (use Closed Lost)""",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "lead_id": types.Schema(type=types.Type.INTEGER, description="Lead ID to move"),
+                        "stage": types.Schema(type=types.Type.STRING, description="Stage name to move to. Valid stages: 'Lead', 'Qualified', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'"),
+                        "notes": types.Schema(type=types.Type.STRING, description="Optional notes about the stage change (e.g., reason for moving, deal details)"),
+                    },
+                    required=["lead_id", "stage"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="get_pipeline_stages",
+                description="Get all available pipeline stages for leads in the organization. Shows the complete sales pipeline with stage order, names, and status. Use this to understand what stages exist before moving leads.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={},
                 ),
             ),
             # Deal functions
@@ -1350,8 +1629,11 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
             "delete_customer": delete_customer_tool,
             # Lead tools
             "list_leads": list_leads_tool,
+            "get_lead": get_lead_tool,
             "create_lead": create_lead_tool,
             "update_lead": update_lead_tool,
+            "move_lead_stage": move_lead_stage_tool,
+            "get_pipeline_stages": get_pipeline_stages_tool,
             "qualify_lead": qualify_lead_tool,
             "convert_lead_to_customer": convert_lead_to_customer_tool,
             # Deal tools
