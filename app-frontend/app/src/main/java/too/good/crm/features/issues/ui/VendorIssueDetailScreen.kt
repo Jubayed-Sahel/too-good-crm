@@ -168,6 +168,25 @@ fun VendorIssueDetailScreen(
                                     Text("Update Priority")
                                 }
 
+                                // Linear Sync Button
+                                if (!issue.syncedToLinear) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            viewModel.syncToLinear(issueId) { success, url ->
+                                                if (success && url != null) {
+                                                    onOpenLinear(url)
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = !isLoading
+                                    ) {
+                                        Text("Sync to Linear")
+                                    }
+                                }
+
                                 if (issue.status != "resolved" && issue.status != "closed") {
                                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -178,6 +197,26 @@ fun VendorIssueDetailScreen(
                                     ) {
                                         Text("Mark as Resolved")
                                     }
+                                }
+
+                                // Delete Issue Button (for vendors only)
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                OutlinedButton(
+                                    onClick = {
+                                        viewModel.deleteIssue(issueId) { success, error ->
+                                            if (success) {
+                                                onNavigateBack()
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = !isLoading,
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    )
+                                ) {
+                                    Text("Delete Issue")
                                 }
                             }
                         }
@@ -283,6 +322,43 @@ fun VendorIssueDetailScreen(
                                     }
                                     IconButton(onClick = { onOpenLinear(issue.linearIssueUrl) }) {
                                         Icon(Icons.Default.OpenInBrowser, "Open in Linear")
+                                    }
+                                }
+                            }
+                        }
+
+                        // Comments Section
+                        if (!issue.comments.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Comments",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "${issue.comments.size} comments",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    issue.comments.forEach { comment ->
+                                        CommentItem(comment = comment)
+                                        if (comment != issue.comments.last()) {
+                                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                                        }
                                     }
                                 }
                             }

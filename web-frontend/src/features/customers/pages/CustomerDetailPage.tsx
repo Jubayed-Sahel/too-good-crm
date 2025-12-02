@@ -23,6 +23,8 @@ import {
   FiArrowLeft,
   FiActivity,
   FiFileText,
+  FiAlertCircle,
+  FiEye,
 } from 'react-icons/fi';
 import { StandardButton, ConfirmDialog } from '@/components/common';
 import { SendEmailDialog, type EmailData } from '@/features/activities/components/SendEmailDialog';
@@ -30,6 +32,7 @@ import { activityService } from '@/features/activities/services/activity.service
 import { toaster } from '@/components/ui/toaster';
 import { useCustomer, useDeleteCustomer } from '../hooks';
 import { useProfile } from '@/contexts/ProfileContext';
+import { useIssues } from '@/features/issues/hooks/useIssues';
 
 const CustomerDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +43,12 @@ const CustomerDetailPage = () => {
   const { data: customerData, isLoading, error } = useCustomer(customerId);
   const deleteCustomer = useDeleteCustomer();
   const { activeOrganizationId } = useProfile();
+  
+  // Fetch issues raised by this customer
+  const { data: issuesData, isLoading: issuesLoading } = useIssues({ 
+    raised_by_customer: customerId 
+  });
+  const customerIssues = issuesData?.results || [];
   
   // State for dialogs
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -103,6 +112,37 @@ const CustomerDetailPage = () => {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
+  };
+
+  const getIssueStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'open':
+        return 'orange';
+      case 'in_progress':
+        return 'blue';
+      case 'resolved':
+        return 'green';
+      case 'closed':
+        return 'gray';
+      default:
+        return 'gray';
+    }
+  };
+
+  const getIssuePriorityColor = (priority: string) => {
+    switch (priority.toLowerCase()) {
+      case 'low':
+        return 'gray';
+      case 'medium':
+        return 'blue';
+      case 'high':
+        return 'orange';
+      case 'urgent':
+      case 'critical':
+        return 'red';
+      default:
+        return 'gray';
+    }
   };
 
   const handleEdit = () => {
@@ -513,6 +553,116 @@ const CustomerDetailPage = () => {
                   </Text>
                 </Box>
               </Grid>
+            </Box>
+
+            {/* Issues Raised by Customer Card */}
+            <Box
+              bg="white"
+              borderRadius="xl"
+              p={{ base: 5, md: 6 }}
+              boxShadow="sm"
+              borderWidth="1px"
+              borderColor="gray.200"
+            >
+              <HStack justify="space-between" mb={4}>
+                <HStack gap={3}>
+                  <Box p={2} bg="red.100" borderRadius="md" color="red.600">
+                    <FiAlertCircle size={20} />
+                  </Box>
+                  <Heading size="lg" color="gray.800">
+                    Issues Raised
+                  </Heading>
+                </HStack>
+                <Badge colorScheme="red" fontSize="md" px={3} py={1} borderRadius="full">
+                  {customerIssues.length}
+                </Badge>
+              </HStack>
+              
+              {issuesLoading ? (
+                <Box display="flex" justifyContent="center" py={8}>
+                  <Spinner size="md" color="red.500" />
+                </Box>
+              ) : customerIssues.length === 0 ? (
+                <Box
+                  p={6}
+                  bg="gray.50"
+                  borderRadius="lg"
+                  textAlign="center"
+                >
+                  <Text fontSize="md" color="gray.600">
+                    No issues raised by this customer
+                  </Text>
+                </Box>
+              ) : (
+                <VStack align="stretch" gap={3}>
+                  {customerIssues.slice(0, 5).map((issue: any) => (
+                    <Box
+                      key={issue.id}
+                      p={4}
+                      bg="gray.50"
+                      borderRadius="lg"
+                      borderWidth="1px"
+                      borderColor="gray.200"
+                      _hover={{ borderColor: 'red.300', bg: 'red.50' }}
+                      cursor="pointer"
+                      onClick={() => navigate(`/issues/${issue.id}`)}
+                    >
+                      <HStack justify="space-between" mb={2}>
+                        <VStack align="start" gap={0} flex={1}>
+                          <HStack gap={2}>
+                            <Text fontSize="sm" fontWeight="bold" color="gray.500">
+                              {issue.issue_number}
+                            </Text>
+                            <Badge
+                              colorScheme={getIssueStatusColor(issue.status)}
+                              fontSize="xs"
+                            >
+                              {issue.status.replace('_', ' ')}
+                            </Badge>
+                            <Badge
+                              colorScheme={getIssuePriorityColor(issue.priority)}
+                              fontSize="xs"
+                            >
+                              {issue.priority}
+                            </Badge>
+                          </HStack>
+                          <Text fontSize="md" fontWeight="semibold" color="gray.900">
+                            {issue.title}
+                          </Text>
+                        </VStack>
+                        <StandardButton
+                          variant="ghost"
+                          size="sm"
+                          leftIcon={<FiEye />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/issues/${issue.id}`);
+                          }}
+                        >
+                          View
+                        </StandardButton>
+                      </HStack>
+                      {issue.description && (
+                        <Text fontSize="sm" color="gray.600" lineClamp={2}>
+                          {issue.description}
+                        </Text>
+                      )}
+                      <Text fontSize="xs" color="gray.500" mt={2}>
+                        Created {formatDate(issue.created_at)}
+                      </Text>
+                    </Box>
+                  ))}
+                  {customerIssues.length > 5 && (
+                    <StandardButton
+                      variant="outline"
+                      w="full"
+                      onClick={() => navigate(`/issues?customer=${customerId}`)}
+                    >
+                      View All {customerIssues.length} Issues
+                    </StandardButton>
+                  )}
+                </VStack>
+              )}
             </Box>
           </VStack>
 

@@ -16,8 +16,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import too.good.crm.data.model.Issue
 import too.good.crm.features.issues.viewmodel.IssueDetailUiState
 import too.good.crm.features.issues.viewmodel.IssueViewModel
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -203,6 +201,43 @@ fun CustomerIssueDetailScreen(
                             }
                         }
 
+                        // Comments Section
+                        if (!issue.comments.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp)
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Comments",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "${issue.comments.size} comments",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(12.dp))
+
+                                    issue.comments.forEach { comment ->
+                                        CommentItem(comment = comment)
+                                        if (comment != issue.comments.last()) {
+                                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // Add Comment Section
                         Spacer(modifier = Modifier.height(16.dp))
                         Card(
@@ -286,35 +321,5 @@ fun CustomerIssueDetailScreen(
     }
 }
 
-@Composable
-fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
 
-fun formatDateTime(dateString: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
-        val date = inputFormat.parse(dateString)
-        outputFormat.format(date ?: Date())
-    } catch (e: Exception) {
-        dateString
-    }
-}
 

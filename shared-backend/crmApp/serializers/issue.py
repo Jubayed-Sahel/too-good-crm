@@ -10,36 +10,29 @@ from .employee import EmployeeListSerializer
 
 class IssueListSerializer(serializers.ModelSerializer):
     """Lightweight serializer for issue lists"""
-    vendor_name = serializers.SerializerMethodField()
-    order_number = serializers.SerializerMethodField()
-    assigned_to_name = serializers.SerializerMethodField()
+    vendor = VendorListSerializer(read_only=True)
+    assigned_to = EmployeeListSerializer(read_only=True)
+    resolved_by = EmployeeListSerializer(read_only=True)
     raised_by_customer_name = serializers.SerializerMethodField()
     organization_name = serializers.CharField(source='organization.name', read_only=True)
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
+    order_number = serializers.CharField(source='order.order_number', read_only=True, allow_null=True)
     
     class Meta:
         model = Issue
         fields = [
             'id', 'code', 'issue_number', 'title', 'description',
-            'vendor', 'vendor_name', 'order', 'order_number',
+            'vendor', 'order', 'order_number',
             'priority', 'priority_display', 'category', 'category_display',
-            'status', 'status_display', 'assigned_to', 'assigned_to_name',
+            'status', 'status_display', 'assigned_to',
             'is_client_issue', 'raised_by_customer', 'raised_by_customer_name',
             'organization', 'organization_name',
             'linear_issue_id', 'linear_issue_url', 'synced_to_linear',
-            'created_at', 'updated_at', 'resolved_at'
+            'resolved_by', 'resolved_at',
+            'created_at', 'updated_at'
         ]
-    
-    def get_vendor_name(self, obj):
-        return obj.vendor.name if obj.vendor else None
-    
-    def get_order_number(self, obj):
-        return obj.order.order_number if obj.order else None
-    
-    def get_assigned_to_name(self, obj):
-        return obj.assigned_to.full_name if obj.assigned_to else None
     
     def get_raised_by_customer_name(self, obj):
         if obj.raised_by_customer:
@@ -50,6 +43,7 @@ class IssueListSerializer(serializers.ModelSerializer):
 class IssueSerializer(serializers.ModelSerializer):
     """Full issue serializer"""
     from crmApp.models import Vendor, Order, Employee
+    from .issue_comment import IssueCommentSerializer
     
     vendor = VendorListSerializer(read_only=True)
     vendor_id = serializers.PrimaryKeyRelatedField(
@@ -80,6 +74,7 @@ class IssueSerializer(serializers.ModelSerializer):
     priority_display = serializers.CharField(source='get_priority_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     category_display = serializers.CharField(source='get_category_display', read_only=True)
+    comments = IssueCommentSerializer(many=True, read_only=True)
     
     class Meta:
         model = Issue
@@ -95,7 +90,8 @@ class IssueSerializer(serializers.ModelSerializer):
             'is_client_issue', 'raised_by_customer', 'raised_by_customer_name',
             'created_by', 'created_at', 'updated_at',
             'linear_issue_id', 'linear_issue_url', 'linear_team_id',
-            'synced_to_linear', 'last_synced_at'
+            'synced_to_linear', 'last_synced_at',
+            'comments'
         ]
         read_only_fields = ['id', 'code', 'issue_number', 'organization', 'created_by', 'created_at', 'updated_at', 'resolved_by', 'last_synced_at']
     

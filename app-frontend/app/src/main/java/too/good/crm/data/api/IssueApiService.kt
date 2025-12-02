@@ -7,6 +7,12 @@ import too.good.crm.data.model.*
 interface IssueApiService {
 
     // Customer endpoints
+    @GET("client/issues/")
+    suspend fun getCustomerIssues(
+        @Query("status") status: String? = null,
+        @Query("priority") priority: String? = null
+    ): Response<IssuesListResponse>
+
     @POST("client/issues/raise/")
     suspend fun createIssue(
         @Body request: CreateIssueRequest
@@ -60,5 +66,15 @@ interface IssueApiService {
         @Path("issueId") issueId: Int,
         @Body request: ResolveIssueRequest
     ): Response<Issue>
+
+    @POST("issues/{issueId}/sync_to_linear/")
+    suspend fun syncToLinear(
+        @Path("issueId") issueId: Int
+    ): Response<IssueResponse>
+
+    @DELETE("issues/{issueId}/")
+    suspend fun deleteIssue(
+        @Path("issueId") issueId: Int
+    ): Response<Unit>
 }
 
