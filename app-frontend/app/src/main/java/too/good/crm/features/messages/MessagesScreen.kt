@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,6 +53,8 @@ fun MessagesScreen(
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     var searchQuery by remember { mutableStateOf("") }
     var showNewMessageDialog by remember { mutableStateOf(false) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    val pullToRefreshState = rememberPullToRefreshState()
     
     // Load profiles on initial load
     LaunchedEffect(Unit) {
@@ -70,6 +74,15 @@ fun MessagesScreen(
             kotlinx.coroutines.delay(10000) // 10 seconds
             viewModel.refresh()
         }
+    }
+    
+    // Handle pull-to-refresh
+    suspend fun handleRefresh() {
+        isRefreshing = true
+        viewModel.refresh()
+        // Wait a moment to ensure the UI updates
+        kotlinx.coroutines.delay(500)
+        isRefreshing = false
     }
     
     // Show new message dialog
@@ -253,7 +266,7 @@ fun MessagesScreen(
                 singleLine = true
             )
             
-            // Conversations List
+            // Conversations List with Pull-to-Refresh
             Card(
                 modifier = Modifier.fillMaxSize(),
                 shape = RoundedCornerShape(12.dp),
@@ -262,102 +275,121 @@ fun MessagesScreen(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                when {
-                    uiState.isLoading -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                CircularProgressIndicator()
-                                Text(
-                                    text = "Loading conversations...",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = DesignTokens.Colors.OnSurfaceVariant
-                                )
-                            }
+                PullToRefreshBox(
+                    isRefreshing = isRefreshing,
+                    onRefresh = {
+                        scope.launch {
+                            handleRefresh()
                         }
-                    }
-                    uiState.error != null -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    },
+                    state = pullToRefreshState,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    when {
+                        uiState.isLoading && !isRefreshing -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    Icons.Default.Error,
-                                    contentDescription = null,
-                                    tint = DesignTokens.Colors.Error,
-                                    modifier = Modifier.size(48.dp)
-                                )
-                                Text(
-                                    text = uiState.error ?: "Failed to load conversations",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = DesignTokens.Colors.Error
-                                )
-                                Button(
-                                    onClick = { viewModel.loadConversations() }
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
-                                    Text("Retry")
+                                    CircularProgressIndicator()
+                                    Text(
+                                        text = "Loading conversations...",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = DesignTokens.Colors.OnSurfaceVariant
+                                    )
                                 }
                             }
                         }
-                    }
-                    filteredConversations.isEmpty() -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                        uiState.error != null && !isRefreshing -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.Message,
-                                    contentDescription = null,
-                                    tint = DesignTokens.Colors.OnSurfaceVariant,
-                                    modifier = Modifier.size(64.dp)
-                                )
-                                Text(
-                                    text = if (searchQuery.isEmpty()) "No conversations yet" else "No conversations found",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = DesignTokens.Colors.OnSurfaceVariant
-                                )
-                                Text(
-                                    text = if (searchQuery.isEmpty()) 
-                                        "Your conversations will appear here" 
-                                    else 
-                                        "Try a different search term",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = DesignTokens.Colors.OnSurfaceVariant
-                                )
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Error,
+                                        contentDescription = null,
+                                        tint = DesignTokens.Colors.Error,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Text(
+                                        text = uiState.error ?: "Failed to load conversations",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = DesignTokens.Colors.Error
+                                    )
+                                    Button(
+                                        onClick = { viewModel.loadConversations() }
+                                    ) {
+                                        Text("Retry")
+                                    }
+                                }
                             }
                         }
-                    }
-                    else -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(vertical = 8.dp)
-                        ) {
-                            items(filteredConversations) { conversation ->
-                                ConversationItem(
-                                    conversation = conversation,
-                                    onClick = {
-                                        onNavigate("chat/${conversation.otherParticipant.id}")
-                                    }
-                                )
+                        filteredConversations.isEmpty() && !isRefreshing -> {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Message,
+                                        contentDescription = null,
+                                        tint = DesignTokens.Colors.OnSurfaceVariant,
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                    Text(
+                                        text = if (searchQuery.isEmpty()) "No conversations yet" else "No conversations found",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = DesignTokens.Colors.OnSurfaceVariant
+                                    )
+                                    // Role-specific empty state message
+                                    Text(
+                                        text = if (searchQuery.isEmpty()) {
+                                            when (profileState.activeProfile?.profileType) {
+                                                "vendor" -> "Choose a contact from the left to start messaging, or create a new conversation to reach out to your employees and customers."
+                                                "employee" -> "Choose a contact from the left to start messaging, or create a new conversation to message your vendor or other team members."
+                                                "customer" -> "Choose a contact from the left to continue a conversation. Only vendors and employees can initiate new conversations."
+                                                else -> "Pull down to refresh or tap + to start a conversation"
+                                            }
+                                        } else {
+                                            "Try a different search term"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = DesignTokens.Colors.OnSurfaceVariant,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                        else -> {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(vertical = 8.dp)
+                            ) {
+                                items(filteredConversations) { conversation ->
+                                    ConversationItem(
+                                        conversation = conversation,
+                                        onClick = {
+                                            onNavigate("chat/${conversation.otherParticipant.id}")
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
