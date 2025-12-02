@@ -20,6 +20,12 @@ from crmApp.models import TelegramUser, User
 from crmApp.services.telegram_service import TelegramService
 from crmApp.services.telegram_auth_service import TelegramAuthService
 from crmApp.services.gemini_service import GeminiService
+from crmApp.services.telegram_rbac_service import TelegramRBACService
+from crmApp.viewsets.telegram_commands import (
+    handle_permissions_command,
+    check_permission_and_notify,
+    create_command_help_message_with_rbac,
+)
 from crmApp.utils.telegram_utils import (
     parse_telegram_update,
     extract_email,
@@ -115,7 +121,7 @@ def handle_telegram_message(parsed: Dict[str, Any]):
 
 def handle_command(telegram_user: TelegramUser, parsed: Dict[str, Any], telegram_service: TelegramService):
     """
-    Handle Telegram bot commands.
+    Handle Telegram bot commands with RBAC context.
     """
     command = parsed['command']
     args = parsed['command_args']
@@ -129,7 +135,7 @@ def handle_command(telegram_user: TelegramUser, parsed: Dict[str, Any], telegram
     
     # Command handlers
     if command == 'start':
-        handle_start_command(telegram_user, telegram_service)
+        handle_start_command(telegram_user, telegram_service, args)
     
     elif command == 'help':
         message = create_command_help_message()
@@ -190,6 +196,12 @@ def handle_command(telegram_user: TelegramUser, parsed: Dict[str, Any], telegram
         else:
             handle_switch_command(telegram_user, args, telegram_service)
     
+    elif command == 'permissions':
+        if not telegram_user.is_authenticated:
+            telegram_service.send_message(chat_id, "🔐 Please authenticate first with /start")
+        else:
+            handle_permissions_command(telegram_user, telegram_service)
+    
     else:
         telegram_service.send_message(
             chat_id,
@@ -197,12 +209,91 @@ def handle_command(telegram_user: TelegramUser, parsed: Dict[str, Any], telegram
         )
 
 
-def handle_start_command(telegram_user: TelegramUser, telegram_service: TelegramService):
+def handle_start_command(telegram_user: TelegramUser, telegram_service: TelegramService, args: list = None):
     """
-    Handle /start command - initiate authentication flow.
+    Handle /start command - initiate authentication flow or process deep link.
+    
+    Args:
+        telegram_user: TelegramUser instance
+        telegram_service: TelegramService instance
+        args: Command arguments (for deep link payload)
     """
+    from crmApp.viewsets.telegram_link_generator import verify_auth_token
+    from crmApp.models import User, UserProfile
+    
     chat_id = telegram_user.chat_id
     
+    # Check if there's a deep link payload
+    if args and len(args) > 0:
+        payload = args[0]
+        
+        # Check if it's an auth payload: auth_USERID_PROFILEID_TIMESTAMP_TOKEN
+        if payload.startswith('auth_'):
+            try:
+                parts = payload.split('_')
+                if len(parts) == 5:
+                    _, user_id, profile_id, timestamp, token = parts
+                    user_id = int(user_id)
+                    profile_id = int(profile_id)
+                    timestamp = int(timestamp)
+                    
+                    # Verify token
+                    if verify_auth_token(user_id, profile_id, timestamp, token):
+                        # Get user and profile
+                        user = User.objects.get(id=user_id)
+                        profile = UserProfile.objects.get(id=profile_id, user=user)
+                        
+                        # Link Telegram account
+                        telegram_user.authenticate(user)
+                        telegram_user.selected_profile = profile
+                        telegram_user.save(update_fields=['selected_profile'])
+                        
+                        # Get permissions
+                        from crmApp.services.telegram_rbac_service import TelegramRBACService
+                        permissions_summary = TelegramRBACService.get_permission_summary(telegram_user)
+                        
+                        # Send success message
+                        org_name = profile.organization.name if profile.organization else "Standalone"
+                        message = (
+                            f"✅ <b>Authenticated successfully!</b>\n\n"
+                            f"<b>Welcome, {user.full_name}!</b>\n\n"
+                            f"<b>Profile:</b> {profile.get_profile_type_display()}\n"
+                            f"<b>Organization:</b> {org_name}\n\n"
+                            f"{permissions_summary}\n\n"
+                            f"You can now use all CRM features via Telegram!\n\n"
+                            f"Try asking:\n"
+                            f"• \"Show my deals\"\n"
+                            f"• \"List my customers\"\n"
+                            f"• \"Create a new lead\"\n"
+                            f"• \"Show statistics\"\n\n"
+                            f"Type /help to see all available commands."
+                        )
+                        telegram_service.send_message(chat_id, message)
+                        logger.info(
+                            f"✅ Auto-authenticated {user.email} via deep link "
+                            f"(profile: {profile.profile_type})"
+                        )
+                        return
+                    else:
+                        message = (
+                            f"❌ <b>Invalid or expired link</b>\n\n"
+                            f"The authorization link has expired (valid for 5 minutes).\n\n"
+                            f"Please generate a new link from the CRM chat interface."
+                        )
+                        telegram_service.send_message(chat_id, message)
+                        return
+                        
+            except Exception as e:
+                logger.error(f"Error processing deep link: {str(e)}", exc_info=True)
+                message = (
+                    f"❌ <b>Authentication failed</b>\n\n"
+                    f"There was an error processing your authorization link.\n\n"
+                    f"Please try generating a new link or authenticate manually with /login"
+                )
+                telegram_service.send_message(chat_id, message)
+                return
+    
+    # Regular /start flow (no deep link)
     if telegram_user.is_authenticated:
         message = (
             f"👋 Welcome back, {telegram_user.user.full_name}!\n\n"
@@ -317,7 +408,7 @@ def handle_unauthenticated_message(telegram_user: TelegramUser, text: str, teleg
 def handle_authenticated_message(telegram_user: TelegramUser, text: str, telegram_service: TelegramService):
     """
     Handle messages from authenticated users.
-    Forwards to Gemini AI for processing.
+    Forwards to Gemini AI for processing with RBAC context.
     """
     chat_id = telegram_user.chat_id
     user = telegram_user.user
@@ -328,6 +419,10 @@ def handle_authenticated_message(telegram_user: TelegramUser, text: str, telegra
             "❌ Authentication error. Please /logout and /start again."
         )
         return
+    
+    # Get user's organization context for RBAC
+    org_id = TelegramRBACService.get_organization_context(telegram_user)
+    logger.info(f"Processing message from {user.email} (org_id: {org_id})")
     
     # Show typing indicator
     telegram_service.send_typing_action(chat_id)

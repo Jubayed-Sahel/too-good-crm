@@ -29,6 +29,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/contexts/PermissionContext';
 import { toaster } from '@/components/ui/toaster';
 import { VoiceGeminiChatWindow } from '@/components/messages/VoiceGeminiChatWindow';
+import { TelegramLinkButton } from '@/components/messages/TelegramLinkButton';
 
 // Add CSS for select element
 const styles = document.createElement('style');
@@ -403,8 +404,18 @@ const MessagesPage = () => {
 
         {/* Chat Window */}
         {selectedUserId === AI_ASSISTANT_ID ? (
-          /* AI Assistant Chat Window with Voice */
-          <VoiceGeminiChatWindow autoSpeak={true} defaultLanguage="en-US" />
+          /* AI Assistant Chat Window with Voice + Telegram Link */
+          <VStack flex={1} gap={3} align="stretch">
+            {/* Telegram Bot Connection */}
+            <Box px={4} pt={4}>
+              <TelegramLinkButton />
+            </Box>
+            
+            {/* AI Chat */}
+            <Box flex={1}>
+              <VoiceGeminiChatWindow autoSpeak={true} defaultLanguage="en-US" />
+            </Box>
+          </VStack>
         ) : (
           /* Regular User Chat Window */
           <Box
