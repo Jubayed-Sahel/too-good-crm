@@ -9,7 +9,10 @@ import kotlinx.coroutines.launch
 import too.good.crm.data.model.User
 import too.good.crm.data.model.UserProfile
 import too.good.crm.data.repository.ProfileRepository
+import too.good.crm.data.repository.PermissionRepository
+import too.good.crm.data.rbac.PermissionManager
 import android.content.Context
+import android.util.Log
 
 /**
  * UI State for Profile Management
@@ -151,6 +154,28 @@ class ProfileViewModel(context: Context) : ViewModel() {
                         isSwitching = false,
                         error = null
                     )
+                    
+                    // Refresh permissions for the new profile
+                    try {
+                        val permissionRepo = PermissionRepository.getInstance()
+                        val profileResult = permissionRepo.getCurrentProfile()
+                        profileResult.fold(
+                            onSuccess = { profileWithPerms ->
+                                val permissions = profileWithPerms.permissions ?: emptyList()
+                                PermissionManager.initialize(profileWithPerms, permissions)
+                                Log.d("ProfileViewModel", "Permissions refreshed after profile switch: ${permissions.size} permissions")
+                            },
+                            onFailure = { error ->
+                                // Fallback: Use profile from switch response
+                                newActiveProfile?.let { profile ->
+                                    PermissionManager.initialize(profile, profile.permissions)
+                                    Log.w("ProfileViewModel", "Failed to fetch fresh permissions, using profile permissions: ${error.message}")
+                                }
+                            }
+                        )
+                    } catch (e: Exception) {
+                        Log.w("ProfileViewModel", "Error refreshing permissions: ${e.message}")
+                    }
                     
                     // Trigger success callback
                     onSuccess(user)

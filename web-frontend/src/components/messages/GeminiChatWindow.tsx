@@ -150,18 +150,6 @@ export const GeminiChatWindow = () => {
               >
                 • "List all high-priority leads"
               </Box>
-              <Box
-                p={2}
-                bg="gray.50"
-                borderRadius="md"
-                fontSize="sm"
-                color="gray.700"
-                cursor="pointer"
-                _hover={{ bg: 'gray.100' }}
-                onClick={() => setInput('What are my open deals?')}
-              >
-                • "What are my open deals?"
-              </Box>
             </VStack>
           </VStack>
         )}

@@ -65,6 +65,11 @@ class MainActivity : ComponentActivity() {
         val authRepository = too.good.crm.data.repository.AuthRepository(this)
         authRepository.initializeSession()
         
+        // Initialize permissions if user is logged in
+        if (authRepository.isLoggedIn()) {
+            too.good.crm.data.rbac.PermissionInitializer.initializeAsync(this)
+        }
+        
         // Removed enableEdgeToEdge() as it can interfere with keyboard input
         setContent {
             MaterialTheme(

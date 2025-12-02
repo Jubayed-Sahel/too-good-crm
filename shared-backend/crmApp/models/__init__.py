@@ -74,7 +74,7 @@ from .activity import Activity
 from .notification import NotificationPreferences
 
 # Message models
-from .message import Message, Conversation
+from .message import Message, Conversation, GeminiConversation
 
 # Telegram models
 from .telegram import TelegramUser
@@ -127,6 +127,7 @@ __all__ = [
     # Messages
     'Message',
     'Conversation',
+    'GeminiConversation',
     
     # Telegram
     'TelegramUser',

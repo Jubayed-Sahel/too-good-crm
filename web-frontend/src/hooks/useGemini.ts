@@ -24,6 +24,8 @@ export function useGemini(): UseGeminiReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<GeminiStatusResponse | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   // Check Gemini service status on mount
   const checkStatus = useCallback(async () => {
@@ -36,9 +38,41 @@ export function useGemini(): UseGeminiReturn {
     }
   }, []);
 
+  // Load conversation history from backend
+  const loadConversationHistory = useCallback(async (convId: string) => {
+    setIsLoadingHistory(true);
+    try {
+      const conversation = await geminiService.getConversation(convId);
+      
+      // Convert backend messages to frontend format
+      const loadedMessages: GeminiMessage[] = conversation.messages.map((msg: any, index: number) => ({
+        id: `${convId}-${index}`,
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        timestamp: new Date(msg.timestamp),
+      }));
+      
+      setMessages(loadedMessages);
+    } catch (err) {
+      console.error('Error loading conversation history:', err);
+      // Don't set error, just continue with empty messages
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, []);
+
   useEffect(() => {
     checkStatus();
   }, [checkStatus]);
+
+  // Load conversation history on mount if we have a stored conversation ID
+  useEffect(() => {
+    const storedConversationId = localStorage.getItem('gemini_conversation_id');
+    if (storedConversationId && !conversationId) {
+      setConversationId(storedConversationId);
+      loadConversationHistory(storedConversationId);
+    }
+  }, [conversationId, loadConversationHistory]);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim()) return;
@@ -82,8 +116,13 @@ export function useGemini(): UseGeminiReturn {
       for await (const event of geminiService.streamChat({
         message: content.trim(),
         history,
+        conversation_id: conversationId || undefined,
       })) {
-        if (event.type === 'message' && event.content) {
+        if (event.type === 'connected' && event.conversation_id) {
+          // Store conversation ID for future messages
+          setConversationId(event.conversation_id);
+          localStorage.setItem('gemini_conversation_id', event.conversation_id);
+        } else if (event.type === 'message' && event.content) {
           // Append to assistant message
           setMessages(prev =>
             prev.map(msg =>
@@ -122,6 +161,8 @@ export function useGemini(): UseGeminiReturn {
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
+    setConversationId(null); // Start a new conversation
+    localStorage.removeItem('gemini_conversation_id');
   }, []);
 
   return {

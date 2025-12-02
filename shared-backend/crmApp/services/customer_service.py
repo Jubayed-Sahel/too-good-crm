@@ -90,6 +90,34 @@ class CustomerService:
                 **data
             )
             
+            # Move lead to "Closed Won" stage in pipeline
+            from crmApp.models import PipelineStage, LeadStageHistory
+            try:
+                closed_won_stage = PipelineStage.objects.filter(
+                    pipeline__organization=lead.organization,
+                    is_closed_won=True,
+                    is_active=True
+                ).first()
+                
+                if closed_won_stage:
+                    previous_stage = lead.stage
+                    lead.stage = closed_won_stage
+                    
+                    # Create stage history entry
+                    LeadStageHistory.objects.create(
+                        lead=lead,
+                        organization=lead.organization,
+                        stage=closed_won_stage,
+                        previous_stage=previous_stage,
+                        changed_by=lead.assigned_to,
+                        notes='Automatically moved to Closed Won after conversion to customer'
+                    )
+            except Exception as e:
+                # Log but don't fail the conversion if stage update fails
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Failed to update lead stage to Closed Won: {str(e)}")
+            
             # Update lead status
             lead.is_converted = True
             lead.qualification_status = 'converted'

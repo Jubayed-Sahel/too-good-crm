@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import too.good.crm.data.repository.AuthRepository
+import too.good.crm.data.repository.PermissionRepository
+import too.good.crm.data.rbac.PermissionManager
 import too.good.crm.data.UserSession
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.api.NetworkUtils
@@ -96,6 +98,29 @@ class LoginViewModel(
                             activeMode = activeMode
                         )
                         UserSession.activeMode = activeMode
+                        
+                        // Initialize Permission Manager with profile and permissions
+                        // Get fresh profile with permissions from backend
+                        try {
+                            val permissionRepo = PermissionRepository.getInstance()
+                            val profileResult = permissionRepo.getCurrentProfile()
+                            profileResult.fold(
+                                onSuccess = { profileWithPerms ->
+                                    val permissions = profileWithPerms.permissions ?: emptyList()
+                                    PermissionManager.initialize(profileWithPerms, permissions)
+                                    android.util.Log.d("LoginViewModel", "Permission Manager initialized with ${permissions.size} permissions")
+                                },
+                                onFailure = { error ->
+                                    // Fallback: Use primary profile from login response
+                                    PermissionManager.initialize(primaryProfile, primaryProfile.permissions)
+                                    android.util.Log.w("LoginViewModel", "Failed to fetch profile with permissions, using fallback: ${error.message}")
+                                }
+                            )
+                        } catch (e: Exception) {
+                            // Fallback: Use primary profile from login response
+                            PermissionManager.initialize(primaryProfile, primaryProfile.permissions)
+                            android.util.Log.w("LoginViewModel", "Error initializing permissions: ${e.message}")
+                        }
                     }
                     _uiState.value = LoginUiState.Success("Login successful")
                     onSuccess()

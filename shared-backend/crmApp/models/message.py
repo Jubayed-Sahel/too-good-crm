@@ -1,6 +1,7 @@
 """
 Message Model
 Handles direct messaging between users (vendors, customers, employees)
+Also handles Gemini AI conversation persistence
 """
 
 from django.db import models
@@ -133,6 +134,86 @@ class Message(TimestampedModel):
         self.is_read = True
         self.read_at = timezone.now()
         self.save(update_fields=['is_read', 'read_at'])
+
+
+class GeminiConversation(TimestampedModel):
+    """
+    Stores conversation history with Gemini AI assistant
+    Persists chat messages for later retrieval
+    """
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='gemini_conversations',
+        help_text="User who owns this conversation"
+    )
+    
+    organization = models.ForeignKey(
+        'Organization',
+        on_delete=models.CASCADE,
+        related_name='gemini_conversations',
+        null=True,
+        blank=True,
+        help_text="Organization context"
+    )
+    
+    conversation_id = models.CharField(
+        max_length=100,
+        unique=True,
+        help_text="Unique conversation identifier (UUID)"
+    )
+    
+    title = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="Conversation title (auto-generated from first message)"
+    )
+    
+    messages = models.JSONField(
+        default=list,
+        help_text="Array of messages [{role, content, timestamp}]"
+    )
+    
+    last_message_at = models.DateTimeField(
+        auto_now=True,
+        help_text="Timestamp of last message"
+    )
+    
+    class Meta:
+        db_table = 'gemini_conversations'
+        verbose_name = 'Gemini Conversation'
+        verbose_name_plural = 'Gemini Conversations'
+        ordering = ['-last_message_at']
+        indexes = [
+            models.Index(fields=['user', 'organization']),
+            models.Index(fields=['conversation_id']),
+        ]
+    
+    def __str__(self):
+        title = self.title or f"Conversation {self.conversation_id[:8]}"
+        return f"{self.user.email} - {title}"
+    
+    def add_message(self, role: str, content: str):
+        """Add a message to the conversation"""
+        from django.utils import timezone
+        
+        if not self.messages:
+            self.messages = []
+        
+        self.messages.append({
+            'role': role,
+            'content': content,
+            'timestamp': timezone.now().isoformat()
+        })
+        
+        # Auto-generate title from first user message
+        if not self.title and role == 'user':
+            # Take first 50 chars of first message as title
+            self.title = content[:50] + ('...' if len(content) > 50 else '')
+        
+        self.save()
 
 
 class Conversation(TimestampedModel):

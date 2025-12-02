@@ -1,5 +1,6 @@
 package too.good.crm.data.repository
 
+import android.content.Context
 import android.util.Log
 import too.good.crm.data.api.ApiClient
 import too.good.crm.data.model.CreateCustomerRequest
@@ -30,7 +31,7 @@ import too.good.crm.data.model.PaginatedResponse
  * 
  * @author Android Development Team
  */
-class CustomerRepository {
+class CustomerRepository(private val context: Context? = null) {
     private val apiService = ApiClient.customerApiService
 
     companion object {
@@ -42,9 +43,9 @@ class CustomerRepository {
         /**
          * Get singleton instance of CustomerRepository
          */
-        fun getInstance(): CustomerRepository {
+        fun getInstance(context: Context? = null): CustomerRepository {
             return instance ?: synchronized(this) {
-                instance ?: CustomerRepository().also { instance = it }
+                instance ?: CustomerRepository(context).also { instance = it }
             }
         }
     }
@@ -295,7 +296,32 @@ class CustomerRepository {
      */
     suspend fun patchCustomer(id: Int, request: CreateCustomerRequest): Result<Customer> {
         return try {
-            Log.d(TAG, "Patching customer ID: $id (PATCH - partial update)")
+            Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            Log.d(TAG, "🔄 PATCH CUSTOMER REQUEST DEBUG")
+            Log.d(TAG, "Customer ID: $id")
+            Log.d(TAG, "Request Data:")
+            Log.d(TAG, "  - Name: ${request.name}")
+            Log.d(TAG, "  - Email: ${request.email}")
+            Log.d(TAG, "  - Phone: ${request.phone}")
+            Log.d(TAG, "  - First Name: ${request.firstName}")
+            Log.d(TAG, "  - Last Name: ${request.lastName}")
+            Log.d(TAG, "  - Company: ${request.companyName}")
+            Log.d(TAG, "  - Status: ${request.status}")
+            Log.d(TAG, "  - Customer Type: ${request.customerType}")
+            
+            // Log authentication info for debugging
+            try {
+                val authToken = ApiClient.getAuthToken()
+                Log.d(TAG, "Auth Context:")
+                Log.d(TAG, "  - Has Auth Token: ${authToken != null}")
+                Log.d(TAG, "  - Auth Token Length: ${authToken?.length ?: 0}")
+                Log.d(TAG, "  - Auth Token Prefix: ${authToken?.take(10) ?: "N/A"}...")
+            } catch (e: Exception) {
+                Log.w(TAG, "  - Error logging auth context: ${e.message}")
+            }
+            
+            Log.d(TAG, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            
             val response = apiService.patchCustomer(id, request)
             
             if (response.isSuccessful) {
@@ -307,9 +333,56 @@ class CustomerRepository {
                     Result.failure(Exception("No customer data returned"))
                 }
             } else {
-                val errorMessage = handleHttpError(response.code(), "patch customer")
-                Log.e(TAG, errorMessage)
-                Result.failure(Exception(errorMessage))
+                // Try to extract detailed error message from response body
+                val errorBody = response.errorBody()?.string()
+                val detailedError = if (errorBody != null && errorBody.isNotBlank()) {
+                    Log.e(TAG, "API Error Response (${response.code()}): $errorBody")
+                    // Try to extract common error message formats
+                    try {
+                        // Check for common JSON error formats
+                        when {
+                            errorBody.contains("\"detail\"") -> {
+                                // Extract detail field from JSON
+                                val detailMatch = Regex("\"detail\"\\s*:\\s*\"([^\"]+)\"").find(errorBody)
+                                detailMatch?.groupValues?.get(1) ?: errorBody.take(200)
+                            }
+                            errorBody.contains("\"error\"") -> {
+                                val errorMatch = Regex("\"error\"\\s*:\\s*\"([^\"]+)\"").find(errorBody)
+                                errorMatch?.groupValues?.get(1) ?: errorBody.take(200)
+                            }
+                            errorBody.contains("\"message\"") -> {
+                                val messageMatch = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(errorBody)
+                                messageMatch?.groupValues?.get(1) ?: errorBody.take(200)
+                            }
+                            else -> errorBody.take(200) // Show first 200 chars if can't parse
+                        }
+                    } catch (e: Exception) {
+                        // If parsing fails, use raw error body (limited length)
+                        errorBody.take(200)
+                    }
+                } else {
+                    null
+                }
+                
+                // Use detailed error if available, otherwise use generic error handler
+                val finalErrorMessage = if (detailedError != null) {
+                    // Enhance the detailed error message for customer.update permission issues
+                    if (response.code() == 403 && (detailedError.contains("customer.update", ignoreCase = true) || 
+                                                    detailedError.contains("customer:update", ignoreCase = true))) {
+                        "$detailedError\n\n" +
+                        "If you're a vendor, this might be a backend configuration issue.\n" +
+                        "Please check:\n" +
+                        "• Your vendor profile is active in the correct organization\n" +
+                        "• The customer belongs to your organization\n" +
+                        "• Your active profile is set correctly"
+                    } else {
+                        detailedError
+                    }
+                } else {
+                    handleHttpError(response.code(), "patch customer")
+                }
+                Log.e(TAG, "Patch customer failed (${response.code()}): $finalErrorMessage")
+                Result.failure(Exception(finalErrorMessage))
             }
         } catch (e: Exception) {
             val errorMessage = handleException(e, "patch customer")
@@ -356,7 +429,13 @@ class CustomerRepository {
         return when (code) {
             400 -> "Invalid data. Please check all fields and try again."
             401 -> "Unauthorized. Please login again."
-            403 -> "Access denied. You don't have permission to $action."
+            403 -> {
+                "Permission denied. You don't have permission to $action.\n\n" +
+                "If you're a vendor, ensure:\n" +
+                "• Your vendor profile is active\n" +
+                "• You're logged into the correct organization\n" +
+                "• Your account has the necessary permissions"
+            }
             404 -> "Customer not found."
             409 -> "Conflict. A customer with this information already exists."
             422 -> "Validation error. Please check your input."

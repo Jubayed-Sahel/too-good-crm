@@ -67,6 +67,15 @@ from crmApp.viewsets.telegram import (
     telegram_bot_info,
 )
 
+# Import Telegram Login Widget auth views
+from crmApp.viewsets.telegram_auth import (
+    telegram_login_widget_auth,
+    telegram_link_account,
+)
+
+# Import Telegram link generator
+from crmApp.viewsets.telegram_link_generator import generate_telegram_link
+
 # Create router
 router = DefaultRouter()
 
@@ -146,6 +155,11 @@ urlpatterns = [
     path('api/telegram/webhook/info/', telegram_webhook_info, name='telegram-webhook-info'),
     path('api/telegram/webhook/set/', telegram_set_webhook, name='telegram-set-webhook'),
     path('api/telegram/bot/info/', telegram_bot_info, name='telegram-bot-info'),
+    
+    # Telegram Login Widget endpoints
+    path('api/telegram/auth/', telegram_login_widget_auth, name='telegram-login-widget'),
+    path('api/telegram/link/', telegram_link_account, name='telegram-link-account'),
+    path('api/telegram/generate-link/', generate_telegram_link, name='telegram-generate-link'),
     
     # Router URLs (catch-all, must be last)
     path('api/', include(router.urls)),

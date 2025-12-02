@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -126,16 +127,21 @@ fun DealEditScreen(
         scope.launch {
             isSaving = true
             
+            // Convert value to Double
+            val valueDouble = value.toDoubleOrNull() ?: 0.0
+            
             val updateRequest = CreateDealRequest(
+                organization = deal!!.organization,
                 title = title,
                 description = description.ifBlank { null },
-                customerId = deal!!.customer!!.id,
-                value = value,
+                customer = deal!!.customer?.id ?: 0,
+                value = valueDouble,
                 currency = currency,
-                pipelineId = deal!!.pipelineId,
+                pipeline = deal!!.pipelineId,
+                stage = deal!!.stageId ?: 1,
                 probability = probability.toIntOrNull(),
                 expectedCloseDate = expectedCloseDate.ifBlank { null },
-                assignedToId = deal!!.assignedTo?.id,
+                assignedTo = deal!!.assignedTo?.id,
                 priority = priority,
                 notes = notes.ifBlank { null },
                 nextAction = nextAction.ifBlank { null },
@@ -166,7 +172,7 @@ fun DealEditScreen(
                 title = { Text("Edit Deal") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {

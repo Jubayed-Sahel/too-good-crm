@@ -170,5 +170,26 @@ export const geminiService = {
     
     return chunks.join('');
   },
+
+  /**
+   * Get a specific conversation by ID
+   */
+  async getConversation(conversationId: string): Promise<any> {
+    return await api.get(`${GEMINI_BASE_URL}/conversations/${conversationId}/`);
+  },
+
+  /**
+   * List all conversations for current user
+   */
+  async listConversations(): Promise<any[]> {
+    return await api.get(`${GEMINI_BASE_URL}/conversations/`);
+  },
+
+  /**
+   * Delete a conversation
+   */
+  async deleteConversation(conversationId: string): Promise<void> {
+    await api.delete(`${GEMINI_BASE_URL}/conversations/${conversationId}/`);
+  },
 };
 

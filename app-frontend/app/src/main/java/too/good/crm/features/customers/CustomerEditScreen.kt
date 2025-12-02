@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -14,9 +15,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import too.good.crm.ui.components.*
 import too.good.crm.ui.theme.DesignTokens
 import too.good.crm.ui.utils.*
+import too.good.crm.data.rbac.PermissionManager
 import android.widget.Toast
 
 /**
@@ -34,6 +37,7 @@ fun CustomerEditScreen(
     val context = LocalContext.current
     val viewModel: CustomersViewModel = viewModel()
     val uiState by viewModel.uiState.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
     
     val customer = remember(uiState.customers, customerId) {
         uiState.customers.find { it.id == customerId }
@@ -67,6 +71,29 @@ fun CustomerEditScreen(
     
     var isSaving by remember { mutableStateOf(false) }
     
+    // Observe ViewModel state for success/error
+    LaunchedEffect(uiState.successMessage, uiState.error) {
+        if (uiState.successMessage != null && isSaving) {
+            Toast.makeText(
+                context,
+                uiState.successMessage,
+                Toast.LENGTH_SHORT
+            ).show()
+            isSaving = false
+            viewModel.clearSuccessMessage()
+            // Navigate back after showing success
+            onBack()
+        } else if (uiState.error != null && isSaving) {
+            Toast.makeText(
+                context,
+                uiState.error,
+                Toast.LENGTH_SHORT
+            ).show()
+            isSaving = false
+            viewModel.clearError()
+        }
+    }
+    
     // Validation - matching web frontend requirements
     val isFormValid = firstName.isNotBlank() && 
                       lastName.isNotBlank() &&
@@ -79,7 +106,7 @@ fun CustomerEditScreen(
                 title = { Text("Edit Customer") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -520,12 +547,33 @@ fun CustomerEditScreen(
                         
                         Button(
                             onClick = {
-                                isSaving = true
+                                // Check permission before allowing update
+                                if (!PermissionManager.canUpdate("customer")) {
+                                    Toast.makeText(
+                                        context,
+                                        "You don't have permission to update customers. Please contact your administrator.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                    return@Button
+                                }
+                                
                                 val customerIdInt = customerId.toIntOrNull()
-                                if (customerIdInt != null) {
-                                    // Combine first and last name for the name field
-                                    val fullName = "$firstName $lastName".trim()
-                                    
+                                if (customerIdInt == null) {
+                                    Toast.makeText(
+                                        context,
+                                        "Invalid customer ID",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@Button
+                                }
+                                
+                                if (isSaving) return@Button
+                                
+                                isSaving = true
+                                // Combine first and last name for the name field
+                                val fullName = "$firstName $lastName".trim()
+                                
+                                coroutineScope.launch {
                                     viewModel.updateCustomer(
                                         customerId = customerIdInt,
                                         name = fullName,
@@ -545,19 +593,7 @@ fun CustomerEditScreen(
                                         industry = industry,
                                         notes = notes
                                     )
-                                    Toast.makeText(
-                                        context,
-                                        "Customer updated successfully",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    onBack()
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        "Invalid customer ID",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    isSaving = false
+                                    // Success/error handling is done in LaunchedEffect above
                                 }
                             },
                             modifier = Modifier.weight(1f),

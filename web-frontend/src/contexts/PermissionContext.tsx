@@ -45,6 +45,11 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
   // Fetch user permissions from backend
   useEffect(() => {
     const fetchPermissions = async () => {
+      // Skip if auth is still loading
+      if (authLoading) {
+        return;
+      }
+      
       // ========== DIAGNOSTIC LOGGING ==========
       console.log('[PermissionContext] ========== PERMISSION FETCH START ==========');
       console.log('[PermissionContext] User:', user ? `${user.email} (ID: ${user.id})` : 'null');
@@ -140,7 +145,7 @@ export const PermissionProvider = ({ children }: PermissionProviderProps) => {
 
     fetchPermissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, activeOrganizationId, activeProfile?.id]);
+  }, [user?.id, activeOrganizationId, activeProfile?.id, authLoading]);
 
   const permissionContext = useMemo(() => {
     // If auth is loading or no user, return default permissions
