@@ -92,7 +92,7 @@ interface LeadApiService {
     @POST("leads/{id}/move_stage/")
     suspend fun moveLeadStage(
         @Path("id") id: Int,
-        @Body body: Map<String, Any> // {"stage_id": 123, "notes": "..."}
+        @Body body: Map<String, @JvmSuppressWildcards Any> // {"stage_id": 123, "notes": "..."}
     ): Lead
     
     /**

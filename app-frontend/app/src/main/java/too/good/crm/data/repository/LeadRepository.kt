@@ -94,10 +94,22 @@ class LeadRepository {
      */
     suspend fun moveLeadStage(
         id: Int,
-        stageId: Int,
+        stageId: Int?,
+        stageKey: String? = null,
+        stageName: String? = null,
         notes: String? = null
     ): NetworkResult<Lead> = safeApiCall {
-        val body = mutableMapOf<String, Any>("stage_id" to stageId)
+        val body = mutableMapOf<String, @JvmSuppressWildcards Any>()
+        // Only send stage_id if it's valid (not null and > 0)
+        if (stageId != null && stageId > 0) {
+            body["stage_id"] = stageId
+        } else {
+            // Don't send stage_id at all - let backend use stage_key and stage_name
+            body["stage_id"] = 0
+        }
+        // Always send stage_key and stage_name to help backend find the right stage
+        stageKey?.let { body["stage_key"] = it }
+        stageName?.let { body["stage_name"] = it }
         notes?.let { body["notes"] = it }
         apiService.moveLeadStage(id, body)
     }
