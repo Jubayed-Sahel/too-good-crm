@@ -103,7 +103,7 @@ class Customer(TimestampedModel, CodeMixin, ContactInfoMixin, AddressMixin, Stat
     # Primary organization (backward compatibility - first vendor the customer signed up with)
     organization = models.ForeignKey(
         'Organization',
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,  # Prevent accidental org deletion if it has customers
         related_name='primary_customers',
         null=True,
         blank=True,

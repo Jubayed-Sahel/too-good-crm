@@ -16,7 +16,7 @@ import DashboardLayout from '../../components/dashboard/DashboardLayout';
 import CustomSelect from '../../components/ui/CustomSelect';
 import { Card, StandardButton } from '../../components/common';
 import { toaster } from '../../components/ui/toaster';
-import { dealService } from '@/services/deal.service';
+import { dealService } from '@/features/deals/services/deal.service';
 import type { Deal } from '@/types';
 
 const stageOptions = [

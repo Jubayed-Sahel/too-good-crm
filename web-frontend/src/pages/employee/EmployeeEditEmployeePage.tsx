@@ -12,11 +12,11 @@ import {
   SimpleGrid,
 } from '@chakra-ui/react';
 import { FiArrowLeft, FiSave } from 'react-icons/fi';
-import CustomSelect from '../../components/ui/CustomSelect';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { Card } from '../../components/common';
-import { toaster } from '../../components/ui/toaster';
-import { useEmployees } from '../../hooks/useEmployees';
+import CustomSelect from '@/components/ui/CustomSelect';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { Card } from '@/components/common';
+import { toaster } from '@/components/ui/toaster';
+import { useEmployees } from '@/features/employees/hooks/useEmployees';
 import { employeeService } from '@/services';
 
 const employmentTypeOptions = [

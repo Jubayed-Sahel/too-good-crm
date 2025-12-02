@@ -7,13 +7,14 @@ import {
 } from '@chakra-ui/react';
 import { FiSearch, FiFilter, FiPlus } from 'react-icons/fi';
 import CustomSelect from '@/components/ui/CustomSelect';
+import { usePermissions } from '@/contexts/PermissionContext';
 
 interface CustomerFiltersProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
   statusFilter: string;
   onStatusChange: (value: string) => void;
-  onAddCustomer: () => void;
+  onAddCustomer?: () => void; // Optional - only provided if user has create permission
 }
 
 const CustomerFilters = ({
@@ -23,12 +24,13 @@ const CustomerFilters = ({
   onStatusChange,
   onAddCustomer,
 }: CustomerFiltersProps) => {
+
   return (
     <Stack
       direction={{ base: 'column', md: 'row' }}
-      gap={4}
-      justifyContent="space-between"
-      alignItems={{ base: 'stretch', md: 'center' }}
+      gap={3}
+      justify="space-between"
+      align={{ base: 'stretch', md: 'center' }}
     >
       {/* Search and Filter */}
       <Stack direction={{ base: 'column', sm: 'row' }} gap={3} flex="1">
@@ -69,16 +71,16 @@ const CustomerFilters = ({
 
       {/* Action Buttons */}
       <HStack gap={2}>
-
-
-        <Button
-          colorPalette="purple"
-          h="40px"
-          onClick={onAddCustomer}
-        >
-          <FiPlus />
-          <Box ml={2}>Add Customer</Box>
-        </Button>
+        {onAddCustomer && (
+          <Button
+            colorPalette="purple"
+            h="40px"
+            onClick={onAddCustomer}
+          >
+            <FiPlus />
+            <Box ml={2}>Add Customer</Box>
+          </Button>
+        )}
       </HStack>
     </Stack>
   );

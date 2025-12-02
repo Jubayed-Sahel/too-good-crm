@@ -3,11 +3,11 @@
  * Helper functions to test CRUD operations end-to-end
  */
 
-import { customerService } from '@/services/customer.service';
-import { dealService } from '@/services/deal.service';
-import { leadService } from '@/services/lead.service';
-import { issueService } from '@/services/issue.service';
-import { activityService } from '@/services/activity.service';
+import { customerService } from '@/features/customers/services/customer.service';
+import { dealService } from '@/features/deals/services/deal.service';
+import { leadService } from '@/features/leads/services/lead.service';
+import { issueService } from '@/features/issues/services/issue.service';
+import { activityService } from '@/features/activities/services/activity.service';
 
 export interface CRUDTestResult {
   success: boolean;

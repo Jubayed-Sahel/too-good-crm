@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -7,9 +8,7 @@ import {
   HStack,
   Grid,
   Badge,
-  Button,
   Spinner,
-  IconButton,
 } from '@chakra-ui/react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import {
@@ -25,45 +24,56 @@ import {
   FiActivity,
   FiFileText,
 } from 'react-icons/fi';
-import { useCustomers } from '../hooks/useCustomers';
-import { useMemo } from 'react';
+import { StandardButton, ConfirmDialog } from '@/components/common';
+import { SendEmailDialog, type EmailData } from '@/features/activities/components/SendEmailDialog';
+import { activityService } from '@/features/activities/services/activity.service';
+import { toaster } from '@/components/ui/toaster';
+import { useCustomer, useDeleteCustomer } from '../hooks';
+import { useProfile } from '@/contexts/ProfileContext';
 
 const CustomerDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { customers, isLoading, error } = useCustomers();
+  
+  // Use useCustomer hook to fetch single customer
+  const customerId = id ? parseInt(id) : 0;
+  const { data: customerData, isLoading, error } = useCustomer(customerId);
+  const deleteCustomer = useDeleteCustomer();
+  const { activeOrganizationId } = useProfile();
+  
+  // State for dialogs
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
 
-  // Find the customer by ID - now uses full mock data with activities, notes, etc.
+  // Transform customer data for display
   const customer = useMemo(() => {
-    if (!customers || !id) return null;
+    if (!customerData) return null;
     
-    const found = customers.find((c) => c.id.toString() === id) as any;
-    if (!found) return null;
-
-    // Return the full customer object with all mock data fields
     return {
-      id: found.id.toString(),
-      name: found.full_name,
-      email: found.email,
-      phone: found.phone || '',
-      company: found.company || '',
-      website: found.website || '',
-      address: found.address || '',
-      city: found.city || '',
-      state: found.state || '',
-      country: found.country || '',
-      status: (found.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'pending',
-      job_title: found.job_title || '',
-      industry: found.industry || '',
-      source: found.source || '',
-      notes: found.notes || '',
-      tags: found.tags || [],
-      totalValue: found.total_value || 0,
-      lifetimeValue: found.lifetime_value || 0,
-      lastContact: found.last_contact || found.updated_at || found.created_at,
-      created_at: found.created_at,
+      id: customerData.id.toString(),
+      name: customerData.full_name || '',
+      email: customerData.email || '',
+      phone: customerData.phone || '',
+      organization: customerData.organization || '',
+      vendor_organizations: customerData.vendor_organizations || [],
+      website: customerData.website || '',
+      address: customerData.address || '',
+      city: customerData.city || '',
+      state: customerData.state || '',
+      country: customerData.country || '',
+      status: (customerData.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'prospect' | 'vip',
+      job_title: customerData.job_title || '',
+      industry: '',
+      source: '',
+      notes: customerData.notes || '',
+      tags: customerData.tags || [],
+      totalValue: customerData.total_value || 0,
+      lifetimeValue: customerData.total_value || 0,
+      lastContact: customerData.updated_at || customerData.created_at,
+      created_at: customerData.created_at,
     };
-  }, [customers, id]);
+  }, [customerData]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
@@ -96,17 +106,92 @@ const CustomerDetailPage = () => {
   };
 
   const handleEdit = () => {
-    // TODO: Implement edit functionality
-    alert(`Edit customer: ${customer?.name}`);
+    if (!customer) return;
+    navigate(`/customers/${customer.id}/edit`);
   };
 
   const handleDelete = () => {
     if (!customer) return;
-    if (confirm(`Are you sure you want to delete ${customer.name}?`)) {
-      // TODO: Implement delete functionality
-      alert(`Customer ${customer.name} deleted`);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!customerId) return;
+    
+    try {
+      await deleteCustomer.mutateAsync(customerId);
+      setIsDeleteDialogOpen(false);
+      
+      toaster.create({
+        title: 'Customer deleted',
+        description: 'Customer has been deleted successfully.',
+        type: 'success',
+      });
+      
+      // Navigate to customers list
       navigate('/customers');
+    } catch (error: any) {
+      toaster.create({
+        title: 'Failed to delete customer',
+        description: error.message || 'Please try again.',
+        type: 'error',
+      });
     }
+  };
+
+  const handleSendEmail = () => {
+    if (!customer) return;
+    setIsEmailDialogOpen(true);
+  };
+
+  const handleEmailSubmit = async (data: EmailData) => {
+    if (!customer || !activeOrganizationId) {
+      toaster.create({
+        title: 'Unable to send email',
+        description: 'Customer or organization information not found.',
+        type: 'error',
+      });
+      return;
+    }
+
+    setIsSendingEmail(true);
+    try {
+      // Create email activity via ActivityService
+      // Organization is automatically set by backend based on user's active organization
+      await activityService.create({
+        activity_type: 'email',
+        title: data.subject,
+        description: data.body,
+        customer: parseInt(customer.id),
+        email_subject: data.subject,
+        email_body: data.body,
+        status: 'completed',
+      });
+
+      toaster.create({
+        title: 'Email sent successfully',
+        description: `Email sent to ${data.emailAddress}`,
+        type: 'success',
+        duration: 3000,
+      });
+      setIsEmailDialogOpen(false);
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toaster.create({
+        title: 'Failed to send email',
+        description: error.message || error.response?.data?.detail || 'Please try again',
+        type: 'error',
+        duration: 3000,
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
+  const handleCreateDeal = () => {
+    if (!customer) return;
+    // Navigate to deals page - user can create a deal there and select this customer
+    navigate('/deals');
   };
 
   if (isLoading) {
@@ -147,13 +232,13 @@ const CustomerDetailPage = () => {
           <Text color="gray.600" fontSize="md" mb={6}>
             {error?.message || 'The customer you are looking for does not exist.'}
           </Text>
-          <Button
-            colorPalette="purple"
+          <StandardButton
+            variant="primary"
             onClick={() => navigate('/customers')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2}>Back to Customers</Text>
-          </Button>
+            Back to Customers
+          </StandardButton>
         </Box>
       </DashboardLayout>
     );
@@ -164,31 +249,28 @@ const CustomerDetailPage = () => {
       <VStack align="stretch" gap={5}>
         {/* Back Button and Actions */}
         <HStack justify="space-between" align="center">
-          <Button
+          <StandardButton
             variant="ghost"
-            colorPalette="gray"
             onClick={() => navigate('/customers')}
+            leftIcon={<FiArrowLeft />}
           >
-            <FiArrowLeft />
-            <Text ml={2}>Back to Customers</Text>
-          </Button>
+            Back to Customers
+          </StandardButton>
           <HStack gap={2}>
-            <Button
+            <StandardButton
               variant="outline"
-              colorPalette="blue"
               onClick={handleEdit}
+              leftIcon={<FiEdit2 />}
             >
-              <FiEdit2 />
-              <Text ml={2}>Edit</Text>
-            </Button>
-            <IconButton
-              aria-label="Delete customer"
-              variant="outline"
-              colorPalette="red"
+              Edit
+            </StandardButton>
+            <StandardButton
+              variant="danger"
               onClick={handleDelete}
+              leftIcon={<FiTrash2 />}
             >
-              <FiTrash2 />
-            </IconButton>
+              Delete
+            </StandardButton>
           </HStack>
         </HStack>
 
@@ -252,10 +334,10 @@ const CustomerDetailPage = () => {
                 <Heading size={{ base: 'xl', md: '2xl' }}>
                   {customer.name}
                 </Heading>
-                {customer.company && (
+                {customer.organization && (
                   <HStack gap={2} opacity={0.9}>
                     <FiBriefcase size={16} />
-                    <Text fontSize="lg">{customer.company}</Text>
+                    <Text fontSize="lg">{customer.organization}</Text>
                   </HStack>
                 )}
                 <HStack gap={2} opacity={0.85}>
@@ -349,7 +431,7 @@ const CustomerDetailPage = () => {
                   </VStack>
                 </HStack>
 
-                {customer.company && (
+                {customer.organization && (
                   <HStack
                     p={4}
                     bg="gray.50"
@@ -367,10 +449,10 @@ const CustomerDetailPage = () => {
                     </Box>
                     <VStack align="start" gap={0.5} flex={1}>
                       <Text fontSize="sm" fontWeight="semibold" color="gray.600">
-                        Company
+                        Organization
                       </Text>
                       <Text fontSize="md" fontWeight="medium" color="gray.900">
-                        {customer.company}
+                        {customer.organization}
                       </Text>
                     </VStack>
                   </HStack>
@@ -530,37 +612,61 @@ const CustomerDetailPage = () => {
                 Quick Actions
               </Heading>
               <VStack align="stretch" gap={2}>
-                <Button
+                <StandardButton
                   variant="outline"
-                  colorPalette="purple"
                   w="full"
                   justifyContent="flex-start"
+                  onClick={handleSendEmail}
+                  leftIcon={<FiMail />}
                 >
-                  <FiMail />
-                  <Text ml={2}>Send Email</Text>
-                </Button>
-                <Button
+                  Send Email
+                </StandardButton>
+                <StandardButton
                   variant="outline"
-                  colorPalette="blue"
                   w="full"
                   justifyContent="flex-start"
+                  onClick={handleCreateDeal}
+                  leftIcon={<FiFileText />}
                 >
-                  <FiPhone />
-                  <Text ml={2}>Make Call</Text>
-                </Button>
-                <Button
-                  variant="outline"
-                  colorPalette="green"
-                  w="full"
-                  justifyContent="flex-start"
-                >
-                  <FiFileText />
-                  <Text ml={2}>Create Deal</Text>
-                </Button>
+                  Create Deal
+                </StandardButton>
               </VStack>
             </Box>
           </VStack>
         </Grid>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmDialog
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={confirmDelete}
+          title="Delete Customer"
+          message={
+            customer
+              ? `Are you sure you want to delete customer "${customer.name}"? This action cannot be undone.`
+              : 'Are you sure you want to delete this customer?'
+          }
+          confirmText="Delete"
+          cancelText="Cancel"
+          colorScheme="red"
+          isLoading={deleteCustomer.isPending}
+        />
+
+        {/* Send Email Dialog */}
+        <SendEmailDialog
+          open={isEmailDialogOpen}
+          onClose={() => setIsEmailDialogOpen(false)}
+          onSubmit={handleEmailSubmit}
+          initialCustomer={
+            customer
+              ? {
+                  id: parseInt(customer.id),
+                  name: customer.name,
+                  email: customer.email,
+                }
+              : undefined
+          }
+        />
       </VStack>
     </DashboardLayout>
   );

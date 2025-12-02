@@ -158,7 +158,11 @@ class PipelineStageViewSet(viewsets.ModelViewSet):
         )
 
 
+from crmApp.viewsets.mixins.audit_mixin import AuditLoggingMixin
+
+
 class DealViewSet(
+    AuditLoggingMixin,
     viewsets.ModelViewSet,
     PermissionCheckMixin,
     OrganizationFilterMixin,

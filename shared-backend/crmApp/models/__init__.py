@@ -70,6 +70,9 @@ from .payment import Payment
 # Activity model
 from .activity import Activity
 
+# Audit Log model
+from .audit_log import AuditLog
+
 # Notification model
 from .notification import NotificationPreferences
 

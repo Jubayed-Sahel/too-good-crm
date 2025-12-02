@@ -11,14 +11,14 @@ import {
   Grid,
   Spinner,
 } from '@chakra-ui/react';
-import { Card, ConfirmDialog } from '../common';
-import { Field } from '../ui/field';
-import CustomSelect from '../ui/CustomSelect';
+import { Card, ConfirmDialog } from '@/components/common';
+import { Field } from '@/components/ui/field';
+import CustomSelect from '@/components/ui/CustomSelect';
 import { FiUserPlus, FiMail, FiTrash2, FiMoreVertical } from 'react-icons/fi';
-import { employeeService, type Employee } from '@/services/employee.service';
+import { employeeService, type Employee } from '@/features/employees/services/employee.service';
 import { roleService, type Role } from '@/services/role.service';
 import { useProfile } from '@/contexts/ProfileContext';
-import { toaster } from '../ui/toaster';
+import { toaster } from '@/components/ui/toaster';
 
 const TeamSettings = () => {
   const { activeOrganizationId } = useProfile();

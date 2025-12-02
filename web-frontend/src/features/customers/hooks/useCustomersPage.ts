@@ -21,9 +21,10 @@ export interface MappedCustomer {
   email: string;
   phone: string;
   company: string;
-  status: 'active' | 'inactive' | 'pending';
+  status: 'active' | 'inactive' | 'prospect' | 'vip';
   totalValue: number;
   lastContact: string;
+  user_id?: number | null;  // For Jitsi video calls
 }
 
 /**
@@ -133,9 +134,10 @@ export const useCustomersPage = (customers: Customer[] | undefined): UseCustomer
       email: customer.email,
       phone: customer.phone || '',
       company: customer.company || customer.company_name || '',
-      status: (customer.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'pending',
-      totalValue: (customer as any).total_value || 0,
+      status: (customer.status?.toLowerCase() || 'active') as 'active' | 'inactive' | 'prospect' | 'vip',
+      totalValue: customer.total_value || 0,
       lastContact: customer.updated_at || customer.created_at,
+      user_id: customer.user_id || null,  // For Jitsi video calls
     }));
   }, [customers, filteredCustomers]);
 

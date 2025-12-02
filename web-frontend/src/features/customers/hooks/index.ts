@@ -3,13 +3,15 @@
  * Barrel export for all customer-related hooks
  */
 
-export { useCustomers } from './useCustomers';
+export { useCustomers, useCustomer } from './useCustomers';
 export { useCustomersPage } from './useCustomersPage';
 export { useCustomerActions } from './useCustomerActions';
 export { 
   useCreateCustomer, 
   useUpdateCustomer, 
-  useDeleteCustomer 
+  useDeleteCustomer,
+  useActivateCustomer,
+  useDeactivateCustomer
 } from './useCustomerMutations';
 
 // Re-export types

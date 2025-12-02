@@ -25,7 +25,11 @@ from crmApp.viewsets.mixins import (
 )
 
 
+from crmApp.viewsets.mixins.audit_mixin import AuditLoggingMixin
+
+
 class LeadViewSet(
+    AuditLoggingMixin,
     viewsets.ModelViewSet,
     PermissionCheckMixin,
     OrganizationFilterMixin,
