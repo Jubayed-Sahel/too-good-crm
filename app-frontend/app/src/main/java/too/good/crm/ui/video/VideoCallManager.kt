@@ -93,15 +93,15 @@ fun VideoCallManager(
                                 onShowToast("Incoming call from $callerName")
                                 Log.d("VideoCallManager", "Incoming call from $callerName")
                             }
-                        } else if (call == null && currentCall != null) {
-                            // Call ended
-                            Log.d("VideoCallManager", "Call ended")
-                            GlobalCallState.clearCall()
-                            lastCallId = null
                         } else if (call != null && call.id == lastCallId) {
-                            // Update existing call status
+                            // Update existing call status (but don't clear if call becomes null)
+                            // The call should only be cleared by:
+                            // 1. User ending it manually (Jitsi CONFERENCE_TERMINATED event)
+                            // 2. WebSocket "call-ended" notification
                             GlobalCallState.setCall(call)
                         }
+                        // Note: Removed automatic clear when call becomes null
+                        // This prevents premature closing when other party ends the call
                     }
                 } catch (e: Exception) {
                     Log.e("VideoCallManager", "Error checking for calls", e)
@@ -189,11 +189,19 @@ object VideoCallHelper {
             initialize()
             videoRepository!!
         }
+        Log.d("VideoCallHelper", "🔵 Initiating call to user $recipientId")
         val result = repo.initiateCall(recipientId, callType)
+        
+        Log.d("VideoCallHelper", "🔵 Call result: ${if (result is Resource.Success) "SUCCESS" else "ERROR"}")
         
         // Update global state on success so VideoCallManager shows the UI immediately
         if (result is Resource.Success) {
+            Log.d("VideoCallHelper", "🔵 Setting GlobalCallState with call ID: ${result.data?.id}")
+            Log.d("VideoCallHelper", "🔵 Call details - status: ${result.data?.status}, initiator: ${result.data?.initiator}, recipient: ${result.data?.recipient}")
             GlobalCallState.setCall(result.data)
+            Log.d("VideoCallHelper", "🔵 GlobalCallState updated. Current value: ${GlobalCallState.currentCall.value?.id}")
+        } else if (result is Resource.Error) {
+            Log.e("VideoCallHelper", "🔴 Call failed: ${result.message}")
         }
         
         return result
@@ -207,11 +215,19 @@ object VideoCallHelper {
             initialize()
             videoRepository!!
         }
+        Log.d("VideoCallHelper", "🔵 Initiating call to email $email")
         val result = repo.initiateCallByEmail(email, callType)
+        
+        Log.d("VideoCallHelper", "🔵 Call result: ${if (result is Resource.Success) "SUCCESS" else "ERROR"}")
         
         // Update global state on success so VideoCallManager shows the UI immediately
         if (result is Resource.Success) {
+            Log.d("VideoCallHelper", "🔵 Setting GlobalCallState with call ID: ${result.data?.id}")
+            Log.d("VideoCallHelper", "🔵 Call details - status: ${result.data?.status}, initiator: ${result.data?.initiator}, recipient: ${result.data?.recipient}")
             GlobalCallState.setCall(result.data)
+            Log.d("VideoCallHelper", "🔵 GlobalCallState updated. Current value: ${GlobalCallState.currentCall.value?.id}")
+        } else if (result is Resource.Error) {
+            Log.e("VideoCallHelper", "🔴 Call failed: ${result.message}")
         }
         
         return result

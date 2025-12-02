@@ -1,5 +1,10 @@
 package too.good.crm
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -18,8 +23,14 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.jitsi.meet.sdk.BroadcastEvent
+import org.jitsi.meet.sdk.BroadcastIntentHelper
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.data.repository.VideoRepository
 import too.good.crm.features.activities.ActivitiesScreen
 import too.good.crm.features.client.ClientDashboardScreen
 import too.good.crm.features.client.MyVendorsScreen
@@ -55,6 +66,35 @@ import too.good.crm.ui.video.VideoCallHelper
 import android.widget.Toast
 
 class MainActivity : ComponentActivity() {
+    
+    private val jitsiMeetEventReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            intent?.let {
+                when (it.action) {
+                    BroadcastEvent.Type.CONFERENCE_TERMINATED.action -> {
+                        android.util.Log.d("MainActivity", "🔴 Jitsi conference ended - ${it.action}")
+                        // Clear the call UI immediately
+                        too.good.crm.ui.video.GlobalCallState.clearCall()
+                        
+                        // End the active call in backend
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val videoRepository = VideoRepository()
+                                val activeCall = videoRepository.getMyActiveCall()
+                                if (activeCall is too.good.crm.data.Resource.Success && activeCall.data != null) {
+                                    android.util.Log.d("MainActivity", "Ending active call ${activeCall.data.id}")
+                                    videoRepository.endCall(activeCall.data.id)
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("MainActivity", "Failed to end call", e)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -68,10 +108,27 @@ class MainActivity : ComponentActivity() {
         val authRepository = too.good.crm.data.repository.AuthRepository(this)
         authRepository.initializeSession()
         
+        // Initialize and restore UserSession
+        android.util.Log.d("MainActivity", "=== INITIALIZING USER SESSION ===")
+        too.good.crm.data.UserSession.initialize(this)
+        android.util.Log.d("MainActivity", "UserSession.initialize() called")
+        
+        too.good.crm.data.UserSession.restoreSession()
+        android.util.Log.d("MainActivity", "UserSession.restoreSession() called")
+        
+        val restoredProfile = too.good.crm.data.UserSession.currentProfile
+        android.util.Log.d("MainActivity", "After restore - currentProfile: userId=${restoredProfile?.id}, name=${restoredProfile?.name}")
+        
         // Initialize permissions if user is logged in
         if (authRepository.isLoggedIn()) {
+            android.util.Log.d("MainActivity", "User is logged in, initializing permissions")
             too.good.crm.data.rbac.PermissionInitializer.initializeAsync(this)
+        } else {
+            android.util.Log.d("MainActivity", "User is NOT logged in")
         }
+        
+        // Register Jitsi conference event receiver
+        registerJitsiEventReceiver()
         
         // Removed enableEdgeToEdge() as it can interfere with keyboard input
         setContent {
@@ -109,7 +166,11 @@ class MainActivity : ComponentActivity() {
                 val currentUserId = currentProfile?.id
                 
                 // Video Call Manager - runs globally
-                android.util.Log.d("MainActivity", "VideoCallManager - isAuthenticated: $isAuthenticated, userId: $currentUserId, profile: ${currentProfile?.name}")
+                android.util.Log.d("MainActivity", "=== VIDEO CALL MANAGER STATE ===")
+                android.util.Log.d("MainActivity", "Composing with - isAuthenticated: $isAuthenticated, userId: $currentUserId, profile: ${currentProfile?.name}")
+                android.util.Log.d("MainActivity", "UserSession.currentProfile (direct): ${UserSession.currentProfile?.id}")
+                android.util.Log.d("MainActivity", "currentProfileState.value: ${UserSession.currentProfileState.value?.id}")
+                
                 VideoCallManager(
                     isAuthenticated = isAuthenticated,
                     currentUserId = currentUserId,
@@ -479,6 +540,30 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+    
+    private fun registerJitsiEventReceiver() {
+        val intentFilter = IntentFilter().apply {
+            addAction(BroadcastEvent.Type.CONFERENCE_TERMINATED.action)
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(jitsiMeetEventReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(jitsiMeetEventReceiver, intentFilter)
+        }
+        
+        android.util.Log.d("MainActivity", "✅ Jitsi event receiver registered")
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        try {
+            unregisterReceiver(jitsiMeetEventReceiver)
+            android.util.Log.d("MainActivity", "Jitsi event receiver unregistered")
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Error unregistering receiver", e)
         }
     }
 }

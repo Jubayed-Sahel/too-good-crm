@@ -23,7 +23,7 @@ class JitsiService:
     Generates JWT tokens for secure authentication with 8x8's Jitsi platform.
     """
     
-    def __init__(self):
+    def __init__(self, use_public_server=None):
         # 8x8 Configuration
         self.app_id = getattr(settings, 'JITSI_8X8_APP_ID', '')
         self.api_key = getattr(settings, 'JITSI_8X8_API_KEY', '')
@@ -32,8 +32,20 @@ class JitsiService:
         self.algorithm = getattr(settings, 'JITSI_JWT_ALGORITHM', 'RS256')
         self.jwt_expires_in = getattr(settings, 'JITSI_JWT_EXPIRES_IN', 3600)
         
-        if not self.app_id or not self.api_key:
-            logger.warning("8x8 Video credentials not configured. Set JITSI_8X8_APP_ID and JITSI_8X8_API_KEY in settings.")
+        # Check for force public server environment variable
+        force_public = getattr(settings, 'JITSI_USE_PUBLIC_SERVER', 'false').lower() == 'true'
+        
+        # If 8x8 credentials are not configured, force_public is True, or use_public_server is True,
+        # fall back to public Jitsi server (meet.jit.si) which doesn't need JWT
+        self.use_public_server = use_public_server if use_public_server is not None else (force_public or not self.app_id or not self.api_key)
+        
+        if self.use_public_server:
+            self.server_domain = 'meet.jit.si'
+            logger.info("🌐 Using public Jitsi server (meet.jit.si) - no authentication required")
+        elif not self.app_id or not self.api_key:
+            logger.warning("⚠️ 8x8 Video credentials not configured. Set JITSI_8X8_APP_ID and JITSI_8X8_API_KEY in settings.")
+        else:
+            logger.info(f"🔐 Using 8x8 Video server ({self.server_domain}) with JWT authentication")
     
     def generate_room_name(self, initiator_id, recipient_id=None):
         """
@@ -48,6 +60,7 @@ class JitsiService:
     def generate_jwt_token(self, room_name, user, moderator=True):
         """
         Generate JWT token for 8x8 Video authentication.
+        Returns None if using public Jitsi server (no auth needed).
         
         Args:
             room_name (str): The room identifier
@@ -55,8 +68,13 @@ class JitsiService:
             moderator (bool): Whether user has moderator privileges
             
         Returns:
-            str: JWT token for authentication
+            str or None: JWT token for authentication (None for public server)
         """
+        # Public Jitsi server doesn't need JWT token
+        if self.use_public_server:
+            logger.info(f"Using public server - no JWT token needed for room {room_name}")
+            return None
+            
         if not self.app_id or not self.api_key:
             raise ValueError("8x8 credentials not configured")
         
@@ -107,6 +125,7 @@ class JitsiService:
             headers={'kid': self.kid} if self.kid else None
         )
         
+        logger.info(f"Generated JWT token for user {user.username} in room {room_name}")
         return token
     
     def initiate_call(self, initiator, recipient=None, call_type='video', organization=None):
@@ -290,6 +309,8 @@ class JitsiService:
             call_session (JitsiCallSession): The call session to end
             user (User): User ending the call
         """
+        logger.info(f"[end_call] Starting - Call ID: {call_session.id}, User: {user.id}, Current status: {call_session.status}")
+        
         if call_session.status in ['completed', 'rejected', 'cancelled', 'failed']:
             logger.warning(f"Attempting to end already ended call: {call_session.id}")
             return
@@ -303,6 +324,7 @@ class JitsiService:
             call_session.duration_seconds = int(duration)
         
         call_session.save()
+        logger.info(f"[end_call] Call {call_session.id} saved with status='completed'")
         
         # Clear current call from all participants
         for participant_id in call_session.participants:
@@ -313,7 +335,9 @@ class JitsiService:
                     presence.current_call = None
                     presence.status = 'online'
                     presence.save()
+                    logger.info(f"[end_call] Cleared current_call for participant {participant_id}")
             except (User.DoesNotExist, UserPresence.DoesNotExist):
+                logger.warning(f"[end_call] Could not find user or presence for participant {participant_id}")
                 pass
         
         logger.info(f"Call ended: Room {call_session.room_name}, Duration: {call_session.duration_formatted}")
@@ -323,22 +347,24 @@ class JitsiService:
         
         # Send real-time notification to all participants
         for participant_id in call_session.participants:
+            logger.info(f"[end_call] Sending call-ended notification to participant {participant_id}")
             self._send_call_notification(call_session, 'call-ended', participant_id)
         
+        logger.info(f"[end_call] Completed for call {call_session.id}")
         return call_session
     
     def get_video_url(self, call_session, user):
         """
-        Generate 8x8 Video URL with JWT token for joining a call.
+        Generate Jitsi Video URL with JWT token (if needed) for joining a call.
         
         Args:
             call_session (JitsiCallSession): The call session
             user (User): User joining the call
             
         Returns:
-            dict: URL and JWT token for joining
+            dict: URL and JWT token for joining (token is None for public server)
         """
-        # Generate JWT token for this user
+        # Generate JWT token for this user (None for public server)
         is_moderator = (call_session.initiator == user)
         jwt_token = self.generate_jwt_token(
             call_session.room_name,
@@ -346,15 +372,23 @@ class JitsiService:
             moderator=is_moderator
         )
         
-        # 8x8 Video URL format
-        video_url = f"https://{self.server_domain}/{self.app_id}/{call_session.room_name}"
+        # Video URL format
+        if self.use_public_server:
+            # Public Jitsi server (meet.jit.si)
+            video_url = f"https://{self.server_domain}/{call_session.room_name}"
+            logger.info(f"Generated public Jitsi URL: {video_url}")
+        else:
+            # 8x8 Video URL format
+            video_url = f"https://{self.server_domain}/{self.app_id}/{call_session.room_name}"
+            logger.info(f"Generated 8x8 Video URL: {video_url}")
         
         return {
             'video_url': video_url,
-            'jwt_token': jwt_token,
+            'jwt_token': jwt_token,  # None for public server
             'room_name': call_session.room_name,
-            'app_id': self.app_id,
+            'app_id': self.app_id if not self.use_public_server else None,
             'server_domain': self.server_domain,
+            'error': None
         }
     
     def get_active_calls(self, organization=None, user=None):

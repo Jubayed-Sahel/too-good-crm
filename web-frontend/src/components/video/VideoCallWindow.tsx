@@ -139,6 +139,7 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
    * Handle ending an active call
    */
   const handleEnd = () => {
+    console.log('[VideoCallWindow] handleEnd called for call:', callSession.id);
     onEnd(callSession.id);
   };
 
@@ -449,7 +450,22 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
                   // Recording will be saved on the server (8x8 Video cloud or your Jibri server)
                   // Only the initiator (moderator) should start recording to avoid duplicates
                   onApiReady={(externalApi) => {
-                    externalApi.addEventListener('videoConferenceJoined', () => {
+                    // Listen for hangup button click to close immediately (before ads)
+                    externalApi.addListener('toolbarButtonClicked', (event: any) => {
+                      if (event.key === 'hangup') {
+                        console.log('Hangup button clicked, force closing window');
+                        // Dispose the Jitsi API immediately
+                        try {
+                          externalApi.dispose();
+                        } catch (e) {
+                          console.log('Error disposing Jitsi API:', e);
+                        }
+                        // Force end the call
+                        handleEnd();
+                      }
+                    });
+                    
+                    externalApi.on('videoConferenceJoined', () => {
                       // Only start recording if user is the initiator (moderator)
                       // This prevents multiple participants from starting separate recordings
                       if (isInitiator) {
@@ -476,14 +492,16 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
                       }
                     });
 
-                    externalApi.addEventListener('recordingStatusChanged', (status: any) => {
+                    externalApi.on('recordingStatusChanged', (status: any) => {
                       // eslint-disable-next-line no-console
                       console.log('Recording status changed:', status);
                       // If recording stopped and we have a URL, we could upload it here
                       // But server-side recordings are handled by 8x8/Jitsi server
                     });
 
-                    externalApi.addEventListener('readyToClose', () => {
+                    // Handle call ending - stop recording and end the call
+                    externalApi.on('readyToClose', () => {
+                      console.log('Jitsi readyToClose event fired');
                       if (isInitiator) {
                         try {
                           externalApi.executeCommand('stopRecording', {
@@ -502,15 +520,14 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
                           }
                         }
                       }
+                      // End the call immediately
+                      handleEnd();
                     });
                   }}
                   getIFrameRef={(iframeRef) => {
                     iframeRef.style.height = '100%';
                     iframeRef.style.width = '100%';
                     iframeRef.style.border = 'none';
-                  }}
-                  onReadyToClose={() => {
-                    handleEnd();
                   }}
                 />
               </Box>

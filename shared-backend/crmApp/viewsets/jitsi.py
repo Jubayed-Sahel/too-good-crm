@@ -200,6 +200,9 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
         }
         """
         call_session = self.get_object()
+        logger.info(f"[update_status] Received request for call {pk}, action: {request.data.get('action')}, user: {request.user.id}")
+        logger.info(f"[update_status] Call current status: {call_session.status}")
+        
         serializer = UpdateCallStatusSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         
@@ -213,10 +216,12 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
                 jitsi_service.reject_call(call_session, request.user)
                 message = 'Call rejected'
             elif action_type == 'end':
+                logger.info(f"[update_status] Calling jitsi_service.end_call for call {pk}")
                 jitsi_service.end_call(call_session, request.user)
                 message = 'Call ended'
             
             call_session.refresh_from_db()
+            logger.info(f"[update_status] Call {pk} status after action: {call_session.status}")
             
             return Response({
                 'message': message,

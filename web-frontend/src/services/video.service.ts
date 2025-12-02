@@ -113,16 +113,23 @@ export const videoService = {
    * @returns Updated call session
    */
   async endCall(callId: number): Promise<VideoCallSession> {
+    console.log('[videoService.endCall] Starting call end for callId:', callId);
     const request: UpdateCallStatusRequest = {
       action: 'end',
     };
 
-    const response = await apiClient.post<UpdateCallStatusResponse>(
-      `${JITSI_BASE_URL}/${callId}/update_status/`,
-      request
-    );
-
-    return response.call_session;
+    try {
+      console.log('[videoService.endCall] Sending POST to update_status with action:', request.action);
+      const response = await apiClient.post<UpdateCallStatusResponse>(
+        `${JITSI_BASE_URL}/${callId}/update_status/`,
+        request
+      );
+      console.log('[videoService.endCall] Response received:', response);
+      return response.call_session;
+    } catch (error) {
+      console.error('[videoService.endCall] API call failed:', error);
+      throw error;
+    }
   },
 
   /**

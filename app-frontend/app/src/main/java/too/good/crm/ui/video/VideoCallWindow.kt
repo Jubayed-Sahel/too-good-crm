@@ -96,8 +96,9 @@ fun VideoCallWindow(
                 }
                 
                 // Active Call - Show Jitsi Meet video
-                isActive && jwtToken != null && !hasJwtError -> {
-                    Log.d("VideoCallWindow", "Showing JitsiMeetCallUI - token exists: ${jwtToken != null}, room: $roomName")
+                // For public server (meet.jit.si), jwtToken will be null - that's expected!
+                isActive && !hasJwtError -> {
+                    Log.d("VideoCallWindow", "✅ Showing JitsiMeetCallUI - token: ${if (jwtToken != null) "present" else "none (public server)"}, room: $roomName")
                     JitsiMeetCallUI(
                         context = context,
                         jwtToken = jwtToken,
@@ -110,7 +111,7 @@ fun VideoCallWindow(
                 
                 // Error state
                 else -> {
-                    Log.e("VideoCallWindow", "Showing ErrorCallUI - jwtToken: $jwtToken, hasJwtError: $hasJwtError, error: ${callSession.jitsiUrl.error}")
+                    Log.e("VideoCallWindow", "❌ Showing ErrorCallUI - jwtToken: $jwtToken, hasJwtError: $hasJwtError, error: ${callSession.jitsiUrl.error}")
                     ErrorCallUI(
                         errorMessage = callSession.jitsiUrl.error ?: "Failed to initialize call",
                         onDismiss = { onEnd(callSession.id) }
@@ -296,7 +297,7 @@ private fun IncomingCallUI(
 @Composable
 private fun JitsiMeetCallUI(
     context: Context,
-    jwtToken: String,
+    jwtToken: String?,  // Nullable - null for public server (meet.jit.si)
     roomName: String,
     serverDomain: String,
     callSession: VideoCallSession,
@@ -311,23 +312,46 @@ private fun JitsiMeetCallUI(
             Log.d("VideoCallWindow", "Server: $serverDomain")
             
             try {
-                // Launch Jitsi Meet activity with JWT token
-                val options = JitsiMeetConferenceOptions.Builder()
+                // Launch Jitsi Meet activity with JWT token (if provided)
+                Log.d("VideoCallWindow", "Building Jitsi options with audio/video enabled")
+                Log.d("VideoCallWindow", "JWT Token: ${if (jwtToken.isNullOrEmpty()) "NOT PROVIDED (public server)" else "PROVIDED"}")
+                
+                val optionsBuilder = JitsiMeetConferenceOptions.Builder()
                     .setServerURL(URL("https://$serverDomain"))
                     .setRoom(roomName)
-                    .setToken(jwtToken)
                     .setAudioOnly(callSession.callType == too.good.crm.data.models.CallType.AUDIO)
-                    .setAudioMuted(false)
+                    .setAudioMuted(false)  // Start with audio UNMUTED
                     .setVideoMuted(callSession.callType == too.good.crm.data.models.CallType.AUDIO)
+                    // Feature flags for better call experience
                     .setFeatureFlag("welcomepage.enabled", false)
                     .setFeatureFlag("prejoinpage.enabled", false)
-                    .build()
+                    .setFeatureFlag("pip.enabled", true)  // Picture-in-picture
+                    .setFeatureFlag("recording.enabled", true)
+                    .setFeatureFlag("live-streaming.enabled", false)
+                    .setFeatureFlag("meeting-name.enabled", false)
+                    .setFeatureFlag("calendar.enabled", false)
+                    .setFeatureFlag("call-integration.enabled", true)
+                    // Audio settings
+                    .setFeatureFlag("audio-mute.enabled", true)
+                    .setFeatureFlag("video-mute.enabled", true)
+                    .setFeatureFlag("speakerphone.enabled", true)
                 
+                // Only set JWT token if provided (8x8 server needs it, public server doesn't)
+                if (!jwtToken.isNullOrEmpty()) {
+                    optionsBuilder.setToken(jwtToken)
+                    Log.d("VideoCallWindow", "Using authenticated server with JWT token")
+                } else {
+                    Log.d("VideoCallWindow", "Using public Jitsi server (no JWT token)")
+                }
+                
+                val options = optionsBuilder.build()
+                
+                Log.d("VideoCallWindow", "Jitsi options: audioOnly=${callSession.callType == too.good.crm.data.models.CallType.AUDIO}, audioMuted=false")
                 JitsiMeetActivity.launch(context, options)
                 jitsiLaunched = true
-                Log.d("VideoCallWindow", "Jitsi Meet launched successfully")
+                Log.d("VideoCallWindow", "✅ Jitsi Meet launched successfully")
             } catch (e: Exception) {
-                Log.e("VideoCallWindow", "Failed to start Jitsi Meet", e)
+                Log.e("VideoCallWindow", "❌ Failed to start Jitsi Meet", e)
                 android.widget.Toast.makeText(context, "Failed to start video call: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
                 onEnd()
             }

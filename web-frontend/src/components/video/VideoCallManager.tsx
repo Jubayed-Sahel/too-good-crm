@@ -182,7 +182,8 @@ const VideoCallManager: React.FC = () => {
    * Handle call ended event from Pusher
    */
   const handleCallEnded = useCallback((event: VideoCallEvent) => {
-    console.log('[VideoCallManager] Call ended via Pusher:', event);
+    console.log('[VideoCallManager.handleCallEnded] Received call-ended event:', event);
+    console.log('[VideoCallManager.handleCallEnded] Current call before clearing:', currentCallRef.current);
     setCurrentCall(null);
     
     toaster.create({
@@ -209,15 +210,20 @@ const VideoCallManager: React.FC = () => {
    * Check for existing active call on mount
    */
   const checkExistingCall = useCallback(async () => {
+    console.log('[VideoCallManager.checkExistingCall] Checking for existing active call...');
     try {
       const activeCall = await videoService.getMyActiveCall();
       if (activeCall) {
-        console.log('[VideoCallManager] Found existing active call:', activeCall);
+        console.log('[VideoCallManager.checkExistingCall] Found existing active call:', activeCall);
         setCurrentCall(activeCall);
+      } else {
+        console.log('[VideoCallManager.checkExistingCall] No active call found');
       }
     } catch (error: any) {
       if (error?.response?.status !== 404) {
-        console.error('[VideoCallManager] Failed to check for existing call:', error);
+        console.error('[VideoCallManager.checkExistingCall] Failed to check for existing call:', error);
+      } else {
+        console.log('[VideoCallManager.checkExistingCall] No active call (404)');
       }
     }
   }, []);
@@ -299,10 +305,16 @@ const VideoCallManager: React.FC = () => {
    * Handle call end
    */
   const handleEnd = useCallback(async (callId: number) => {
+    console.log('[VideoCallManager.handleEnd] Called with callId:', callId);
+    console.log('[VideoCallManager.handleEnd] Current call state before clear:', currentCall);
+    
+    // Clear the UI immediately to close the window
+    setCurrentCall(null);
+    console.log('[VideoCallManager.handleEnd] Call window closed, ending call in backend');
+    
     try {
-      await videoService.endCall(callId);
-      setCurrentCall(null);
-      console.log('[VideoCallManager] Call ended');
+      const result = await videoService.endCall(callId);
+      console.log('[VideoCallManager.handleEnd] Call ended successfully, result:', result);
       toaster.create({
         title: 'Call Ended',
         description: 'The call has ended.',
@@ -310,15 +322,15 @@ const VideoCallManager: React.FC = () => {
         duration: 3000,
       });
     } catch (error) {
-      console.error('[VideoCallManager] Failed to end call:', error);
+      console.error('[VideoCallManager.handleEnd] Failed to end call:', error);
       toaster.create({
         title: 'Error',
-        description: 'Failed to end call.',
+        description: 'Failed to end call in backend.',
         type: 'error',
         duration: 5000,
       });
     }
-  }, []);
+  }, [currentCall]);
 
   // Show call window for:
   // - Active calls (both initiator and recipient)
