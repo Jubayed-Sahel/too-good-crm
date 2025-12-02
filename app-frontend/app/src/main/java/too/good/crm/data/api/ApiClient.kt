@@ -255,6 +255,13 @@ object ApiClient {
         retrofit.create(TelegramApiService::class.java)
     }
 
+    /**
+     * Vendor API Service instance
+     */
+    val vendorApiService: VendorApiService by lazy {
+        retrofit.create(VendorApiService::class.java)
+    }
+
     // Add other API services here as needed
     // val organizationApiService: OrganizationApiService by lazy { ... }
 }
