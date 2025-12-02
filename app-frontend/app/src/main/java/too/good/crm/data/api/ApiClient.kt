@@ -262,6 +262,13 @@ object ApiClient {
         retrofit.create(VendorApiService::class.java)
     }
 
+    /**
+     * Order API Service instance
+     */
+    val orderApiService: OrderApiService by lazy {
+        retrofit.create(OrderApiService::class.java)
+    }
+
     // Add other API services here as needed
     // val organizationApiService: OrganizationApiService by lazy { ... }
 }

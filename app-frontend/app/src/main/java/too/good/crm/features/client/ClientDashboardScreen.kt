@@ -30,8 +30,10 @@ fun ClientDashboardScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     val profileViewModel = remember { too.good.crm.features.profile.ProfileViewModel(context) }
+    val dashboardViewModel = remember { ClientDashboardViewModel(context) }
     val authRepository = remember { too.good.crm.data.repository.AuthRepository(context) }
     val profileState by profileViewModel.uiState.collectAsState()
+    val dashboardState by dashboardViewModel.uiState.collectAsState()
     
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     
@@ -40,6 +42,8 @@ fun ClientDashboardScreen(
         if (profileState.profiles.isEmpty() && !profileState.isLoading) {
             profileViewModel.loadProfiles()
         }
+        // Load dashboard data
+        dashboardViewModel.loadDashboardData()
     }
 
     AppScaffoldWithDrawer(
@@ -122,55 +126,137 @@ fun ClientDashboardScreen(
             }
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
-            ClientWelcomeCard()
+        // Pull-to-refresh state
+        val isRefreshing = dashboardState.isLoading
+        
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                // Show loading state
+                if (dashboardState.isLoading && !dashboardState.hasData) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+                return@Column
+            }
+            
+            // Show error state
+            if (dashboardState.error != null) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = DesignTokens.Colors.Error.copy(alpha = 0.1f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Error Loading Dashboard",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = DesignTokens.Colors.Error
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = dashboardState.error ?: "Unknown error",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { dashboardViewModel.refresh() }) {
+                            Icon(Icons.Default.Refresh, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Retry")
+                        }
+                    }
+                }
+                return@Column
+            }
+            
+            // Show dashboard content
+            ClientWelcomeCard(onNavigate)
             Spacer(modifier = Modifier.height(16.dp))
+            
+            // Vendor stats
+            val vendorStats = dashboardState.vendorStats
             ClientMetricCard(
                 title = "MY VENDORS",
-                value = "12",
-                change = "+3",
-                changeLabel = "new this month",
+                value = vendorStats?.totalVendors?.toString() ?: "0",
+                change = "+${vendorStats?.activeVendors ?: 0}",
+                changeLabel = "active vendors",
                 icon = Icons.Default.Store,
                 isPositive = true
             )
             Spacer(modifier = Modifier.height(16.dp))
+            
+            // Order stats
+            val orderStats = dashboardState.orderStats
+            val activeOrders = (orderStats?.byStatus?.pending ?: 0) + 
+                              (orderStats?.byStatus?.processing ?: 0) +
+                              (orderStats?.byStatus?.confirmed ?: 0)
             ClientMetricCard(
                 title = "ACTIVE ORDERS",
-                value = "8",
-                change = "+5",
-                changeLabel = "vs last month",
+                value = activeOrders.toString(),
+                change = "+${orderStats?.byStatus?.completed ?: 0}",
+                changeLabel = "completed",
                 icon = Icons.Default.ShoppingBag,
                 isPositive = true
             )
             Spacer(modifier = Modifier.height(16.dp))
+            
+            // Total spent (revenue)
+            val totalRevenue = orderStats?.totalRevenue ?: 0.0
             ClientMetricCard(
                 title = "TOTAL SPENT",
-                value = "$24,500",
-                change = "+18%",
-                changeLabel = "vs last month",
+                value = "$${String.format("%.2f", totalRevenue)}",
+                change = "${orderStats?.total ?: 0}",
+                changeLabel = "total orders",
                 icon = Icons.Default.Payment,
                 isPositive = true
             )
             Spacer(modifier = Modifier.height(16.dp))
+            
+            // Pending orders
             ClientMetricCard(
-                title = "OPEN ISSUES",
-                value = "2",
-                change = "-1",
-                changeLabel = "vs last week",
-                icon = Icons.Default.ReportProblem,
-                isPositive = true
+                title = "PENDING ORDERS",
+                value = (orderStats?.byStatus?.pending ?: 0).toString(),
+                change = "${orderStats?.byStatus?.cancelled ?: 0}",
+                changeLabel = "cancelled",
+                icon = Icons.Default.HourglassEmpty,
+                isPositive = orderStats?.byStatus?.pending ?: 0 <= 5
             )
+        }
+            
+            // Floating refresh button
+            if (dashboardState.hasData) {
+                FloatingActionButton(
+                    onClick = { dashboardViewModel.refresh() },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp),
+                    containerColor = DesignTokens.Colors.Info
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Refresh Dashboard"
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun ClientWelcomeCard() {
+fun ClientWelcomeCard(onNavigate: (String) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -204,7 +290,7 @@ fun ClientWelcomeCard() {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Button(
-                    onClick = { /* TODO: Navigate to Orders */ },
+                    onClick = { onNavigate("my-orders") },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = DesignTokens.Colors.Info
@@ -215,15 +301,15 @@ fun ClientWelcomeCard() {
                     Text("My Orders")
                 }
                 OutlinedButton(
-                    onClick = { /* TODO: Create new order */ },
+                    onClick = { onNavigate("my-vendors") },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = DesignTokens.Colors.Info
                     )
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
+                    Icon(Icons.Default.Store, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("New Order")
+                    Text("My Vendors")
                 }
             }
         }
