@@ -22,7 +22,7 @@ class AIAssistantViewModel(application: Application) : AndroidViewModel(applicat
     
     private val context: Context = application.applicationContext
     
-    private val repository = GeminiRepository()
+    private val repository = GeminiRepository(context)
     
     // UI State
     private val _uiState = MutableStateFlow(AIAssistantUiState())

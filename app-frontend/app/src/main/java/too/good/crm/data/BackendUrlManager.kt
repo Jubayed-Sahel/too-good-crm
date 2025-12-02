@@ -47,9 +47,10 @@ object BackendUrlManager {
      */
     fun resetToDefault(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        // Set to the default IP address
         prefs.edit()
-            .putBoolean(KEY_USE_CUSTOM_URL, false)
-            .remove(KEY_BACKEND_URL)
+            .putString(KEY_BACKEND_URL, "http://192.168.0.102:8000/api/")
+            .putBoolean(KEY_USE_CUSTOM_URL, true)
             .apply()
     }
     

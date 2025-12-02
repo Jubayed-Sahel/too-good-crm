@@ -1,5 +1,6 @@
 package too.good.crm.data.repository
 
+import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -11,6 +12,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import too.good.crm.data.BackendUrlManager
 import too.good.crm.data.NetworkResult
 import too.good.crm.data.api.ApiClient
 import too.good.crm.data.api.*
@@ -23,7 +25,7 @@ import java.util.concurrent.TimeUnit
  * Gemini AI Repository
  * Handles all AI Assistant operations including streaming chat
  */
-class GeminiRepository {
+class GeminiRepository(private val context: Context? = null) {
     private val apiService = ApiClient.geminiApiService
     
     companion object {
@@ -77,8 +79,12 @@ class GeminiRepository {
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .build()
             
-            // Get base URL from BuildConfig
-            val baseUrl = too.good.crm.BuildConfig.BACKEND_URL
+            // Get base URL from BackendUrlManager (dynamic) or BuildConfig (fallback)
+            val baseUrl = if (context != null) {
+                BackendUrlManager.getBackendUrl(context)
+            } else {
+                too.good.crm.BuildConfig.BACKEND_URL
+            }
             val authToken = ApiClient.getAuthToken()
             
             // Create request
