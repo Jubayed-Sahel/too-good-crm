@@ -13,6 +13,7 @@ import too.good.crm.data.repository.CustomerRepository
 data class CustomersUiState(
     val customers: List<Customer> = emptyList(),
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val showAddCustomerDialog: Boolean = false,
     val isCreatingCustomer: Boolean = false,
@@ -33,9 +34,13 @@ class CustomersViewModel : ViewModel() {
         loadCustomers()
     }
 
-    fun loadCustomers() {
+    fun loadCustomers(refresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            if (refresh) {
+                _uiState.value = _uiState.value.copy(isRefreshing = true, error = null)
+            } else {
+                _uiState.value = _uiState.value.copy(isLoading = true, error = null)
+            }
 
             try {
                 repository.getCustomers()
@@ -51,18 +56,21 @@ class CustomersViewModel : ViewModel() {
                         }
                         _uiState.value = _uiState.value.copy(
                             customers = customers,
-                            isLoading = false
+                            isLoading = false,
+                            isRefreshing = false
                         )
                     }
                     .onFailure { error ->
                         _uiState.value = _uiState.value.copy(
                             isLoading = false,
+                            isRefreshing = false,
                             error = error.message ?: "Failed to load customers"
                         )
                     }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    isRefreshing = false,
                     error = "Error loading customers: ${e.message}"
                 )
             }

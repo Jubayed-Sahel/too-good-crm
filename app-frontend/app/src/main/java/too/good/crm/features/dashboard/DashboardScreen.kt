@@ -8,6 +8,8 @@ import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -81,6 +83,7 @@ fun DashboardScreen(
     }
     
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    val pullToRefreshState = rememberPullToRefreshState()
 
     AppScaffoldWithDrawer(
         title = "Dashboard",
@@ -166,10 +169,17 @@ fun DashboardScreen(
             }
         }
     ) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = dashboardState.isRefreshing,
+            onRefresh = { dashboardViewModel.loadStats(refresh = true) },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
+                .padding(paddingValues)
                 .padding(DesignTokens.Spacing.Space4)
         ) {
             WelcomeCard()
@@ -326,6 +336,7 @@ fun DashboardScreen(
                     iconTintColor = DesignTokens.Colors.Info
                 )
             }
+        }
         }
     }
 }

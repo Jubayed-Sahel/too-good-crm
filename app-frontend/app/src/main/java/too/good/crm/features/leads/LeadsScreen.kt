@@ -7,6 +7,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +52,7 @@ fun LeadsScreen(
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     var showFilterDrawer by remember { mutableStateOf(false) }
     var currentFilters by remember { mutableStateOf(LeadFilters()) }
+    val pullToRefreshState = rememberPullToRefreshState()
     
     LaunchedEffect(Unit) {
         if (profileState.profiles.isEmpty() && !profileState.isLoading) {
@@ -103,12 +106,18 @@ fun LeadsScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.loadLeads(refresh = true) },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
             // Header
             Text(
                 text = "Leads",
@@ -382,6 +391,7 @@ fun LeadsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
                 }
+            }
             }
         }
     }

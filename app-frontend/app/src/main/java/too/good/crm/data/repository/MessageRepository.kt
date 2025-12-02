@@ -86,7 +86,8 @@ class MessageRepository {
      * Returns list of conversations ordered by last message time
      */
     suspend fun getConversations(): NetworkResult<List<Conversation>> = safeApiCall {
-        apiService.getConversations()
+        val response = apiService.getConversations()
+        response.results // Extract the list from paginated response
     }
 }
 
