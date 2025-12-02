@@ -310,6 +310,13 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+                        composable("ai-assistant") {
+                            too.good.crm.features.messages.AIAssistantScreen(
+                                onBack = {
+                                    navController.popBackStack()
+                                }
+                            )
+                        }
                         composable("chat/{conversationId}") { backStackEntry ->
                             val conversationId = backStackEntry.arguments?.getString("conversationId")?.toIntOrNull()
                             if (conversationId != null) {

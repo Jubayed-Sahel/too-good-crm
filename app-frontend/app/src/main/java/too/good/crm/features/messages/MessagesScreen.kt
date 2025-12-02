@@ -240,6 +240,59 @@ fun MessagesScreen(
                 }
             }
             
+            // AI Assistant Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onNavigate("ai-assistant") },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = DesignTokens.Colors.Primary.copy(alpha = 0.1f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(DesignTokens.Colors.Primary.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "🤖",
+                            fontSize = 24.sp
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = "AI Assistant",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = DesignTokens.Colors.OnSurface
+                        )
+                        Text(
+                            text = "Ask me anything about your CRM • Voice enabled",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                    }
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = DesignTokens.Colors.OnSurfaceVariant
+                    )
+                }
+            }
+            
             // Telegram Link Button
             TelegramLinkButton()
             
