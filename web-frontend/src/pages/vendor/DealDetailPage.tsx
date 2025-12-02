@@ -25,7 +25,7 @@ import {
   FiTrendingUp,
   FiTarget,
 } from 'react-icons/fi';
-import { dealService } from '@/services/deal.service';
+import { dealService } from '@/features/deals/services/deal.service';
 import { useDeleteDeal } from '@/hooks';
 import { StandardButton, ConfirmDialog } from '@/components/common';
 import type { Deal } from '@/types';

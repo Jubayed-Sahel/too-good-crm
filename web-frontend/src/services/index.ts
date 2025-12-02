@@ -21,17 +21,21 @@ export type {
   SecuritySettings,
   ActiveSession
 } from './userProfile.service';
-export { employeeService } from './employee.service';
+// Employee service - RE-EXPORTED from features/employees (MIGRATED)
+export { employeeService } from '../features/employees/services/employee.service';
 export type { 
   Employee, 
   InviteEmployeeRequest, 
   InviteEmployeeResponse 
-} from './employee.service';
+} from '../features/employees/services/employee.service';
 
 // CRM Core
-export { customerService } from './customer.service';
-export { leadService } from './lead.service';
-export { dealService } from './deal.service';
+// Customer service - RE-EXPORTED from features/customers (MIGRATED)
+export { customerService } from '../features/customers/services/customer.service';
+// Lead service - RE-EXPORTED from features/leads (MIGRATED)
+export { leadService } from '../features/leads/services/lead.service';
+// Deal service - RE-EXPORTED from features/deals (MIGRATED)
+export { dealService } from '../features/deals/services/deal.service';
 export type { 
   DealCreateData, 
   DealFilters, 
@@ -39,15 +43,20 @@ export type {
   Pipeline, 
   PipelineStage,
   MoveStageData 
-} from './deal.service';
-export { activityService } from './activity.service';
-export { getActivities, getActivity, createActivity, deleteActivity, getActivityStats } from './activity.service';
+} from '../features/deals/services/deal.service';
+// Activity services - RE-EXPORTED from features/activities (MIGRATED)
+export { activityService, getActivities, getActivity, createActivity, deleteActivity, getActivityStats } from '../features/activities/services/activity.service';
+export { auditLogService } from '../features/activities/services/auditLog.service';
 
 // Operations
-export { vendorService } from './vendor.service';
-export { issueService } from './issue.service';
-export { orderService } from './order.service';
-export { paymentService } from './payment.service';
+// Vendor service - RE-EXPORTED from features/vendors (MIGRATED - structure only)
+export { vendorService } from '../features/vendors/services/vendor.service';
+// Issue service - RE-EXPORTED from features/issues (MIGRATED)
+export { issueService } from '../features/issues/services/issue.service';
+// Order service - RE-EXPORTED from features/orders (MIGRATED)
+export { orderService } from '../features/orders/services/order.service';
+// Payment service - RE-EXPORTED from features/payments (MIGRATED)
+export { paymentService } from '../features/payments/services/payment.service';
 
 // Organization & Settings
 export { organizationService } from './organization.service';
@@ -58,4 +67,6 @@ export type {
 } from './notificationPreferences.service';
 
 // AI & Automation
-export { geminiService } from './gemini.service';
+// geminiService - RE-EXPORTED from features/messages (MIGRATED)
+// Messages services - RE-EXPORTED from features/messages (MIGRATED)
+export * from '../features/messages/services';

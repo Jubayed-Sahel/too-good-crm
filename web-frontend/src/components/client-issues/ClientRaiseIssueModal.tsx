@@ -21,8 +21,8 @@ import {
 } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import type { ClientRaiseIssueData, IssuePriority, IssueCategory } from '@/types';
-import { vendorService } from '@/services/vendor.service';
-import { orderService } from '@/services/order.service';
+import { vendorService } from '@/features/vendors/services/vendor.service';
+import { orderService } from '@/features/orders/services/order.service';
 import { organizationService } from '@/services/organization.service';
 import { useAuth } from '@/hooks/useAuth';
 

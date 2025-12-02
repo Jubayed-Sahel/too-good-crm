@@ -13,10 +13,10 @@ import {
   Input,
   Separator,
 } from '@chakra-ui/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { Card, StandardButton, ConfirmDialog, ErrorState } from '../../components/common';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { Card, StandardButton, ConfirmDialog, ErrorState } from '@/components/common';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { issueService } from '../../services/issue.service';
+import { issueService } from '@/features/issues/services/issue.service';
 import {
   FiArrowLeft,
   FiCheckCircle,

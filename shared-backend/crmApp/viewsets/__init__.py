@@ -46,6 +46,7 @@ from .issue import IssueViewSet
 from .order import OrderViewSet
 from .payment import PaymentViewSet
 from .activity import ActivityViewSet
+from .audit_log import AuditLogViewSet
 
 # Jitsi Calls
 from .jitsi import (
@@ -102,6 +103,7 @@ __all__ = [
     'OrderViewSet',
     'PaymentViewSet',
     'ActivityViewSet',
+    'AuditLogViewSet',
     
     # Jitsi Calls
     'JitsiCallViewSet',

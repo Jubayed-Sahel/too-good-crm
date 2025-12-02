@@ -23,7 +23,11 @@ from crmApp.viewsets.mixins import (
 )
 
 
+from crmApp.viewsets.mixins.audit_mixin import AuditLoggingMixin
+
+
 class CustomerViewSet(
+    AuditLoggingMixin,
     viewsets.ModelViewSet,
     PermissionCheckMixin,
     OrganizationFilterMixin,
@@ -55,6 +59,9 @@ class CustomerViewSet(
         import logging
         from crmApp.models import CustomerOrganization
         logger = logging.getLogger(__name__)
+        
+        # Set audit user for logging (from AuditLoggingMixin)
+        self._set_audit_user()
         
         # Get organization from user's active profile using mixin method
         organization = self.get_organization_from_request(self.request)

@@ -13,11 +13,11 @@ import {
   Input,
   Separator,
 } from '@chakra-ui/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { Card, StandardButton, ConfirmDialog, ErrorState } from '../../components/common';
-import { issueService } from '../../services/issue.service';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { Card, StandardButton, ConfirmDialog, ErrorState } from '@/components/common';
+import { issueService } from '@/features/issues/services/issue.service';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Issue, IssueComment, IssuePriority, IssueCategory } from '../../types';
+import type { Issue, IssueComment, IssuePriority, IssueCategory } from '@/types';
 import {
   FiArrowLeft,
   FiTrash2,
