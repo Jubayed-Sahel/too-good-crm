@@ -25,7 +25,7 @@ android {
         // For Android Emulator: http://10.0.2.2:8000/api/
         // For Physical Device: http://YOUR_COMPUTER_IP:8000/api/
         // Get your IP: Windows (cmd): ipconfig | Mac/Linux: ifconfig
-        val backendUrl = "http://192.168.0.102:8000/api/"
+        val backendUrl = "http://192.168.0.218:8000/api/"
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
     }
 
@@ -80,6 +80,9 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.android.material:material:1.11.0")
     implementation(libs.accompanist.swiperefresh)
+    
+    // Accompanist Permissions for runtime permission handling
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
     
     // Pusher for real-time updates
     implementation("com.pusher:pusher-java-client:2.4.4")
