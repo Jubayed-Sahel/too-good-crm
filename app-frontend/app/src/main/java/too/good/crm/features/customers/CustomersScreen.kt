@@ -11,6 +11,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +57,7 @@ fun CustomersScreen(
     
     var searchQuery by remember { mutableStateOf("") }
     var filterStatus by remember { mutableStateOf<CustomerStatus?>(null) }
+    val pullToRefreshState = rememberPullToRefreshState()
 
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     
@@ -202,13 +205,19 @@ fun CustomersScreen(
                 )
             }
         ) { drawerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(DesignTokens.Colors.Background)
-                    .padding(drawerPadding)
-                    .padding(
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.loadCustomers(refresh = true) },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(DesignTokens.Colors.Background)
+                        .padding(drawerPadding)
+                        .padding(
                         responsivePadding(
                             compact = DesignTokens.Spacing.Space4,
                             medium = DesignTokens.Spacing.Space5,
@@ -401,37 +410,36 @@ fun CustomersScreen(
                                 }
                             )
                         }
-                    }
                 }
             }
+        }
 
-            // Floating Action Button
-            FloatingActionButton(
-                onClick = { viewModel.showAddCustomerDialog() },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp),
-                containerColor = DesignTokens.Colors.Primary,
-                contentColor = DesignTokens.Colors.OnPrimary
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Add Customer"
-                )
-            }
-
-            // Snackbar
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 80.dp)
+        // Floating Action Button
+        FloatingActionButton(
+            onClick = { viewModel.showAddCustomerDialog() },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = DesignTokens.Colors.Primary,
+            contentColor = DesignTokens.Colors.OnPrimary
+        ) {
+            Icon(
+                Icons.Default.Add,
+                contentDescription = "Add Customer"
             )
         }
-    }
-}
 
-@Composable
+        // Snackbar
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 80.dp)
+        )
+    }
+        }
+    }
+}@Composable
 fun ResponsiveCustomerCard(
     customer: Customer,
     onView: () -> Unit = {},
