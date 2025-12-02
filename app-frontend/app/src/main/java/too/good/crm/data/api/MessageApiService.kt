@@ -67,8 +67,9 @@ interface MessageApiService {
      * GET /api/conversations/
      * 
      * Returns list of conversations ordered by last_message_at
+     * Note: Backend returns paginated response
      */
     @GET("conversations/")
-    suspend fun getConversations(): List<Conversation>
+    suspend fun getConversations(): ConversationsListResponse
 }
 

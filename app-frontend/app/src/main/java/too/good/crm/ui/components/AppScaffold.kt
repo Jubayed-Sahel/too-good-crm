@@ -134,20 +134,20 @@ fun NavigationDrawerContent(
                 Icon(
                     imageVector = if (activeMode == ActiveMode.VENDOR) Icons.Default.FlashOn else Icons.Default.ShoppingCart,
                     contentDescription = "App Icon",
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = if (activeMode == ActiveMode.VENDOR) MaterialTheme.colorScheme.primary else DesignTokens.Colors.Secondary,
                     modifier = Modifier.size(40.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Too Good CRM",
+                        text = "LeadGrid",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = if (activeMode == ActiveMode.VENDOR) "Vendor Platform" else "Client Platform",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = if (activeMode == ActiveMode.VENDOR) MaterialTheme.colorScheme.primary else DesignTokens.Colors.Secondary
                     )
                 }
             }

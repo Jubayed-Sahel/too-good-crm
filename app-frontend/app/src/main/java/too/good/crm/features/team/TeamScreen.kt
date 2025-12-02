@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +48,7 @@ fun TeamScreen(
     var searchQuery by remember { mutableStateOf("") }
     var filterRole by remember { mutableStateOf<TeamRole?>(null) }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    val pullToRefreshState = rememberPullToRefreshState()
     
     LaunchedEffect(Unit) {
         if (profileState.profiles.isEmpty() && !profileState.isLoading) {
@@ -99,10 +102,17 @@ fun TeamScreen(
             )
         }
     ) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = (teamUiState as? TeamUiState.Success)?.isRefreshing ?: false,
+            onRefresh = { teamViewModel.loadEmployees(refresh = true) },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(DesignTokens.Colors.Background)
+                .padding(paddingValues)
                 .padding(DesignTokens.Spacing.Space4)
         ) {
             // Header
@@ -374,6 +384,7 @@ fun TeamScreen(
                     }
                 }
             }
+        }
         }
     }
 }

@@ -44,12 +44,20 @@ class TeamViewModel(private val context: Context) : ViewModel() {
         organizationId: Int? = null,
         status: String? = null,
         department: String? = null,
-        search: String? = null
+        search: String? = null,
+        refresh: Boolean = false
     ) {
         viewModelScope.launch {
             try {
                 Log.d(TAG, "Loading employees")
-                _uiState.value = TeamUiState.Loading
+                if (refresh) {
+                    val currentState = _uiState.value
+                    if (currentState is TeamUiState.Success) {
+                        _uiState.value = currentState.copy(isRefreshing = true)
+                    }
+                } else {
+                    _uiState.value = TeamUiState.Loading
+                }
                 
                 val result = employeeRepository.getEmployees(
                     organizationId = organizationId,
@@ -61,7 +69,7 @@ class TeamViewModel(private val context: Context) : ViewModel() {
                 result.fold(
                     onSuccess = { employees ->
                         Log.d(TAG, "Employees loaded successfully: ${employees.size}")
-                        _uiState.value = TeamUiState.Success(employees)
+                        _uiState.value = TeamUiState.Success(employees, isRefreshing = false)
                     },
                     onFailure = { error ->
                         Log.e(TAG, "Failed to load employees", error)
@@ -213,7 +221,7 @@ class TeamViewModel(private val context: Context) : ViewModel() {
  */
 sealed class TeamUiState {
     object Loading : TeamUiState()
-    data class Success(val employees: List<Employee>) : TeamUiState()
+    data class Success(val employees: List<Employee>, val isRefreshing: Boolean = false) : TeamUiState()
     data class Error(val message: String) : TeamUiState()
 }
 

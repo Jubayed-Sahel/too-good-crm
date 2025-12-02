@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +51,7 @@ fun DealsScreen(
     
     var searchQuery by remember { mutableStateOf("") }
     var filterStage by remember { mutableStateOf<String?>(null) }
+    val pullToRefreshState = rememberPullToRefreshState()
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     
     LaunchedEffect(Unit) {
@@ -121,24 +124,31 @@ fun DealsScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(DesignTokens.Colors.Background)
-                .padding(
-                    responsivePadding(
-                        compact = DesignTokens.Spacing.Space4,
-                        medium = DesignTokens.Spacing.Space5,
-                        expanded = DesignTokens.Spacing.Space6
-                    )
-                ),
-            verticalArrangement = Arrangement.spacedBy(
-                responsiveSpacing(
-                    compact = DesignTokens.Spacing.Space4,
-                    medium = DesignTokens.Spacing.Space5
-                )
-            )
+        PullToRefreshBox(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.loadDeals(refresh = true) },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(DesignTokens.Colors.Background)
+                    .padding(paddingValues)
+                    .padding(
+                        responsivePadding(
+                            compact = DesignTokens.Spacing.Space4,
+                            medium = DesignTokens.Spacing.Space5,
+                            expanded = DesignTokens.Spacing.Space6
+                        )
+                    ),
+                verticalArrangement = Arrangement.spacedBy(
+                    responsiveSpacing(
+                        compact = DesignTokens.Spacing.Space4,
+                        medium = DesignTokens.Spacing.Space5
+                    )
+                )
+            ) {
             // Header Section
             Column(
                 verticalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space2)
@@ -335,6 +345,7 @@ fun DealsScreen(
                     }
                 }
             }
+        }
         }
     }
 }

@@ -11,6 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,6 +54,7 @@ fun SalesScreen(
     val salesState by salesViewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    val pullToRefreshState = rememberPullToRefreshState()
     val customerRepository = remember { CustomerRepository.getInstance(context) }
     
     // Stage move dialog state
@@ -117,6 +120,12 @@ fun SalesScreen(
             )
         }
     ) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = salesState.isRefreshing,
+            onRefresh = { salesViewModel.loadDeals(refresh = true) },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -374,6 +383,7 @@ fun SalesScreen(
                 // Error will be shown via snackbar if needed
                 salesViewModel.clearError()
             }
+        }
         }
     }
 }

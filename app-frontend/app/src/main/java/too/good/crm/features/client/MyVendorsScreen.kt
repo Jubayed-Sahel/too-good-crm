@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +49,8 @@ fun MyVendorsScreen(
     var filterStatus by remember { mutableStateOf<VendorStatus?>(null) }
     val vendors = remember { VendorSampleData.getVendors() }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    val pullToRefreshState = rememberPullToRefreshState()
+    var isRefreshing by remember { mutableStateOf(false) }
 
     // Load profiles on initial load
     LaunchedEffect(Unit) {
@@ -108,10 +112,24 @@ fun MyVendorsScreen(
             )
         }
     ) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = {
+                isRefreshing = true
+                // Simulate refresh delay
+                kotlinx.coroutines.GlobalScope.launch {
+                    kotlinx.coroutines.delay(1000)
+                    isRefreshing = false
+                }
+            },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(DesignTokens.Colors.Background)
+                .padding(paddingValues)
                 .padding(16.dp)
         ) {
             // Header
@@ -190,6 +208,7 @@ fun MyVendorsScreen(
                     VendorCard(vendor = vendor)
                 }
             }
+        }
         }
     }
 }
