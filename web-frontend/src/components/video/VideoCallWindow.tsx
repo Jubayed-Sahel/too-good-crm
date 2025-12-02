@@ -445,6 +445,65 @@ const VideoCallWindow: React.FC<VideoCallWindowProps> = ({
                     SHOW_WATERMARK_FOR_GUESTS: false,
                     DISABLE_VIDEO_BACKGROUND: true,
                   }}
+                  // Automatically start server-side recording when call starts
+                  // Recording will be saved on the server (8x8 Video cloud or your Jibri server)
+                  // Only the initiator (moderator) should start recording to avoid duplicates
+                  onApiReady={(externalApi) => {
+                    externalApi.addEventListener('videoConferenceJoined', () => {
+                      // Only start recording if user is the initiator (moderator)
+                      // This prevents multiple participants from starting separate recordings
+                      if (isInitiator) {
+                        try {
+                          // Try server-side recording first (saves on server)
+                          externalApi.executeCommand('startRecording', {
+                            mode: 'file', // Server-side recording mode
+                          });
+                          // eslint-disable-next-line no-console
+                          console.log('Server-side recording started');
+                        } catch (e) {
+                          // If server-side recording fails, try local recording as fallback
+                          try {
+                            externalApi.executeCommand('startRecording', {
+                              mode: 'local', // Local recording fallback
+                            });
+                            // eslint-disable-next-line no-console
+                            console.warn('Server-side recording not available, using local recording', e);
+                          } catch (localError) {
+                            // eslint-disable-next-line no-console
+                            console.warn('Failed to start any recording', localError);
+                          }
+                        }
+                      }
+                    });
+
+                    externalApi.addEventListener('recordingStatusChanged', (status: any) => {
+                      // eslint-disable-next-line no-console
+                      console.log('Recording status changed:', status);
+                      // If recording stopped and we have a URL, we could upload it here
+                      // But server-side recordings are handled by 8x8/Jitsi server
+                    });
+
+                    externalApi.addEventListener('readyToClose', () => {
+                      if (isInitiator) {
+                        try {
+                          externalApi.executeCommand('stopRecording', {
+                            mode: 'file',
+                          });
+                          // eslint-disable-next-line no-console
+                          console.log('Server-side recording stopped');
+                        } catch (e) {
+                          try {
+                            externalApi.executeCommand('stopRecording', {
+                              mode: 'local',
+                            });
+                          } catch (localError) {
+                            // eslint-disable-next-line no-console
+                            console.warn('Failed to stop recording', localError);
+                          }
+                        }
+                      }
+                    });
+                  }}
                   getIFrameRef={(iframeRef) => {
                     iframeRef.style.height = '100%';
                     iframeRef.style.width = '100%';

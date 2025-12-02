@@ -110,7 +110,13 @@ class JitsiCallSession(TimestampedModel):
         max_length=500,
         null=True,
         blank=True,
-        help_text="URL to call recording if enabled"
+        help_text="URL to call recording if enabled (external URL)"
+    )
+    recording_file = models.FileField(
+        upload_to='call_recordings/%Y/%m/%d/',
+        null=True,
+        blank=True,
+        help_text="Call recording file stored on server"
     )
     notes = models.TextField(
         blank=True,

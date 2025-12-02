@@ -68,6 +68,8 @@ class JitsiService:
         display_name = f"{user.first_name} {user.last_name}".strip() or user.username
         
         # JWT Payload for 8x8 Video (Jaas format)
+        # NOTE: recording is explicitly enabled so that the in-call UI
+        # and external API can start/stop recordings.
         payload = {
             # Standard JWT claims
             "iss": "chat",  # Issuer - must be "chat" for 8x8
@@ -89,7 +91,7 @@ class JitsiService:
                 },
                 "features": {
                     "livestreaming": "false",
-                    "recording": "false",
+                    "recording": "true",  # Allow recording controls for this user
                     "transcription": "false",
                     "outbound-call": "false",
                 }

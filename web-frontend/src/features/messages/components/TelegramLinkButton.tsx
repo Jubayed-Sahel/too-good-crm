@@ -1,13 +1,14 @@
 /**
  * Telegram Link Button
- * Phone number verification for linking Telegram account to CRM
+ * Direct authentication code for linking Telegram account to CRM
  */
 import { useState } from 'react';
+import { Box, Button, Text, VStack, HStack, Code, Link, Spinner, Separator } from '@chakra-ui/react';
+import { FiPhone, FiCopy, FiCheck, FiExternalLink, FiSend } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import { Box, Button, Text, VStack, HStack, Code, Link } from '@chakra-ui/react';
-import { FiPhone, FiCopy, FiCheck, FiExternalLink } from 'react-icons/fi';
 import { toaster } from '@/components/ui/toaster';
 import { PhoneVerificationDialog } from './PhoneVerificationDialog';
+import api from '@/lib/apiClient';
 
 interface VerificationInfo {
   phoneNumber: string;
@@ -15,11 +16,20 @@ interface VerificationInfo {
   url: string;
 }
 
+interface AuthCodeInfo {
+  authCode: string;
+  botUsername: string;
+  telegramLink: string;
+  expiresIn: number;
+}
+
 export const TelegramLinkButton = () => {
+  const navigate = useNavigate();
   const [isPhoneDialogOpen, setIsPhoneDialogOpen] = useState(false);
   const [verificationInfo, setVerificationInfo] = useState<VerificationInfo | null>(null);
+  const [authCodeInfo, setAuthCodeInfo] = useState<AuthCodeInfo | null>(null);
+  const [isLoadingCode, setIsLoadingCode] = useState(false);
   const [isCodeCopied, setIsCodeCopied] = useState(false);
-  const navigate = useNavigate();
 
   const handleVerificationSent = (phoneNumber: string, code: string, url: string) => {
     setVerificationInfo({ phoneNumber, code, url });
@@ -69,7 +79,177 @@ export const TelegramLinkButton = () => {
     }
   };
 
-  // Show verification info if code was sent
+  const handleGenerateAuthCode = async () => {
+    setIsLoadingCode(true);
+    try {
+      const response = await api.get<any>('/api/telegram/generate-link/');
+      
+      if (response.auth_code) {
+        setAuthCodeInfo({
+          authCode: response.auth_code,
+          botUsername: response.bot_username || 'LeadGrid_bot',
+          telegramLink: response.telegram_link,
+          expiresIn: response.expires_in || 300,
+        });
+        toaster.create({
+          title: 'Authentication Code Generated!',
+          description: `Code valid for ${Math.floor((response.expires_in || 300) / 60)} minutes`,
+          type: 'success',
+          duration: 5000,
+        });
+      } else {
+        throw new Error(response.error || 'Failed to generate code');
+      }
+    } catch (error: any) {
+      console.error('Error generating auth code:', error);
+      toaster.create({
+        title: 'Error',
+        description: error.errors?.detail?.[0] || error.message || 'Failed to generate authentication code',
+        type: 'error',
+        duration: 5000,
+      });
+    } finally {
+      setIsLoadingCode(false);
+    }
+  };
+
+  const copyAuthCode = async () => {
+    if (!authCodeInfo) return;
+    try {
+      await navigator.clipboard.writeText(authCodeInfo.authCode);
+      setIsCodeCopied(true);
+      toaster.create({
+        title: 'Copied!',
+        description: 'Authentication code copied to clipboard',
+        type: 'success',
+        duration: 2000,
+      });
+      setTimeout(() => setIsCodeCopied(false), 2000);
+    } catch (error) {
+      console.error('Error copying code:', error);
+    }
+  };
+
+  const openTelegram = () => {
+    if (!authCodeInfo) return;
+    window.open(authCodeInfo.telegramLink, '_blank');
+  };
+
+  // Show auth code if generated
+  if (authCodeInfo) {
+    return (
+      <Box
+        p={4}
+        bg="green.50"
+        borderRadius="lg"
+        borderWidth="2px"
+        borderColor="green.300"
+      >
+        <VStack align="stretch" gap={4}>
+          <HStack justify="center">
+            <Box
+              p={2}
+              bg="green.500"
+              borderRadius="md"
+              color="white"
+            >
+              <FiSend size={20} />
+            </Box>
+            <VStack align="start" gap={0}>
+              <Text fontWeight="bold" fontSize="sm" color="green.900">
+                Authentication Code Generated!
+              </Text>
+              <Text fontSize="xs" color="green.700">
+                Code expires in {Math.floor(authCodeInfo.expiresIn / 60)} minutes
+              </Text>
+            </VStack>
+          </HStack>
+
+          {/* Code Display */}
+          <Box
+            p={4}
+            bg="white"
+            borderRadius="md"
+            borderWidth="1px"
+            borderColor="green.300"
+          >
+            <VStack align="stretch" gap={3}>
+              <Text fontSize="xs" fontWeight="semibold" color="gray.700" textAlign="center">
+                Your Authentication Code
+              </Text>
+              <HStack gap={2} justify="center">
+                <Code
+                  fontSize="3xl"
+                  fontWeight="bold"
+                  letterSpacing="0.3em"
+                  px={6}
+                  py={4}
+                  bg="gray.100"
+                  color="gray.900"
+                  borderRadius="md"
+                >
+                  {authCodeInfo.authCode}
+                </Code>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={copyAuthCode}
+                  px={3}
+                >
+                  {isCodeCopied ? <FiCheck /> : <FiCopy />}
+                </Button>
+              </HStack>
+            </VStack>
+          </Box>
+
+          {/* Instructions */}
+          <Box
+            p={3}
+            bg="blue.50"
+            borderRadius="md"
+            borderWidth="1px"
+            borderColor="blue.200"
+          >
+            <VStack align="stretch" gap={2}>
+              <Text fontSize="sm" fontWeight="semibold" color="blue.900">
+                How to authenticate:
+              </Text>
+              <VStack align="start" gap={1} fontSize="sm" color="blue.800">
+                <Text>1. Open Telegram and find <strong>@{authCodeInfo.botUsername}</strong></Text>
+                <Text>2. Type: <Code>/start {authCodeInfo.authCode}</Code></Text>
+                <Text>3. You'll be authenticated automatically!</Text>
+              </VStack>
+            </VStack>
+          </Box>
+
+          {/* Action Buttons */}
+          <HStack gap={2}>
+            <Button
+              colorPalette="green"
+              size="sm"
+              flex={1}
+              onClick={openTelegram}
+            >
+              <HStack gap={2}>
+                <Text>Open Telegram</Text>
+                <FiExternalLink />
+              </HStack>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              flex={1}
+              onClick={() => setAuthCodeInfo(null)}
+            >
+              New Code
+            </Button>
+          </HStack>
+        </VStack>
+      </Box>
+    );
+  }
+
+  // Show phone verification info if code was sent
   if (verificationInfo) {
     return (
       <Box
@@ -154,9 +334,11 @@ export const TelegramLinkButton = () => {
                   size="sm"
                   w="full"
                   onClick={handleVerifyNow}
-                  rightIcon={<FiExternalLink />}
                 >
-                  Click to Verify Telegram Account
+                  <HStack gap={2}>
+                    <Text>Click to Verify Telegram Account</Text>
+                    <FiExternalLink />
+                  </HStack>
                 </Button>
               </Box>
 
@@ -172,7 +354,8 @@ export const TelegramLinkButton = () => {
                       color="blue.600"
                       wordBreak="break-all"
                       flex={1}
-                      isExternal
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
                       {verificationInfo.url}
                     </Link>
@@ -241,22 +424,42 @@ export const TelegramLinkButton = () => {
                 Connect to Telegram Bot
               </Text>
               <Text fontSize="xs" color="blue.700">
-                Verify your phone number to link your Telegram account
+                Quick authentication or phone verification
               </Text>
             </VStack>
           </HStack>
 
+          {/* Direct Auth Code Button */}
           <Button
-            onClick={() => setIsPhoneDialogOpen(true)}
+            onClick={handleGenerateAuthCode}
             colorPalette="blue"
             size="sm"
             w="full"
-            leftIcon={<FiPhone />}
+            disabled={isLoadingCode}
           >
-            Verify via Phone Number
+            <HStack gap={2}>
+              {isLoadingCode ? <Spinner size="sm" /> : <FiSend />}
+              <Text>{isLoadingCode ? 'Generating...' : 'Get Authentication Code'}</Text>
+            </HStack>
+          </Button>
+
+          <Separator />
+
+          {/* Phone Verification Button */}
+          <Button
+            onClick={() => setIsPhoneDialogOpen(true)}
+            variant="outline"
+            size="sm"
+            w="full"
+            disabled={isLoadingCode}
+          >
+            <HStack gap={2}>
+              <FiPhone />
+              <Text>Verify via Phone Number</Text>
+            </HStack>
           </Button>
           <Text fontSize="xs" color="gray.500" textAlign="center">
-            Receive verification code via SMS
+            Or use phone verification as alternative method
           </Text>
         </VStack>
       </Box>
