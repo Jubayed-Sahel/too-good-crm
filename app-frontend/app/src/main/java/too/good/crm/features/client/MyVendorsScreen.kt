@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.data.model.UserProfile
 import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
@@ -32,8 +33,11 @@ import too.good.crm.data.models.CallType
 import too.good.crm.data.Resource
 import android.widget.Toast
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import too.good.crm.data.model.Vendor
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 fun MyVendorsScreen(
     onNavigate: (String) -> Unit,
@@ -42,15 +46,16 @@ fun MyVendorsScreen(
     val context = LocalContext.current
     val authRepository = remember { AuthRepository(context) }
     val profileViewModel = remember { ProfileViewModel(context) }
+    val vendorViewModel = remember { VendorViewModel() }
+    
     val profileState by profileViewModel.uiState.collectAsState()
+    val uiState by vendorViewModel.uiState.collectAsState()
+    
     val scope = rememberCoroutineScope()
     
     var searchQuery by remember { mutableStateOf("") }
-    var filterStatus by remember { mutableStateOf<VendorStatus?>(null) }
-    val vendors = remember { VendorSampleData.getVendors() }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
     val pullToRefreshState = rememberPullToRefreshState()
-    var isRefreshing by remember { mutableStateOf(false) }
 
     // Load profiles on initial load
     LaunchedEffect(Unit) {
@@ -58,13 +63,25 @@ fun MyVendorsScreen(
             profileViewModel.loadProfiles()
         }
     }
-
-    val filteredVendors = vendors.filter { vendor ->
-        val matchesSearch = searchQuery.isEmpty() ||
-                vendor.name.contains(searchQuery, ignoreCase = true) ||
-                vendor.category.contains(searchQuery, ignoreCase = true)
-        val matchesFilter = filterStatus == null || vendor.status == filterStatus
-        matchesSearch && matchesFilter
+    
+    // Search debounce
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotEmpty()) {
+            vendorViewModel.searchVendors(searchQuery)
+        } else {
+            vendorViewModel.loadVendors()
+        }
+    }
+    
+    // Filter vendors based on local search query
+    val filteredVendors = if (searchQuery.isEmpty()) {
+        uiState.vendors
+    } else {
+        uiState.vendors.filter { vendor ->
+            vendor.name.contains(searchQuery, ignoreCase = true) ||
+            vendor.companyName?.contains(searchQuery, ignoreCase = true) == true ||
+            vendor.vendorType.contains(searchQuery, ignoreCase = true)
+        }
     }
 
     AppScaffoldWithDrawer(
@@ -113,14 +130,9 @@ fun MyVendorsScreen(
         }
     ) { paddingValues ->
         PullToRefreshBox(
-            isRefreshing = isRefreshing,
+            isRefreshing = uiState.isRefreshing,
             onRefresh = {
-                isRefreshing = true
-                // Simulate refresh delay
-                kotlinx.coroutines.GlobalScope.launch {
-                    kotlinx.coroutines.delay(1000)
-                    isRefreshing = false
-                }
+                vendorViewModel.refresh()
             },
             state = pullToRefreshState,
             modifier = Modifier.fillMaxSize()
@@ -155,19 +167,21 @@ fun MyVendorsScreen(
                 VendorStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Total",
-                    value = vendors.size.toString(),
+                    value = uiState.stats?.totalVendors?.toString() ?: uiState.totalCount.toString(),
                     color = DesignTokens.Colors.Info
                 )
                 VendorStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Active",
-                    value = vendors.count { it.status == VendorStatus.ACTIVE }.toString(),
+                    value = uiState.stats?.activeVendors?.toString() 
+                        ?: filteredVendors.count { it.status == "active" }.toString(),
                     color = DesignTokens.Colors.Success
                 )
                 VendorStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Orders",
-                    value = vendors.sumOf { it.totalOrders }.toString(),
+                    value = uiState.stats?.totalOrders?.toString() 
+                        ?: filteredVendors.sumOf { it.totalOrders ?: 0 }.toString(),
                     color = DesignTokens.Colors.Info
                 )
             }
@@ -200,12 +214,81 @@ fun MyVendorsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Vendors List
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredVendors) { vendor ->
-                    VendorCard(vendor = vendor)
+            // Content: Loading, Error, Empty, or List
+            when {
+                uiState.isLoading && filteredVendors.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = DesignTokens.Colors.Info)
+                    }
+                }
+                uiState.error != null && filteredVendors.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Error,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = DesignTokens.Colors.Error
+                            )
+                            Text(
+                                text = uiState.error ?: "Unknown error",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = DesignTokens.Colors.Error
+                            )
+                            Button(onClick = { vendorViewModel.loadVendors() }) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                }
+                filteredVendors.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Business,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                            Text(
+                                text = if (searchQuery.isNotEmpty()) "No vendors found" else "No vendors yet",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    text = "Add your first vendor to get started",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = DesignTokens.Colors.OnSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+                else -> {
+                    // Vendors List
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(filteredVendors) { vendor ->
+                            VendorCard(vendor = vendor)
+                        }
+                    }
                 }
             }
         }
@@ -235,13 +318,13 @@ fun VendorCard(vendor: Vendor) {
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = vendor.name,
+                        text = vendor.companyName ?: vendor.name,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = vendor.category,
+                        text = vendor.vendorTypeDisplay ?: vendor.vendorType,
                         style = MaterialTheme.typography.bodyMedium,
                         color = DesignTokens.Colors.OnSurfaceVariant
                     )
@@ -256,20 +339,22 @@ fun VendorCard(vendor: Vendor) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Star,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = DesignTokens.Colors.ActivityNote
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "${vendor.rating}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = DesignTokens.Colors.OnSurface
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
+                    if (vendor.rating != null) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = DesignTokens.Colors.ActivityNote
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "${vendor.rating}",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = DesignTokens.Colors.OnSurface
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                    }
                     Icon(
                         Icons.Default.ShoppingBag,
                         contentDescription = null,
@@ -278,7 +363,7 @@ fun VendorCard(vendor: Vendor) {
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "${vendor.totalOrders} orders",
+                        text = "${vendor.totalOrders ?: 0} orders",
                         style = MaterialTheme.typography.bodySmall,
                         color = DesignTokens.Colors.OnSurfaceVariant
                     )
@@ -293,18 +378,20 @@ fun VendorCard(vendor: Vendor) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Email,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = DesignTokens.Colors.OnSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = vendor.email,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = DesignTokens.Colors.OnSurfaceVariant
-                    )
+                    if (vendor.email != null) {
+                        Icon(
+                            Icons.Default.Email,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = vendor.email ?: "No email",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                    }
                 }
                 
                 // Video/Audio Call Buttons
@@ -416,17 +503,32 @@ fun VendorCallButtons(userId: Int) {
 }
 
 @Composable
-fun VendorStatusBadge(status: VendorStatus) {
-    val (backgroundColor, textColor, text) = when (status) {
-        VendorStatus.ACTIVE -> Triple(
+fun VendorStatusBadge(status: String) {
+    val (backgroundColor, textColor, text) = when (status.lowercase()) {
+        "active" -> Triple(
             DesignTokens.Colors.Success.copy(alpha = 0.1f),
             DesignTokens.Colors.Success,
             "Active"
         )
-        VendorStatus.INACTIVE -> Triple(
+        "inactive" -> Triple(
             DesignTokens.Colors.OnSurfaceVariant.copy(alpha = 0.1f),
             DesignTokens.Colors.OnSurfaceVariant,
             "Inactive"
+        )
+        "pending" -> Triple(
+            DesignTokens.Colors.Info.copy(alpha = 0.1f),
+            DesignTokens.Colors.Info,
+            "Pending"
+        )
+        "blacklisted" -> Triple(
+            DesignTokens.Colors.Error.copy(alpha = 0.1f),
+            DesignTokens.Colors.Error,
+            "Blacklisted"
+        )
+        else -> Triple(
+            DesignTokens.Colors.OnSurfaceVariant.copy(alpha = 0.1f),
+            DesignTokens.Colors.OnSurfaceVariant,
+            status
         )
     }
 

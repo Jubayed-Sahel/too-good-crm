@@ -7,8 +7,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Note
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import too.good.crm.data.ActiveMode
 import too.good.crm.data.UserSession
+import too.good.crm.data.model.UserProfile
 import too.good.crm.data.repository.AuthRepository
 import too.good.crm.features.profile.ProfileViewModel
 import too.good.crm.ui.components.AppScaffoldWithDrawer
@@ -39,26 +44,35 @@ fun ActivitiesScreen(
     val profileState by profileViewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
     
+    // Use ViewModel for real data
+    val activitiesViewModel = remember { ActivitiesViewModel() }
+    val activitiesState by activitiesViewModel.uiState.collectAsState()
+    
     var searchQuery by remember { mutableStateOf("") }
-    var filterType by remember { mutableStateOf<ActivityType?>(null) }
-    var filterStatus by remember { mutableStateOf<ActivityStatus?>(null) }
-    val activities = remember { ActivitySampleData.getActivities() }
     var activeMode by remember { mutableStateOf(UserSession.activeMode) }
+    val pullToRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(Unit) {
         if (profileState.profiles.isEmpty() && !profileState.isLoading) {
             profileViewModel.loadProfiles()
         }
     }
-
-    val filteredActivities = activities.filter { activity ->
-        val matchesSearch = searchQuery.isEmpty() ||
-                activity.title.contains(searchQuery, ignoreCase = true) ||
-                activity.customerName.contains(searchQuery, ignoreCase = true)
-        val matchesType = filterType == null || activity.type == filterType
-        val matchesStatus = filterStatus == null || activity.status == filterStatus
-        matchesSearch && matchesType && matchesStatus
+    
+    // Search debounce
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotEmpty()) {
+            activitiesViewModel.searchActivities(searchQuery)
+        } else {
+            activitiesViewModel.loadActivities()
+        }
     }
+
+    // Calculate stats from real data
+    val activities = activitiesState.activities
+    val totalActivities = activities.size
+    val completedActivities = activities.count { it.status == "completed" }
+    val pendingActivities = activities.count { it.status == "in_progress" || it.status == "scheduled" }
+    val scheduledActivities = activities.count { it.status == "scheduled" }
 
     AppScaffoldWithDrawer(
         title = "Activities",
@@ -105,10 +119,17 @@ fun ActivitiesScreen(
             )
         }
     ) { paddingValues ->
+        PullToRefreshBox(
+            isRefreshing = activitiesState.isRefreshing,
+            onRefresh = { activitiesViewModel.refresh() },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(DesignTokens.Colors.Background)
+                .padding(paddingValues)
                 .padding(16.dp)
         ) {
             // Header
@@ -134,25 +155,25 @@ fun ActivitiesScreen(
                 ActivityStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Total",
-                    value = activities.size.toString(),
+                    value = totalActivities.toString(),
                     color = MaterialTheme.colorScheme.primary
                 )
                 ActivityStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Completed",
-                    value = activities.count { it.status == ActivityStatus.COMPLETED }.toString(),
+                    value = completedActivities.toString(),
                     color = DesignTokens.Colors.Success
                 )
                 ActivityStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Pending",
-                    value = activities.count { it.status == ActivityStatus.PENDING }.toString(),
+                    value = pendingActivities.toString(),
                     color = DesignTokens.Colors.Warning
                 )
                 ActivityStatCard(
                     modifier = Modifier.weight(1f),
                     title = "Scheduled",
-                    value = activities.count { it.status == ActivityStatus.SCHEDULED }.toString(),
+                    value = scheduledActivities.toString(),
                     color = DesignTokens.Colors.Info
                 )
             }
@@ -184,20 +205,73 @@ fun ActivitiesScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Activities List
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(filteredActivities) { activity ->
-                    ActivityCard(activity = activity)
+            // Loading and Error States
+            when {
+                activitiesState.isLoading && activities.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                }
+                activitiesState.error != null -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Error loading activities",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = DesignTokens.Colors.Error
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(onClick = { activitiesViewModel.loadActivities() }) {
+                                Text("Retry")
+                            }
+                        }
+                    }
+                }
+                activities.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.Event,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "No activities found",
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                else -> {
+                    // Activities List
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(activities) { activity ->
+                            ActivityItemCard(activity = activity)
+                        }
+                    }
                 }
             }
+        }
         }
     }
 }
 
 @Composable
-fun ActivityCard(activity: Activity) {
+fun ActivityItemCard(activity: too.good.crm.data.model.ActivityListItem) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -213,16 +287,19 @@ fun ActivityCard(activity: Activity) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Type Icon
+            val typeIcon = getActivityTypeIconFromString(activity.activityType)
+            val typeColor = getActivityTypeColorFromString(activity.activityType)
+            
             Surface(
                 shape = RoundedCornerShape(8.dp),
-                color = getActivityTypeColor(activity.type).copy(alpha = 0.1f),
+                color = typeColor.copy(alpha = 0.1f),
                 modifier = Modifier.size(48.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
-                        imageVector = getActivityTypeIcon(activity.type),
+                        imageVector = typeIcon,
                         contentDescription = null,
-                        tint = getActivityTypeColor(activity.type),
+                        tint = typeColor,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -243,60 +320,68 @@ fun ActivityCard(activity: Activity) {
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
-                    ActivityStatusBadge(status = activity.status)
+                    ActivityStatusBadgeFromString(status = activity.status)
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Business,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = DesignTokens.Colors.OnSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = activity.customerName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = DesignTokens.Colors.OnSurfaceVariant
-                    )
+                // Related entity (customer)
+                if (activity.customerName != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Business,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = activity.customerName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = DesignTokens.Colors.OnSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = DesignTokens.Colors.OnSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Due: ${activity.dueDate}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = DesignTokens.Colors.OnSurfaceVariant
-                        )
+                    // Scheduled date
+                    if (activity.scheduledAt != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.CalendarToday,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = formatDate(activity.scheduledAt),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                        }
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = DesignTokens.Colors.OnSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = activity.createdBy,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = DesignTokens.Colors.OnSurfaceVariant
-                        )
+                    // Assigned to
+                    if (activity.assignedToName != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = activity.assignedToName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = DesignTokens.Colors.OnSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -304,28 +389,43 @@ fun ActivityCard(activity: Activity) {
     }
 }
 
+// Helper function to format date
+private fun formatDate(dateString: String): String {
+    return try {
+        // Simple format - just show date part
+        dateString.substringBefore("T")
+    } catch (e: Exception) {
+        dateString
+    }
+}
+
 @Composable
-fun ActivityStatusBadge(status: ActivityStatus) {
+fun ActivityStatusBadgeFromString(status: String) {
     val (backgroundColor, textColor, text) = when (status) {
-        ActivityStatus.COMPLETED -> Triple(
+        "completed" -> Triple(
             DesignTokens.Colors.Success.copy(alpha = 0.1f),
             DesignTokens.Colors.Success,
             "Completed"
         )
-        ActivityStatus.PENDING -> Triple(
+        "in_progress" -> Triple(
             DesignTokens.Colors.Warning.copy(alpha = 0.1f),
             DesignTokens.Colors.Warning,
-            "Pending"
+            "In Progress"
         )
-        ActivityStatus.SCHEDULED -> Triple(
+        "scheduled" -> Triple(
             DesignTokens.Colors.Info.copy(alpha = 0.1f),
             DesignTokens.Colors.Info,
             "Scheduled"
         )
-        ActivityStatus.OVERDUE -> Triple(
+        "cancelled" -> Triple(
             DesignTokens.Colors.Error.copy(alpha = 0.1f),
             DesignTokens.Colors.Error,
-            "Overdue"
+            "Cancelled"
+        )
+        else -> Triple(
+            DesignTokens.Colors.OnSurfaceVariant.copy(alpha = 0.1f),
+            DesignTokens.Colors.OnSurfaceVariant,
+            status.capitalize()
         )
     }
 
@@ -381,23 +481,27 @@ fun ActivityStatCard(
     }
 }
 
-fun getActivityTypeIcon(type: ActivityType): ImageVector {
+fun getActivityTypeIconFromString(type: String): ImageVector {
     return when (type) {
-        ActivityType.CALL -> Icons.Default.Phone
-        ActivityType.EMAIL -> Icons.Default.Email
-        ActivityType.MEETING -> Icons.Default.Event
-        ActivityType.TASK -> Icons.Default.CheckCircle
-        ActivityType.FOLLOW_UP -> Icons.Default.Update
+        "call" -> Icons.Default.Phone
+        "email" -> Icons.Default.Email
+        "telegram" -> Icons.AutoMirrored.Filled.Send
+        "meeting" -> Icons.Default.Event
+        "note" -> Icons.AutoMirrored.Filled.Note
+        "task" -> Icons.Default.CheckCircle
+        else -> Icons.Default.Event
     }
 }
 
-fun getActivityTypeColor(type: ActivityType): Color {
+fun getActivityTypeColorFromString(type: String): Color {
     return when (type) {
-        ActivityType.CALL -> DesignTokens.Colors.Info
-        ActivityType.EMAIL -> DesignTokens.Colors.StatusScheduled
-        ActivityType.MEETING -> DesignTokens.Colors.Success
-        ActivityType.TASK -> DesignTokens.Colors.Warning
-        ActivityType.FOLLOW_UP -> DesignTokens.Colors.PinkAccent
+        "call" -> DesignTokens.Colors.Info
+        "email" -> DesignTokens.Colors.StatusScheduled
+        "telegram" -> DesignTokens.Colors.PinkAccent
+        "meeting" -> DesignTokens.Colors.Success
+        "note" -> DesignTokens.Colors.Warning
+        "task" -> DesignTokens.Colors.Primary
+        else -> DesignTokens.Colors.OnSurfaceVariant
     }
 }
 
