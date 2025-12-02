@@ -118,6 +118,7 @@ const Sidebar = ({ isOpen = true, onClose }: SidebarProps) => {
     { icon: FiShoppingBag, label: 'My Vendors', path: '/client/vendors', resource: CRM_RESOURCES.VENDOR, action: 'read' },
     { icon: FiPackage, label: 'My Orders', path: '/client/orders', resource: CRM_RESOURCES.ORDER, action: 'read' },
     { icon: FiAlertCircle, label: 'Issues', path: '/client/issues', resource: CRM_RESOURCES.ISSUE, action: 'read' },
+    { icon: FiMessageSquare, label: 'Messages', path: '/client/messages', alwaysShow: true },
     { icon: FiSettings, label: 'Settings', path: '/client/settings', alwaysShow: true },
   ];
 

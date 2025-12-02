@@ -22,6 +22,7 @@ export const useSalesPage = () => {
   } = useQuery({
     queryKey: ['deals'],
     queryFn: () => dealService.getDeals(),
+    refetchInterval: 10000, // Refetch every 10 seconds to pick up MCP chatbot changes
   });
 
   // Fetch pipeline stats
@@ -31,6 +32,7 @@ export const useSalesPage = () => {
   } = useQuery<DealStats>({
     queryKey: ['deals', 'stats'],
     queryFn: () => dealService.getStats(),
+    refetchInterval: 10000, // Refetch every 10 seconds
   });
 
   // Fetch pipelines (to get stages)

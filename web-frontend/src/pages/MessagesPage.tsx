@@ -311,35 +311,35 @@ const MessagesPage = () => {
                   </Button>
                 </Box>
 
-                {/* AI Assistant - Show for Vendors and Employees */}
-                {(isVendor || isEmployee) && (
-                  <Box
-                    p={4}
-                    cursor="pointer"
-                    bg={selectedUserId === AI_ASSISTANT_ID ? 'purple.50' : 'white'}
-                    borderLeftWidth={selectedUserId === AI_ASSISTANT_ID ? '3px' : '0'}
-                    borderLeftColor={selectedUserId === AI_ASSISTANT_ID ? 'purple.500' : 'transparent'}
-                    borderBottomWidth="1px"
-                    borderBottomColor="gray.100"
-                    _hover={{ bg: selectedUserId === AI_ASSISTANT_ID ? 'purple.50' : 'gray.50' }}
-                    onClick={() => setSelectedUserId(AI_ASSISTANT_ID)}
-                  >
-                    <HStack justify="space-between" mb={1}>
-                      <HStack>
-                        <Text fontSize="lg">🤖</Text>
-                        <Text fontWeight="semibold" fontSize="sm">
-                          AI Assistant
-                        </Text>
-                        <Badge colorPalette="purple" size="sm">
-                          NEW
-                        </Badge>
-                      </HStack>
+                {/* AI Assistant - Show for all users */}
+                <Box
+                  p={4}
+                  cursor="pointer"
+                  bg={selectedUserId === AI_ASSISTANT_ID ? 'purple.50' : 'white'}
+                  borderLeftWidth={selectedUserId === AI_ASSISTANT_ID ? '3px' : '0'}
+                  borderLeftColor={selectedUserId === AI_ASSISTANT_ID ? 'purple.500' : 'transparent'}
+                  borderBottomWidth="1px"
+                  borderBottomColor="gray.100"
+                  _hover={{ bg: selectedUserId === AI_ASSISTANT_ID ? 'purple.50' : 'gray.50' }}
+                  onClick={() => setSelectedUserId(AI_ASSISTANT_ID)}
+                >
+                  <HStack justify="space-between" mb={1}>
+                    <HStack>
+                      <Text fontSize="lg">🤖</Text>
+                      <Text fontWeight="semibold" fontSize="sm">
+                        AI Assistant
+                      </Text>
+                      <Badge colorPalette="purple" size="sm">
+                        NEW
+                      </Badge>
                     </HStack>
-                    <Text fontSize="xs" color="gray.600" noOfLines={1}>
-                      Ask me about your CRM data, analytics, and more
-                    </Text>
-                  </Box>
-                )}
+                  </HStack>
+                  <Text fontSize="xs" color="gray.600" noOfLines={1}>
+                    {isVendor || isEmployee 
+                      ? 'Ask me about your CRM data, analytics, and more'
+                      : 'Get instant help with your orders, issues, and inquiries'}
+                  </Text>
+                </Box>
 
                 {/* Regular Conversations */}
                 {filteredConversations.length === 0 && !isVendor && !isEmployee ? (

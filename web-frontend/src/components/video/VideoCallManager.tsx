@@ -38,8 +38,14 @@ const VideoCallManager: React.FC = () => {
 
   // Get auth token from localStorage and update state
   useEffect(() => {
+    // Skip if user object is not yet loaded
+    if (!user && isAuthenticated) {
+      console.log('[VideoCallManager] User data still loading, skipping token check');
+      return;
+    }
+    
     console.log('[VideoCallManager] Token loading effect - isAuthenticated:', isAuthenticated);
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
       const storedTokens = localStorage.getItem('auth_tokens');
       console.log('[VideoCallManager] localStorage auth_tokens exists:', !!storedTokens);
       if (storedTokens) {
@@ -57,12 +63,17 @@ const VideoCallManager: React.FC = () => {
         setAuthToken(null);
       }
     } else {
-      console.log('[VideoCallManager] Not authenticated, clearing token');
+      if (!isAuthenticated) {
+        console.log('[VideoCallManager] Not authenticated, clearing token');
+      }
       setAuthToken(null);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user]);
 
-  console.log('[VideoCallManager] Render - isAuthenticated:', isAuthenticated, 'user:', user?.id, 'hasToken:', !!authToken, 'isInitialized:', isInitialized, 'currentCall:', currentCall);
+  // Only log if there's a current call or in development mode with user loaded
+  if (currentCall || (process.env.NODE_ENV === 'development' && user)) {
+    console.log('[VideoCallManager] Render - isAuthenticated:', isAuthenticated, 'user:', user?.id, 'hasToken:', !!authToken, 'isInitialized:', isInitialized, 'currentCall:', currentCall);
+  }
 
   /**
    * Send heartbeat to mark user as online
