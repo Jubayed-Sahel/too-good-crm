@@ -280,6 +280,5 @@ object ApiClient {
 
     // Add other API services here as needed
     // val organizationApiService: OrganizationApiService by lazy { ... }
->>>>>>> 3a17723a05d87f1c48f22fe22781f216f42365c6
 }
 
