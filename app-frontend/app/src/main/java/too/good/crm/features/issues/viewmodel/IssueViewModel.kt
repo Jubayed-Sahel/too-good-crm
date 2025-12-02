@@ -86,6 +86,36 @@ class IssueViewModel : ViewModel() {
         }
     }
 
+    fun syncToLinear(issueId: Int, onComplete: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.syncToLinear(issueId)
+            result.fold(
+                onSuccess = { response ->
+                    // Reload issue details to get updated sync status
+                    loadIssueDetails(issueId)
+                    onComplete(true, response.linearUrl)
+                },
+                onFailure = { error ->
+                    onComplete(false, error.message)
+                }
+            )
+        }
+    }
+
+    fun deleteIssue(issueId: Int, onComplete: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.deleteIssue(issueId)
+            result.fold(
+                onSuccess = {
+                    onComplete(true, null)
+                },
+                onFailure = { error ->
+                    onComplete(false, error.message)
+                }
+            )
+        }
+    }
+
     fun loadIssueDetails(issueId: Int) {
         viewModelScope.launch {
             _detailUiState.value = IssueDetailUiState.Loading
@@ -130,17 +160,44 @@ class IssueViewModel : ViewModel() {
         }
     }
 
+    // Customer functions
+    fun loadCustomerIssues() {
+        viewModelScope.launch {
+            try {
+                _uiState.value = IssueUiState.Loading
+
+                repository.getCustomerIssues(
+                    status = _statusFilter.value,
+                    priority = _priorityFilter.value
+                ).collect { issues ->
+                    android.util.Log.d("IssueViewModel", "Collected ${issues.size} issues in ViewModel")
+                    issues.forEachIndexed { index, issue ->
+                        android.util.Log.d("IssueViewModel", "  Issue $index: ID=${issue.id}, Title=${issue.title}")
+                    }
+                    _uiState.value = IssueUiState.Success(issues)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("IssueViewModel", "Error loading customer issues", e)
+                _uiState.value = IssueUiState.Error(e.message ?: "Failed to load issues")
+            }
+        }
+    }
+
     // Vendor/Employee functions
     fun loadAllIssues() {
         viewModelScope.launch {
-            _uiState.value = IssueUiState.Loading
+            try {
+                _uiState.value = IssueUiState.Loading
 
-            repository.getAllIssues(
-                status = _statusFilter.value,
-                priority = _priorityFilter.value,
-                isClientIssue = true // Only show client-raised issues
-            ).collect { issues ->
-                _uiState.value = IssueUiState.Success(issues)
+                repository.getAllIssues(
+                    status = _statusFilter.value,
+                    priority = _priorityFilter.value,
+                    isClientIssue = true // Only show client-raised issues
+                ).collect { issues ->
+                    _uiState.value = IssueUiState.Success(issues)
+                }
+            } catch (e: Exception) {
+                _uiState.value = IssueUiState.Error(e.message ?: "Failed to load issues")
             }
         }
     }

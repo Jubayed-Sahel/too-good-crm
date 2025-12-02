@@ -296,6 +296,63 @@ class ClientRaiseIssueView(APIView):
             )
 
 
+class ClientIssueListView(APIView):
+    """
+    Endpoint for clients to list their issues
+    GET /api/client/issues/
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """Get all issues raised by the current customer"""
+        try:
+            # Get ALL customer records for this user (they can be customer of multiple orgs)
+            customers = Customer.objects.filter(user=request.user)
+            if not customers.exists():
+                return Response(
+                    {
+                        'error': 'Forbidden',
+                        'details': 'Only customers can access this endpoint'
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Get all issues raised by ANY of this user's customer records
+            issues = Issue.objects.filter(
+                raised_by_customer__in=customers
+            ).select_related(
+                'organization', 'vendor', 'order', 'assigned_to', 'resolved_by'
+            ).order_by('-created_at')
+            
+            # Apply filters if provided
+            status_filter = request.query_params.get('status')
+            if status_filter:
+                issues = issues.filter(status=status_filter)
+            
+            priority_filter = request.query_params.get('priority')
+            if priority_filter:
+                issues = issues.filter(priority=priority_filter)
+            
+            serializer = IssueSerializer(issues, many=True)
+            return Response(
+                {
+                    'count': issues.count(),
+                    'results': serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+                
+        except Exception as e:
+            logger.error(f"Error getting client issues: {str(e)}", exc_info=True)
+            return Response(
+                {
+                    'error': 'Internal Server Error',
+                    'details': str(e)
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class ClientIssueDetailView(APIView):
     """
     Endpoint for clients to view their issue details
@@ -306,10 +363,9 @@ class ClientIssueDetailView(APIView):
     def get(self, request, issue_id):
         """Get issue details if it belongs to the client"""
         try:
-            # Verify user is a customer
-            try:
-                customer = Customer.objects.get(user=request.user)
-            except Customer.DoesNotExist:
+            # Get ALL customer records for this user
+            customers = Customer.objects.filter(user=request.user)
+            if not customers.exists():
                 return Response(
                     {
                         'error': 'Forbidden',
@@ -318,11 +374,11 @@ class ClientIssueDetailView(APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
             
-            # Get issue and verify ownership
+            # Get issue and verify ownership (check if raised by ANY of user's customer records)
             try:
                 issue = Issue.objects.select_related(
                     'organization', 'vendor', 'order', 'assigned_to', 'resolved_by'
-                ).get(id=issue_id, raised_by_customer=customer)
+                ).get(id=issue_id, raised_by_customer__in=customers)
             except Issue.DoesNotExist:
                 return Response(
                     {
@@ -332,18 +388,27 @@ class ClientIssueDetailView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # Sync comments from Linear if issue is synced
+            # Sync full issue data from Linear if issue is synced
             if issue.linear_issue_id:
                 try:
                     from crmApp.services.issue_linear_service import IssueLinearService
                     linear_service = IssueLinearService()
-                    success, count, error = linear_service.sync_comments_from_linear(issue)
-                    if success and count > 0:
+                    
+                    # Sync issue status and data from Linear
+                    sync_success, sync_message = linear_service.sync_issue_from_linear(issue)
+                    if sync_success:
+                        logger.info(f"Synced issue data from Linear: {sync_message}")
+                        # Reload issue to get updated data
+                        issue.refresh_from_db()
+                    
+                    # Sync comments from Linear
+                    comment_success, count, error = linear_service.sync_comments_from_linear(issue)
+                    if comment_success and count > 0:
                         logger.info(f"Synced {count} new comments from Linear for issue {issue.issue_number}")
-                    elif not success:
+                    elif not comment_success:
                         logger.warning(f"Failed to sync comments from Linear: {error}")
                 except Exception as e:
-                    logger.error(f"Error syncing comments from Linear: {str(e)}", exc_info=True)
+                    logger.error(f"Error syncing from Linear: {str(e)}", exc_info=True)
             
             serializer = IssueSerializer(issue)
             return Response(serializer.data, status=status.HTTP_200_OK)
@@ -370,10 +435,9 @@ class ClientIssueCommentView(APIView):
     def post(self, request, issue_id):
         """Add a comment to the issue"""
         try:
-            # Verify user is a customer
-            try:
-                customer = Customer.objects.get(user=request.user)
-            except Customer.DoesNotExist:
+            # Get ALL customer records for this user
+            customers = Customer.objects.filter(user=request.user)
+            if not customers.exists():
                 return Response(
                     {
                         'error': 'Forbidden',
@@ -382,9 +446,9 @@ class ClientIssueCommentView(APIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
             
-            # Get issue and verify ownership
+            # Get issue and verify ownership (check if raised by ANY of user's customer records)
             try:
-                issue = Issue.objects.get(id=issue_id, raised_by_customer=customer)
+                issue = Issue.objects.get(id=issue_id, raised_by_customer__in=customers)
             except Issue.DoesNotExist:
                 return Response(
                     {
@@ -406,6 +470,7 @@ class ClientIssueCommentView(APIView):
                 )
             
             # Create IssueComment
+            customer = issue.raised_by_customer  # Get the specific customer record that raised this issue
             author_name = f"{customer.first_name} {customer.last_name}".strip() or customer.user.username
             comment = IssueComment.objects.create(
                 issue=issue,

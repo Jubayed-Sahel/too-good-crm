@@ -114,13 +114,54 @@ data class User(
     val primaryProfile: UserProfile? = null
 )
 
-// Organization Model (for employee profiles)
+// Organization Model (full version)
 data class Organization(
     @SerializedName("id")
     val id: Int,
     @SerializedName("name")
-    val name: String
+    val name: String,
+    @SerializedName("code")
+    val code: String? = null,
+    @SerializedName("industry")
+    val industry: String? = null,
+    @SerializedName("website")
+    val website: String? = null,
+    @SerializedName("email")
+    val email: String? = null,
+    @SerializedName("phone")
+    val phone: String? = null,
+    @SerializedName("address")
+    val address: String? = null,
+    @SerializedName("city")
+    val city: String? = null,
+    @SerializedName("state")
+    val state: String? = null,
+    @SerializedName("zip_code")
+    val zipCode: String? = null,
+    @SerializedName("country")
+    val country: String? = null,
+    @SerializedName("status")
+    val status: String? = null,
+    @SerializedName("created_at")
+    val createdAt: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
 )
+
+// Paginated Organization List Response
+data class OrganizationListResponse(
+    @SerializedName("count")
+    val count: Int,
+    @SerializedName("next")
+    val next: String?,
+    @SerializedName("previous")
+    val previous: String?,
+    @SerializedName("results")
+    val results: List<Organization>
+)
+
+// Simple version for dropdowns (type alias)
+typealias OrganizationSimple = Organization
 
 // Role Model (for employee profiles)
 data class ProfileRole(

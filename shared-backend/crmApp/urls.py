@@ -54,7 +54,7 @@ from crmApp.viewsets import (
 # Import issue action views
 from crmApp.views.issue_actions import RaiseIssueView, ResolveIssueView
 from crmApp.views.linear_webhook import LinearWebhookView
-from crmApp.views.client_issues import ClientRaiseIssueView, ClientIssueDetailView, ClientIssueCommentView
+from crmApp.views.client_issues import ClientRaiseIssueView, ClientIssueListView, ClientIssueDetailView, ClientIssueCommentView
 from crmApp.views.pusher_auth import pusher_auth
 
 # Import JWT token views
@@ -145,6 +145,7 @@ urlpatterns = [
     path('api/issues/resolve/<int:issue_id>/', ResolveIssueView.as_view(), name='issue-resolve'),
     
     # Client issue endpoints
+    path('api/client/issues/', ClientIssueListView.as_view(), name='client-issue-list'),
     path('api/client/issues/raise/', ClientRaiseIssueView.as_view(), name='client-issue-raise'),
     path('api/client/issues/<int:issue_id>/', ClientIssueDetailView.as_view(), name='client-issue-detail'),
     path('api/client/issues/<int:issue_id>/comment/', ClientIssueCommentView.as_view(), name='client-issue-comment'),

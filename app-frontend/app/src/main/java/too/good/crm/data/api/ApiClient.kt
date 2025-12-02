@@ -6,6 +6,8 @@ import okio.Buffer
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import too.good.crm.BuildConfig
+import too.good.crm.data.model.UserProfile
+import com.google.gson.GsonBuilder
 import java.util.concurrent.TimeUnit
 
 /**
@@ -155,10 +157,15 @@ object ApiClient {
         .retryOnConnectionFailure(true)
         .build()
 
+    // Custom Gson instance with UserProfile deserializer
+    private val gson = GsonBuilder()
+        .registerTypeAdapter(UserProfile::class.java, UserProfile.Companion.UserProfileDeserializer())
+        .create()
+
     private val retrofit = Retrofit.Builder()
         .baseUrl(BASE_URL)
         .client(okHttpClient)
-        .addConverterFactory(GsonConverterFactory.create())
+        .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 
     /**
@@ -263,11 +270,23 @@ object ApiClient {
     }
 
     /**
+<<<<<<< HEAD
+     * Organization API Service instance
+     */
+    val organizationApiService: OrganizationApiService by lazy {
+        retrofit.create(OrganizationApiService::class.java)
+    }
+
+    /**
+=======
+>>>>>>> 3a17723a05d87f1c48f22fe22781f216f42365c6
      * Order API Service instance
      */
     val orderApiService: OrderApiService by lazy {
         retrofit.create(OrderApiService::class.java)
     }
+<<<<<<< HEAD
+=======
 
     /**
      * Gemini AI API Service instance
@@ -278,5 +297,6 @@ object ApiClient {
 
     // Add other API services here as needed
     // val organizationApiService: OrganizationApiService by lazy { ... }
+>>>>>>> 3a17723a05d87f1c48f22fe22781f216f42365c6
 }
 
