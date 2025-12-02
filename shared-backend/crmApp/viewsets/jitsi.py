@@ -235,6 +235,62 @@ class JitsiCallViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=True, methods=['post'])
+    def upload_recording(self, request, pk=None):
+        """
+        Upload a call recording file.
+        
+        Request: multipart/form-data with 'recording' file field
+        """
+        call_session = self.get_object()
+        
+        # Verify user has permission (must be participant)
+        if request.user not in [call_session.initiator, call_session.recipient] and request.user.id not in (call_session.participants or []):
+            return Response(
+                {'error': 'You do not have permission to upload recordings for this call'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get uploaded file
+        recording_file = request.FILES.get('recording')
+        if not recording_file:
+            return Response(
+                {'error': 'No recording file provided'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validate file type (allow common video/audio formats)
+        allowed_extensions = ['.mp4', '.webm', '.mkv', '.mp3', '.wav', '.m4a']
+        file_ext = recording_file.name.lower().split('.')[-1] if '.' in recording_file.name else ''
+        if file_ext not in allowed_extensions:
+            return Response(
+                {'error': f'Invalid file type. Allowed: {", ".join(allowed_extensions)}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Save recording file
+        try:
+            # Generate filename with call session info
+            filename = f"call_{call_session.id}_{call_session.room_name}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.{file_ext}"
+            call_session.recording_file.save(filename, recording_file, save=True)
+            
+            logger.info(f"Recording uploaded for call {call_session.id} by user {request.user.username}")
+            
+            call_session.refresh_from_db()
+            
+            return Response({
+                'message': 'Recording uploaded successfully',
+                'recording_url': request.build_absolute_uri(call_session.recording_file.url) if call_session.recording_file else None,
+                'call_session': JitsiCallSessionSerializer(call_session, context={'request': request}).data
+            })
+            
+        except Exception as e:
+            logger.error(f"Error uploading recording: {str(e)}", exc_info=True)
+            return Response(
+                {'error': f'Failed to upload recording: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
     @action(detail=False, methods=['get'])
     def active_calls(self, request):
         """Get all currently active calls"""

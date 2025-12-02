@@ -79,6 +79,7 @@ class JitsiCallSessionSerializer(serializers.ModelSerializer):
             'participant_count',
             'organization',
             'recording_url',
+            'recording_file',
             'notes',
             'jitsi_server',
             'jitsi_url',
