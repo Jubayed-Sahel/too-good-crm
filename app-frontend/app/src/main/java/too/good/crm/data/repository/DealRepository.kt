@@ -125,7 +125,7 @@ class DealRepository {
      * Get all pipelines
      */
     suspend fun getPipelines(): NetworkResult<List<Pipeline>> = safeApiCall {
-        apiService.getPipelines()
+        apiService.getPipelines().results
     }
     
     /**

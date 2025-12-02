@@ -170,7 +170,7 @@ fun NavigationDrawerContent(
                     onClick = { onNavigate("customers") }
                 )
                 NavigationDrawerItem(
-                    icon = { Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null) },
+                    icon = { Icon(Icons.Default.ViewColumn, contentDescription = null) },
                     label = { Text("Sales") },
                     selected = false,
                     onClick = { onNavigate("sales") }
