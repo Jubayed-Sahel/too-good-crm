@@ -25,11 +25,7 @@ android {
         // For Android Emulator: http://10.0.2.2:8000/api/
         // For Physical Device: http://YOUR_COMPUTER_IP:8000/api/
         // Get your IP: Windows (cmd): ipconfig | Mac/Linux: ifconfig
-<<<<<<< HEAD
-        val backendUrl = project.findProperty("BACKEND_URL") as String? ?: "http://10.0.2.2:8000/api/"
-=======
-        val backendUrl = "http://192.168.0.218:8000/api/"
->>>>>>> 3a17723a05d87f1c48f22fe22781f216f42365c6
+        val backendUrl = project.findProperty("BACKEND_URL") as String? ?: "http://192.168.0.102:8000/api/"
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
     }
 

@@ -56,6 +56,7 @@ fun ChatScreen(
     val chatTitle = uiState.selectedUserName ?: "Chat"
 
     Scaffold(
+        modifier = Modifier.imePadding(),
         topBar = {
             TopAppBar(
                 title = {

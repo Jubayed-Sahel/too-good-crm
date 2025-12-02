@@ -7,6 +7,7 @@ import okio.Buffer
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import too.good.crm.BuildConfig
+import too.good.crm.data.BackendUrlManager
 import java.util.concurrent.TimeUnit
 
 /**
@@ -190,11 +191,7 @@ object ApiClient {
         .retryOnConnectionFailure(true)
         .build()
 
-    private val retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(okHttpClient)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
+
 
     /**
      * Issue API Service instance
@@ -274,11 +271,31 @@ object ApiClient {
     /**
      * Telegram API Service instance (Phone verification)
      */
-    val telegramApiService: TelegramApiService by lazy {
-        retrofit.create(TelegramApiService::class.java)
-    }
+    val telegramApiService: TelegramApiService
+        get() = getRetrofit().create(TelegramApiService::class.java)
 
-    // Add other API services here as needed
-    // val organizationApiService: OrganizationApiService by lazy { ... }
+    /**
+     * Organization API Service instance
+     */
+    val organizationApiService: OrganizationApiService
+        get() = getRetrofit().create(OrganizationApiService::class.java)
+
+    /**
+     * Vendor API Service instance
+     */
+    val vendorApiService: VendorApiService
+        get() = getRetrofit().create(VendorApiService::class.java)
+
+    /**
+     * Order API Service instance
+     */
+    val orderApiService: OrderApiService
+        get() = getRetrofit().create(OrderApiService::class.java)
+
+    /**
+     * Gemini API Service instance
+     */
+    val geminiApiService: GeminiApiService
+        get() = getRetrofit().create(GeminiApiService::class.java)
 }
 

@@ -118,10 +118,8 @@ fun CustomerCreateIssueScreen(
             orders = emptyList()
             selectedOrder = null
             try {
-                val response = ApiClient.orderApiService.getOrdersByOrganization(orgId)
-                if (response.isSuccessful) {
-                    orders = response.body()?.results ?: emptyList()
-                }
+                val response = ApiClient.orderApiService.getOrders(pageSize = 100)
+                orders = response.results
             } catch (e: Exception) {
                 android.util.Log.e("CustomerCreateIssue", "Failed to load orders: ${e.message}")
             } finally {
