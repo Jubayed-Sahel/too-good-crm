@@ -44,6 +44,7 @@ import EmployeeTasksPage from './pages/employee/EmployeeTasksPage'
 import EmployeeSettingsPage from './pages/employee/EmployeeSettingsPage'
 import { MessagesPage } from './features/messages/pages'
 import { ClientMessagesPage } from './features/messages/pages'
+import NotFoundPage from './pages/NotFoundPage'
 import './App.css'
 
 function App() {
@@ -368,6 +369,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+          
+          {/* 404 - Catch all unmatched routes */}
+          <Route path="*" element={<NotFoundPage />} />
           </Routes>
           </PermissionProvider>
         </ProfileProvider>

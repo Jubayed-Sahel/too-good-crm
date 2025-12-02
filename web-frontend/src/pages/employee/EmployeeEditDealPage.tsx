@@ -12,10 +12,10 @@ import {
   Spinner,
 } from '@chakra-ui/react';
 import { FiSave, FiX, FiArrowLeft } from 'react-icons/fi';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import CustomSelect from '../../components/ui/CustomSelect';
-import { Card, StandardButton } from '../../components/common';
-import { toaster } from '../../components/ui/toaster';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import CustomSelect from '@/components/ui/CustomSelect';
+import { Card, StandardButton } from '@/components/common';
+import { toaster } from '@/components/ui/toaster';
 import { dealService } from '@/features/deals/services/deal.service';
 import type { Deal } from '@/types';
 

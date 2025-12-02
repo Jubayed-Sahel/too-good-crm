@@ -9,8 +9,8 @@ import {
   Badge,
   Spinner,
 } from '@chakra-ui/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { Card, GradientBox, StandardButton, ConfirmDialog } from '../../components/common';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { Card, GradientBox, StandardButton, ConfirmDialog } from '@/components/common';
 import {
   FiMail,
   FiPhone,
@@ -25,10 +25,10 @@ import {
   FiFileText,
   FiCheckSquare,
 } from 'react-icons/fi';
-import { toaster } from '../../components/ui/toaster';
+import { toaster } from '@/components/ui/toaster';
 import { useState, useEffect } from 'react';
-import { activityService } from '../../services/activity.service';
-import type { Activity, ActivityType, ActivityStatus } from '../../types/activity.types';
+import { activityService } from '@/features/activities/services/activity.service';
+import type { Activity, ActivityType, ActivityStatus } from '@/types/activity.types';
 
 const EmployeeActivityDetailPage = () => {
   const { id } = useParams<{ id: string }>();

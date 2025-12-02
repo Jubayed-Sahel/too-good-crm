@@ -45,9 +45,9 @@ import {
   FiFilter,
   FiSearch,
 } from 'react-icons/fi';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import CustomSelect from '../../components/ui/CustomSelect';
-import { CreateLeadDialog } from '../../components/leads/CreateLeadDialog';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import CustomSelect from '@/components/ui/CustomSelect';
+import { CreateLeadDialog } from '@/features/leads/components/CreateLeadDialog';
 import { useSalesPage } from '@/hooks/useSalesPage';
 import { useLeads } from '@/hooks';
 import { useMoveDealToStage } from '@/features/deals/hooks/useDealMutations';

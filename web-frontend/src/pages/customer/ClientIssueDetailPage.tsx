@@ -34,7 +34,7 @@ import {
   FiSave,
   FiCheckCircle,
 } from 'react-icons/fi';
-import { toaster } from '../../components/ui/toaster';
+import { toaster } from '@/components/ui/toaster';
 
 const ClientIssueDetailPage = () => {
   const { id } = useParams<{ id: string }>();

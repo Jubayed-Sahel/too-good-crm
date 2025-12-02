@@ -23,8 +23,8 @@ import {
   FiFilter,
   FiSearch,
 } from 'react-icons/fi';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import CustomSelect from '../../components/ui/CustomSelect';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import CustomSelect from '@/components/ui/CustomSelect';
 import { mockPipelineDeals, getPipelineStats } from '@/services/mockData';
 
 // Interface for Deal type

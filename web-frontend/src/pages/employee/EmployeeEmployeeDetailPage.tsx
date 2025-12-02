@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, HStack, Badge, Spinner } from '@chakra-ui/react';
 import { FiArrowLeft, FiEdit, FiMail, FiPhone, FiMapPin, FiCalendar, FiUser } from 'react-icons/fi';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { Card, StandardButton } from '../../components/common';
-import { useEmployees } from '../../hooks/useEmployees';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { Card, StandardButton } from '@/components/common';
+import { useEmployees } from '@/features/employees/hooks/useEmployees';
 
 const EmployeeEmployeeDetailPage = () => {
   const { id } = useParams<{ id: string }>();

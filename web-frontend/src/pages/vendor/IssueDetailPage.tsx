@@ -32,7 +32,7 @@ import {
   FiFileText,
   FiSend,
 } from 'react-icons/fi';
-import { toaster } from '../../components/ui/toaster';
+import { toaster } from '@/components/ui/toaster';
 import type { Issue, IssueStatus, IssuePriority, IssueCategory, IssueComment } from '../../types';
 
 const IssueDetailPage = () => {

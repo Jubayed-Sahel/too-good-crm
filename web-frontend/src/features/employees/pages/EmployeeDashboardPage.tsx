@@ -1,5 +1,5 @@
 import { VStack, Box, Text, Heading, Container, SimpleGrid } from '@chakra-ui/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import {
   StatsGrid,
   InfoCardsGrid,

@@ -10,7 +10,7 @@ import {
   Badge,
   Spinner,
 } from '@chakra-ui/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import {
   FiMail,
   FiPhone,
