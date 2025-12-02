@@ -6,10 +6,15 @@ import hashlib
 import hmac
 import json
 import logging
+import secrets
+import string
 import time
 from typing import Dict, Optional
+from django.utils import timezone
+from datetime import timedelta
 
 from django.conf import settings
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -18,6 +23,10 @@ from rest_framework.response import Response
 from crmApp.models import User, UserProfile
 
 logger = logging.getLogger(__name__)
+
+# Cache key prefix for auth codes
+AUTH_CODE_CACHE_PREFIX = "tg_auth_code_"
+AUTH_CODE_EXPIRY = 300  # 5 minutes
 
 
 def generate_auth_token(user_id: int, profile_id: int, timestamp: int) -> str:
@@ -114,10 +123,27 @@ def generate_telegram_link(request):
             f"(profile: {profile.profile_type})"
         )
         
+        # Generate a short 6-character code for manual entry
+        # Format: 3 letters + 3 digits (e.g., "ABC123")
+        auth_code = ''.join(secrets.choice(string.ascii_uppercase) for _ in range(3))
+        auth_code += ''.join(secrets.choice(string.digits) for _ in range(3))
+        
+        # Store code in cache with user/profile info (expires in 5 minutes)
+        code_data = {
+            'user_id': user.id,
+            'profile_id': profile.id,
+            'timestamp': timestamp,
+            'token': token  # Store full token for verification
+        }
+        cache.set(f"{AUTH_CODE_CACHE_PREFIX}{auth_code}", code_data, AUTH_CODE_EXPIRY)
+        
+        logger.info(f"Generated auth code {auth_code} for user {user.email}")
+        
         return Response({
             'telegram_link': telegram_link,
+            'auth_code': auth_code,  # Short code for manual entry
             'bot_username': bot_username,
-            'expires_in': 300,  # 5 minutes
+            'expires_in': AUTH_CODE_EXPIRY,  # 5 minutes
             'user': {
                 'id': user.id,
                 'email': user.email,
@@ -169,4 +195,46 @@ def verify_auth_token(user_id: int, profile_id: int, timestamp: int, token: str)
         return False
     
     return True
+
+
+def verify_auth_code(code: str) -> Optional[Dict]:
+    """
+    Verify a short auth code and return user/profile data.
+    
+    Args:
+        code: 6-character auth code (e.g., "ABC123")
+        
+    Returns:
+        Dict with user_id, profile_id, timestamp, token if valid, None otherwise
+    """
+    if not code or len(code) != 6:
+        return None
+    
+    # Normalize code to uppercase
+    code = code.upper()
+    
+    # Get from cache
+    code_data = cache.get(f"{AUTH_CODE_CACHE_PREFIX}{code}")
+    
+    if not code_data:
+        logger.warning(f"Auth code not found or expired: {code}")
+        return None
+    
+    # Verify the stored token is still valid
+    user_id = code_data['user_id']
+    profile_id = code_data['profile_id']
+    timestamp = code_data['timestamp']
+    token = code_data['token']
+    
+    # Verify token
+    if not verify_auth_token(user_id, profile_id, timestamp, token):
+        logger.warning(f"Invalid token for auth code: {code}")
+        cache.delete(f"{AUTH_CODE_CACHE_PREFIX}{code}")  # Delete invalid code
+        return None
+    
+    # Delete code after use (one-time use)
+    cache.delete(f"{AUTH_CODE_CACHE_PREFIX}{code}")
+    
+    logger.info(f"Auth code verified: {code} for user {user_id}")
+    return code_data
 

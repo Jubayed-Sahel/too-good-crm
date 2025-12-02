@@ -405,14 +405,14 @@ const MessagesPage = () => {
         {/* Chat Window */}
         {selectedUserId === AI_ASSISTANT_ID ? (
           /* AI Assistant Chat Window with Voice + Telegram Link */
-          <VStack flex={1} gap={3} align="stretch">
+          <VStack flex={1} h="100%" gap={3} align="stretch" overflow="hidden">
             {/* Telegram Bot Connection */}
-            <Box px={4} pt={4}>
+            <Box px={4} pt={4} flexShrink={0}>
               <TelegramLinkButton />
             </Box>
             
             {/* AI Chat */}
-            <Box flex={1}>
+            <Box flex={1} h="100%" minH={0} overflow="hidden">
               <VoiceGeminiChatWindow autoSpeak={true} defaultLanguage="en-US" />
             </Box>
           </VStack>

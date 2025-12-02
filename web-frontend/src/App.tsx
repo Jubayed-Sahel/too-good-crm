@@ -45,6 +45,7 @@ import EmployeeSettingsPage from './pages/employee/EmployeeSettingsPage'
 import { MessagesPage } from './features/messages/pages'
 import { ClientMessagesPage } from './features/messages/pages'
 import NotFoundPage from './pages/NotFoundPage'
+import VerifyTelegramPage from './pages/VerifyTelegramPage'
 import './App.css'
 
 function App() {
@@ -59,6 +60,9 @@ function App() {
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
+          
+          {/* Public verification route (no auth required) */}
+          <Route path="/verify-telegram" element={<VerifyTelegramPage />} />
           
           {/* CRM Routes - Accessible by Vendor and Employee profiles */}
           <Route

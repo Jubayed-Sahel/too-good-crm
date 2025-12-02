@@ -77,6 +77,13 @@ from crmApp.viewsets.telegram_auth import (
 # Import Telegram link generator
 from crmApp.viewsets.telegram_link_generator import generate_telegram_link
 
+# Import phone verification views
+from crmApp.viewsets.phone_verification import (
+    send_verification_code,
+    verify_phone_code,
+    check_verification_code,
+)
+
 # Create router
 router = DefaultRouter()
 
@@ -162,6 +169,11 @@ urlpatterns = [
     path('api/telegram/auth/', telegram_login_widget_auth, name='telegram-login-widget'),
     path('api/telegram/link/', telegram_link_account, name='telegram-link-account'),
     path('api/telegram/generate-link/', generate_telegram_link, name='telegram-generate-link'),
+    
+    # Phone verification endpoints
+    path('api/telegram/send-verification-code/', send_verification_code, name='send-verification-code'),
+    path('api/telegram/verify-phone-code/', verify_phone_code, name='verify-phone-code'),
+    path('api/telegram/check-verification-code/', check_verification_code, name='check-verification-code'),
     
     # Router URLs (catch-all, must be last)
     path('api/', include(router.urls)),

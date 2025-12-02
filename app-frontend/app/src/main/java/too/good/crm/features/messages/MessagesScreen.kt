@@ -226,6 +226,9 @@ fun MessagesScreen(
                 }
             }
             
+            // Telegram Link Button
+            TelegramLinkButton()
+            
             // Search Bar
             OutlinedTextField(
                 value = searchQuery,

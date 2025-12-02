@@ -248,6 +248,13 @@ object ApiClient {
         retrofit.create(VideoApiService::class.java)
     }
 
+    /**
+     * Telegram API Service instance (Phone verification)
+     */
+    val telegramApiService: TelegramApiService by lazy {
+        retrofit.create(TelegramApiService::class.java)
+    }
+
     // Add other API services here as needed
     // val organizationApiService: OrganizationApiService by lazy { ... }
 }
