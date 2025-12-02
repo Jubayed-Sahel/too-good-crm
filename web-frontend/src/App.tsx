@@ -10,23 +10,25 @@ import { Toaster } from './components/ui/toaster'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardPage from './pages/DashboardPage'
-import CustomersPage from './pages/CustomersPage'
-import CustomerDetailPage from './pages/CustomerDetailPage'
-import SalesPage from './pages/SalesPage'
-import DealDetailPage from './pages/DealDetailPage'
-import EditDealPage from './pages/EditDealPage'
-import EditLeadPage from './pages/EditLeadPage'
-import LeadDetailPage from './pages/LeadDetailPage'
-import EditCustomerPage from './pages/EditCustomerPage'
-import ActivitiesPage from './pages/ActivitiesPage'
-import ActivityDetailPage from './pages/ActivityDetailPage'
-import EditActivityPage from './pages/EditActivityPage'
+// Feature-based imports
+import { CustomersPage } from './features/customers'
+import { CustomerDetailPage } from './features/customers'
+import { EditCustomerPage } from './features/customers'
+import { SalesPage } from './features/deals'
+import { DealDetailPage } from './features/deals'
+import { EditDealPage } from './features/deals'
+import { LeadDetailPage } from './features/leads'
+import { EditLeadPage } from './features/leads'
+import { ActivitiesPage } from './features/activities'
+import { ActivityDetailPage } from './features/activities'
+import { EditActivityPage } from './features/activities'
+import { IssuesPage } from './features/issues'
+import { IssueDetailPage } from './features/issues'
+// Vendor/Employee pages (still in pages/ - may be organized later)
 import EmployeesPage from './pages/vendor/EmployeesPage'
 import TeamPage from './pages/vendor/TeamPage'
 import EmployeeDetailPage from './pages/vendor/EmployeeDetailPage'
 import EditEmployeePage from './pages/vendor/EditEmployeePage'
-import IssuesPage from './pages/IssuesPage'
-import IssueDetailPage from './pages/vendor/IssueDetailPage'
 import SettingsPage from './pages/SettingsPage'
 import ClientDashboardPage from './pages/ClientDashboardPage'
 import ClientVendorsPage from './pages/ClientVendorsPage'
@@ -40,8 +42,9 @@ import PermissionDebugPage from './pages/PermissionDebugPage'
 import EmployeeDashboardPage from './pages/employee/EmployeeDashboardPage'
 import EmployeeTasksPage from './pages/employee/EmployeeTasksPage'
 import EmployeeSettingsPage from './pages/employee/EmployeeSettingsPage'
-import MessagesPage from './pages/MessagesPage'
-import ClientMessagesPage from './pages/ClientMessagesPage'
+import { MessagesPage } from './features/messages/pages'
+import { ClientMessagesPage } from './features/messages/pages'
+import NotFoundPage from './pages/NotFoundPage'
 import './App.css'
 
 function App() {
@@ -366,6 +369,9 @@ function App() {
               </ProtectedRoute>
             }
           />
+          
+          {/* 404 - Catch all unmatched routes */}
+          <Route path="*" element={<NotFoundPage />} />
           </Routes>
           </PermissionProvider>
         </ProfileProvider>

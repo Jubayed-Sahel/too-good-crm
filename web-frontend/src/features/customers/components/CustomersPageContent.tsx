@@ -1,12 +1,15 @@
 import React from 'react';
-import { Box, Heading, Text, VStack } from '@chakra-ui/react';
+import { VStack, Button, HStack } from '@chakra-ui/react';
+import { FiPlus } from 'react-icons/fi';
 import {
   CustomerTable,
   CustomerFilters,
   CustomerStats,
   CreateCustomerDialog,
 } from './index';
-import type { MappedCustomer, CustomerStats as Stats } from '../hooks/useCustomersPage';
+import { PageHeader, StandardButton } from '@/components/common';
+import { usePermissions } from '@/contexts/PermissionContext';
+import type { MappedCustomer, CustomerStats as Stats } from '@/hooks/useCustomersPage';
 
 /**
  * Props for CustomersPageContent component
@@ -71,17 +74,16 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
   isCreateDialogOpen,
   onCloseCreateDialog,
 }) => {
+  const { canAccess } = usePermissions();
+  const canCreate = canAccess('customer', 'create');
+  
   return (
     <VStack gap={5} align="stretch">
       {/* Page Header */}
-      <Box>
-        <Heading size="xl" mb={2}>
-          Customers
-        </Heading>
-        <Text color="gray.600" fontSize="sm">
-          Manage your customer relationships and track interactions
-        </Text>
-      </Box>
+      <PageHeader
+        title="Customers"
+        description="Manage your customer relationships, track interactions, and monitor customer activity"
+        />
 
       {/* Stats Cards */}
       <CustomerStats {...stats} />
@@ -92,7 +94,7 @@ export const CustomersPageContent: React.FC<CustomersPageContentProps> = ({
         onSearchChange={onSearchChange}
         statusFilter={statusFilter}
         onStatusChange={onStatusChange}
-        onAddCustomer={onAddCustomer}
+        onAddCustomer={canCreate ? onAddCustomer : undefined}
       />
 
       {/* Customer Table */}

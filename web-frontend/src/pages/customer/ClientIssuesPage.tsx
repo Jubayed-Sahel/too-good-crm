@@ -2,14 +2,14 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text, VStack, Spinner } from '@chakra-ui/react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { IssueStats, IssueFilters, IssuesTable, ClientRaiseIssueModal } from '../../components/client-issues';
-import { ErrorState, ConfirmDialog } from '../../components/common';
-import type { Issue as ComponentIssue } from '../../components/client-issues';
-import { useIssues, useIssueStats } from '../../hooks/useIssues';
-import { issueService } from '../../services/issue.service';
-import type { Issue as BackendIssue, IssuePriority, ClientRaiseIssueData } from '../../types';
-import { toaster } from '../../components/ui/toaster';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { IssueStats, IssueFilters, IssuesTable, ClientRaiseIssueModal } from '@/components/client-issues';
+import { ErrorState, ConfirmDialog } from '@/components/common';
+import type { Issue as ComponentIssue } from '@/components/client-issues';
+import { useIssues, useIssueStats } from '@/features/issues/hooks/useIssues';
+import { issueService } from '@/features/issues/services/issue.service';
+import type { Issue as BackendIssue, IssuePriority, ClientRaiseIssueData } from '@/types';
+import { toaster } from '@/components/ui/toaster';
 
 const ClientIssuesPage = () => {
   const navigate = useNavigate();

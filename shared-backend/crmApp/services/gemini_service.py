@@ -79,28 +79,107 @@ class GeminiService:
         permissions = []
         
         try:
-            # Get all permissions for user's role
-            if organization_id:
-                user_roles = user.user_roles.filter(
-                    organization_id=organization_id,
-                    is_active=True
-                )
-            else:
-                # For customers without single org, skip role-based permissions
-                user_roles = []
+            profile_type = active_profile.profile_type
             
-            for user_role in user_roles:
-                role = user_role.role
-                role_permissions = role.role_permissions.filter(
-                    is_active=True
-                ).select_related('permission')
+            # VENDORS: Have all permissions in their organization
+            if profile_type == 'vendor' and organization_id:
+                from crmApp.models import Permission
+                # Vendors have access to all permissions in their organization
+                all_perms = Permission.objects.filter(organization_id=organization_id, is_active=True)
+                permissions = [f"{p.resource}:{p.action}" for p in all_perms]
+                logger.info(f"Vendor user {user.id} in org {organization_id}: Loaded {len(permissions)} permissions")
+            
+            # EMPLOYEES: Get permissions from their assigned roles
+            elif profile_type == 'employee' and organization_id:
+                from crmApp.models import Employee, UserRole
                 
-                for rp in role_permissions:
-                    perm_str = f"{rp.permission.resource}:{rp.permission.action}"
-                    if perm_str not in permissions:
-                        permissions.append(perm_str)
+                # Get employee record
+                employee = Employee.objects.filter(
+                    user=user,
+                    organization_id=organization_id,
+                    status='active'
+                ).select_related('role').first()
+                
+                if employee:
+                    # Get role IDs from Employee.role and UserRole assignments
+                    role_ids = set()
+                    
+                    # 1. Primary role from Employee.role
+                    if employee.role:
+                        role_ids.add(employee.role.id)
+                    
+                    # 2. Additional roles from UserRole
+                    user_role_ids = UserRole.objects.filter(
+                        user=user,
+                        organization_id=organization_id,
+                        is_active=True
+                    ).values_list('role_id', flat=True)
+                    
+                    role_ids.update(user_role_ids)
+                    
+                    # Get all permissions from all roles
+                    from crmApp.models import RolePermission
+                    role_permissions = RolePermission.objects.filter(
+                        role_id__in=role_ids,
+                        is_active=True
+                    ).select_related('permission', 'permission__organization')
+                    
+                    # Filter permissions to only include those from the correct organization
+                    for rp in role_permissions:
+                        if rp.permission.organization_id == organization_id:
+                            perm_str = f"{rp.permission.resource}:{rp.permission.action}"
+                            if perm_str not in permissions:
+                                permissions.append(perm_str)
+                    
+                    logger.info(f"Employee user {user.id} in org {organization_id}: Loaded {len(permissions)} permissions from {len(role_ids)} role(s)")
+                else:
+                    logger.warning(f"Employee user {user.id} has no active employee record in org {organization_id}")
+            
+            # CUSTOMERS: Limited permissions (usually handled by role-based or explicit permissions)
+            elif profile_type == 'customer':
+                # For customers, permissions are usually role-based if they have roles
+                if organization_id:
+                    user_roles = user.user_roles.filter(
+                        organization_id=organization_id,
+                        is_active=True
+                    )
+                    
+                    for user_role in user_roles:
+                        role = user_role.role
+                        role_permissions = role.role_permissions.filter(
+                            is_active=True
+                        ).select_related('permission')
+                        
+                        for rp in role_permissions:
+                            perm_str = f"{rp.permission.resource}:{rp.permission.action}"
+                            if perm_str not in permissions:
+                                permissions.append(perm_str)
+                
+                # Customers have default read permissions for their own data
+                # This is handled by MCP check_permission function, not explicit permissions list
+                logger.info(f"Customer user {user.id}: Loaded {len(permissions)} role-based permissions")
+            
+            # FALLBACK: Try role-based permissions for other profile types
+            else:
+                if organization_id:
+                    user_roles = user.user_roles.filter(
+                        organization_id=organization_id,
+                        is_active=True
+                    )
+                    
+                    for user_role in user_roles:
+                        role = user_role.role
+                        role_permissions = role.role_permissions.filter(
+                            is_active=True
+                        ).select_related('permission')
+                        
+                        for rp in role_permissions:
+                            perm_str = f"{rp.permission.resource}:{rp.permission.action}"
+                            if perm_str not in permissions:
+                                permissions.append(perm_str)
+                
         except Exception as e:
-            logger.warning(f"Could not load permissions for user {user.id}: {str(e)}")
+            logger.error(f"Error loading permissions for user {user.id}: {str(e)}", exc_info=True)
         
         context = {
             'user_id': user.id,
@@ -221,7 +300,7 @@ You are an intelligent AI assistant for a Customer Relationship Management (CRM)
 - **User ID**: {user_id}
 - **Organization ID**: {org_id}
 - **Role**: {role.upper()}
-- **Permissions**: {permissions_count} active permissions
+- **Permissions**: {permissions_count if role != 'vendor' or permissions_count > 0 else 'Full access (vendor role)'} active permissions
 
 ## User Capabilities
 {capabilities}
@@ -314,6 +393,33 @@ Available tools:
 ### Employee Management
 - `list_employees`: View employees in the organization
 - `get_employee`: Get employee details
+- `invite_employee`: Invite a new or existing employee to join the organization
+
+### Role & Permission Management
+Manage roles and permissions to control employee access:
+
+- `list_roles`: List all roles in the organization
+- `create_role`: Create a new role with optional initial permissions
+- `assign_permissions_to_role`: Assign permissions to an existing role
+- `assign_role_to_employee`: Assign a role to an employee
+- `list_permissions`: List all available permissions (to find permission IDs)
+
+**Workflow example:**
+1. Use `list_permissions` to find permission IDs (e.g., customer:read, deal:create)
+2. Use `create_role` to create a role with those permission IDs
+3. Use `assign_role_to_employee` to assign the role to an employee
+4. Or use `invite_employee` with a role_id to invite and assign role in one step
+
+### Activity Management
+Activities track customer interactions, communications, and tasks (calls, emails, meetings, notes, tasks).
+
+Available tools:
+- `list_activities`: List activities with filters (type, status, customer)
+- `get_activity`: Get detailed activity information
+- `get_activity_stats`: Get activity statistics and metrics
+
+Activity types: call, email, telegram, meeting, note, task
+Activity statuses: scheduled, in_progress, completed, cancelled
 
 ### Analytics & Reporting
 - `get_dashboard_stats`: Comprehensive dashboard metrics
@@ -420,7 +526,7 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         Create CRM query tools with user context bound.
         These tools allow Gemini to fetch and modify CRM data directly.
         """
-        from crmApp.models import Customer, Lead, Deal, Issue
+        from crmApp.models import Customer, Lead, Deal, Issue, Activity
         
         org_id = user_context.get('organization_id')
         role = user_context.get('role')
@@ -1528,8 +1634,461 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                     "issues": {
                         "total": Issue.objects.filter(organization_id=org_id).count(),
                         "open": Issue.objects.filter(organization_id=org_id, status='open').count(),
+                    },
+                    "activities": {
+                        "total": Activity.objects.filter(organization_id=org_id).count(),
+                        "completed": Activity.objects.filter(organization_id=org_id, status='completed').count(),
+                        "pending": Activity.objects.filter(organization_id=org_id, status__in=['scheduled', 'in_progress']).count(),
                     }
                 }
+            return await fetch()
+        
+        # === ACTIVITY TOOLS ===
+        async def list_activities_tool(
+            activity_type: str = None,
+            status: str = None,
+            customer_id: int = None,
+            limit: int = 20
+        ):
+            """List activities in the organization with optional filters"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('activity', 'read')
+            if auth_error:
+                return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                queryset = Activity.objects.filter(organization_id=org_id)
+                
+                if activity_type:
+                    queryset = queryset.filter(activity_type=activity_type)
+                if status:
+                    queryset = queryset.filter(status=status)
+                if customer_id:
+                    queryset = queryset.filter(customer_id=customer_id)
+                
+                activities = queryset.select_related(
+                    'customer', 'lead', 'deal', 'assigned_to', 'created_by'
+                ).order_by('-created_at')[:limit]
+                
+                return [
+                    {
+                        "id": a.id,
+                        "activity_type": a.activity_type,
+                        "title": a.title,
+                        "description": a.description,
+                        "customer_name": a.customer_name or (a.customer.name if a.customer else None),
+                        "status": a.status,
+                        "scheduled_at": str(a.scheduled_at) if a.scheduled_at else None,
+                        "completed_at": str(a.completed_at) if a.completed_at else None,
+                        "created_at": str(a.created_at),
+                    }
+                    for a in activities
+                ]
+            return await fetch()
+        
+        async def get_activity_tool(activity_id: int):
+            """Get detailed information about a specific activity"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('activity', 'read')
+            if auth_error:
+                return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                try:
+                    activity = Activity.objects.select_related(
+                        'customer', 'lead', 'deal', 'assigned_to', 'created_by'
+                    ).get(id=activity_id, organization_id=org_id)
+                    
+                    return {
+                        "id": activity.id,
+                        "activity_type": activity.activity_type,
+                        "title": activity.title,
+                        "description": activity.description,
+                        "customer_id": activity.customer_id,
+                        "customer_name": activity.customer_name or (activity.customer.name if activity.customer else None),
+                        "lead_id": activity.lead_id,
+                        "deal_id": activity.deal_id,
+                        "assigned_to_id": activity.assigned_to_id,
+                        "assigned_to_name": f"{activity.assigned_to.first_name} {activity.assigned_to.last_name}".strip() if activity.assigned_to else None,
+                        "status": activity.status,
+                        "scheduled_at": str(activity.scheduled_at) if activity.scheduled_at else None,
+                        "completed_at": str(activity.completed_at) if activity.completed_at else None,
+                        "created_at": str(activity.created_at),
+                        "duration_minutes": activity.duration_minutes,
+                    }
+                except Activity.DoesNotExist:
+                    return {"error": f"Activity {activity_id} not found in your organization"}
+            return await fetch()
+        
+        async def get_activity_stats_tool(activity_type: str = None):
+            """Get activity statistics for the organization"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('activity', 'read')
+            if auth_error:
+                return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                queryset = Activity.objects.filter(organization_id=org_id)
+                
+                if activity_type:
+                    queryset = queryset.filter(activity_type=activity_type)
+                
+                total = queryset.count()
+                by_type = {}
+                by_status = {}
+                
+                for atype in ['call', 'email', 'telegram', 'meeting', 'note', 'task']:
+                    count = queryset.filter(activity_type=atype).count()
+                    if count > 0:
+                        by_type[atype] = count
+                
+                for s in ['scheduled', 'in_progress', 'completed', 'cancelled']:
+                    count = queryset.filter(status=s).count()
+                    if count > 0:
+                        by_status[s] = count
+                
+                return {
+                    "total_activities": total,
+                    "completed": queryset.filter(status='completed').count(),
+                    "pending": queryset.filter(status__in=['scheduled', 'in_progress']).count(),
+                    "by_type": by_type,
+                    "by_status": by_status
+                }
+            return await fetch()
+        
+        # === ROLE MANAGEMENT TOOLS ===
+        async def invite_employee_tool(
+            email: str,
+            first_name: str,
+            last_name: str,
+            phone: Optional[str] = None,
+            department: Optional[str] = None,
+            job_title: Optional[str] = None,
+            role_id: Optional[int] = None
+        ):
+            """Invite a new or existing employee to join the organization"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('employee', 'create')
+            if auth_error:
+                return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def invite():
+                from crmApp.models import User, UserOrganization, UserProfile, Employee, Role, Organization
+                from django.utils.crypto import get_random_string
+                from django.utils import timezone
+                
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                organization = Organization.objects.get(id=org_id)
+                existing_user = User.objects.filter(email=email).first()
+                user_created = False
+                
+                try:
+                    from django.db import transaction
+                    with transaction.atomic():
+                        if existing_user:
+                            existing_employee = Employee.objects.filter(
+                                organization=organization,
+                                user=existing_user
+                            ).first()
+                            
+                            if existing_employee:
+                                return {"error": f"{existing_user.full_name} is already an employee in this organization"}
+                            
+                            user = existing_user
+                            user_org_link, _ = UserOrganization.objects.get_or_create(
+                                user=user,
+                                organization=organization,
+                                defaults={'is_owner': False, 'is_active': True}
+                            )
+                            if not user_org_link.is_active:
+                                user_org_link.is_active = True
+                                user_org_link.save()
+                            
+                            user_profile, _ = UserProfile.objects.get_or_create(
+                                user=user,
+                                profile_type='employee',
+                                defaults={
+                                    'organization': organization,
+                                    'is_primary': False,
+                                    'status': 'active',
+                                    'activated_at': timezone.now()
+                                }
+                            )
+                            message = f'Existing user {user.full_name} added as employee'
+                        else:
+                            username = email.split('@')[0]
+                            if User.objects.filter(username=username).exists():
+                                username = f"{username}_{get_random_string(4)}"
+                            
+                            temp_password = get_random_string(12)
+                            user = User.objects.create_user(
+                                username=username,
+                                email=email,
+                                password=temp_password,
+                                first_name=first_name,
+                                last_name=last_name,
+                                phone=phone
+                            )
+                            user_created = True
+                            
+                            UserOrganization.objects.create(
+                                user=user,
+                                organization=organization,
+                                is_owner=False,
+                                is_active=True
+                            )
+                            
+                            user_profile = UserProfile.objects.create(
+                                user=user,
+                                organization=organization,
+                                profile_type='employee',
+                                is_primary=False,
+                                status='active',
+                                activated_at=timezone.now()
+                            )
+                            message = f'New user created and invited as employee'
+                        
+                        employee_data = {
+                            'organization': organization,
+                            'user': user,
+                            'first_name': first_name,
+                            'last_name': last_name,
+                            'email': email,
+                            'phone': phone,
+                            'department': department,
+                            'job_title': job_title,
+                            'status': 'active',
+                            'hire_date': timezone.now().date()
+                        }
+                        
+                        if role_id:
+                            try:
+                                role = Role.objects.get(id=role_id, organization=organization)
+                                employee_data['role'] = role
+                            except Role.DoesNotExist:
+                                return {"error": f"Role with ID {role_id} not found in your organization"}
+                        
+                        employee = Employee.objects.create(**employee_data)
+                        
+                        return {
+                            "success": True,
+                            "message": message,
+                            "employee": {
+                                "id": employee.id,
+                                "name": f"{employee.first_name} {employee.last_name}",
+                                "email": employee.email,
+                                "job_title": employee.job_title,
+                                "department": employee.department,
+                                "role_id": employee.role_id,
+                            },
+                            "user_created": user_created
+                        }
+                except Exception as e:
+                    logger.error(f"Error inviting employee: {str(e)}", exc_info=True)
+                    return {"error": f"Failed to invite employee: {str(e)}"}
+            return await invite()
+        
+        async def list_roles_tool(is_active: Optional[bool] = None, search: Optional[str] = None, limit: int = 20):
+            """List roles in the organization"""
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                from crmApp.models import Role
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                queryset = Role.objects.filter(organization_id=org_id)
+                
+                if is_active is not None:
+                    queryset = queryset.filter(is_active=is_active)
+                
+                if search:
+                    queryset = queryset.filter(name__icontains=search) | queryset.filter(description__icontains=search)
+                
+                roles = queryset.prefetch_related('role_permissions__permission')[:limit]
+                
+                return [
+                    {
+                        "id": r.id,
+                        "name": r.name,
+                        "description": r.description,
+                        "is_active": r.is_active,
+                        "permission_count": r.role_permissions.count(),
+                    }
+                    for r in roles
+                ]
+            return await fetch()
+        
+        async def create_role_tool(
+            name: str,
+            description: Optional[str] = None,
+            permission_ids: Optional[List[int]] = None
+        ):
+            """Create a new role in the organization"""
+            # AUTHORIZATION CHECK - vendors can always create roles
+            if role != 'vendor':
+                auth_error = check_role_permission('role', 'create')
+                if auth_error:
+                    return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def create():
+                from crmApp.models import Role, Permission, RolePermission, Organization
+                from django.utils.text import slugify
+                
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                organization = Organization.objects.get(id=org_id)
+                base_slug = slugify(name)
+                slug = base_slug
+                counter = 1
+                
+                while Role.objects.filter(organization=organization, slug=slug).exists():
+                    slug = f"{base_slug}-{counter}"
+                    counter += 1
+                
+                role = Role.objects.create(
+                    organization=organization,
+                    name=name,
+                    slug=slug,
+                    description=description,
+                    is_system_role=False,
+                    is_active=True
+                )
+                
+                if permission_ids:
+                    permissions = Permission.objects.filter(id__in=permission_ids, organization=organization)
+                    for permission in permissions:
+                        RolePermission.objects.get_or_create(role=role, permission=permission)
+                
+                return {
+                    "success": True,
+                    "message": f"Role '{name}' created successfully",
+                    "role": {
+                        "id": role.id,
+                        "name": role.name,
+                        "description": role.description,
+                        "permission_count": role.role_permissions.count(),
+                    }
+                }
+            return await create()
+        
+        async def assign_permissions_to_role_tool(role_id: int, permission_ids: List[int]):
+            """Assign permissions to a role"""
+            # AUTHORIZATION CHECK
+            if role != 'vendor':
+                auth_error = check_role_permission('role', 'update')
+                if auth_error:
+                    return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def assign():
+                from crmApp.models import Role, Permission, RolePermission
+                
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                role = Role.objects.get(id=role_id, organization_id=org_id)
+                permissions = Permission.objects.filter(id__in=permission_ids, organization_id=org_id)
+                
+                assigned_count = 0
+                for permission in permissions:
+                    _, created = RolePermission.objects.get_or_create(role=role, permission=permission)
+                    if created:
+                        assigned_count += 1
+                
+                return {
+                    "success": True,
+                    "message": f"Assigned {assigned_count} permission(s) to role '{role.name}'",
+                    "role": {
+                        "id": role.id,
+                        "name": role.name,
+                        "permission_count": role.role_permissions.count(),
+                    }
+                }
+            return await assign()
+        
+        async def assign_role_to_employee_tool(employee_id: int, role_id: int):
+            """Assign a role to an employee"""
+            # AUTHORIZATION CHECK
+            auth_error = check_role_permission('employee', 'update')
+            if auth_error:
+                return auth_error
+            
+            @sync_to_async(thread_sensitive=False)
+            def assign():
+                from crmApp.models import Employee, Role, UserRole
+                
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                employee = Employee.objects.get(id=employee_id, organization_id=org_id)
+                role = Role.objects.get(id=role_id, organization_id=org_id)
+                
+                employee.role = role
+                employee.save()
+                
+                UserRole.objects.get_or_create(
+                    user=employee.user,
+                    role=role,
+                    organization_id=org_id,
+                    defaults={'assigned_by_id': user_context.get('user_id'), 'is_active': True}
+                )
+                
+                return {
+                    "success": True,
+                    "message": f"Role '{role.name}' assigned to employee {employee.first_name} {employee.last_name}",
+                    "employee": {
+                        "id": employee.id,
+                        "name": f"{employee.first_name} {employee.last_name}",
+                        "role_id": employee.role_id,
+                        "role_name": role.name,
+                    }
+                }
+            return await assign()
+        
+        async def list_permissions_tool(resource: Optional[str] = None, action: Optional[str] = None, limit: int = 100):
+            """List available permissions in the organization"""
+            @sync_to_async(thread_sensitive=False)
+            def fetch():
+                from crmApp.models import Permission
+                if not org_id:
+                    return {"error": "No organization context found"}
+                
+                queryset = Permission.objects.filter(organization_id=org_id)
+                
+                if resource:
+                    queryset = queryset.filter(resource=resource)
+                if action:
+                    queryset = queryset.filter(action=action)
+                
+                permissions = queryset[:limit]
+                
+                return [
+                    {
+                        "id": p.id,
+                        "resource": p.resource,
+                        "action": p.action,
+                        "description": p.description,
+                        "full_permission": f"{p.resource}:{p.action}",
+                    }
+                    for p in permissions
+                ]
             return await fetch()
         
         # === EMPLOYEE TOOLS ===
@@ -1683,12 +2242,26 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         async def get_current_user_context_tool():
             """Get information about the current logged-in user"""
+            role = user_context.get('role', '')
+            permissions = user_context.get('permissions', [])
+            permissions_count = len(permissions)
+            
+            # For vendors, show full access message even if permission count is 0
+            # Vendors have full access via role-based authorization, not explicit permissions
+            if role == 'vendor':
+                permission_message = f"Full access (vendor role) - {permissions_count} explicit permissions"
+                if permissions_count == 0:
+                    permission_message = "Full access (vendor role - all permissions granted)"
+            else:
+                permission_message = f"{permissions_count} active permissions"
+            
             return {
                 "user_id": user_context.get('user_id'),
                 "organization_id": user_context.get('organization_id'),
-                "role": user_context.get('role'),
-                "permissions_count": len(user_context.get('permissions', [])),
-                "message": f"You are logged in as user ID {user_context.get('user_id')} with role '{user_context.get('role')}' in organization {user_context.get('organization_id')}"
+                "role": role,
+                "permissions_count": permissions_count,
+                "permissions": permissions,
+                "message": f"You are logged in as user ID {user_context.get('user_id')} with role '{role}' in organization {user_context.get('organization_id')}. You currently have {permission_message}."
             }
         
         # Define all function declarations
@@ -2059,6 +2632,41 @@ Use this function when user says things like:
                 description="Get comprehensive dashboard statistics for customers, leads, deals, and issues",
                 parameters=types.Schema(type=types.Type.OBJECT, properties={}),
             ),
+            # Activity functions
+            types.FunctionDeclaration(
+                name="list_activities",
+                description="List activities (calls, emails, meetings, notes, tasks) in the organization. Activities track customer interactions and communications.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "activity_type": types.Schema(type=types.Type.STRING, description="Filter by type: call, email, telegram, meeting, note, task"),
+                        "status": types.Schema(type=types.Type.STRING, description="Filter by status: scheduled, in_progress, completed, cancelled"),
+                        "customer_id": types.Schema(type=types.Type.INTEGER, description="Filter by customer ID"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 20, max: 100)"),
+                    },
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="get_activity",
+                description="Get detailed information about a specific activity by ID",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "activity_id": types.Schema(type=types.Type.INTEGER, description="Activity ID (required)"),
+                    },
+                    required=["activity_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="get_activity_stats",
+                description="Get activity statistics for the organization, including counts by type and status",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "activity_type": types.Schema(type=types.Type.STRING, description="Filter by activity type (optional)"),
+                    },
+                ),
+            ),
             # Vendor functions
             types.FunctionDeclaration(
                 name="list_vendors",
@@ -2111,6 +2719,93 @@ Use this function when user says things like:
                 description="Get information about the current logged-in user, including their role, organization, and permissions",
                 parameters=types.Schema(type=types.Type.OBJECT, properties={}),
             ),
+            # Role and permission management functions
+            types.FunctionDeclaration(
+                name="invite_employee",
+                description="Invite a new or existing employee to join the organization. Creates user account if needed and sets up employee profile.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "email": types.Schema(type=types.Type.STRING, description="Employee email address (required)"),
+                        "first_name": types.Schema(type=types.Type.STRING, description="Employee first name (required)"),
+                        "last_name": types.Schema(type=types.Type.STRING, description="Employee last name (required)"),
+                        "phone": types.Schema(type=types.Type.STRING, description="Employee phone number (optional)"),
+                        "department": types.Schema(type=types.Type.STRING, description="Employee department (optional)"),
+                        "job_title": types.Schema(type=types.Type.STRING, description="Employee job title (optional)"),
+                        "role_id": types.Schema(type=types.Type.INTEGER, description="Role ID to assign to employee (optional)"),
+                    },
+                    required=["email", "first_name", "last_name"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="list_roles",
+                description="List roles in the organization. Useful for finding role IDs to assign to employees.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "is_active": types.Schema(type=types.Type.BOOLEAN, description="Filter by active status (optional)"),
+                        "search": types.Schema(type=types.Type.STRING, description="Search by role name or description (optional)"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number of results (default: 20, max: 100)"),
+                    },
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="create_role",
+                description="Create a new role in the organization. Roles define sets of permissions that can be assigned to employees.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "name": types.Schema(type=types.Type.STRING, description="Role name (required)"),
+                        "description": types.Schema(type=types.Type.STRING, description="Role description (optional)"),
+                        "permission_ids": types.Schema(
+                            type=types.Type.ARRAY,
+                            items=types.Schema(type=types.Type.INTEGER),
+                            description="List of permission IDs to assign to the role (optional, can be added later)"
+                        ),
+                    },
+                    required=["name"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="assign_permissions_to_role",
+                description="Assign permissions to a role. Use list_permissions first to find permission IDs. Existing permissions are preserved.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "role_id": types.Schema(type=types.Type.INTEGER, description="Role ID (required)"),
+                        "permission_ids": types.Schema(
+                            type=types.Type.ARRAY,
+                            items=types.Schema(type=types.Type.INTEGER),
+                            description="List of permission IDs to assign (required)"
+                        ),
+                    },
+                    required=["role_id", "permission_ids"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="assign_role_to_employee",
+                description="Assign a role to an employee. This updates the employee's primary role. Use list_roles to find role IDs and list_employees to find employee IDs.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "employee_id": types.Schema(type=types.Type.INTEGER, description="Employee ID (required)"),
+                        "role_id": types.Schema(type=types.Type.INTEGER, description="Role ID to assign (required)"),
+                    },
+                    required=["employee_id", "role_id"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="list_permissions",
+                description="List available permissions in the organization. Use this to find permission IDs when creating roles or assigning permissions. Permissions are in the format 'resource:action' (e.g., 'customer:read', 'deal:create').",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "resource": types.Schema(type=types.Type.STRING, description="Filter by resource (e.g., 'customer', 'deal', 'activity') (optional)"),
+                        "action": types.Schema(type=types.Type.STRING, description="Filter by action (e.g., 'create', 'read', 'update', 'delete') (optional)"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number of results (default: 100, max: 200)"),
+                    },
+                ),
+            ),
         ]
         
         # Return tools with all function declarations
@@ -2151,6 +2846,10 @@ Use this function when user says things like:
             "delete_issue": delete_issue_tool,
             # Analytics tools
             "get_dashboard_stats": get_dashboard_stats_tool,
+            # Activity tools
+            "list_activities": list_activities_tool,
+            "get_activity": get_activity_tool,
+            "get_activity_stats": get_activity_stats_tool,
             # Vendor tools
             "list_vendors": list_vendors_tool,
             "get_vendor": get_vendor_tool,
@@ -2159,6 +2858,13 @@ Use this function when user says things like:
             "get_employee": get_employee_tool,
             # User context tools
             "get_current_user_context": get_current_user_context_tool,
+            # Role and permission management tools
+            "invite_employee": invite_employee_tool,
+            "list_roles": list_roles_tool,
+            "create_role": create_role_tool,
+            "assign_permissions_to_role": assign_permissions_to_role_tool,
+            "assign_role_to_employee": assign_role_to_employee_tool,
+            "list_permissions": list_permissions_tool,
         }
         
         return tools

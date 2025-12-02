@@ -26,6 +26,8 @@ from mcp_tools.issue_tools import register_issue_tools
 from mcp_tools.order_tools import register_order_tools
 from mcp_tools.employee_tools import register_employee_tools
 from mcp_tools.organization_tools import register_organization_tools
+from mcp_tools.activity_tools import register_activity_tools
+from mcp_tools.role_management_tools import register_role_management_tools
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -216,6 +218,8 @@ register_issue_tools(mcp)
 register_order_tools(mcp)
 register_employee_tools(mcp)
 register_organization_tools(mcp)
+register_activity_tools(mcp)
+register_role_management_tools(mcp)
 logger.info("All MCP tools registered successfully")
 
 # Global tool registry for direct access

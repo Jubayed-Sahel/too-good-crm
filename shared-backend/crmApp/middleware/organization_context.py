@@ -4,6 +4,7 @@ Handles organization-scoped requests for multi-tenancy
 Uses UserProfile to determine organization context based on profile type
 """
 
+import threading
 from django.utils.deprecation import MiddlewareMixin
 from crmApp.models import UserProfile, Organization
 from crmApp.utils.profile_context import (
@@ -11,6 +12,19 @@ from crmApp.utils.profile_context import (
     get_user_accessible_organizations,
     get_customer_vendor_organizations,
 )
+
+# Thread-local storage for current user (for signal handlers)
+_thread_locals = threading.local()
+
+
+def get_current_user():
+    """Get the current user from thread-local storage."""
+    return getattr(_thread_locals, 'user', None)
+
+
+def set_current_user(user):
+    """Set the current user in thread-local storage."""
+    _thread_locals.user = user
 
 
 class OrganizationContextMiddleware(MiddlewareMixin):
@@ -27,6 +41,16 @@ class OrganizationContextMiddleware(MiddlewareMixin):
     
     def process_request(self, request):
         """Process incoming request to set organization context"""
+        
+        # Store current user in thread-local for signal handlers
+        user_to_set = request.user if request.user.is_authenticated else None
+        set_current_user(user_to_set)
+        
+        # Debug logging
+        import logging
+        logger = logging.getLogger(__name__)
+        if request.path.startswith('/api/customers'):
+            logger.info(f"🔧 Middleware: Setting current_user to {user_to_set} (authenticated: {getattr(request.user, 'is_authenticated', False)})")
         
         # Skip for unauthenticated requests
         if not request.user or not request.user.is_authenticated:
@@ -69,6 +93,9 @@ class OrganizationContextMiddleware(MiddlewareMixin):
     
     def process_response(self, request, response):
         """Add organization context to response headers"""
+        
+        # Clear thread-local storage
+        set_current_user(None)
         
         if hasattr(request.user, 'current_organization') and request.user.current_organization:
             response['X-Active-Organization'] = str(request.user.current_organization.id)

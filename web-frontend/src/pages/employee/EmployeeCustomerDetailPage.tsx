@@ -10,7 +10,7 @@ import {
   Badge,
   Spinner,
 } from '@chakra-ui/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import {
   FiMail,
   FiPhone,
@@ -25,10 +25,10 @@ import {
   FiFileText,
 } from 'react-icons/fi';
 import { StandardButton, ConfirmDialog } from '@/components/common';
-import { SendEmailDialog, type EmailData } from '@/components/activities/SendEmailDialog';
-import { activityService } from '@/services/activity.service';
+import { SendEmailDialog, type EmailData } from '@/features/activities/components/SendEmailDialog';
+import { activityService } from '@/features/activities/services/activity.service';
 import { toaster } from '@/components/ui/toaster';
-import { useCustomer, useDeleteCustomer } from '@/hooks/useCustomers';
+import { useCustomer, useDeleteCustomer } from '@/features/customers/hooks/useCustomers';
 import { useProfile } from '@/contexts/ProfileContext';
 
 const EmployeeCustomerDetailPage = () => {

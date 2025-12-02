@@ -5,7 +5,7 @@
 
 import api from '@/lib/apiClient';
 import { API_CONFIG } from '@/config/api.config';
-import { employeeService } from './employee.service';
+import { employeeService } from '@/features/employees/services/employee.service';
 import type {
   Role,
   Permission,

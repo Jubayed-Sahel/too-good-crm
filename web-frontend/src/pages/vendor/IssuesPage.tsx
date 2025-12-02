@@ -1,12 +1,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VStack, Box, Heading, Text, Badge, Spinner } from '@chakra-ui/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { IssueStatsGrid, IssueFiltersPanel, IssuesDataTable, ResolveIssueModal } from '../../components/issues';
-import { ErrorState, PageHeader, StandardButton, ConfirmDialog } from '../../components/common';
-import { useIssues, useIssueStats, useIssueMutations } from '../../hooks/useIssues';
-import type { Issue, IssuePriority, IssueStatus, IssueCategory } from '../../types';
-import { toaster } from '../../components/ui/toaster';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { IssueStatsGrid, IssueFiltersPanel, IssuesDataTable, ResolveIssueModal } from '@/features/issues/components';
+import { ErrorState, PageHeader, StandardButton, ConfirmDialog } from '@/components/common';
+import { useIssues, useIssueStats, useIssueMutations } from '@/features/issues/hooks/useIssues';
+import type { Issue, IssuePriority, IssueStatus, IssueCategory } from '@/types';
+import { toaster } from '@/components/ui/toaster';
 
 const IssuesPage = () => {
   const navigate = useNavigate();

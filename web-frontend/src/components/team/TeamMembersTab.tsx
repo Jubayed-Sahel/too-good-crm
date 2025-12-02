@@ -7,11 +7,11 @@ import { Box, VStack, HStack, SimpleGrid, Text, Stack, Input } from '@chakra-ui/
 import { FiUserPlus, FiSearch } from 'react-icons/fi';
 import { StandardButton, StandardCard } from '@/components/common';
 import CustomSelect from '@/components/ui/CustomSelect';
-import EmployeeTable from '../employees/EmployeeTable';
-import { InviteEmployeeDialog } from '../employees/InviteEmployeeDialog';
-import { ConfirmDialog } from '../common';
-import { toaster } from '../ui/toaster';
-import { useEmployees } from '@/hooks/useEmployees';
+import EmployeeTable from '@/features/employees/components/EmployeeTable';
+import { InviteEmployeeDialog } from '@/features/employees/components/InviteEmployeeDialog';
+import { ConfirmDialog } from '@/components/common';
+import { toaster } from '@/components/ui/toaster';
+import { useEmployees } from '@/features/employees/hooks/useEmployees';
 import { employeeService } from '@/services';
 import type { Employee } from '@/services';
 import { useProfile } from '@/contexts/ProfileContext';

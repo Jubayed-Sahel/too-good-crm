@@ -9,12 +9,12 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Heading, Text } from '@chakra-ui/react';
-import DashboardLayout from '../../components/dashboard/DashboardLayout';
-import { EmployeesPageContent, EmployeesPageLoading } from '../../components/employees';
-import { InviteEmployeeDialog } from '../../components/employees/InviteEmployeeDialog';
-import { ConfirmDialog } from '../../components/common';
-import { toaster } from '../../components/ui/toaster';
-import { useEmployees } from '@/hooks/useEmployees';
+import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { EmployeesPageContent, EmployeesPageLoading } from '@/features/employees/components';
+import { InviteEmployeeDialog } from '@/features/employees/components/InviteEmployeeDialog';
+import { ConfirmDialog } from '@/components/common';
+import { toaster } from '@/components/ui/toaster';
+import { useEmployees } from '@/features/employees/hooks/useEmployees';
 import { employeeService } from '@/services';
 import type { Employee } from '@/services';
 import { exportData } from '@/utils';
