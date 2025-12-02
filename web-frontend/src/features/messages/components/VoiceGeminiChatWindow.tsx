@@ -212,7 +212,8 @@ export const VoiceGeminiChatWindow: React.FC<VoiceGeminiChatWindowProps> = ({
 
   return (
     <Box
-      flex={1}
+      h="100%"
+      maxH="100%"
       bg="white"
       borderRadius="xl"
       boxShadow="sm"
@@ -223,7 +224,7 @@ export const VoiceGeminiChatWindow: React.FC<VoiceGeminiChatWindowProps> = ({
       overflow="hidden"
     >
       {/* Header */}
-      <Box p={4} borderBottomWidth="1px" borderColor="gray.200">
+      <Box p={4} borderBottomWidth="1px" borderColor="gray.200" flexShrink={0}>
         <HStack justify="space-between">
           <VStack align="start" gap={0}>
             <HStack>
@@ -298,7 +299,7 @@ export const VoiceGeminiChatWindow: React.FC<VoiceGeminiChatWindowProps> = ({
 
       {/* Browser Support Warnings */}
       {(!isSpeechRecognitionSupported || !isSpeechSynthesisSupported) && (
-        <Box p={4} bg="orange.50" borderBottomWidth="1px" borderColor="orange.200">
+        <Box p={4} bg="orange.50" borderBottomWidth="1px" borderColor="orange.200" flexShrink={0}>
           <HStack gap={2} align="start">
             <Text fontSize="lg">⚠️</Text>
             <Box flex={1}>
@@ -317,7 +318,7 @@ export const VoiceGeminiChatWindow: React.FC<VoiceGeminiChatWindowProps> = ({
       )}
 
       {/* Messages Area */}
-      <Box flex={1} overflowY="auto" p={4} bg="white">
+      <Box flex={1} minH={0} overflowY="auto" p={4} bg="white">
         {!status?.available && (
           <Box p={4} bg="orange.50" borderRadius="md" borderWidth="1px" borderColor="orange.200" mb={4}>
             <HStack gap={2} align="start">
@@ -485,6 +486,7 @@ export const VoiceGeminiChatWindow: React.FC<VoiceGeminiChatWindowProps> = ({
         borderTopWidth="1px" 
         borderColor="gray.200"
         bg="white"
+        flexShrink={0}
       >
         <VStack align="stretch" gap={2}>
           {/* Voice Recording Indicator */}

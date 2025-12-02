@@ -82,6 +82,9 @@ from .message import Message, Conversation, GeminiConversation
 # Telegram models
 from .telegram import TelegramUser
 
+# Phone verification model
+from .phone_verification import PhoneVerification
+
 # Export all models for backward compatibility
 __all__ = [
     # Authentication
@@ -134,4 +137,7 @@ __all__ = [
     
     # Telegram
     'TelegramUser',
+    
+    # Phone Verification
+    'PhoneVerification',
 ]

@@ -6,7 +6,7 @@ Integrates Google Gemini with MCP server for AI-powered CRM operations
 import os
 import logging
 import asyncio
-from typing import Optional, Dict, Any, AsyncIterator, Callable
+from typing import Optional, Dict, Any, AsyncIterator, Callable, List
 from django.conf import settings
 from asgiref.sync import sync_to_async
 from google import genai
@@ -85,7 +85,8 @@ class GeminiService:
             if profile_type == 'vendor' and organization_id:
                 from crmApp.models import Permission
                 # Vendors have access to all permissions in their organization
-                all_perms = Permission.objects.filter(organization_id=organization_id, is_active=True)
+                # Note: Permission model doesn't have is_active field, all permissions are active
+                all_perms = Permission.objects.filter(organization_id=organization_id)
                 permissions = [f"{p.resource}:{p.action}" for p in all_perms]
                 logger.info(f"Vendor user {user.id} in org {organization_id}: Loaded {len(permissions)} permissions")
             
@@ -414,12 +415,17 @@ Manage roles and permissions to control employee access:
 Activities track customer interactions, communications, and tasks (calls, emails, meetings, notes, tasks).
 
 Available tools:
-- `list_activities`: List activities with filters (type, status, customer)
+- `list_activities`: List activities with filters (type, status, customer). IMPORTANT: When displaying activities, show ALL activities returned by the tool (up to the limit specified). Do not limit the display to just one activity - show the complete list.
 - `get_activity`: Get detailed activity information
 - `get_activity_stats`: Get activity statistics and metrics
 
 Activity types: call, email, telegram, meeting, note, task
 Activity statuses: scheduled, in_progress, completed, cancelled
+
+**CRITICAL:** When users ask to "show activities" or "list activities", always:
+1. Call `list_activities` with an appropriate limit (default 20, use 50-100 if they want to see more)
+2. Display ALL activities returned - do not truncate or show only one
+3. Format each activity clearly with all relevant details (title, type, customer, status, dates)
 
 ### Analytics & Reporting
 - `get_dashboard_stats`: Comprehensive dashboard metrics
@@ -445,11 +451,16 @@ Activity statuses: scheduled, in_progress, completed, cancelled
 - Use **tables** for structured data (customers, deals, leads)
 - Use **numbers and metrics** prominently for statistics
 - Use **emojis sparingly** for visual clarity (✅ ✗ 📊 💰 👤)
+- **CRITICAL: When a tool returns a LIST of items, display ALL items in the list, not just one!**
+  - Example: If `list_activities` returns 10 activities, show all 10, not just the first one
+  - Example: If `list_customers` returns 25 customers, show all 25, not just one
+  - Only limit display if explicitly requested by the user (e.g., "show top 5")
 
 ### 3. Provide Context
 - When showing filtered results, mention the filters applied
 - When showing stats, add brief insights ("Your conversion rate of 45% is above industry average")
 - When operations succeed, confirm clearly ("✅ Customer created successfully: John Doe (ID: 123)")
+- **IMPORTANT: Always indicate how many items are shown (e.g., "Found 15 activities:" or "Showing 25 customers:")**
 
 ### 4. Handle Errors Gracefully
 - If a tool fails, explain why in user-friendly terms
@@ -475,6 +486,12 @@ Activity statuses: scheduled, in_progress, completed, cancelled
 - Avoid technical jargon unless the user uses it first
 - Explain CRM concepts when needed
 - Be conversational but professional
+
+### 9. Display All Results
+- **When a tool returns a list/array, iterate through ALL items and display them**
+- **Do NOT truncate or show only the first item unless explicitly requested**
+- **Show the total count: "Found X items:" or "Showing X of Y items:"**
+- This is especially important for: list_activities, list_customers, list_leads, list_deals, list_issues
 
 ## Example Interactions
 
@@ -1645,10 +1662,14 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
         
         # === ACTIVITY TOOLS ===
         async def list_activities_tool(
-            activity_type: str = None,
-            status: str = None,
-            customer_id: int = None,
-            limit: int = 20
+            activity_type: Optional[str] = None,
+            status: Optional[str] = None,
+            customer_id: Optional[int] = None,
+            lead_id: Optional[int] = None,
+            deal_id: Optional[int] = None,
+            assigned_to: Optional[int] = None,
+            search: Optional[str] = None,
+            limit: int = 50  # Increased default from 20 to 50 for better visibility
         ):
             """List activities in the organization with optional filters"""
             # AUTHORIZATION CHECK
@@ -1661,33 +1682,161 @@ You are now ready to assist the user with their CRM needs. Be helpful, efficient
                 if not org_id:
                     return {"error": "No organization context found"}
                 
-                queryset = Activity.objects.filter(organization_id=org_id)
+                from django.db.models import Q
+                from crmApp.models import AuditLog, JitsiCallSession
+                from crmApp.serializers import ActivityListSerializer
+                from crmApp.serializers.audit_log import AuditLogListSerializer
+                from crmApp.serializers.jitsi import JitsiCallSessionSerializer
                 
+                # 1. Get regular activities
+                activities_queryset = Activity.objects.filter(organization_id=org_id)
+                
+                # Apply filters to activities
                 if activity_type:
-                    queryset = queryset.filter(activity_type=activity_type)
+                    activities_queryset = activities_queryset.filter(activity_type=activity_type)
                 if status:
-                    queryset = queryset.filter(status=status)
+                    activities_queryset = activities_queryset.filter(status=status)
                 if customer_id:
-                    queryset = queryset.filter(customer_id=customer_id)
+                    activities_queryset = activities_queryset.filter(customer_id=customer_id)
+                if lead_id:
+                    activities_queryset = activities_queryset.filter(lead_id=lead_id)
+                if deal_id:
+                    activities_queryset = activities_queryset.filter(deal_id=deal_id)
+                if assigned_to:
+                    activities_queryset = activities_queryset.filter(assigned_to_id=assigned_to)
+                if search:
+                    activities_queryset = activities_queryset.filter(
+                        Q(title__icontains=search) |
+                        Q(description__icontains=search) |
+                        Q(customer_name__icontains=search)
+                    )
                 
-                activities = queryset.select_related(
+                activities_queryset = activities_queryset.select_related(
                     'customer', 'lead', 'deal', 'assigned_to', 'created_by'
-                ).order_by('-created_at')[:limit]
+                ).order_by('-created_at')
                 
-                return [
-                    {
-                        "id": a.id,
-                        "activity_type": a.activity_type,
-                        "title": a.title,
-                        "description": a.description,
-                        "customer_name": a.customer_name or (a.customer.name if a.customer else None),
-                        "status": a.status,
-                        "scheduled_at": str(a.scheduled_at) if a.scheduled_at else None,
-                        "completed_at": str(a.completed_at) if a.completed_at else None,
-                        "created_at": str(a.created_at),
+                # 2. Get audit logs
+                audit_logs_queryset = AuditLog.objects.filter(organization_id=org_id)
+                if search:
+                    audit_logs_queryset = audit_logs_queryset.filter(
+                        Q(description__icontains=search) |
+                        Q(resource_name__icontains=search) |
+                        Q(user_email__icontains=search)
+                    )
+                audit_logs_queryset = audit_logs_queryset.select_related(
+                    'user', 'related_customer', 'related_lead', 'related_deal'
+                ).order_by('-created_at')
+                
+                # 3. Get video calls
+                video_calls_queryset = JitsiCallSession.objects.filter(organization_id=org_id)
+                if activity_type:
+                    if activity_type != 'call':
+                        video_calls_queryset = video_calls_queryset.none()
+                if status:
+                    status_map = {
+                        'scheduled': ['pending', 'ringing'],
+                        'in_progress': ['active'],
+                        'completed': ['completed'],
+                        'cancelled': ['cancelled', 'rejected', 'missed', 'failed']
                     }
-                    for a in activities
-                ]
+                    if status in status_map:
+                        video_calls_queryset = video_calls_queryset.filter(status__in=status_map[status])
+                if search:
+                    video_calls_queryset = video_calls_queryset.filter(
+                        Q(room_name__icontains=search) |
+                        Q(notes__icontains=search)
+                    )
+                video_calls_queryset = video_calls_queryset.select_related(
+                    'initiator', 'recipient', 'organization'
+                ).order_by('-created_at')
+                
+                # Serialize all three
+                activities_serializer = ActivityListSerializer(activities_queryset, many=True)
+                activities_list = list(activities_serializer.data)
+                
+                audit_logs_serializer = AuditLogListSerializer(audit_logs_queryset, many=True)
+                audit_logs_list = list(audit_logs_serializer.data)
+                
+                video_calls_serializer = JitsiCallSessionSerializer(video_calls_queryset, many=True)
+                video_calls_list = list(video_calls_serializer.data)
+                
+                # Convert audit logs to activity format
+                audit_logs_as_activities = []
+                for log in audit_logs_list:
+                    if activity_type and activity_type != 'note':
+                        continue
+                    audit_logs_as_activities.append({
+                        'id': f"audit-{log['id']}",
+                        'activity_type': 'note',
+                        'title': log.get('description') or f"{log.get('action_display', '')} {log.get('resource_type_display', '')}",
+                        'description': log.get('resource_name') or log.get('description', ''),
+                        'customer_name': log.get('user_email', 'System'),
+                        'status': 'completed',
+                        'created_at': log['created_at'],
+                        'updated_at': log.get('updated_at', log['created_at']),
+                        'scheduled_at': log['created_at'],
+                        'completed_at': log['created_at'],
+                        'organization': org_id,  # Use org_id from context (AuditLogListSerializer doesn't include organization field)
+                        'created_by': log.get('user'),
+                        'assigned_to': None,
+                    })
+                
+                # Convert video calls to activity format
+                call_status_map = {
+                    'pending': 'scheduled',
+                    'ringing': 'scheduled',
+                    'active': 'in_progress',
+                    'completed': 'completed',
+                    'missed': 'cancelled',
+                    'rejected': 'cancelled',
+                    'cancelled': 'cancelled',
+                    'failed': 'cancelled',
+                }
+                
+                video_calls_as_activities = []
+                for call in video_calls_list:
+                    call_status = call_status_map.get(call.get('status', 'completed'), 'completed')
+                    if status and call_status != status:
+                        continue
+                    
+                    recipient_name = call.get('recipient_name') or call.get('initiator_name', 'Unknown')
+                    call_title = f"{call.get('call_type', 'audio').title()} Call"
+                    if call.get('status') == 'completed':
+                        call_title += f" with {recipient_name}"
+                    else:
+                        call_title += f" to {recipient_name}"
+                    
+                    video_calls_as_activities.append({
+                        'id': call['id'],
+                        'activity_type': 'call',
+                        'title': call_title,
+                        'description': call.get('notes') or f"{call.get('call_type', 'audio')} call - {call.get('status', '')}{(' (' + call.get('duration_formatted', '') + ')') if call.get('duration_formatted') else ''}",
+                        'customer_name': recipient_name,
+                        'status': call_status,
+                        'created_at': call['created_at'],
+                        'updated_at': call.get('updated_at', call['created_at']),
+                        'scheduled_at': call.get('started_at') or call['created_at'],
+                        'completed_at': call.get('ended_at'),
+                        'organization': call.get('organization', org_id),  # Use org_id as fallback
+                        'created_by': call.get('initiator'),
+                        'assigned_to': call.get('recipient'),
+                    })
+                
+                # Merge all activities
+                all_activities = activities_list + audit_logs_as_activities + video_calls_as_activities
+                
+                # Sort by creation date (newest first)
+                all_activities.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+                
+                # Apply limit
+                limit_val = min(max(limit, 1), 100)
+                result = all_activities[:limit_val]
+                
+                activity_count = len(result)
+                total_available = len(all_activities)
+                logger.info(f"Retrieved {activity_count} activities for org {org_id} (limit={limit_val}, total_available={total_available}, Regular: {len(activities_list)}, Audit Logs: {len(audit_logs_as_activities)}, Video Calls: {len(video_calls_as_activities)})")
+                
+                return result
             return await fetch()
         
         async def get_activity_tool(activity_id: int):
@@ -2635,14 +2784,18 @@ Use this function when user says things like:
             # Activity functions
             types.FunctionDeclaration(
                 name="list_activities",
-                description="List activities (calls, emails, meetings, notes, tasks) in the organization. Activities track customer interactions and communications.",
+                description="List activities (calls, emails, meetings, notes, tasks) in the organization. Activities track customer interactions and communications. Returns a list of activities - display ALL returned activities to the user, do not limit to just one.",
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
                         "activity_type": types.Schema(type=types.Type.STRING, description="Filter by type: call, email, telegram, meeting, note, task"),
                         "status": types.Schema(type=types.Type.STRING, description="Filter by status: scheduled, in_progress, completed, cancelled"),
                         "customer_id": types.Schema(type=types.Type.INTEGER, description="Filter by customer ID"),
-                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 20, max: 100)"),
+                        "lead_id": types.Schema(type=types.Type.INTEGER, description="Filter by lead ID"),
+                        "deal_id": types.Schema(type=types.Type.INTEGER, description="Filter by deal ID"),
+                        "assigned_to": types.Schema(type=types.Type.INTEGER, description="Filter by assigned employee ID"),
+                        "search": types.Schema(type=types.Type.STRING, description="Search by title, description, or customer name"),
+                        "limit": types.Schema(type=types.Type.INTEGER, description="Maximum number to return (default: 50 for better visibility, max: 100, min: 1). Set to 50-100 when user asks to see activities without a specific count."),
                     },
                 ),
             ),
@@ -3033,7 +3186,46 @@ Use this function when user says things like:
                 if function_name in self._tool_handlers:
                     try:
                         tool_result = await self._tool_handlers[function_name](**function_args)
-                        logger.info(f"Tool result: {str(tool_result)[:200]}...")
+                        
+                        # Log result details
+                        if isinstance(tool_result, list):
+                            logger.info(f"Tool result: List with {len(tool_result)} items (first 100 chars: {str(tool_result)[:100]}...)")
+                        elif isinstance(tool_result, dict):
+                            logger.info(f"Tool result: Dict with keys {list(tool_result.keys())[:5]}... (first 200 chars: {str(tool_result)[:200]}...)")
+                        else:
+                            logger.info(f"Tool result: {type(tool_result).__name__} (first 200 chars: {str(tool_result)[:200]}...)")
+                        
+                        # Format function response - Gemini FunctionResponse requires a dict
+                        # If result is a list, wrap it in an appropriate key based on function name
+                        if isinstance(tool_result, list):
+                            # Use semantic keys based on function name
+                            if 'list_' in function_name:
+                                # For list functions, use plural noun from function name
+                                key_name = function_name.replace('list_', '').replace('_', '')
+                                function_response_data = {key_name: tool_result, "count": len(tool_result)}
+                            elif function_name in ['list_activities', 'list_customers', 'list_leads', 'list_deals', 'list_issues', 'list_employees', 'list_roles', 'list_permissions']:
+                                # Map specific function names to semantic keys
+                                key_map = {
+                                    'list_activities': 'activities',
+                                    'list_customers': 'customers',
+                                    'list_leads': 'leads',
+                                    'list_deals': 'deals',
+                                    'list_issues': 'issues',
+                                    'list_employees': 'employees',
+                                    'list_roles': 'roles',
+                                    'list_permissions': 'permissions',
+                                }
+                                key_name = key_map.get(function_name, 'items')
+                                function_response_data = {key_name: tool_result, "count": len(tool_result)}
+                            else:
+                                # Generic wrapper
+                                function_response_data = {"items": tool_result, "count": len(tool_result)}
+                        elif isinstance(tool_result, dict):
+                            # Dict can be passed directly
+                            function_response_data = tool_result
+                        else:
+                            # Other types (str, int, etc.) wrap in generic dict
+                            function_response_data = {"result": tool_result}
                         
                         # Send function response back to Gemini
                         function_response = types.Content(
@@ -3042,7 +3234,7 @@ Use this function when user says things like:
                                 types.Part(
                                     function_response=types.FunctionResponse(
                                         name=function_name,
-                                        response={"result": tool_result}
+                                        response=function_response_data
                                     )
                                 )
                             ]
@@ -3067,11 +3259,71 @@ Use this function when user says things like:
                         logger.info("Received final response stream from Gemini")
                         
                         # Stream the final response
+                        text_yielded = False
                         async for chunk in final_response_stream:
                             if chunk.candidates and chunk.candidates[0].content and chunk.candidates[0].content.parts:
                                 for part in chunk.candidates[0].content.parts:
                                     if hasattr(part, 'text') and part.text:
+                                        text_yielded = True
                                         yield part.text
+                        
+                        # If no text was yielded but we got a function result, provide feedback
+                        if not text_yielded:
+                            logger.warning(f"No text content in final response for function {function_name}")
+                            
+                            # Extract items from tool_result (could be list or dict-wrapped)
+                            items_to_format = None
+                            is_operation_result = False
+                            
+                            if isinstance(tool_result, list):
+                                items_to_format = tool_result
+                            elif isinstance(tool_result, dict):
+                                # Check if it contains a list (might be already wrapped from function_response_data)
+                                for key in ['activities', 'customers', 'leads', 'deals', 'issues', 'employees', 'roles', 'permissions', 'items']:
+                                    if key in tool_result and isinstance(tool_result[key], list):
+                                        items_to_format = tool_result[key]
+                                        break
+                                # If no list found, treat as operation result
+                                if items_to_format is None:
+                                    is_operation_result = True
+                            
+                            # Handle operation results (dict with message, no list)
+                            if is_operation_result:
+                                yield f"\n\nOperation completed: {tool_result.get('message', 'Success')}\n"
+                            # Format list items if we have any
+                            elif items_to_format:
+                                count = len(items_to_format)
+                                yield f"\n\nFound {count} result(s). "
+                                if count > 0:
+                                    yield "Here are the details:\n\n"
+                                    # Yield formatted results - show ALL items
+                                    for idx, item in enumerate(items_to_format, 1):
+                                        if isinstance(item, dict):
+                                            # Format as bullet points with key details
+                                            yield f"{idx}. "
+                                            
+                                            # Try to extract meaningful fields for activities
+                                            if 'title' in item:
+                                                yield f"**{item.get('title', 'N/A')}**"
+                                            elif 'name' in item:
+                                                yield f"**{item.get('name', 'N/A')}**"
+                                            
+                                            # Add type/status if available (for activities)
+                                            if 'activity_type' in item:
+                                                yield f" (Type: {item.get('activity_type', 'N/A')})"
+                                            if 'status' in item:
+                                                yield f" - Status: {item.get('status', 'N/A')}"
+                                            if 'customer_name' in item and item.get('customer_name'):
+                                                yield f" - Customer: {item.get('customer_name')}"
+                                            if 'created_at' in item:
+                                                yield f" - {item.get('created_at', '')}"
+                                            
+                                            yield "\n"
+                                        else:
+                                            yield f"{idx}. {str(item)[:150]}\n"
+                                    yield "\n"
+                            else:
+                                yield f"\n\nResult: {str(tool_result)[:200]}\n"
                     
                     except Exception as tool_error:
                         logger.error(f"Error executing tool {function_name}: {tool_error}")
@@ -3080,7 +3332,7 @@ Use this function when user says things like:
                     yield f"\n\n❌ Unknown function: {function_name}"
             
             logger.info("Gemini response completed")
-                
+            
         except Exception as e:
             # Handle different types of errors with user-friendly messages
             error_str = str(e)
@@ -3098,6 +3350,25 @@ Use this function when user says things like:
             
             logger.error(f"Error in Gemini chat: {error_str}", exc_info=True)
             yield error_msg
+        finally:
+            # Ensure proper cleanup of async streams to prevent "Task was destroyed" errors
+            try:
+                if 'response_stream' in locals() and response_stream:
+                    if hasattr(response_stream, 'aclose'):
+                        await response_stream.aclose()
+                    elif hasattr(response_stream, 'close'):
+                        response_stream.close()
+            except Exception as cleanup_error:
+                logger.debug(f"Error closing response_stream: {cleanup_error}")
+            
+            try:
+                if 'final_response_stream' in locals() and final_response_stream:
+                    if hasattr(final_response_stream, 'aclose'):
+                        await final_response_stream.aclose()
+                    elif hasattr(final_response_stream, 'close'):
+                        final_response_stream.close()
+            except Exception as cleanup_error:
+                logger.debug(f"Error closing final_response_stream: {cleanup_error}")
     
     async def chat(
         self,

@@ -6,6 +6,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import too.good.crm.BuildConfig
 import java.net.HttpURLConnection
 import java.net.URL
 
@@ -27,10 +28,12 @@ object NetworkUtils {
      * Test connection to backend server
      * Returns true if server is reachable, false otherwise
      */
-    suspend fun testServerConnection(baseUrl: String = "http://10.0.2.2:8000"): Result<String> {
+    suspend fun testServerConnection(baseUrl: String? = null): Result<String> {
         return withContext(Dispatchers.IO) {
             try {
-                val url = URL("$baseUrl/api/")
+                // Use provided baseUrl or fall back to BuildConfig.BACKEND_URL
+                val testUrl = baseUrl ?: BuildConfig.BACKEND_URL.removeSuffix("/api/").removeSuffix("/")
+                val url = URL("$testUrl/api/")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000 // 5 second timeout for quick test

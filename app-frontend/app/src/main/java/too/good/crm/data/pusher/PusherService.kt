@@ -16,6 +16,7 @@ import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import too.good.crm.BuildConfig
 import too.good.crm.data.api.ApiClient
 import java.io.IOException
 
@@ -25,7 +26,10 @@ object PusherService {
     // Pusher configuration (from backend settings)
     private const val PUSHER_KEY = "5ea9fef4e6e142b94ac4"
     private const val PUSHER_CLUSTER = "ap2"
-    private const val PUSHER_AUTH_ENDPOINT = "http://10.0.2.2:8000/api/pusher/auth/"
+    
+    // Use BuildConfig.BACKEND_URL from gradle.properties instead of hardcoded URL
+    private val PUSHER_AUTH_ENDPOINT: String
+        get() = "${BuildConfig.BACKEND_URL.removeSuffix("/")}/pusher/auth/"
     
     private var pusher: Pusher? = null
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.DISCONNECTED)

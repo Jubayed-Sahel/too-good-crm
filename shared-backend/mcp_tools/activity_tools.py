@@ -5,8 +5,10 @@ Provides tools for activity logging and tracking with RBAC
 
 import logging
 from typing import Optional, List, Dict, Any
-from crmApp.models import Activity, Employee
+from crmApp.models import Activity, Employee, AuditLog, JitsiCallSession
 from crmApp.serializers import ActivitySerializer, ActivityListSerializer
+from crmApp.serializers.audit_log import AuditLogListSerializer
+from crmApp.serializers.jitsi import JitsiCallSessionSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -47,46 +49,172 @@ def register_activity_tools(mcp):
             if not org_id:
                 return {"error": "No organization context found"}
             
-            queryset = Activity.objects.filter(organization_id=org_id)
+            from django.db.models import Q
             
-            # Apply filters
+            # 1. Get regular activities
+            activities_queryset = Activity.objects.filter(organization_id=org_id)
+            
+            # Apply filters to activities
             if activity_type:
-                queryset = queryset.filter(activity_type=activity_type)
+                activities_queryset = activities_queryset.filter(activity_type=activity_type)
             
             if status:
-                queryset = queryset.filter(status=status)
+                activities_queryset = activities_queryset.filter(status=status)
             
             if customer_id:
-                queryset = queryset.filter(customer_id=customer_id)
+                activities_queryset = activities_queryset.filter(customer_id=customer_id)
             
             if lead_id:
-                queryset = queryset.filter(lead_id=lead_id)
+                activities_queryset = activities_queryset.filter(lead_id=lead_id)
             
             if deal_id:
-                queryset = queryset.filter(deal_id=deal_id)
+                activities_queryset = activities_queryset.filter(deal_id=deal_id)
             
             if assigned_to:
-                queryset = queryset.filter(assigned_to_id=assigned_to)
+                activities_queryset = activities_queryset.filter(assigned_to_id=assigned_to)
             
             if search:
-                from django.db.models import Q
-                queryset = queryset.filter(
+                activities_queryset = activities_queryset.filter(
                     Q(title__icontains=search) |
                     Q(description__icontains=search) |
                     Q(customer_name__icontains=search)
                 )
             
-            # Limit results
-            limit = min(limit, 100)  # Cap at 100
-            queryset = queryset.select_related(
+            activities_queryset = activities_queryset.select_related(
                 'customer', 'lead', 'deal', 'assigned_to', 'created_by'
-            ).order_by('-created_at')[:limit]
+            ).order_by('-created_at')
             
-            # Serialize
-            serializer = ActivityListSerializer(queryset, many=True)
+            # 2. Get audit logs (convert to activity format)
+            audit_logs_queryset = AuditLog.objects.filter(organization_id=org_id)
             
-            logger.info(f"Retrieved {len(serializer.data)} activities for org {org_id}")
-            return serializer.data
+            if search:
+                audit_logs_queryset = audit_logs_queryset.filter(
+                    Q(description__icontains=search) |
+                    Q(resource_name__icontains=search) |
+                    Q(user_email__icontains=search)
+                )
+            
+            audit_logs_queryset = audit_logs_queryset.select_related(
+                'user', 'related_customer', 'related_lead', 'related_deal'
+            ).order_by('-created_at')
+            
+            # 3. Get video calls (convert to activity format)
+            video_calls_queryset = JitsiCallSession.objects.filter(organization_id=org_id)
+            
+            if activity_type:
+                # Filter video calls if activity_type is 'call'
+                if activity_type != 'call':
+                    video_calls_queryset = video_calls_queryset.none()
+            
+            if status:
+                # Map activity status to call status
+                status_map = {
+                    'scheduled': ['pending', 'ringing'],
+                    'in_progress': ['active'],
+                    'completed': ['completed'],
+                    'cancelled': ['cancelled', 'rejected', 'missed', 'failed']
+                }
+                if status in status_map:
+                    video_calls_queryset = video_calls_queryset.filter(status__in=status_map[status])
+            
+            if search:
+                video_calls_queryset = video_calls_queryset.filter(
+                    Q(room_name__icontains=search) |
+                    Q(notes__icontains=search)
+                )
+            
+            video_calls_queryset = video_calls_queryset.select_related(
+                'initiator', 'recipient', 'organization'
+            ).order_by('-created_at')
+            
+            # Serialize all three types
+            activities_serializer = ActivityListSerializer(activities_queryset, many=True)
+            activities_list = list(activities_serializer.data)
+            
+            audit_logs_serializer = AuditLogListSerializer(audit_logs_queryset, many=True)
+            audit_logs_list = list(audit_logs_serializer.data)
+            
+            video_calls_serializer = JitsiCallSessionSerializer(video_calls_queryset, many=True)
+            video_calls_list = list(video_calls_serializer.data)
+            
+            # Convert audit logs to activity format (matching frontend conversion)
+            audit_logs_as_activities = []
+            for log in audit_logs_list:
+                # Skip if activity_type filter excludes 'note'
+                if activity_type and activity_type != 'note':
+                    continue
+                
+                audit_logs_as_activities.append({
+                    'id': f"audit-{log['id']}",  # Prefix to avoid ID collision
+                    'activity_type': 'note',
+                    'title': log.get('description') or f"{log.get('action_display', '')} {log.get('resource_type_display', '')}",
+                    'description': log.get('resource_name') or log.get('description', ''),
+                    'customer_name': log.get('user_email', 'System'),
+                    'status': 'completed',  # Audit logs are always completed
+                    'created_at': log['created_at'],
+                    'updated_at': log.get('updated_at', log['created_at']),
+                    'scheduled_at': log['created_at'],
+                    'completed_at': log['created_at'],
+                    'organization': org_id,  # Use org_id from context (AuditLogListSerializer doesn't include organization field)
+                    'created_by': log.get('user'),
+                    'assigned_to': None,
+                })
+            
+            # Convert video calls to activity format (matching frontend conversion)
+            call_status_map = {
+                'pending': 'scheduled',
+                'ringing': 'scheduled',
+                'active': 'in_progress',
+                'completed': 'completed',
+                'missed': 'cancelled',
+                'rejected': 'cancelled',
+                'cancelled': 'cancelled',
+                'failed': 'cancelled',
+            }
+            
+            video_calls_as_activities = []
+            for call in video_calls_list:
+                call_status = call_status_map.get(call.get('status', 'completed'), 'completed')
+                
+                # Skip if status filter doesn't match
+                if status and call_status != status:
+                    continue
+                
+                recipient_name = call.get('recipient_name') or call.get('initiator_name', 'Unknown')
+                call_title = f"{call.get('call_type', 'audio').title()} Call"
+                if call.get('status') == 'completed':
+                    call_title += f" with {recipient_name}"
+                else:
+                    call_title += f" to {recipient_name}"
+                
+                    video_calls_as_activities.append({
+                        'id': call['id'],
+                        'activity_type': 'call',
+                        'title': call_title,
+                        'description': call.get('notes') or f"{call.get('call_type', 'audio')} call - {call.get('status', '')}{(' (' + call.get('duration_formatted', '') + ')') if call.get('duration_formatted') else ''}",
+                        'customer_name': recipient_name,
+                        'status': call_status,
+                        'created_at': call['created_at'],
+                        'updated_at': call.get('updated_at', call['created_at']),
+                        'scheduled_at': call.get('started_at') or call['created_at'],
+                        'completed_at': call.get('ended_at'),
+                        'organization': call.get('organization', org_id),  # Use org_id as fallback
+                        'created_by': call.get('initiator'),
+                        'assigned_to': call.get('recipient'),
+                    })
+            
+            # Merge all activities
+            all_activities = activities_list + audit_logs_as_activities + video_calls_as_activities
+            
+            # Sort by creation date (newest first)
+            all_activities.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+            # Apply limit
+            limit = min(limit, 100)  # Cap at 100
+            result = all_activities[:limit]
+            
+            logger.info(f"Retrieved {len(result)} activities for org {org_id} (Regular: {len(activities_list)}, Audit Logs: {len(audit_logs_as_activities)}, Video Calls: {len(video_calls_as_activities)})")
+            return result
             
         except PermissionError as e:
             return {"error": str(e)}
@@ -139,7 +267,15 @@ def register_activity_tools(mcp):
         assigned_to: Optional[int] = None,
         status: str = "scheduled",
         scheduled_at: Optional[str] = None,
-        **kwargs
+        phone_number: Optional[str] = None,
+        call_duration: Optional[int] = None,
+        email_subject: Optional[str] = None,
+        email_body: Optional[str] = None,
+        meeting_location: Optional[str] = None,
+        meeting_url: Optional[str] = None,
+        task_priority: Optional[str] = None,
+        task_due_date: Optional[str] = None,
+        duration_minutes: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Create a new activity.
@@ -154,7 +290,15 @@ def register_activity_tools(mcp):
             assigned_to: Assigned employee ID
             status: Status (scheduled, in_progress, completed, cancelled)
             scheduled_at: Scheduled datetime (ISO format)
-            **kwargs: Additional activity-specific fields
+            phone_number: Phone number (for call activities)
+            call_duration: Call duration in seconds (for call activities)
+            email_subject: Email subject (for email activities)
+            email_body: Email body (for email activities)
+            meeting_location: Meeting location (for meeting activities)
+            meeting_url: Meeting URL (for meeting activities)
+            task_priority: Task priority - low, medium, high (for task activities)
+            task_due_date: Task due date (ISO format, for task activities)
+            duration_minutes: Activity duration in minutes
         
         Returns:
             Created activity object
@@ -224,20 +368,30 @@ def register_activity_tools(mcp):
                 else:
                     return {"error": "Invalid scheduled_at format. Use ISO 8601 format (e.g., 2024-01-15T10:30:00Z)"}
             
-            # Add activity-specific fields from kwargs
-            activity_specific_fields = {
-                'phone_number', 'call_duration', 'call_recording_url',
-                'email_subject', 'email_body', 'email_attachments',
-                'telegram_username', 'telegram_chat_id',
-                'meeting_location', 'meeting_url', 'attendees',
-                'task_priority', 'task_due_date',
-                'video_call_room', 'video_call_url',
-                'duration_minutes', 'is_pinned'
-            }
-            
-            for field in activity_specific_fields:
-                if field in kwargs:
-                    activity_data[field] = kwargs[field]
+            # Add activity-specific fields
+            if phone_number:
+                activity_data['phone_number'] = phone_number
+            if call_duration is not None:
+                activity_data['call_duration'] = call_duration
+            if email_subject:
+                activity_data['email_subject'] = email_subject
+            if email_body:
+                activity_data['email_body'] = email_body
+            if meeting_location:
+                activity_data['meeting_location'] = meeting_location
+            if meeting_url:
+                activity_data['meeting_url'] = meeting_url
+            if task_priority:
+                activity_data['task_priority'] = task_priority
+            if task_due_date:
+                from django.utils.dateparse import parse_date
+                parsed_date = parse_date(task_due_date)
+                if parsed_date:
+                    activity_data['task_due_date'] = parsed_date
+                else:
+                    return {"error": "Invalid task_due_date format. Use ISO date format (e.g., 2024-01-15)"}
+            if duration_minutes is not None:
+                activity_data['duration_minutes'] = duration_minutes
             
             # Create activity
             activity = Activity.objects.create(**activity_data)
@@ -265,7 +419,15 @@ def register_activity_tools(mcp):
         assigned_to: Optional[int] = None,
         scheduled_at: Optional[str] = None,
         completed_at: Optional[str] = None,
-        **kwargs
+        phone_number: Optional[str] = None,
+        call_duration: Optional[int] = None,
+        email_subject: Optional[str] = None,
+        email_body: Optional[str] = None,
+        meeting_location: Optional[str] = None,
+        meeting_url: Optional[str] = None,
+        task_priority: Optional[str] = None,
+        task_due_date: Optional[str] = None,
+        duration_minutes: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Update an existing activity.
@@ -278,7 +440,15 @@ def register_activity_tools(mcp):
             assigned_to: Update assigned employee ID
             scheduled_at: Update scheduled datetime (ISO format)
             completed_at: Update completed datetime (ISO format)
-            **kwargs: Additional fields to update
+            phone_number: Update phone number (for call activities)
+            call_duration: Update call duration in seconds (for call activities)
+            email_subject: Update email subject (for email activities)
+            email_body: Update email body (for email activities)
+            meeting_location: Update meeting location (for meeting activities)
+            meeting_url: Update meeting URL (for meeting activities)
+            task_priority: Update task priority - low, medium, high (for task activities)
+            task_due_date: Update task due date (ISO format, for task activities)
+            duration_minutes: Update activity duration in minutes
         
         Returns:
             Updated activity object
@@ -324,19 +494,29 @@ def register_activity_tools(mcp):
                     return {"error": "Invalid completed_at format. Use ISO 8601 format"}
             
             # Update activity-specific fields
-            activity_specific_fields = {
-                'phone_number', 'call_duration', 'call_recording_url',
-                'email_subject', 'email_body', 'email_attachments',
-                'telegram_username', 'telegram_chat_id',
-                'meeting_location', 'meeting_url', 'attendees',
-                'task_priority', 'task_due_date',
-                'video_call_room', 'video_call_url',
-                'duration_minutes', 'is_pinned'
-            }
-            
-            for field in activity_specific_fields:
-                if field in kwargs:
-                    setattr(activity, field, kwargs[field])
+            if phone_number is not None:
+                activity.phone_number = phone_number
+            if call_duration is not None:
+                activity.call_duration = call_duration
+            if email_subject is not None:
+                activity.email_subject = email_subject
+            if email_body is not None:
+                activity.email_body = email_body
+            if meeting_location is not None:
+                activity.meeting_location = meeting_location
+            if meeting_url is not None:
+                activity.meeting_url = meeting_url
+            if task_priority is not None:
+                activity.task_priority = task_priority
+            if task_due_date is not None:
+                from django.utils.dateparse import parse_date
+                parsed_date = parse_date(task_due_date)
+                if parsed_date:
+                    activity.task_due_date = parsed_date
+                else:
+                    return {"error": "Invalid task_due_date format. Use ISO date format"}
+            if duration_minutes is not None:
+                activity.duration_minutes = duration_minutes
             
             activity.save()
             serializer = ActivitySerializer(activity)

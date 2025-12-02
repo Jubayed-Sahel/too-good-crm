@@ -20,11 +20,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // For Android Emulator - use: "http://10.0.2.2:8000/api/"
-        // For Physical Phone - use: "http://YOUR_IP:8000/api/" (replace YOUR_IP with your computer's IP)
-        // For Production - use: "https://api.yourdomain.com/api/"
-
-        //  EDIT THIS LINE WITH IP ADDRESS
+        // Backend URL is configured in gradle.properties (project root)
+        // Edit that file to change: BACKEND_URL=http://YOUR_IP:8000/api/
+        // For Android Emulator: http://10.0.2.2:8000/api/
+        // For Physical Device: http://YOUR_COMPUTER_IP:8000/api/
         // Get your IP: Windows (cmd): ipconfig | Mac/Linux: ifconfig
         val backendUrl = "http://192.168.0.218:8000/api/"
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")

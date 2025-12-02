@@ -52,7 +52,12 @@ def telegram_webhook(request):
     try:
         # Parse incoming update
         update = json.loads(request.body)
-        logger.info(f"Received Telegram update: {update.get('update_id')}")
+        logger.info(f"Received Telegram update: {update.get('update_id')}, keys: {list(update.keys())}")
+        
+        # Log message details if present
+        if 'message' in update:
+            message = update['message']
+            logger.info(f"Message text: {message.get('text', 'N/A')}, entities: {message.get('entities', [])}")
         
         # Parse update
         parsed = parse_telegram_update(update)
@@ -126,8 +131,9 @@ def handle_command(telegram_user: TelegramUser, parsed: Dict[str, Any], telegram
     command = parsed['command']
     args = parsed['command_args']
     chat_id = parsed['chat_id']
+    text = parsed.get('text', '')
     
-    logger.info(f"Handling command: /{command} from chat {chat_id}")
+    logger.info(f"Handling command: /{command} from chat {chat_id}, args: {args}, full text: {text}")
     
     # Update last command
     telegram_user.last_command_used = command
@@ -135,7 +141,7 @@ def handle_command(telegram_user: TelegramUser, parsed: Dict[str, Any], telegram
     
     # Command handlers
     if command == 'start':
-        handle_start_command(telegram_user, telegram_service, args)
+        handle_start_command(telegram_user, telegram_service, args, parsed.get('text', ''))
     
     elif command == 'help':
         message = create_command_help_message()
@@ -209,7 +215,7 @@ def handle_command(telegram_user: TelegramUser, parsed: Dict[str, Any], telegram
         )
 
 
-def handle_start_command(telegram_user: TelegramUser, telegram_service: TelegramService, args: list = None):
+def handle_start_command(telegram_user: TelegramUser, telegram_service: TelegramService, args: list = None, text: str = ''):
     """
     Handle /start command - initiate authentication flow or process deep link.
     
@@ -217,15 +223,105 @@ def handle_start_command(telegram_user: TelegramUser, telegram_service: Telegram
         telegram_user: TelegramUser instance
         telegram_service: TelegramService instance
         args: Command arguments (for deep link payload)
+        text: Full message text (for extracting payload if args parsing failed)
     """
     from crmApp.viewsets.telegram_link_generator import verify_auth_token
     from crmApp.models import User, UserProfile
+    import urllib.parse
     
     chat_id = telegram_user.chat_id
     
-    # Check if there's a deep link payload
+    # Log received arguments for debugging
+    logger.info(f"handle_start_command called with args: {args}, text: {text[:100]}...")
+    
+    # Check for short auth code first (e.g., /start ABC123)
+    auth_code = None
+    if args and len(args) > 0:
+        potential_code = args[0].upper().strip()
+        # Check if it's a 6-character code (3 letters + 3 digits)
+        if len(potential_code) == 6 and potential_code.isalnum():
+            auth_code = potential_code
+            logger.info(f"Detected auth code: {auth_code}")
+    
+    # If short code found, use it
+    if auth_code:
+        from crmApp.viewsets.telegram_link_generator import verify_auth_code
+        code_data = verify_auth_code(auth_code)
+        
+        if code_data:
+            try:
+                user = User.objects.get(id=code_data['user_id'])
+                profile = UserProfile.objects.get(id=code_data['profile_id'], user=user)
+                
+                # Link Telegram account
+                telegram_user.authenticate(user)
+                telegram_user.selected_profile = profile
+                # Clear any pending conversation state
+                telegram_user.conversation_state = None
+                telegram_user.save(update_fields=['selected_profile', 'conversation_state'])
+                
+                # Get permissions
+                from crmApp.services.telegram_rbac_service import TelegramRBACService
+                permissions_summary = TelegramRBACService.get_permission_summary(telegram_user)
+                
+                # Send success message
+                org_name = profile.organization.name if profile.organization else "Standalone"
+                message = (
+                    f"✅ <b>Authenticated successfully!</b>\n\n"
+                    f"<b>Welcome, {user.full_name}!</b>\n\n"
+                    f"<b>Profile:</b> {profile.get_profile_type_display()}\n"
+                    f"<b>Organization:</b> {org_name}\n\n"
+                    f"{permissions_summary}\n\n"
+                    f"You can now use all CRM features via Telegram!\n\n"
+                    f"Try asking:\n"
+                    f"• \"Show my deals\"\n"
+                    f"• \"List my customers\"\n"
+                    f"• \"Create a new lead\"\n"
+                    f"• \"Show statistics\"\n\n"
+                    f"Type /help to see all available commands."
+                )
+                telegram_service.send_message(chat_id, message)
+                logger.info(
+                    f"✅ Auto-authenticated {user.email} via auth code {auth_code} "
+                    f"(profile: {profile.profile_type})"
+                )
+                return
+            except Exception as e:
+                logger.error(f"Error authenticating with code {auth_code}: {str(e)}", exc_info=True)
+                message = (
+                    f"❌ <b>Authentication failed</b>\n\n"
+                    f"There was an error processing your auth code.\n\n"
+                    f"Please generate a new code from the CRM app."
+                )
+                telegram_service.send_message(chat_id, message)
+                return
+        else:
+            message = (
+                f"❌ <b>Invalid or expired code</b>\n\n"
+                f"The authentication code has expired (valid for 5 minutes).\n\n"
+                f"Please generate a new code from the CRM app."
+            )
+            telegram_service.send_message(chat_id, message)
+            return
+    
+    # Check if there's a deep link payload (for backward compatibility)
+    payload = None
     if args and len(args) > 0:
         payload = args[0]
+    elif text and 'auth_' in text:
+        # Try to extract from text if args parsing failed
+        # Deep link format: /start auth_USERID_PROFILEID_TIMESTAMP_TOKEN
+        parts = text.split('auth_', 1)
+        if len(parts) > 1:
+            # Get everything after 'auth_' until space or end
+            payload_part = parts[1].split()[0] if ' ' in parts[1] else parts[1].strip()
+            payload = 'auth_' + payload_part
+            logger.info(f"Extracted payload from text: {payload[:50]}...")
+    
+    if payload:
+        # URL decode in case Telegram encoded it
+        payload = urllib.parse.unquote(payload)
+        logger.info(f"Processing deep link payload: {payload[:50]}..." if len(payload) > 50 else f"Processing deep link payload: {payload}")
         
         # Check if it's an auth payload: auth_USERID_PROFILEID_TIMESTAMP_TOKEN
         if payload.startswith('auth_'):
@@ -237,16 +333,24 @@ def handle_start_command(telegram_user: TelegramUser, telegram_service: Telegram
                     profile_id = int(profile_id)
                     timestamp = int(timestamp)
                     
+                    logger.info(f"Extracted auth payload - user_id: {user_id}, profile_id: {profile_id}, timestamp: {timestamp}, token: {token[:20]}...")
+                    
                     # Verify token
-                    if verify_auth_token(user_id, profile_id, timestamp, token):
+                    is_valid = verify_auth_token(user_id, profile_id, timestamp, token)
+                    logger.info(f"Token verification result: {is_valid}")
+                    
+                    if is_valid:
                         # Get user and profile
                         user = User.objects.get(id=user_id)
                         profile = UserProfile.objects.get(id=profile_id, user=user)
+                        logger.info(f"Found user: {user.email}, profile: {profile.profile_type}")
                         
                         # Link Telegram account
                         telegram_user.authenticate(user)
                         telegram_user.selected_profile = profile
-                        telegram_user.save(update_fields=['selected_profile'])
+                        # Clear any pending conversation state
+                        telegram_user.conversation_state = None
+                        telegram_user.save(update_fields=['selected_profile', 'conversation_state'])
                         
                         # Get permissions
                         from crmApp.services.telegram_rbac_service import TelegramRBACService
@@ -275,6 +379,7 @@ def handle_start_command(telegram_user: TelegramUser, telegram_service: Telegram
                         )
                         return
                     else:
+                        logger.warning(f"Token verification failed for user_id: {user_id}, profile_id: {profile_id}")
                         message = (
                             f"❌ <b>Invalid or expired link</b>\n\n"
                             f"The authorization link has expired (valid for 5 minutes).\n\n"
@@ -282,6 +387,8 @@ def handle_start_command(telegram_user: TelegramUser, telegram_service: Telegram
                         )
                         telegram_service.send_message(chat_id, message)
                         return
+                else:
+                    logger.warning(f"Invalid payload format - expected 5 parts, got {len(parts)}: {parts}")
                         
             except Exception as e:
                 logger.error(f"Error processing deep link: {str(e)}", exc_info=True)
@@ -292,8 +399,11 @@ def handle_start_command(telegram_user: TelegramUser, telegram_service: Telegram
                 )
                 telegram_service.send_message(chat_id, message)
                 return
+        else:
+            logger.info(f"Payload does not start with 'auth_': {payload}")
     
     # Regular /start flow (no deep link)
+    logger.info(f"Falling back to regular /start flow - is_authenticated: {telegram_user.is_authenticated}")
     if telegram_user.is_authenticated:
         message = (
             f"👋 Welcome back, {telegram_user.user.full_name}!\n\n"
