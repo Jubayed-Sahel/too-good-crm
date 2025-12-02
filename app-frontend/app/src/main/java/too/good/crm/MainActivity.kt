@@ -58,6 +58,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Initialize ApiClient with context for runtime URL support
+        too.good.crm.data.api.ApiClient.initialize(this)
+        
         // Initialize VideoCallHelper for global access
         VideoCallHelper.initialize()
         

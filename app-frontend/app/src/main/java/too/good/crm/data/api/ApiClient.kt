@@ -1,40 +1,76 @@
 package too.good.crm.data.api
 
+import android.content.Context
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import okio.Buffer
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import too.good.crm.BuildConfig
+import too.good.crm.data.BackendUrlManager
 import java.util.concurrent.TimeUnit
 
 /**
  * Retrofit API Client for CRM Backend
- * Configure BASE_URL and auth token before using
+ * Supports runtime URL configuration via BackendUrlManager
+ * 
+ * ✅ RUNTIME URL CONFIGURATION:
+ * Change backend URL at runtime without rebuilding!
+ * Use BackendUrlManager.setBackendUrl(context, "http://YOUR_IP:8000/api/")
+ * Then call ApiClient.rebuildRetrofit() to apply changes.
  */
 object ApiClient {
 
-    // ⚠️ BASE_URL Configuration
-    //
-    // TO CHANGE THE BACKEND URL:
-    // Edit the file: gradle.properties (in the root project folder)
-    // Update the line: BACKEND_URL=http://YOUR_IP:8000/api/
-    //
-    // OPTION 1: Android Emulator
-    //   BACKEND_URL=http://10.0.2.2:8000/api/
-    //   (10.0.2.2 is the special IP that emulator uses to access host machine's localhost)
-    //
-    // OPTION 2: Physical Device on Same Network
-    //   BACKEND_URL=http://192.168.1.100:8000/api/
-    //   (Replace 192.168.1.100 with your computer's IP address)
-    //   Find your IP: Windows: ipconfig | Mac/Linux: ifconfig
-    //
-    // OPTION 3: Production/ngrok
-    //   BACKEND_URL=https://api.yourdomain.com/api/
-    //
-    // ✅ CURRENT: Configured in gradle.properties
-    // Make sure your phone is connected to the SAME WiFi network as your PC!
-    private val BASE_URL = BuildConfig.BACKEND_URL
+    private var appContext: Context? = null
+    private var retrofitInstance: Retrofit? = null
+    private var currentBaseUrl: String? = null
+
+    /**
+     * Initialize ApiClient with app context (call once in MainActivity)
+     */
+    fun initialize(context: Context) {
+        appContext = context.applicationContext
+        rebuildRetrofit()
+    }
+
+    /**
+     * Get current BASE_URL (runtime or BuildConfig default)
+     */
+    private fun getBaseUrl(): String {
+        return appContext?.let { BackendUrlManager.getBackendUrl(it) } 
+            ?: BuildConfig.BACKEND_URL
+    }
+
+    /**
+     * Rebuild Retrofit instance when URL changes
+     */
+    fun rebuildRetrofit() {
+        val newBaseUrl = getBaseUrl()
+        if (currentBaseUrl != newBaseUrl) {
+            currentBaseUrl = newBaseUrl
+            retrofitInstance = createRetrofit(newBaseUrl)
+            android.util.Log.d("ApiClient", "🔄 Retrofit rebuilt with URL: $newBaseUrl")
+        }
+    }
+
+    /**
+     * Get Retrofit instance (rebuilds if URL changed)
+     */
+    private fun getRetrofit(): Retrofit {
+        rebuildRetrofit()
+        return retrofitInstance ?: createRetrofit(getBaseUrl())
+    }
+
+    /**
+     * Create Retrofit instance with given base URL
+     */
+    private fun createRetrofit(baseUrl: String): Retrofit {
+        return Retrofit.Builder()
+            .baseUrl(baseUrl)
+            .client(okHttpClient)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+    }
 
     private var authToken: String? = null
 
@@ -155,105 +191,86 @@ object ApiClient {
         .retryOnConnectionFailure(true)
         .build()
 
-    private val retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(okHttpClient)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-
     /**
      * Issue API Service instance
      * NOTE: If IDE shows errors, do: File -> Invalidate Caches -> Invalidate and Restart
      */
-    val issueApiService: IssueApiService by lazy {
-        retrofit.create(IssueApiService::class.java)
-    }
+    val issueApiService: IssueApiService
+        get() = getRetrofit().create(IssueApiService::class.java)
 
     /**
      * Auth API Service instance
      * NOTE: If IDE shows errors, do: File -> Invalidate Caches -> Invalidate and Restart
      */
-    val authApiService: AuthApiService by lazy {
-        retrofit.create(AuthApiService::class.java)
-    }
+    val authApiService: AuthApiService
+        get() = getRetrofit().create(AuthApiService::class.java)
 
     /**
      * Customer API Service instance
      */
-    val customerApiService: CustomerApiService by lazy {
-        retrofit.create(CustomerApiService::class.java)
-    }
+    val customerApiService: CustomerApiService
+        get() = getRetrofit().create(CustomerApiService::class.java)
 
     /**
      * Role Selection API Service instance
      */
-    val roleSelectionApiService: RoleSelectionApiService by lazy {
-        retrofit.create(RoleSelectionApiService::class.java)
-    }
+    val roleSelectionApiService: RoleSelectionApiService
+        get() = getRetrofit().create(RoleSelectionApiService::class.java)
 
     /**
      * User Context API Service instance (for permissions)
      * Matches web frontend: /api/user-context/permissions/
      */
-    val userContextApiService: UserContextApiService by lazy {
-        retrofit.create(UserContextApiService::class.java)
-    }
+    val userContextApiService: UserContextApiService
+        get() = getRetrofit().create(UserContextApiService::class.java)
 
     /**
      * Analytics API Service instance
      */
-    val analyticsApiService: AnalyticsApiService by lazy {
-        retrofit.create(AnalyticsApiService::class.java)
-    }
+    val analyticsApiService: AnalyticsApiService
+        get() = getRetrofit().create(AnalyticsApiService::class.java)
 
     /**
      * Employee API Service instance
      */
-    val employeeApiService: EmployeeApiService by lazy {
-        retrofit.create(EmployeeApiService::class.java)
-    }
+    val employeeApiService: EmployeeApiService
+        get() = getRetrofit().create(EmployeeApiService::class.java)
 
     /**
      * Lead API Service instance
      */
-    val leadApiService: LeadApiService by lazy {
-        retrofit.create(LeadApiService::class.java)
-    }
+    val leadApiService: LeadApiService
+        get() = getRetrofit().create(LeadApiService::class.java)
 
     /**
      * Deal API Service instance
      */
-    val dealApiService: DealApiService by lazy {
-        retrofit.create(DealApiService::class.java)
-    }
+    val dealApiService: DealApiService
+        get() = getRetrofit().create(DealApiService::class.java)
 
     /**
      * Message API Service instance
      */
-    val messageApiService: MessageApiService by lazy {
-        retrofit.create(MessageApiService::class.java)
-    }
+    val messageApiService: MessageApiService
+        get() = getRetrofit().create(MessageApiService::class.java)
 
     /**
      * Activity API Service instance
      */
-    val activityApiService: ActivityApiService by lazy {
-        retrofit.create(ActivityApiService::class.java)
-    }
+    val activityApiService: ActivityApiService
+        get() = getRetrofit().create(ActivityApiService::class.java)
 
     /**
      * Video API Service instance (8x8 Video/Jitsi)
      */
-    val videoApiService: VideoApiService by lazy {
-        retrofit.create(VideoApiService::class.java)
-    }
+    val videoApiService: VideoApiService
+        get() = getRetrofit().create(VideoApiService::class.java)
 
     /**
      * Telegram API Service instance (Phone verification)
      */
-    val telegramApiService: TelegramApiService by lazy {
-        retrofit.create(TelegramApiService::class.java)
-    }
+    val telegramApiService: TelegramApiService
+        get() = getRetrofit().create(TelegramApiService::class.java)
 
     // Add other API services here as needed
     // val organizationApiService: OrganizationApiService by lazy { ... }
