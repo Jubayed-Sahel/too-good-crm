@@ -120,7 +120,7 @@ interface DealApiService {
      * GET /api/pipelines/
      */
     @GET("pipelines/")
-    suspend fun getPipelines(): List<Pipeline>
+    suspend fun getPipelines(): PaginatedResponse<Pipeline>
     
     /**
      * Get single pipeline with stages

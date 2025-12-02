@@ -44,6 +44,7 @@ import too.good.crm.features.leads.LeadDetailScreen
 import too.good.crm.features.leads.LeadEditScreen
 import too.good.crm.features.login.LoginScreen
 import too.good.crm.features.sales.SalesScreen
+import too.good.crm.features.sales.SalesPipelineScreen
 import too.good.crm.features.settings.SettingsScreen
 import too.good.crm.features.signup.SignupScreen
 import too.good.crm.features.team.TeamScreen
@@ -281,7 +282,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         composable("sales") {
-                            SalesScreen(
+                            SalesPipelineScreen(
                                 onNavigate = { route ->
                                     navController.navigate(route)
                                 },

@@ -182,7 +182,7 @@ fun DashboardScreen(
                 .padding(paddingValues)
                 .padding(DesignTokens.Spacing.Space4)
         ) {
-            WelcomeCard()
+            WelcomeCard(onNavigate = onNavigate)
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.Space4))
             
             // Show loading state
@@ -354,7 +354,7 @@ private fun formatPercentage(percentage: Double?): String {
 }
 
 @Composable
-fun WelcomeCard() {
+fun WelcomeCard(onNavigate: (String) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -394,16 +394,16 @@ fun WelcomeCard() {
                 horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.Space3)
             ) {
                 Button(
-                    onClick = { /* TODO: Navigate to Analytics */ },
+                    onClick = { onNavigate("sales") },
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = DesignTokens.Colors.Primary
                     ),
                     shape = MaterialTheme.shapes.medium
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null)
+                    Icon(Icons.Default.ViewColumn, contentDescription = null)
                     Spacer(modifier = Modifier.width(DesignTokens.Spacing.Space2))
-                    Text("Analytics")
+                    Text("Sales")
                 }
                 OutlinedButton(
                     onClick = { /* TODO: Create new deal */ },
