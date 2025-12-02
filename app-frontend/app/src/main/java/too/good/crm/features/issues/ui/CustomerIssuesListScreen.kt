@@ -42,6 +42,7 @@ fun CustomerIssuesListScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val authRepository = remember { AuthRepository(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     // Initialize Pusher and subscribe to real-time updates
     LaunchedEffect(Unit) {
@@ -55,14 +56,14 @@ fun CustomerIssuesListScreen(
                 when (eventName) {
                     "issue-created", "issue-updated", "issue-status-changed" -> {
                         // Reload issues when any issue event is received
-                        viewModel.loadAllIssues()
+                        viewModel.loadCustomerIssues()
                     }
                 }
             }
         }
         
         // Load issues when screen opens
-        viewModel.loadAllIssues()
+        viewModel.loadCustomerIssues()
     }
     
     // Cleanup Pusher subscription when screen is disposed
@@ -78,7 +79,7 @@ fun CustomerIssuesListScreen(
     // Handle pull-to-refresh
     suspend fun refresh() {
         isRefreshing = true
-        viewModel.loadAllIssues()
+        viewModel.loadCustomerIssues()
         delay(1000) // Show refresh indicator for at least 1 second
         isRefreshing = false
     }
@@ -95,8 +96,9 @@ fun CustomerIssuesListScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            isRefreshing = true
-                            viewModel.loadAllIssues()
+                            coroutineScope.launch {
+                                refresh()
+                            }
                         }
                     ) {
                         Icon(Icons.Default.Refresh, "Refresh")
@@ -136,6 +138,7 @@ fun CustomerIssuesListScreen(
                         )
                     }
                     is IssueUiState.Success -> {
+                        android.util.Log.d("CustomerIssuesListScreen", "UI rendering ${state.issues.size} issues")
                         if (state.issues.isEmpty()) {
                             EmptyIssuesView(
                                 modifier = Modifier.align(Alignment.Center),
@@ -147,6 +150,7 @@ fun CustomerIssuesListScreen(
                                 contentPadding = PaddingValues(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
+                                android.util.Log.d("CustomerIssuesListScreen", "LazyColumn items count: ${state.issues.size}")
                                 items(state.issues) { issue ->
                                     IssueCard(
                                         issue = issue,

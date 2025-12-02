@@ -43,9 +43,8 @@ class RaiseIssueView(APIView):
             # Only customers can raise issues through this endpoint
             # Vendors and employees should use the Issues ViewSet to view and update issues
             from crmApp.models import Customer
-            try:
-                customer = Customer.objects.get(user=request.user)
-            except Customer.DoesNotExist:
+            customer = Customer.objects.filter(user=request.user).first()
+            if not customer:
                 return Response(
                     {
                         'error': 'Forbidden',

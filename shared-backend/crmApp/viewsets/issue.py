@@ -40,7 +40,7 @@ class IssueViewSet(
 ):
     """ViewSet for Issue model"""
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['vendor', 'order', 'priority', 'category', 'status', 'assigned_to']
+    filterset_fields = ['vendor', 'order', 'priority', 'category', 'status', 'assigned_to', 'raised_by_customer']
     search_fields = ['issue_number', 'title', 'description']
     ordering_fields = ['created_at', 'updated_at', 'priority', 'status']
     ordering = ['-created_at']
@@ -131,19 +131,27 @@ class IssueViewSet(
         return Issue.objects.none()
     
     def retrieve(self, request, *args, **kwargs):
-        """Override retrieve to sync comments from Linear before returning issue"""
+        """Override retrieve to sync full issue data from Linear before returning issue"""
         instance = self.get_object()
         
-        # Sync comments from Linear if issue is synced
+        # Sync full issue data from Linear if issue is synced
         if instance.linear_issue_id:
             try:
-                success, count, error = self.linear_service.sync_comments_from_linear(instance)
-                if success and count > 0:
+                # Sync issue status and data from Linear
+                sync_success, sync_message = self.linear_service.sync_issue_from_linear(instance)
+                if sync_success:
+                    logger.info(f"Synced issue data from Linear: {sync_message}")
+                    # Reload instance to get updated data
+                    instance.refresh_from_db()
+                
+                # Sync comments from Linear
+                comment_success, count, error = self.linear_service.sync_comments_from_linear(instance)
+                if comment_success and count > 0:
                     logger.info(f"Synced {count} new comments from Linear for issue {instance.issue_number}")
-                elif not success:
+                elif not comment_success:
                     logger.warning(f"Failed to sync comments from Linear: {error}")
             except Exception as e:
-                logger.error(f"Error syncing comments from Linear: {str(e)}", exc_info=True)
+                logger.error(f"Error syncing from Linear: {str(e)}", exc_info=True)
         
         serializer = self.get_serializer(instance)
         return Response(serializer.data)

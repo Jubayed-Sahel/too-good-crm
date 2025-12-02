@@ -44,6 +44,7 @@ fun VendorIssuesListScreen(
     var isRefreshing by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val authRepository = remember { AuthRepository(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     // Initialize Pusher and subscribe to real-time updates
     LaunchedEffect(Unit) {
@@ -97,8 +98,9 @@ fun VendorIssuesListScreen(
                 actions = {
                     IconButton(
                         onClick = {
-                            isRefreshing = true
-                            viewModel.loadAllIssues()
+                            coroutineScope.launch {
+                                refresh()
+                            }
                         }
                     ) {
                         Icon(Icons.Default.Refresh, "Refresh")
@@ -108,7 +110,6 @@ fun VendorIssuesListScreen(
         }
     ) { padding ->
         val swipeRefreshState = rememberSwipeRefreshState(isRefreshing)
-        val coroutineScope = rememberCoroutineScope()
 
         SwipeRefresh(
             state = swipeRefreshState,

@@ -81,6 +81,7 @@ export interface IssueFilters {
   category?: IssueCategory;
   status?: IssueStatus;
   assigned_to?: number;
+  raised_by_customer?: number;
   organization?: number;
   search?: string;
   ordering?: string;

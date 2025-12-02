@@ -13,7 +13,7 @@ interface VendorApiService {
     /**
      * Get all vendors (with pagination)
      * GET /api/vendors/
-     * Backend filters: vendor_type, status, search, ordering
+     * Backend filters: vendor_type, status, search, ordering, organization
      */
     @GET("vendors/")
     suspend fun getVendors(
@@ -23,7 +23,8 @@ interface VendorApiService {
         @Query("status") status: String? = null,
         @Query("search") search: String? = null,
         @Query("ordering") ordering: String? = null,
-        @Query("assigned_employee") assignedEmployee: Int? = null
+        @Query("assigned_employee") assignedEmployee: Int? = null,
+        @Query("organization") organizationId: Int? = null
     ): VendorListResponse
     
     /**

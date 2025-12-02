@@ -1,5 +1,6 @@
 package too.good.crm.data.repository
 
+import android.util.Log
 import too.good.crm.data.api.ApiClient
 import too.good.crm.data.api.IssueApiService
 import too.good.crm.data.model.*
@@ -34,10 +35,19 @@ class IssueRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception(response.message() ?: "Failed to create issue"))
+                // Get detailed error message
+                val errorBody = response.errorBody()?.string()
+                val errorMsg = when (response.code()) {
+                    404 -> "Endpoint not found (404). URL: client/issues/raise/"
+                    401 -> "Unauthorized (401). Please login again."
+                    403 -> "Forbidden (403). Only customers can create issues."
+                    400 -> "Bad request (400). $errorBody"
+                    else -> "Failed to create issue (${response.code()}): ${errorBody ?: response.message()}"
+                }
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.failure(Exception("Network error: ${e.message}", e))
         }
     }
 
@@ -47,10 +57,20 @@ class IssueRepository {
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                Result.failure(Exception(response.message() ?: "Failed to get issue"))
+                val errorBody = response.errorBody()?.string()
+                val errorMsg = when (response.code()) {
+                    404 -> "Issue not found. It may have been deleted or you don't have access to it."
+                    401 -> "Unauthorized. Please login again."
+                    403 -> "Access denied. You don't have permission to view this issue."
+                    500 -> "Server error. Please try again later. Details: $errorBody"
+                    else -> "Failed to load issue (${response.code()}): ${errorBody ?: response.message()}"
+                }
+                android.util.Log.e("IssueRepository", "getIssueDetails failed: $errorMsg")
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            android.util.Log.e("IssueRepository", "getIssueDetails exception", e)
+            Result.failure(Exception("Network error: ${e.message}", e))
         }
     }
 
@@ -67,6 +87,29 @@ class IssueRepository {
         }
     }
 
+    // Customer functions
+    fun getCustomerIssues(
+        status: String? = null,
+        priority: String? = null
+    ): Flow<List<Issue>> = flow {
+        try {
+            Log.d("IssueRepository", "Fetching customer issues...")
+            val response = apiService.getCustomerIssues(status, priority)
+            if (response.isSuccessful && response.body() != null) {
+                val issues = response.body()!!.results
+                Log.d("IssueRepository", "Got ${issues.size} customer issues")
+                emit(issues)
+            } else {
+                val errorMsg = "Failed to get customer issues: ${response.code()} - ${response.message()}"
+                Log.e("IssueRepository", errorMsg)
+                throw Exception(errorMsg)
+            }
+        } catch (e: Exception) {
+            Log.e("IssueRepository", "Error getting customer issues", e)
+            throw e
+        }
+    }
+
     // Vendor/Employee functions
     fun getAllIssues(
         status: String? = null,
@@ -75,14 +118,20 @@ class IssueRepository {
         customer: Int? = null
     ): Flow<List<Issue>> = flow {
         try {
+            Log.d("IssueRepository", "Fetching all issues...")
             val response = apiService.getAllIssues(status, priority, isClientIssue, customer)
             if (response.isSuccessful && response.body() != null) {
-                emit(response.body()!!.results)
+                val issues = response.body()!!.results
+                Log.d("IssueRepository", "Got ${issues.size} issues")
+                emit(issues)
             } else {
-                emit(emptyList())
+                val errorMsg = "Failed to get issues: ${response.code()} - ${response.message()}"
+                Log.e("IssueRepository", errorMsg)
+                throw Exception(errorMsg)
             }
         } catch (e: Exception) {
-            emit(emptyList())
+            Log.e("IssueRepository", "Error getting issues", e)
+            throw e
         }
     }
     
@@ -173,6 +222,32 @@ class IssueRepository {
                 Result.success(response.body()!!)
             } else {
                 Result.failure(Exception(response.message() ?: "Failed to resolve issue"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun syncToLinear(issueId: Int): Result<IssueResponse> {
+        return try {
+            val response = apiService.syncToLinear(issueId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                Result.failure(Exception(response.message() ?: "Failed to sync to Linear"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun deleteIssue(issueId: Int): Result<Unit> {
+        return try {
+            val response = apiService.deleteIssue(issueId)
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception(response.message() ?: "Failed to delete issue"))
             }
         } catch (e: Exception) {
             Result.failure(e)

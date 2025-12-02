@@ -467,7 +467,6 @@ class MainActivity : ComponentActivity() {
                         }
                         composable("create-issue") {
                             CustomerCreateIssueScreen(
-                                organizationId = 1, // TODO: Get from user session
                                 onNavigateBack = {
                                     navController.popBackStack()
                                 }
