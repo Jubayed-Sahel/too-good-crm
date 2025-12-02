@@ -269,6 +269,13 @@ object ApiClient {
         retrofit.create(OrderApiService::class.java)
     }
 
+    /**
+     * Gemini AI API Service instance
+     */
+    val geminiApiService: GeminiApiService by lazy {
+        retrofit.create(GeminiApiService::class.java)
+    }
+
     // Add other API services here as needed
     // val organizationApiService: OrganizationApiService by lazy { ... }
 }
